@@ -42,6 +42,8 @@ coverage/
 .cache/
 .parcel-cache/
 .turbo/
+.vite/
+*.tsbuildinfo
 
 # Uploads de documentos
 backend/uploads/
