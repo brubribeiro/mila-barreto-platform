@@ -1,13 +1,16 @@
 import { useMemo, useState } from 'react';
 import {
+  Avatar,
   Box,
   Button,
   Card,
   IconButton,
   MenuItem,
+  Stack,
   TextField,
   Tooltip,
   Typography,
+  alpha,
 } from '@mui/material';
 import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
@@ -31,6 +34,7 @@ import { maskCPF, maskPhone } from '../utils/masks';
 import { formatDateOnlyFromApi } from '../utils/dateOnly';
 import { patientSexLabel } from '../utils/patientSex';
 import { patientReferralSourceLabel } from '../utils/patientReferralSource';
+import { patientInitials } from '../utils/patientPhoto';
 import type { Patient } from '../types';
 
 export function Patients() {
@@ -66,7 +70,34 @@ export function Patients() {
 
   const columns = useMemo<GridColDef<Patient>[]>(
     () => [
-      { field: 'name', headerName: 'Nome', flex: 1.2, minWidth: 200 },
+      {
+        field: 'name',
+        headerName: 'Nome',
+        flex: 1.2,
+        minWidth: 220,
+        renderCell: (params) => (
+          <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 0, py: 0.25 }}>
+            <Avatar
+              src={params.row.photoUrl ?? undefined}
+              alt={params.row.name}
+              sx={{
+                width: 32,
+                height: 32,
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
+                color: 'primary.dark',
+                flexShrink: 0,
+              }}
+            >
+              {patientInitials(params.row.name)}
+            </Avatar>
+            <Typography variant="body2" noWrap title={params.row.name}>
+              {params.row.name}
+            </Typography>
+          </Stack>
+        ),
+      },
       {
         field: 'phone',
         headerName: 'Telefone',

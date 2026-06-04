@@ -71,6 +71,8 @@ export interface Patient {
   notes?: string;
   referralSource?: PatientReferralSource | null;
   referralSourceOther?: string | null;
+  photoStorageKey?: string | null;
+  photoUrl?: string | null;
   createdAt: string;
 }
 

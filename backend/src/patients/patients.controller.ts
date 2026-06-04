@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,8 +9,11 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 import { PatientsService } from './patients.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
@@ -51,6 +55,35 @@ export class PatientsController {
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdatePatientDto) {
     return this.patients.update(id, dto);
+  }
+
+  @RequirePermissions('patients:edit')
+  @Post(':id/photo')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+        if (allowed.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new BadRequestException('Use uma imagem JPEG, PNG ou WebP.'), false);
+        }
+      },
+    }),
+  )
+  uploadPhoto(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('Arquivo de imagem é obrigatório.');
+    return this.patients.uploadPhoto(id, file);
+  }
+
+  @RequirePermissions('patients:edit')
+  @Delete(':id/photo')
+  removePhoto(@Param('id', ParseUUIDPipe) id: string) {
+    return this.patients.removePhoto(id);
   }
 
   @RequirePermissions('patients:delete')

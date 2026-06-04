@@ -247,6 +247,8 @@ model Patient {
   notes               String? // observações gerais
   referralSource      String? // INSTAGRAM | REFERRAL | GOOGLE | LOCATION | OTHER
   referralSourceOther String? // detalhe quando referralSource = OTHER
+  photoStorageKey     String? // chave no Cloudflare R2
+  photoUrl            String? // URL pública da foto
   anamnesis Json? // anamnese estruturada
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

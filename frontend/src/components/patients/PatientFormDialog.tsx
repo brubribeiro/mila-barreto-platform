@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   CircularProgress,
@@ -38,6 +39,7 @@ import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
 import WcOutlinedIcon from '@mui/icons-material/WcOutlined';
 import CakeOutlinedIcon from '@mui/icons-material/CakeOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { patientsApi, PatientPayload } from '../../api/patients';
@@ -51,6 +53,11 @@ import {
   clearViaCepAddressFields,
 } from '../../utils/patientAddress';
 import { fetchViaCepDigits } from '../../utils/viaCep';
+import {
+  PATIENT_PHOTO_ACCEPT,
+  patientInitials,
+  validatePatientPhotoFile,
+} from '../../utils/patientPhoto';
 
 interface PatientFormDialogProps {
   open: boolean;
@@ -85,7 +92,7 @@ const empty: FormValues = {
   referralSourceOther: '',
 };
 
-const DIALOG_HEIGHT_DESKTOP = 840;
+const DIALOG_HEIGHT_DESKTOP = 880;
 
 const AUTOFILL_WHITE = {
   '& input:-webkit-autofill': {
@@ -209,13 +216,27 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
   });
   const cepWatched = watch('cep');
   const referralSourceWatched = watch('referralSource');
+  const nameWatched = watch('name');
 
   const [tab, setTab] = useState<PatientFormTab>('basic');
   const suppressNextFullCepLookup = useRef(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoRemoved, setPhotoRemoved] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const revokeBlobPreview = (url: string | null) => {
+    if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     if (open) {
       setTab('basic');
+      setPhotoFile(null);
+      setPhotoRemoved(false);
+      setPhotoError(null);
+      setPhotoPreview(patient?.photoUrl ?? null);
       const savedCep = patient?.cep ? onlyDigits(patient.cep) : '';
       suppressNextFullCepLookup.current = !!(patient && savedCep.length === 8);
       reset(
@@ -242,6 +263,40 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
       );
     }
   }, [open, patient, reset]);
+
+  useEffect(
+    () => () => {
+      revokeBlobPreview(photoPreview);
+    },
+    [photoPreview],
+  );
+
+  const handlePhotoSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const err = validatePatientPhotoFile(file);
+    if (err) {
+      setPhotoError(err);
+      return;
+    }
+    setPhotoError(null);
+    setPhotoRemoved(false);
+    revokeBlobPreview(photoPreview);
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  const handlePhotoRemove = () => {
+    revokeBlobPreview(photoPreview);
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setPhotoRemoved(true);
+    setPhotoError(null);
+  };
+
+  const avatarDisplaySrc =
+    photoRemoved ? undefined : photoPreview ?? undefined;
 
   const [cepStatus, setCepStatus] = useState<{ loading?: boolean; error?: boolean; text?: string }>(
     {},
@@ -312,7 +367,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
   }, [cepWatched, open, setValue]);
 
   const mutation = useMutation({
-    mutationFn: (values: FormValues) => {
+    mutationFn: async (values: FormValues) => {
       const cepDigits = onlyDigits(values.cep ?? '');
       const payload: PatientPayload = {
         name: values.name,
@@ -363,7 +418,18 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                 : {}),
             }),
       };
-      return patient ? patientsApi.update(patient.id, payload) : patientsApi.create(payload);
+      const saved = patient
+        ? await patientsApi.update(patient.id, payload)
+        : await patientsApi.create(payload);
+
+      const hadPhoto = !!(patient?.photoUrl || patient?.photoStorageKey);
+      if (photoRemoved && hadPhoto) {
+        await patientsApi.removePhoto(saved.id);
+      } else if (photoFile) {
+        await patientsApi.uploadPhoto(saved.id, photoFile);
+      }
+
+      return saved;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
@@ -481,6 +547,69 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
               <Stack spacing={1.5} divider={<Divider flexItem />} sx={{ flex: 1, minHeight: 0 }}>
                 <FieldGroup title="Identificação">
                   <Grid container spacing={1.25}>
+                    <Grid item xs={12}>
+                      <Stack
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={2}
+                        alignItems={{ xs: 'stretch', sm: 'center' }}
+                      >
+                        <Avatar
+                          src={avatarDisplaySrc}
+                          alt={nameWatched || 'Paciente'}
+                          sx={{
+                            width: 80,
+                            height: 80,
+                            mx: { xs: 'auto', sm: 0 },
+                            fontSize: '1.5rem',
+                            fontWeight: 700,
+                            bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
+                            color: 'primary.dark',
+                            border: 1,
+                            borderColor: 'divider',
+                          }}
+                        >
+                          {patientInitials(nameWatched || '?')}
+                        </Avatar>
+                        <Stack spacing={0.75} sx={{ flex: 1, minWidth: 0 }}>
+                          <input
+                            ref={photoInputRef}
+                            type="file"
+                            hidden
+                            accept={PATIENT_PHOTO_ACCEPT}
+                            onChange={handlePhotoSelect}
+                          />
+                          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<PhotoCameraOutlinedIcon />}
+                              onClick={() => photoInputRef.current?.click()}
+                              disabled={mutation.isPending}
+                            >
+                              {avatarDisplaySrc ? 'Alterar foto' : 'Adicionar foto'}
+                            </Button>
+                            {avatarDisplaySrc && (
+                              <Button
+                                size="small"
+                                color="inherit"
+                                onClick={handlePhotoRemove}
+                                disabled={mutation.isPending}
+                              >
+                                Remover
+                              </Button>
+                            )}
+                          </Stack>
+                          <Typography variant="caption" color="text.secondary">
+                            JPEG, PNG ou WebP — máximo 5 MB
+                          </Typography>
+                          {photoError && (
+                            <Typography variant="caption" color="error">
+                              {photoError}
+                            </Typography>
+                          )}
+                        </Stack>
+                      </Stack>
+                    </Grid>
                     <Grid item xs={12}>
                       <Controller
                         name="name"

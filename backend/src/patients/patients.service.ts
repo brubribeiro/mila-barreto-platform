@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { NotificationType } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
@@ -6,6 +6,10 @@ import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { composePatientAddress } from './patient-address.util';
 import { NotificationsService } from '../notifications/notifications.service';
+import { R2StorageService } from '../documents/r2-storage.service';
+
+const PATIENT_PHOTO_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const PATIENT_PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 
 const ADDRESS_STRING_FIELDS = [
   'addressStreet',
@@ -21,6 +25,7 @@ export class PatientsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly r2: R2StorageService,
   ) {}
 
   list(search?: string) {
@@ -267,8 +272,55 @@ export class PatientsService {
     };
   }
 
+  async uploadPhoto(id: string, file: Express.Multer.File) {
+    if (!this.r2.isConfigured) {
+      throw new BadRequestException(
+        'Cloudflare R2 não está configurado. Não é possível enviar a foto.',
+      );
+    }
+    if (!PATIENT_PHOTO_MIMES.has(file.mimetype)) {
+      throw new BadRequestException('Use uma imagem JPEG, PNG ou WebP.');
+    }
+    if (file.size > PATIENT_PHOTO_MAX_BYTES) {
+      throw new BadRequestException('A foto deve ter no máximo 5 MB.');
+    }
+
+    const patient = await this.findOne(id);
+    if (patient.photoStorageKey) {
+      await this.r2.remove(patient.photoStorageKey);
+    }
+
+    const ext =
+      file.mimetype === 'image/png' ? 'png' : file.mimetype === 'image/webp' ? 'webp' : 'jpg';
+    const { key, url } = await this.r2.upload(
+      `foto.${ext}`,
+      file.mimetype,
+      file.buffer,
+      `pacientes/${id}`,
+    );
+
+    return this.prisma.patient.update({
+      where: { id },
+      data: { photoStorageKey: key, photoUrl: url },
+    });
+  }
+
+  async removePhoto(id: string) {
+    const patient = await this.findOne(id);
+    if (patient.photoStorageKey) {
+      await this.r2.remove(patient.photoStorageKey);
+    }
+    return this.prisma.patient.update({
+      where: { id },
+      data: { photoStorageKey: null, photoUrl: null },
+    });
+  }
+
   async remove(id: string) {
-    await this.findOne(id);
+    const patient = await this.findOne(id);
+    if (patient.photoStorageKey) {
+      await this.r2.remove(patient.photoStorageKey);
+    }
     await this.prisma.patient.delete({ where: { id } });
     return { ok: true };
   }

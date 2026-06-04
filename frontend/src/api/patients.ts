@@ -49,6 +49,20 @@ export const patientsApi = {
   remove: async (id: string): Promise<void> => {
     await api.delete(`/patients/${id}`);
   },
+
+  uploadPhoto: async (id: string, file: File): Promise<Patient> => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const { data } = await api.post<Patient>(`/patients/${id}/photo`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+
+  removePhoto: async (id: string): Promise<Patient> => {
+    const { data } = await api.delete<Patient>(`/patients/${id}/photo`);
+    return data;
+  },
   getReliability: async (id: string): Promise<PatientReliability> => {
     const { data } = await api.get<PatientReliability>(`/patients/${id}/reliability`);
     return data;

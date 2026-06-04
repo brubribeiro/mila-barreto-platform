@@ -36,6 +36,7 @@ import { patientSexLabel } from '../../utils/patientSex';
 import { patientReferralSourceLabel } from '../../utils/patientReferralSource';
 import { maskCEP, maskPhone, onlyDigits } from '../../utils/masks';
 import type { Appointment, AppointmentKind } from '../../types';
+import { patientInitials } from '../../utils/patientPhoto';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -84,15 +85,6 @@ interface PatientDetailDrawerProps {
   onClose: () => void;
   defaultTab?: ChartTab;
   highlightAppointmentId?: string | null;
-}
-
-function patientInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('');
 }
 
 function patientAgeLabel(birthDate?: string | null) {
@@ -491,6 +483,8 @@ export function PatientDetailDrawer({
           <Box sx={{ px: { xs: 2, sm: 3 }, pb: 2 }}>
             <Stack direction="row" spacing={2} alignItems="flex-start">
               <Avatar
+                src={data.photoUrl ?? undefined}
+                alt={data.name}
                 sx={{
                   width: 64,
                   height: 64,
