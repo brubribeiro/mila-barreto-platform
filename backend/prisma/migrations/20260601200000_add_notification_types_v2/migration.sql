@@ -1,0 +1,4 @@
+-- Adiciona novos tipos de notificação ao enum
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'INVENTORY_EXPIRING';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'PATIENT_RETURN_DUE';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'PATIENT_REACTIVATION';
