@@ -1,0 +1,662 @@
+// Schema do banco - plataforma de gestão de clínica de estética
+// Tudo em PostgreSQL via Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =========================
+// CONFIGURAÇÕES DO SISTEMA (chave-valor)
+// =========================
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+// =========================
+// USUÁRIOS DO SISTEMA + GRUPOS (ROLES) CUSTOMIZÁVEIS
+// =========================
+
+// Grupo de permissões. Permissões são strings tipo "patients:view".
+// Roles com isSystem=true não podem ser excluídas (seed garante 1 admin sempre).
+model Role {
+  id                        String   @id @default(uuid())
+  name                      String   @unique
+  description               String?
+  permissions               String[]
+  isSystem                  Boolean  @default(false)
+  // Quando true, usuários desse grupo só veem/editam os próprios agendamentos.
+  restrictToOwnAppointments Boolean  @default(false)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  users User[]
+
+  @@map("roles")
+}
+
+model User {
+  id                   String   @id @default(uuid())
+  name                 String
+  email                String   @unique
+  password             String
+  roleId               String
+  active               Boolean  @default(true)
+  providesAppointments Boolean  @default(true) // false = não aparece em agendamentos (ex.: recepção)
+  isPrimary            Boolean  @default(false) // profissional principal (usado para cálculo de custo/hora)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  role                    Role                     @relation(fields: [roleId], references: [id])
+  appointments            Appointment[]            @relation("ProfessionalAppointments")
+  notifications           Notification[]
+  notificationPreferences NotificationPreference[]
+  workingHours            WorkingHours[]
+  unavailabilities        Unavailability[]
+
+  @@map("users")
+}
+
+// =========================
+// HORÁRIOS DE ATENDIMENTO E INDISPONIBILIDADE
+// =========================
+
+// Horário fixo semanal de atendimento por profissional.
+// dayOfWeek: 0 = domingo, 1 = segunda, ..., 6 = sábado.
+model WorkingHours {
+  id        String @id @default(uuid())
+  userId    String
+  dayOfWeek Int // 0..6
+  startTime String // "08:00"
+  endTime   String // "18:00"
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dayOfWeek])
+  @@map("working_hours")
+}
+
+// Bloqueios pontuais de agenda: férias, folga, compromisso, etc.
+model Unavailability {
+  id        String   @id @default(uuid())
+  userId    String
+  startAt   DateTime
+  endAt     DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startAt, endAt])
+  @@map("unavailabilities")
+}
+
+// =========================
+// EQUIPAMENTOS / MÁQUINAS
+// =========================
+model Equipment {
+  id                          String    @id @default(uuid())
+  name                        String
+  brand                       String?
+  model                       String?
+  serialNumber                String?
+  purchaseDate                DateTime?
+  // Valor de aquisição da máquina
+  purchaseValue               Decimal?  @db.Decimal(10, 2)
+  // Valor estimado de cada manutenção
+  maintenanceValue            Decimal?  @db.Decimal(10, 2)
+  // Intervalo padrão entre manutenções (em meses). Null = sem agendamento periódico.
+  maintenanceIntervalMonths   Int?
+  // Quantos dias antes da manutenção o sistema deve notificar
+  maintenanceNotifyDaysBefore Int?
+  lastMaintenanceAt           DateTime?
+  // Próxima manutenção sugerida (gerada a partir de lastMaintenanceAt + intervalo)
+  nextMaintenanceAt           DateTime?
+  // Data agendada para a próxima manutenção (definida manualmente pelo usuário)
+  scheduledMaintenanceAt      DateTime?
+  notes                       String?
+  active                      Boolean   @default(true)
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+
+  documents        Document[]
+  financialEntries FinancialEntry[]
+
+  @@map("equipment")
+}
+
+// =========================
+// DOCUMENTOS (contratos, vigilância, certificados)
+// =========================
+model Document {
+  id           String   @id @default(uuid())
+  name         String
+  category     String? // "contrato", "vigilancia", "certificado", "livre"
+  storageKey   String? @map("driveFileId") // chave no Cloudflare R2
+  fileUrl      String? @map("driveViewUrl") // URL pública do arquivo
+  mimeType     String?
+  size         Int? // bytes
+  notes        String?
+  // Vínculo opcional com paciente ou equipamento
+  patientId    String?
+  equipmentId  String?
+  createdAt    DateTime @default(now())
+
+  patient   Patient?   @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  equipment Equipment? @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+
+  @@index([patientId])
+  @@index([equipmentId])
+  @@map("documents")
+}
+
+// =========================
+// MODELOS DE MENSAGEM (WhatsApp / e-mail)
+// =========================
+
+// Templates reutilizáveis para envio de mensagens.
+// Suporta variáveis no formato {paciente_nome}, {data}, {hora}, {procedimento}, {profissional}.
+model MessageTemplate {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  category    String? // "confirmacao", "lembrete", "retorno", "aniversario", "livre"
+  content     String
+  procedureId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  procedure Procedure? @relation(fields: [procedureId], references: [id], onDelete: SetNull)
+
+  @@map("message_templates")
+}
+
+// =========================
+// NOTIFICAÇÕES
+// =========================
+enum NotificationType {
+  APPOINTMENT_CREATED
+  APPOINTMENT_CANCELLED
+  INVENTORY_LOW_STOCK
+  INVENTORY_EXPIRING
+  PATIENT_CREATED
+  PATIENT_RETURN_DUE
+  PATIENT_REACTIVATION
+  USER_CREATED
+  EQUIPMENT_MAINTENANCE
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  link      String? // ex: "/agenda/abc-123" para navegação ao clicar
+  read      Boolean          @default(false)
+  readAt    DateTime?
+  metadata  Json? // dados auxiliares (ex: appointmentId)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// Preferência por usuário e tipo. Default (quando não existe registro) = habilitado.
+model NotificationPreference {
+  id      String           @id @default(uuid())
+  userId  String
+  type    NotificationType
+  enabled Boolean          @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@map("notification_preferences")
+}
+
+// =========================
+// PACIENTES
+// =========================
+model Patient {
+  id        String    @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  birthDate DateTime?
+  sex       String? // "M" ou "F"
+  document  String? // CPF
+  cep                 String? // apenas dígitos persistidos pela API/front
+  addressStreet       String?
+  addressNeighborhood String?
+  addressCity         String?
+  addressState        String? // UF
+  addressNumber       String?
+  addressComplement   String?
+  address             String? // resumo legível (composto na API)
+  notes               String? // observações gerais
+  anamnesis Json? // anamnese estruturada
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  appointments     Appointment[]
+  financialEntries FinancialEntry[]
+  documents        Document[]
+  packages         PatientPackage[]
+
+  @@map("patients")
+}
+
+// =========================
+// PROCEDIMENTOS / SERVIÇOS
+// =========================
+model Procedure {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  durationMinutes Int      @default(60)
+  price           Decimal  @db.Decimal(10, 2)
+  active          Boolean  @default(true)
+  // Intervalo sugerido (em dias) para retorno do paciente. Null = sem retorno automático.
+  recurrenceDays  Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  appointments     Appointment[]
+  materials        ProcedureMaterial[]
+  messageTemplates MessageTemplate[]
+  packageItems     PackageItem[]
+  promotions       PromotionProcedure[]
+
+  @@map("procedures")
+}
+
+// Materiais necessários para realizar um procedimento.
+// Quando um agendamento ativo é criado, esses itens são deduzidos do estoque;
+// quando cancelado/marcado como faltou, são devolvidos.
+model ProcedureMaterial {
+  id          String  @id @default(uuid())
+  procedureId String
+  itemId      String
+  // Permite frações (ex: 0.5ml de hialurônico, 2.5g de pomada)
+  quantity    Decimal @db.Decimal(12, 3)
+
+  procedure Procedure     @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@unique([procedureId, itemId])
+  @@map("procedure_materials")
+}
+
+// =========================
+// PACOTES DE PROCEDIMENTOS
+// =========================
+
+enum PackageType {
+  COMBO // vários procedimentos diferentes
+  SESSIONS // X sessões do mesmo procedimento
+}
+
+enum PatientPackageStatus {
+  ACTIVE
+  COMPLETED
+  EXPIRED
+  CANCELLED
+}
+
+// Template/catálogo de pacote — define o que o pacote contém e condições.
+model Package {
+  id              String      @id @default(uuid())
+  name            String
+  description     String?
+  type            PackageType
+  // Preço fixo do pacote (quando definido, ignora soma dos procedimentos)
+  totalPrice      Decimal?    @db.Decimal(10, 2)
+  // Desconto percentual sobre a soma dos procedimentos (alternativo ao totalPrice)
+  discountPercent Decimal?    @db.Decimal(5, 2)
+  // Validade em dias a partir da compra. Null = sem expiração.
+  validityDays    Int?
+  // Total de sessões (para SESSIONS: quantidade; para COMBO: soma dos items.quantity)
+  sessionCount    Int         @default(1)
+  active          Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  items           PackageItem[]
+  patientPackages PatientPackage[]
+  promotions      PromotionPackage[]
+
+  @@map("packages")
+}
+
+// Procedimentos que compõem o pacote.
+model PackageItem {
+  id          String @id @default(uuid())
+  packageId   String
+  procedureId String
+  // Quantidade de sessões deste procedimento dentro do pacote
+  quantity    Int    @default(1)
+  // Ordem de exibição / execução sugerida
+  sortOrder   Int    @default(0)
+
+  package   Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  procedure Procedure @relation(fields: [procedureId], references: [id], onDelete: Restrict)
+
+  @@unique([packageId, procedureId])
+  @@map("package_items")
+}
+
+// Vínculo de um pacote com um paciente (a "venda" / ativação).
+model PatientPackage {
+  id            String               @id @default(uuid())
+  patientId     String
+  packageId     String
+  status        PatientPackageStatus @default(ACTIVE)
+  // Preço efetivamente pago
+  totalPaid     Decimal              @db.Decimal(10, 2)
+  paymentMethod String?
+  purchaseDate  DateTime             @default(now())
+  // Data de expiração (calculada: purchaseDate + package.validityDays)
+  expiresAt     DateTime?
+  // Controle de sessões consumidas
+  sessionsTotal Int
+  sessionsUsed  Int                  @default(0)
+  notes         String?
+  // Receita do pacote já lançada no financeiro (antecipada ou no 1º atendimento concluído)
+  financeGenerated Boolean           @default(false)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  package      Package       @relation(fields: [packageId], references: [id])
+  appointments Appointment[]
+
+  @@index([patientId])
+  @@index([status])
+  @@map("patient_packages")
+}
+
+// =========================
+// PROMOÇÕES
+// =========================
+
+enum DiscountType {
+  PERCENTAGE // desconto em percentual
+  FIXED // desconto em valor fixo (R$)
+}
+
+// Promoção vinculada a datas comemorativas, procedimentos e/ou pacotes.
+// Quando ativa e dentro do período, o desconto é aplicado automaticamente
+// no lançamento financeiro ao completar um agendamento.
+model Promotion {
+  id                String       @id @default(uuid())
+  name              String
+  description       String?
+  // Data comemorativa associada (ex: "Dia das Mães", "Black Friday")
+  commemorativeDate String?
+  startAt           DateTime
+  endAt             DateTime
+  discountType      DiscountType
+  // Valor do desconto: percentual (0-100) ou valor fixo em R$
+  discountValue     Decimal      @db.Decimal(10, 2)
+  active            Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  procedures   PromotionProcedure[]
+  packages     PromotionPackage[]
+  appointments Appointment[]
+
+  @@index([startAt, endAt])
+  @@index([active])
+  @@map("promotions")
+}
+
+// Procedimentos participantes da promoção
+model PromotionProcedure {
+  id          String @id @default(uuid())
+  promotionId String
+  procedureId String
+
+  promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  procedure Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+
+  @@unique([promotionId, procedureId])
+  @@map("promotion_procedures")
+}
+
+// Pacotes participantes da promoção
+model PromotionPackage {
+  id          String @id @default(uuid())
+  promotionId String
+  packageId   String
+
+  promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  package   Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([promotionId, packageId])
+  @@map("promotion_packages")
+}
+
+// =========================
+// AGENDAMENTOS
+// =========================
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum AppointmentKind {
+  EVALUATION // avaliação inicial
+  PROCEDURE // realização do procedimento
+  RETURN // retorno
+}
+
+model Appointment {
+  id                String            @id @default(uuid())
+  patientId         String
+  // Procedimento é opcional para Avaliação/Retorno (mas obrigatório quando kind = PROCEDURE)
+  procedureId       String?
+  professionalId    String
+  startAt           DateTime
+  endAt             DateTime
+  status            AppointmentStatus @default(SCHEDULED)
+  kind              AppointmentKind   @default(PROCEDURE)
+  notes             String?
+  clinicalNotes     String?
+  // Controle de tempo real de atendimento
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  materialsDeducted Boolean           @default(false)
+  financeGenerated  Boolean           @default(false)
+  // Vínculo opcional com pacote do paciente (sessão consumida do pacote)
+  patientPackageId  String?
+  // Promoção aplicada automaticamente (se houver)
+  promotionId       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  patient        Patient         @relation(fields: [patientId], references: [id])
+  procedure      Procedure?      @relation(fields: [procedureId], references: [id])
+  professional   User            @relation("ProfessionalAppointments", fields: [professionalId], references: [id])
+  patientPackage PatientPackage? @relation(fields: [patientPackageId], references: [id])
+  promotion      Promotion?      @relation(fields: [promotionId], references: [id])
+
+  financialEntries FinancialEntry[]
+  extraMaterials   AppointmentMaterial[]
+
+  @@index([startAt])
+  @@index([patientId])
+  @@index([patientPackageId])
+  @@map("appointments")
+}
+
+// Materiais extras utilizados em um agendamento específico (além do previsto no procedimento).
+model AppointmentMaterial {
+  id            String  @id @default(uuid())
+  appointmentId String
+  itemId        String
+  quantity      Decimal @db.Decimal(12, 3)
+
+  appointment Appointment   @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  item        InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@unique([appointmentId, itemId])
+  @@map("appointment_materials")
+}
+
+// =========================
+// FINANCEIRO
+// =========================
+enum FinancialType {
+  INCOME
+  EXPENSE
+}
+
+// Formas de pagamento cadastráveis, com taxa da maquininha (feePercent).
+// O valor líquido (netAmount) é calculado automaticamente ao gerar lançamento.
+model PaymentMethod {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  // Taxa percentual cobrada pela operadora/maquininha (0 = sem taxa, ex: dinheiro/PIX)
+  feePercent Decimal  @default(0) @db.Decimal(5, 2)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  financialEntries FinancialEntry[]
+
+  @@map("payment_methods")
+}
+
+// Classifica despesas: fixas (aluguel, internet) vs variáveis (compra de material, taxa cartão)
+enum ExpenseType {
+  FIXED
+  VARIABLE
+}
+
+model FinancialEntry {
+  id                 String        @id @default(uuid())
+  type               FinancialType
+  description        String
+  // Valor bruto do serviço/despesa
+  amount             Decimal       @db.Decimal(10, 2)
+  // Valor líquido após desconto da taxa da forma de pagamento
+  netAmount          Decimal?      @db.Decimal(10, 2)
+  // Taxa percentual aplicada (snapshot no momento do lançamento)
+  feePercent         Decimal?      @db.Decimal(5, 2)
+  paymentMethodId    String?
+  category           String?
+  paidAt             DateTime?
+  dueDate            DateTime?
+  patientId          String?
+  appointmentId      String?
+  equipmentId        String?
+  recurringExpenseId String?
+  invoiceIssued      Boolean       @default(false)
+  invoiceIssuedAt    DateTime?
+  // Classificação de despesas (FIXED/VARIABLE). Nulo para receitas.
+  expenseType        ExpenseType?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  patient          Patient?          @relation(fields: [patientId], references: [id])
+  appointment      Appointment?      @relation(fields: [appointmentId], references: [id])
+  equipment        Equipment?        @relation(fields: [equipmentId], references: [id])
+  recurringExpense RecurringExpense? @relation(fields: [recurringExpenseId], references: [id])
+  paymentMethod    PaymentMethod?    @relation(fields: [paymentMethodId], references: [id])
+
+  @@index([paidAt])
+  @@index([appointmentId])
+  @@index([equipmentId])
+  @@index([recurringExpenseId])
+  @@index([paymentMethodId])
+  @@map("financial_entries")
+}
+
+// =========================
+// DESPESAS RECORRENTES
+// =========================
+
+// Cadastro de despesas que se repetem mensalmente (aluguel, internet, seguro, etc.)
+// O sistema gera automaticamente um FinancialEntry para cada mês.
+model RecurringExpense {
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  amount      Decimal     @db.Decimal(10, 2)
+  category    String?
+  expenseType ExpenseType @default(FIXED)
+  // Dia do mês em que a despesa vence (1-31). Se o mês não tem esse dia, usa o último dia.
+  dueDay      Int         @default(1)
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  generatedEntries FinancialEntry[]
+
+  @@map("recurring_expenses")
+}
+
+// =========================
+// ESTOQUE
+// =========================
+model InventoryItem {
+  id                     String    @id @default(uuid())
+  name                   String
+  sku                    String?   @unique
+  description            String?
+  // Quantidades agora aceitam fracionados (ex: 5.5 ml restantes de um pote de 100ml)
+  quantity               Decimal   @default(0) @db.Decimal(12, 3)
+  minQuantity            Decimal   @default(0) @db.Decimal(12, 3)
+  unit                   String? // "ml", "un", "g"
+  costPrice              Decimal?  @db.Decimal(10, 2)
+  expiresAt              DateTime?
+  // Quantos dias antes da validade o sistema deve notificar. Null = sem notificação.
+  expiryNotifyDaysBefore Int?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  movements         InventoryMovement[]
+  procedureUsages   ProcedureMaterial[]
+  appointmentUsages AppointmentMaterial[]
+
+  @@map("inventory_items")
+}
+
+enum MovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+model InventoryMovement {
+  id        String       @id @default(uuid())
+  itemId    String
+  type      MovementType
+  quantity  Decimal      @db.Decimal(12, 3)
+  reason    String?
+  // Data de validade do lote. Obrigatória para entradas (IN), pois lotes diferentes
+  // do mesmo item podem ter validades distintas.
+  expiresAt DateTime?
+  createdAt DateTime     @default(now())
+
+  item InventoryItem @relation(fields: [itemId], references: [id])
+
+  @@index([itemId])
+  @@map("inventory_movements")
+}
