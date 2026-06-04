@@ -357,6 +357,7 @@ export function AppointmentFormDialog({
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [batchPatientPkg, setBatchPatientPkg] = useState<PatientPackage | null>(null);
   const [batchCreating, setBatchCreating] = useState(false);
+  const [batchSessions, setBatchSessions] = useState<{ date: string; startTime: string }[]>([]);
 
   // Pacotes ativos do paciente
   const { data: activePatientPackages = [] } = useQuery({
@@ -381,6 +382,23 @@ export function AppointmentFormDialog({
   });
 
   const recurrenceEarliestDate = recurrenceLimit?.earliestDate ?? null;
+
+  // Inicializar sessões editáveis quando o dialog de lote abre
+  useEffect(() => {
+    if (!batchDialogOpen || !batchPatientPkg || !selectedProcedure?.recurrenceDays) {
+      return;
+    }
+    const remaining = batchPatientPkg.sessionsTotal - batchPatientPkg.sessionsUsed;
+    const baseDate = dayjs(`${selectedDate}T${selectedStartTime}`);
+    const sessions = Array.from({ length: remaining }, (_, i) => {
+      const sessionDate = baseDate.add(i * selectedProcedure.recurrenceDays!, 'day');
+      return {
+        date: sessionDate.format('YYYY-MM-DD'),
+        startTime: sessionDate.format('HH:mm'),
+      };
+    });
+    setBatchSessions(sessions);
+  }, [batchDialogOpen, batchPatientPkg, selectedProcedure?.recurrenceDays, selectedDate, selectedStartTime]);
 
   // Pacotes do catálogo que contêm o procedimento selecionado
   const { data: allCatalogPackages = [] } = useQuery({
@@ -2391,33 +2409,50 @@ export function AppointmentFormDialog({
                   </Typography>
 
                   <Typography variant="overline" color="text.secondary">
-                    Sessões que serão agendadas:
+                    Sessões que serão agendadas (altere data/horário se precisar):
                   </Typography>
-                  <List dense disablePadding sx={{ maxHeight: 240, overflow: 'auto' }}>
-                    {Array.from(
-                      { length: batchPatientPkg.sessionsTotal - batchPatientPkg.sessionsUsed },
-                      (_, i) => {
-                        const baseDate = dayjs(`${selectedDate}T${selectedStartTime}`);
-                        const sessionDate = baseDate.add(
-                          i * (selectedProcedure.recurrenceDays ?? 7),
-                          'day',
-                        );
-                        return (
-                          <ListItem key={i} disableGutters sx={{ py: 0.5 }}>
-                            <ListItemText
-                              primary={
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                  <Chip size="small" label={`${i + 1}ª`} color="primary" variant="outlined" />
-                                  <Typography variant="body2">
-                                    {sessionDate.format('dddd, DD/MM/YYYY [às] HH:mm')}
-                                  </Typography>
-                                </Stack>
-                              }
-                            />
-                          </ListItem>
-                        );
-                      },
-                    )}
+                  <List dense disablePadding sx={{ maxHeight: 320, overflow: 'auto' }}>
+                    {batchSessions.map((session, i) => (
+                      <ListItem key={i} disableGutters sx={{ py: 0.75 }}>
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
+                          <Chip
+                            size="small"
+                            label={`${i + 1}ª`}
+                            color="primary"
+                            variant="outlined"
+                            sx={{ minWidth: 36 }}
+                          />
+                          <TextField
+                            type="date"
+                            size="small"
+                            value={session.date}
+                            onChange={(e) =>
+                              setBatchSessions((prev) =>
+                                prev.map((s, idx) =>
+                                  idx === i ? { ...s, date: e.target.value } : s,
+                                ),
+                              )
+                            }
+                            InputLabelProps={{ shrink: true }}
+                            sx={{ flex: 1, minWidth: 130 }}
+                          />
+                          <TextField
+                            type="time"
+                            size="small"
+                            value={session.startTime}
+                            onChange={(e) =>
+                              setBatchSessions((prev) =>
+                                prev.map((s, idx) =>
+                                  idx === i ? { ...s, startTime: e.target.value } : s,
+                                ),
+                              )
+                            }
+                            InputLabelProps={{ shrink: true }}
+                            sx={{ width: 110 }}
+                          />
+                        </Stack>
+                      </ListItem>
+                    ))}
                   </List>
                 </>
               ) : (
@@ -2446,16 +2481,13 @@ export function AppointmentFormDialog({
               if (!batchPatientPkg || !selectedProcedure?.recurrenceDays) return;
               setBatchCreating(true);
               try {
-                const remaining = batchPatientPkg.sessionsTotal - batchPatientPkg.sessionsUsed;
-                const baseDate = dayjs(`${selectedDate}T${selectedStartTime}`);
+                const remaining = batchSessions.length;
                 const duration = selectedProcedure.durationMinutes;
                 const professionalId = selectedProfessionalId;
 
                 for (let i = 0; i < remaining; i++) {
-                  const sessionStart = baseDate.add(
-                    i * selectedProcedure.recurrenceDays,
-                    'day',
-                  );
+                  const session = batchSessions[i];
+                  const sessionStart = dayjs(`${session.date}T${session.startTime}`);
                   const sessionEnd = sessionStart.add(duration, 'minute');
 
                   await appointmentsApi.create({
@@ -2488,7 +2520,7 @@ export function AppointmentFormDialog({
               }
             }}
           >
-            {batchCreating ? 'Agendando...' : `Agendar ${batchPatientPkg ? batchPatientPkg.sessionsTotal - batchPatientPkg.sessionsUsed : 0} sessões`}
+            {batchCreating ? 'Agendando...' : `Agendar ${batchSessions.length} sessões`}
           </Button>
         </DialogActions>
       </Dialog>
