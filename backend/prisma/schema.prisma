@@ -245,6 +245,8 @@ model Patient {
   addressComplement   String?
   address             String? // resumo legível (composto na API)
   notes               String? // observações gerais
+  referralSource      String? // INSTAGRAM | REFERRAL | GOOGLE | LOCATION | OTHER
+  referralSourceOther String? // detalhe quando referralSource = OTHER
   anamnesis Json? // anamnese estruturada
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

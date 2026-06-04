@@ -45,6 +45,13 @@ export interface UserSummary {
 /** M = masculino, F = feminino */
 export type PatientSex = 'M' | 'F';
 
+export type PatientReferralSource =
+  | 'INSTAGRAM'
+  | 'REFERRAL'
+  | 'GOOGLE'
+  | 'LOCATION'
+  | 'OTHER';
+
 export interface Patient {
   id: string;
   name: string;
@@ -62,6 +69,8 @@ export interface Patient {
   addressComplement?: string | null;
   address?: string;
   notes?: string;
+  referralSource?: PatientReferralSource | null;
+  referralSourceOther?: string | null;
   createdAt: string;
 }
 

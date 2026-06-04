@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Patient, Appointment, PatientSex } from '../types';
+import type { Patient, Appointment, PatientSex, PatientReferralSource } from '../types';
 
 export interface PatientPayload {
   name: string;
@@ -19,6 +19,9 @@ export interface PatientPayload {
   addressComplement?: string;
   address?: string;
   notes?: string;
+  /** string vazia limpa ao editar */
+  referralSource?: PatientReferralSource | '';
+  referralSourceOther?: string;
   anamnesis?: Record<string, any>;
 }
 

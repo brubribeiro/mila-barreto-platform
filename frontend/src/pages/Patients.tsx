@@ -30,6 +30,7 @@ import { usePermissions } from '../contexts/usePermissions';
 import { maskCPF, maskPhone } from '../utils/masks';
 import { formatDateOnlyFromApi } from '../utils/dateOnly';
 import { patientSexLabel } from '../utils/patientSex';
+import { patientReferralSourceLabel } from '../utils/patientReferralSource';
 import type { Patient } from '../types';
 
 export function Patients() {
@@ -103,6 +104,14 @@ export function Patients() {
         flex: 0.45,
         minWidth: 110,
         valueGetter: (params) => patientSexLabel(params.row.sex),
+      },
+      {
+        field: 'referralSource',
+        headerName: 'Como conheceu',
+        flex: 0.7,
+        minWidth: 140,
+        valueGetter: (params) =>
+          patientReferralSourceLabel(params.row.referralSource, params.row.referralSourceOther),
       },
       {
         field: 'cep',

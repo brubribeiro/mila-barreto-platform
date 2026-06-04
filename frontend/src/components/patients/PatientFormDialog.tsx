@@ -41,10 +41,11 @@ import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { patientsApi, PatientPayload } from '../../api/patients';
-import type { Patient, PatientSex } from '../../types';
+import type { Patient, PatientSex, PatientReferralSource } from '../../types';
 import { isValidCPF, maskCPF, maskCEP, maskPhone, onlyDigits } from '../../utils/masks';
 import { birthDatePayloadFromInput, dateInputValueFromApi } from '../../utils/dateOnly';
 import { PATIENT_SEX_OPTIONS } from '../../utils/patientSex';
+import { PATIENT_REFERRAL_SOURCE_OPTIONS } from '../../utils/patientReferralSource';
 import {
   applyViaCepToAddressFields,
   clearViaCepAddressFields,
@@ -80,9 +81,11 @@ const empty: FormValues = {
   addressNumber: '',
   addressComplement: '',
   notes: '',
+  referralSource: '',
+  referralSourceOther: '',
 };
 
-const DIALOG_HEIGHT_DESKTOP = 880;
+const DIALOG_HEIGHT_DESKTOP = 840;
 
 const AUTOFILL_WHITE = {
   '& input:-webkit-autofill': {
@@ -169,7 +172,7 @@ function FieldsCard({ children }: { children: ReactNode }) {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        p: { xs: 2, sm: 2.5 },
+        p: { xs: 1.5, sm: 2 },
         bgcolor: '#fff',
         borderColor: 'divider',
         borderRadius: 2,
@@ -188,7 +191,7 @@ function FieldGroup({ title, children }: { title: string; children: ReactNode })
       <Typography
         variant="overline"
         color="text.secondary"
-        sx={{ display: 'block', mb: 1, letterSpacing: '0.06em' }}
+        sx={{ display: 'block', mb: 0.75, letterSpacing: '0.06em' }}
       >
         {title}
       </Typography>
@@ -205,6 +208,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
     defaultValues: empty,
   });
   const cepWatched = watch('cep');
+  const referralSourceWatched = watch('referralSource');
 
   const [tab, setTab] = useState<PatientFormTab>('basic');
   const suppressNextFullCepLookup = useRef(false);
@@ -231,6 +235,8 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
               addressNumber: patient.addressNumber ?? '',
               addressComplement: patient.addressComplement ?? '',
               notes: patient.notes ?? '',
+              referralSource: patient.referralSource ?? '',
+              referralSourceOther: patient.referralSourceOther ?? '',
             }
           : empty,
       );
@@ -316,6 +322,17 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
         ...(patient || values.sex ? { sex: (values.sex as PatientSex | '') || '' } : {}),
         ...(values.document ? { document: onlyDigits(values.document) } : {}),
         ...(values.notes ? { notes: values.notes } : {}),
+        ...(patient || values.referralSource
+          ? { referralSource: (values.referralSource as PatientReferralSource | '') || '' }
+          : {}),
+        ...(patient || values.referralSourceOther !== undefined
+          ? {
+              referralSourceOther:
+                values.referralSource === 'OTHER'
+                  ? values.referralSourceOther?.trim() ?? ''
+                  : '',
+            }
+          : {}),
         ...(patient
           ? {
               cep: cepDigits.length === 8 ? cepDigits : '',
@@ -378,7 +395,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
           overflow: 'hidden',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
-            : { height: DIALOG_HEIGHT_DESKTOP, maxHeight: '92vh' }),
+            : { height: DIALOG_HEIGHT_DESKTOP, maxHeight: '94vh' }),
         },
       }}
     >
@@ -461,339 +478,411 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
           <Box sx={{ position: 'relative', flex: 1, minHeight: 0 }}>
           <TabPanel active={tab === 'basic'}>
             <FieldsCard>
-            <Stack spacing={2} divider={<Divider flexItem />} sx={{ flex: 1, minHeight: 0 }}>
-              <FieldGroup title="Identificação">
-                <Grid container spacing={1.5}>
-                  <Grid item xs={12}>
-                    <Controller
-                      name="name"
-                      control={control}
-                      rules={{ required: 'Nome é obrigatório' }}
-                      render={({ field, fieldState }) => (
-                        <TextField
-                          {...field}
-                          label="Nome completo"
-                          fullWidth
-                          required
-                          sx={FIELD_SX}
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <PersonOutlineIcon fontSize="small" color="action" />
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Controller
-                      name="birthDate"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          type="date"
-                          label="Nascimento"
-                          fullWidth
-                          sx={FIELD_SX}
-                          InputLabelProps={{ shrink: true }}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <CakeOutlinedIcon fontSize="small" color="action" />
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Controller
-                      name="sex"
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl fullWidth sx={FIELD_SX}>
-                          <InputLabel id="patient-sex-label" shrink>
-                            Sexo
-                          </InputLabel>
-                          <Select
+              <Stack spacing={1.5} divider={<Divider flexItem />} sx={{ flex: 1, minHeight: 0 }}>
+                <FieldGroup title="Identificação">
+                  <Grid container spacing={1.25}>
+                    <Grid item xs={12}>
+                      <Controller
+                        name="name"
+                        control={control}
+                        rules={{ required: 'Nome é obrigatório' }}
+                        render={({ field, fieldState }) => (
+                          <TextField
                             {...field}
-                            labelId="patient-sex-label"
-                            label="Sexo"
-                            displayEmpty
-                            value={field.value ?? ''}
-                            input={
-                              <OutlinedInput
-                                label="Sexo"
-                                notched
-                                startAdornment={
-                                  <InputAdornment position="start">
-                                    <WcOutlinedIcon fontSize="small" color="action" />
-                                  </InputAdornment>
-                                }
-                              />
-                            }
-                          >
-                            <MenuItem value="">
-                              <em>Não informado</em>
-                            </MenuItem>
-                            {PATIENT_SEX_OPTIONS.map((opt) => (
-                              <MenuItem key={opt.value} value={opt.value}>
-                                {opt.label}
+                            label="Nome completo"
+                            fullWidth
+                            required
+                            size="small"
+                            sx={FIELD_SX}
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <PersonOutlineIcon fontSize="small" color="action" />
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Controller
+                        name="birthDate"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            type="date"
+                            label="Nascimento"
+                            fullWidth
+                            size="small"
+                            sx={FIELD_SX}
+                            InputLabelProps={{ shrink: true }}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <CakeOutlinedIcon fontSize="small" color="action" />
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Controller
+                        name="sex"
+                        control={control}
+                        render={({ field }) => (
+                          <FormControl fullWidth size="small" sx={FIELD_SX}>
+                            <InputLabel id="patient-sex-label" shrink>
+                              Sexo
+                            </InputLabel>
+                            <Select
+                              {...field}
+                              labelId="patient-sex-label"
+                              label="Sexo"
+                              displayEmpty
+                              value={field.value ?? ''}
+                              input={
+                                <OutlinedInput
+                                  label="Sexo"
+                                  notched
+                                  startAdornment={
+                                    <InputAdornment position="start">
+                                      <WcOutlinedIcon fontSize="small" color="action" />
+                                    </InputAdornment>
+                                  }
+                                />
+                              }
+                            >
+                              <MenuItem value="">
+                                <em>Não informado</em>
                               </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      )}
-                    />
+                              {PATIENT_SEX_OPTIONS.map((opt) => (
+                                <MenuItem key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Controller
+                        name="document"
+                        control={control}
+                        rules={{
+                          validate: (v) => !v || isValidCPF(v) || 'CPF inválido',
+                        }}
+                        render={({ field, fieldState }) => (
+                          <TextField
+                            {...field}
+                            label="CPF"
+                            fullWidth
+                            size="small"
+                            sx={FIELD_SX}
+                            placeholder="000.000.000-00"
+                            onChange={(e) => field.onChange(maskCPF(e.target.value))}
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                            inputProps={{ inputMode: 'numeric', maxLength: 14 }}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <BadgeOutlinedIcon fontSize="small" color="action" />
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        )}
+                      />
+                    </Grid>
                   </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Controller
-                      name="document"
-                      control={control}
-                      rules={{
-                        validate: (v) => !v || isValidCPF(v) || 'CPF inválido',
-                      }}
-                      render={({ field, fieldState }) => (
-                        <TextField
-                          {...field}
-                          label="CPF"
-                          fullWidth
-                          sx={FIELD_SX}
-                          placeholder="000.000.000-00"
-                          onChange={(e) => field.onChange(maskCPF(e.target.value))}
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                          inputProps={{ inputMode: 'numeric', maxLength: 14 }}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <BadgeOutlinedIcon fontSize="small" color="action" />
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
-                      )}
-                    />
-                  </Grid>
-                </Grid>
-              </FieldGroup>
+                </FieldGroup>
 
-              <FieldGroup title="Contato">
-                <Grid container spacing={1.5}>
-                  <Grid item xs={12} sm={6}>
-                    <Controller
-                      name="phone"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Telefone"
-                          fullWidth
-                          sx={FIELD_SX}
-                          placeholder="(11) 99999-0000"
-                          onChange={(e) => field.onChange(maskPhone(e.target.value))}
-                          inputProps={{ inputMode: 'numeric', maxLength: 16 }}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <PhoneOutlinedIcon fontSize="small" color="action" />
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
-                      )}
-                    />
+                <FieldGroup title="Contato">
+                  <Grid container spacing={1.25}>
+                    <Grid item xs={12} sm={6}>
+                      <Controller
+                        name="phone"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Telefone"
+                            fullWidth
+                            size="small"
+                            sx={FIELD_SX}
+                            placeholder="(11) 99999-0000"
+                            onChange={(e) => field.onChange(maskPhone(e.target.value))}
+                            inputProps={{ inputMode: 'numeric', maxLength: 16 }}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <PhoneOutlinedIcon fontSize="small" color="action" />
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Controller
+                        name="email"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="E-mail"
+                            type="email"
+                            fullWidth
+                            size="small"
+                            sx={FIELD_SX}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <EmailOutlinedIcon fontSize="small" color="action" />
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        )}
+                      />
+                    </Grid>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Controller
-                      name="email"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="E-mail"
-                          type="email"
-                          fullWidth
-                          sx={FIELD_SX}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <EmailOutlinedIcon fontSize="small" color="action" />
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
-                      )}
-                    />
-                  </Grid>
-                </Grid>
-              </FieldGroup>
+                </FieldGroup>
 
-              <FieldGroup title="Endereço">
-                <Grid container spacing={1.5}>
-                  <Grid item xs={12} sm={4}>
-                    <Controller
-                      name="cep"
-                      control={control}
-                      rules={{
-                        validate: (v) =>
-                          !v ||
-                          onlyDigits(v).length === 0 ||
-                          onlyDigits(v).length === 8 ||
-                          'CEP deve ter 8 dígitos',
-                      }}
-                      render={({ field, fieldState }) => (
-                        <TextField
-                          {...field}
-                          label="CEP"
-                          fullWidth
-                          sx={FIELD_SX}
-                          placeholder="00000-000"
-                          onChange={(e) => field.onChange(maskCEP(e.target.value))}
-                          error={!!fieldState.error || cepStatus.error}
-                          helperText={fieldState.error?.message}
-                          FormHelperTextProps={{ sx: { whiteSpace: 'nowrap', m: 0 } }}
-                          disabled={mutation.isPending}
-                          inputProps={{ inputMode: 'numeric', maxLength: 9 }}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <LocationOnOutlinedIcon fontSize="small" color="action" />
-                              </InputAdornment>
-                            ),
-                            endAdornment: cepStatus.loading ? (
-                              <InputAdornment position="end">
-                                <CircularProgress color="inherit" size={18} />
-                              </InputAdornment>
-                            ) : undefined,
+                <FieldGroup title="Como conheceu a clínica">
+                  <Grid container spacing={1.25}>
+                    <Grid item xs={12} sm={referralSourceWatched === 'OTHER' ? 6 : 12}>
+                      <Controller
+                        name="referralSource"
+                        control={control}
+                        render={({ field }) => (
+                          <FormControl fullWidth size="small" sx={FIELD_SX}>
+                            <InputLabel id="patient-referral-label" shrink>
+                              Origem
+                            </InputLabel>
+                            <Select
+                              {...field}
+                              labelId="patient-referral-label"
+                              label="Origem"
+                              displayEmpty
+                              value={field.value ?? ''}
+                            >
+                              <MenuItem value="">
+                                <em>Não informado</em>
+                              </MenuItem>
+                              {PATIENT_REFERRAL_SOURCE_OPTIONS.map((opt) => (
+                                <MenuItem key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        )}
+                      />
+                    </Grid>
+                    {referralSourceWatched === 'OTHER' && (
+                      <Grid item xs={12} sm={6}>
+                        <Controller
+                          name="referralSourceOther"
+                          control={control}
+                          rules={{
+                            validate: (v) =>
+                              referralSourceWatched !== 'OTHER' ||
+                              !!v?.trim() ||
+                              'Informe qual é a origem',
                           }}
+                          render={({ field, fieldState }) => (
+                            <TextField
+                              {...field}
+                              label="Especifique"
+                              fullWidth
+                              size="small"
+                              sx={FIELD_SX}
+                              error={!!fieldState.error}
+                              helperText={fieldState.error?.message}
+                              placeholder="Ex.: panfleto, evento..."
+                            />
+                          )}
                         />
-                      )}
-                    />
+                      </Grid>
+                    )}
                   </Grid>
-                  <Grid item xs={12} sm={8}>
-                    <Controller
-                      name="addressStreet"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Rua"
-                          fullWidth
-                          disabled
-                          sx={AUTO_FIELD_SX}
-                          placeholder="Preenchido pelo CEP"
-                        />
-                      )}
-                    />
+                </FieldGroup>
+
+                <FieldGroup title="Endereço">
+                  <Grid container spacing={1.25}>
+                    <Grid item xs={12} sm={4}>
+                      <Controller
+                        name="cep"
+                        control={control}
+                        rules={{
+                          validate: (v) =>
+                            !v ||
+                            onlyDigits(v).length === 0 ||
+                            onlyDigits(v).length === 8 ||
+                            'CEP deve ter 8 dígitos',
+                        }}
+                        render={({ field, fieldState }) => (
+                          <TextField
+                            {...field}
+                            label="CEP"
+                            fullWidth
+                            size="small"
+                            sx={FIELD_SX}
+                            placeholder="00000-000"
+                            onChange={(e) => field.onChange(maskCEP(e.target.value))}
+                            error={!!fieldState.error || cepStatus.error}
+                            helperText={fieldState.error?.message}
+                            FormHelperTextProps={{ sx: { whiteSpace: 'nowrap', m: 0 } }}
+                            disabled={mutation.isPending}
+                            inputProps={{ inputMode: 'numeric', maxLength: 9 }}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <LocationOnOutlinedIcon fontSize="small" color="action" />
+                                </InputAdornment>
+                              ),
+                              endAdornment: cepStatus.loading ? (
+                                <InputAdornment position="end">
+                                  <CircularProgress color="inherit" size={18} />
+                                </InputAdornment>
+                              ) : undefined,
+                            }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={8}>
+                      <Controller
+                        name="addressStreet"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Rua"
+                            fullWidth
+                            size="small"
+                            disabled
+                            sx={AUTO_FIELD_SX}
+                            placeholder="Preenchido pelo CEP"
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={5}>
+                      <Controller
+                        name="addressNeighborhood"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Bairro"
+                            fullWidth
+                            size="small"
+                            disabled
+                            sx={AUTO_FIELD_SX}
+                            placeholder="Preenchido pelo CEP"
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={5}>
+                      <Controller
+                        name="addressCity"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Cidade"
+                            fullWidth
+                            size="small"
+                            disabled
+                            sx={AUTO_FIELD_SX}
+                            placeholder="Preenchido pelo CEP"
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={2}>
+                      <Controller
+                        name="addressState"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="UF"
+                            fullWidth
+                            size="small"
+                            disabled
+                            sx={AUTO_FIELD_SX}
+                            placeholder="—"
+                            inputProps={{ maxLength: 2 }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={3}>
+                      <Controller
+                        name="addressNumber"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Número"
+                            fullWidth
+                            size="small"
+                            sx={FIELD_SX}
+                            placeholder="Ex.: 123"
+                            inputProps={{ inputMode: 'numeric' }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={9}>
+                      <Controller
+                        name="addressComplement"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Complemento"
+                            fullWidth
+                            size="small"
+                            sx={FIELD_SX}
+                            placeholder="Apto, bloco, casa…"
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography
+                        variant="caption"
+                        component="p"
+                        color={cepStatus.error ? 'error.main' : 'text.secondary'}
+                        sx={{
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          lineHeight: 1.4,
+                          m: 0,
+                        }}
+                      >
+                        {cepStatus.loading
+                          ? 'Consultando CEP…'
+                          : cepStatus.text ?? 'Busca automática ao completar 8 dígitos'}
+                      </Typography>
+                    </Grid>
                   </Grid>
-                  <Grid item xs={12} sm={5}>
-                    <Controller
-                      name="addressNeighborhood"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Bairro"
-                          fullWidth
-                          disabled
-                          sx={AUTO_FIELD_SX}
-                          placeholder="Preenchido pelo CEP"
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={5}>
-                    <Controller
-                      name="addressCity"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Cidade"
-                          fullWidth
-                          disabled
-                          sx={AUTO_FIELD_SX}
-                          placeholder="Preenchido pelo CEP"
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={2}>
-                    <Controller
-                      name="addressState"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="UF"
-                          fullWidth
-                          disabled
-                          sx={AUTO_FIELD_SX}
-                          placeholder="—"
-                          inputProps={{ maxLength: 2 }}
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={3}>
-                    <Controller
-                      name="addressNumber"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Número"
-                          fullWidth
-                          sx={FIELD_SX}
-                          placeholder="Ex.: 123"
-                          inputProps={{ inputMode: 'numeric' }}
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={9}>
-                    <Controller
-                      name="addressComplement"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Complemento"
-                          fullWidth
-                          sx={FIELD_SX}
-                          placeholder="Apto, bloco, casa…"
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography
-                      variant="caption"
-                      component="p"
-                      color={cepStatus.error ? 'error.main' : 'text.secondary'}
-                      sx={{
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        lineHeight: 1.4,
-                        m: 0,
-                      }}
-                    >
-                      {cepStatus.loading
-                        ? 'Consultando CEP…'
-                        : cepStatus.text ?? 'Busca automática ao completar 8 dígitos'}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </FieldGroup>
-            </Stack>
+                </FieldGroup>
+              </Stack>
             </FieldsCard>
           </TabPanel>
 

@@ -100,6 +100,8 @@ export class PatientsService {
         | 'cep'
         | 'birthDate'
         | 'sex'
+        | 'referralSource'
+        | 'referralSourceOther'
         | 'address'
         | 'addressStreet'
         | 'addressNeighborhood'
@@ -142,6 +144,33 @@ export class PatientsService {
         out.sex = null;
       } else {
         out.sex = raw;
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(dto, 'referralSource')) {
+      const raw = dto.referralSource as unknown;
+      if (raw === undefined) {
+        delete out.referralSource;
+      } else if (raw === null || raw === '') {
+        out.referralSource = null;
+        out.referralSourceOther = null;
+      } else {
+        out.referralSource = raw;
+        if (raw !== 'OTHER') {
+          out.referralSourceOther = null;
+        }
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(dto, 'referralSourceOther')) {
+      const raw = out.referralSourceOther;
+      if (raw === undefined) {
+        delete out.referralSourceOther;
+      } else if (raw === null || raw === '') {
+        out.referralSourceOther = null;
+      } else {
+        const trimmed = String(raw).trim();
+        out.referralSourceOther = trimmed || null;
       }
     }
 

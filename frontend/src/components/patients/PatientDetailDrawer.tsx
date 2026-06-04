@@ -33,6 +33,7 @@ import { packagesApi } from '../../api/packages';
 import { dayjsFromDateOnlyApi, formatDateOnlyFromApi } from '../../utils/dateOnly';
 import { formatPatientAddressDisplay } from '../../utils/patientAddress';
 import { patientSexLabel } from '../../utils/patientSex';
+import { patientReferralSourceLabel } from '../../utils/patientReferralSource';
 import { maskCEP, maskPhone, onlyDigits } from '../../utils/masks';
 import type { Appointment, AppointmentKind } from '../../types';
 
@@ -650,6 +651,14 @@ export function PatientDetailDrawer({
                   }
                 />
                 <InfoRow label="Sexo" value={data.sex ? patientSexLabel(data.sex) : null} />
+                <InfoRow
+                  label="Como conheceu"
+                  value={
+                    data.referralSource
+                      ? patientReferralSourceLabel(data.referralSource, data.referralSourceOther)
+                      : null
+                  }
+                />
                 <InfoRow label="CPF" value={data.document} />
                 <InfoRow
                   label="Cadastro"

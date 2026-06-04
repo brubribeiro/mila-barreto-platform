@@ -3,6 +3,15 @@ import { IsDateString, IsEmail, IsIn, IsObject, IsOptional, IsString } from 'cla
 export const PATIENT_SEX_VALUES = ['M', 'F'] as const;
 export type PatientSex = (typeof PATIENT_SEX_VALUES)[number];
 
+export const PATIENT_REFERRAL_SOURCE_VALUES = [
+  'INSTAGRAM',
+  'REFERRAL',
+  'GOOGLE',
+  'LOCATION',
+  'OTHER',
+] as const;
+export type PatientReferralSource = (typeof PATIENT_REFERRAL_SOURCE_VALUES)[number];
+
 export class CreatePatientDto {
   @IsString()
   name: string;
@@ -63,6 +72,15 @@ export class CreatePatientDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  /** Como conheceu a clínica */
+  @IsOptional()
+  @IsIn(PATIENT_REFERRAL_SOURCE_VALUES)
+  referralSource?: PatientReferralSource;
+
+  @IsOptional()
+  @IsString()
+  referralSourceOther?: string;
 
   @IsOptional()
   @IsObject()
