@@ -6,9 +6,11 @@ import {
   Card,
   CardContent,
   Chip,
+  IconButton,
   MenuItem,
   Snackbar,
   Stack,
+  Switch,
   TextField,
   Tooltip,
   Typography,
@@ -18,15 +20,16 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import { Link as RouterLink } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { PageHeader } from '../components/PageHeader';
 import { ListFiltersBar, ActiveFilterSelect } from '../components/ListFiltersBar';
 import { AppDataGrid } from '../components/AppDataGrid';
 import { FILTER_FIELD_SX, matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
-import { recurringExpensesApi } from '../api/recurring-expenses';
+import { recurringExpensesApi, type HourlyCostSettings } from '../api/recurring-expenses';
 import { RecurringExpenseFormDialog } from '../components/finance/RecurringExpenseFormDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import type { RecurringExpense } from '../types';
@@ -48,9 +51,47 @@ export function RecurringExpensesPage() {
     queryFn: () => recurringExpensesApi.list(),
   });
 
+  const { data: hourlyCostSettings } = useQuery({
+    queryKey: ['recurring-expenses', 'hourly-cost-settings'],
+    queryFn: () => recurringExpensesApi.getHourlyCostSettings(),
+  });
+
+  const includeVariable = hourlyCostSettings?.includeVariable ?? false;
+
   const { data: hourlyCostSummary } = useQuery({
-    queryKey: ['recurring-expenses', 'hourly-cost-summary'],
-    queryFn: () => recurringExpensesApi.getHourlyCostSummary(),
+    queryKey: ['recurring-expenses', 'hourly-cost-summary', includeVariable],
+    queryFn: () => recurringExpensesApi.getHourlyCostSummary(includeVariable),
+    enabled: hourlyCostSettings !== undefined,
+    placeholderData: keepPreviousData,
+  });
+
+  const updateHourlySettingsMutation = useMutation({
+    mutationFn: (value: boolean) => recurringExpensesApi.updateHourlyCostSettings(value),
+    onMutate: async (value) => {
+      await queryClient.cancelQueries({ queryKey: ['recurring-expenses', 'hourly-cost-settings'] });
+      const previousSettings = queryClient.getQueryData<HourlyCostSettings>([
+        'recurring-expenses',
+        'hourly-cost-settings',
+      ]);
+      queryClient.setQueryData(['recurring-expenses', 'hourly-cost-settings'], { includeVariable: value });
+      await queryClient.prefetchQuery({
+        queryKey: ['recurring-expenses', 'hourly-cost-summary', value],
+        queryFn: () => recurringExpensesApi.getHourlyCostSummary(value),
+      });
+      return { previousSettings };
+    },
+    onError: (_err, _value, context) => {
+      if (context?.previousSettings) {
+        queryClient.setQueryData(['recurring-expenses', 'hourly-cost-settings'], context.previousSettings);
+      }
+    },
+    onSuccess: (_data, value) => {
+      void queryClient.prefetchQuery({
+        queryKey: ['recurring-expenses', 'hourly-cost-summary', value],
+        queryFn: () => recurringExpensesApi.getHourlyCostSummary(value),
+      });
+      queryClient.invalidateQueries({ queryKey: ['procedures'] });
+    },
   });
 
   const deleteMutation = useMutation({
@@ -80,13 +121,63 @@ export function RecurringExpensesPage() {
     [items],
   );
 
-  const totalFixedMonthly = useMemo(
+  const activeFixedMonthly = useMemo(
     () =>
       items
         .filter((i) => i.active && i.expenseType === 'FIXED')
         .reduce((sum, i) => sum + Number(i.amount), 0),
     [items],
   );
+
+  const activeVariableMonthly = useMemo(
+    () =>
+      items
+        .filter((i) => i.active && i.expenseType === 'VARIABLE')
+        .reduce((sum, i) => sum + Number(i.amount), 0),
+    [items],
+  );
+
+  const expensesForHourlyRate = includeVariable
+    ? activeFixedMonthly + activeVariableMonthly
+    : activeFixedMonthly;
+
+  const hourlyCostTooltip = useMemo(() => {
+    if (!hourlyCostSummary) return null;
+    const financeDiff = includeVariable
+      ? Math.abs(hourlyCostSummary.financeExpensesMonthly - expensesForHourlyRate)
+      : Math.abs(hourlyCostSummary.financeExpensesMonthly - activeFixedMonthly);
+    const expenseLabel = includeVariable ? 'fixas + variáveis' : 'fixas';
+
+    return (
+      <Stack spacing={0.75} sx={{ maxWidth: 300, p: 0.25 }}>
+        <Typography variant="caption" display="block">
+          Total de despesas {expenseLabel} ativas no cadastro, dividido pela carga horária mensal do
+          profissional principal ({hourlyCostSummary.monthlyHours} h).
+        </Typography>
+        {includeVariable && activeVariableMonthly > 0 && (
+          <Typography variant="caption" display="block">
+            Composição: fixas {brl.format(activeFixedMonthly)} + variáveis{' '}
+            {brl.format(activeVariableMonthly)}.
+          </Typography>
+        )}
+        <Typography variant="caption" display="block">
+          Procedimentos usam as despesas lançadas no financeiro do mês atual, não este cadastro.
+        </Typography>
+        {financeDiff > 0.01 && (
+          <Typography variant="caption" display="block">
+            Financeiro (mês atual): {brl.format(hourlyCostSummary.financeExpensesMonthly)} em despesas{' '}
+            {expenseLabel}.
+          </Typography>
+        )}
+      </Stack>
+    );
+  }, [
+    hourlyCostSummary,
+    includeVariable,
+    expensesForHourlyRate,
+    activeFixedMonthly,
+    activeVariableMonthly,
+  ]);
 
   const filteredItems = useMemo(
     () =>
@@ -131,7 +222,7 @@ export function RecurringExpensesPage() {
         headerName: 'Categoria',
         flex: 0.7,
         minWidth: 120,
-        valueGetter: (p) => p.row.category ?? '—',
+        valueGetter: (p) => p.row.category ?? '---',
       },
       {
         field: 'dueDay',
@@ -215,7 +306,7 @@ export function RecurringExpensesPage() {
               onClick={() => generateMutation.mutate()}
               disabled={generateMutation.isPending}
             >
-              {generateMutation.isPending ? 'Gerando...' : 'Gerar lançamentos do mês'}
+              {generateMutation.isPending ? 'Gerando...' : 'Gerar lançamentos do mes'}
             </Button>
             <Button
               variant="contained"
@@ -234,56 +325,86 @@ export function RecurringExpensesPage() {
       {hourlyCostSummary && (
         <Card sx={{ mb: 3 }}>
           <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
-            <Stack
-              direction={{ xs: 'column', md: 'row' }}
-              spacing={2}
-              alignItems={{ md: 'center' }}
-              justifyContent="space-between"
-            >
-              <Box>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+            <Stack spacing={1.5}>
+              <Stack
+                direction="row"
+                alignItems="flex-start"
+                justifyContent="space-between"
+                spacing={1}
+              >
+                <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
                   <ScheduleIcon color="primary" fontSize="small" />
                   <Typography variant="subtitle1" fontWeight={700}>
                     Custo/hora do profissional principal
                   </Typography>
+                  {hourlyCostTooltip && (
+                    <Tooltip title={hourlyCostTooltip} arrow placement="top-start">
+                      <IconButton
+                        size="small"
+                        aria-label="Detalhes do cálculo de custo por hora"
+                        sx={{ color: 'text.secondary' }}
+                      >
+                        <InfoOutlinedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                 </Stack>
+
+                <Tooltip
+                  title="Inclui despesas variáveis ativas no custo/hora e no cálculo dos procedimentos."
+                  arrow
+                  placement="left"
+                >
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={0.75}
+                    sx={{ flexShrink: 0, mt: -0.25, mr: -1 }}
+                  >
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ lineHeight: 1.2, whiteSpace: 'nowrap' }}
+                    >
+                      Incluir despesas variáveis
+                    </Typography>
+                    <Switch
+                      size="small"
+                      checked={includeVariable}
+                      onChange={(e) => updateHourlySettingsMutation.mutate(e.target.checked)}
+                      inputProps={{ 'aria-label': 'Incluir despesas variáveis no cálculo' }}
+                    />
+                  </Stack>
+                </Tooltip>
+              </Stack>
+
+              <Box>
                 <Typography variant="h4" fontWeight={700} color="primary.main">
                   {brl.format(hourlyCostSummary.hourlyCost)}/h
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  Despesas fixas recorrentes ({brl.format(totalFixedMonthly)}) ÷ carga horária
-                  mensal ({hourlyCostSummary.monthlyHours} h)
+                  {brl.format(hourlyCostSummary.recurringExpensesMonthly)} em despesas{' '}
+                  {includeVariable ? 'fixas + variáveis' : 'fixas'} ÷{' '}
+                  {hourlyCostSummary.monthlyHours} h/mês
                 </Typography>
               </Box>
 
-              <Stack spacing={1} alignItems={{ xs: 'flex-start', md: 'flex-end' }}>
-                {!hourlyCostSummary.primaryProfessional && (
-                  <Alert severity="warning" sx={{ py: 0 }}>
-                    Nenhum profissional principal cadastrado.{' '}
-                    <Button component={RouterLink} to="/profissionais" size="small">
-                      Configurar
-                    </Button>
-                  </Alert>
-                )}
-                {hourlyCostSummary.primaryProfessional && hourlyCostSummary.monthlyHours <= 0 && (
-                  <Alert severity="warning" sx={{ py: 0 }}>
-                    Sem horários de atendimento.{' '}
-                    <Button component={RouterLink} to="/horarios" size="small">
-                      Configurar agenda
-                    </Button>
-                  </Alert>
-                )}
-                {hourlyCostSummary.financeFixedMonthly !== totalFixedMonthly && (
-                  <Tooltip
-                    title="Após gerar os lançamentos do mês, os procedimentos usam o total de despesas fixas no financeiro."
-                  >
-                    <Typography variant="caption" color="text.secondary">
-                      No financeiro (mês atual): {brl.format(hourlyCostSummary.financeFixedMonthly)}{' '}
-                      em despesas fixas
-                    </Typography>
-                  </Tooltip>
-                )}
-              </Stack>
+              {!hourlyCostSummary.primaryProfessional && (
+                <Alert severity="warning">
+                  Nenhum profissional principal cadastrado.{' '}
+                  <Button component={RouterLink} to="/profissionais" size="small">
+                    Configurar
+                  </Button>
+                </Alert>
+              )}
+              {hourlyCostSummary.primaryProfessional && hourlyCostSummary.monthlyHours <= 0 && (
+                <Alert severity="warning">
+                  Sem horários de atendimento na agenda.{' '}
+                  <Button component={RouterLink} to="/horarios" size="small">
+                    Configurar horários
+                  </Button>
+                </Alert>
+              )}
             </Stack>
           </CardContent>
         </Card>

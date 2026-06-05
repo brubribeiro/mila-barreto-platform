@@ -13,6 +13,7 @@ import {
 import { RecurringExpensesService } from './recurring-expenses.service';
 import { CreateRecurringExpenseDto } from './dto/create-recurring-expense.dto';
 import { UpdateRecurringExpenseDto } from './dto/update-recurring-expense.dto';
+import { HourlyCostSettingsDto } from './dto/hourly-cost-settings.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
@@ -29,9 +30,33 @@ export class RecurringExpensesController {
   }
 
   @RequirePermissions('finance:view')
+  @Get('hourly-cost-settings')
+  hourlyCostSettings() {
+    return this.service.getHourlyCostSettings();
+  }
+
+  @RequirePermissions('finance:edit')
+  @Patch('hourly-cost-settings')
+  updateHourlyCostSettings(@Body() dto: HourlyCostSettingsDto) {
+    return this.service.setHourlyCostSettings(dto.includeVariable);
+  }
+
+  @RequirePermissions('finance:view')
   @Get('hourly-cost-summary')
-  hourlyCostSummary() {
-    return this.service.getHourlyCostSummary();
+  hourlyCostSummary(@Query('includeVariable') includeVariable?: string) {
+    if (includeVariable === undefined || includeVariable === '') {
+      return this.service.getHourlyCostSummary();
+    }
+    return this.service.getHourlyCostSummary(includeVariable === 'true');
+  }
+
+  @RequirePermissions('finance:create')
+  @Post('generate')
+  generate(@Query('year') year?: string, @Query('month') month?: string) {
+    const now = new Date();
+    const y = year ? Number(year) : now.getFullYear();
+    const m = month ? Number(month) : now.getMonth() + 1;
+    return this.service.generateForMonth(y, m);
   }
 
   @RequirePermissions('finance:view')
@@ -56,19 +81,5 @@ export class RecurringExpensesController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.service.remove(id);
-  }
-
-  /**
-   * Gera lançamentos financeiros para o mês informado (ou mês atual).
-   * Pode ser chamado via cron ou manualmente.
-   * Ex: POST /recurring-expenses/generate?year=2026&month=6
-   */
-  @RequirePermissions('finance:create')
-  @Post('generate')
-  generate(@Query('year') year?: string, @Query('month') month?: string) {
-    const now = new Date();
-    const y = year ? Number(year) : now.getFullYear();
-    const m = month ? Number(month) : now.getMonth() + 1;
-    return this.service.generateForMonth(y, m);
   }
 }

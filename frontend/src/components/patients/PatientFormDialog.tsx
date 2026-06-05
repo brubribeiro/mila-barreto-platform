@@ -24,6 +24,7 @@ import {
   Tab,
   Tabs,
   TextField,
+  Tooltip,
   Typography,
   alpha,
   useMediaQuery,
@@ -546,71 +547,131 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
             <FieldsCard>
               <Stack spacing={1.5} divider={<Divider flexItem />} sx={{ flex: 1, minHeight: 0 }}>
                 <FieldGroup title="Identificação">
-                  <Grid container spacing={1.25}>
-                    <Grid item xs={12}>
-                      <Stack
-                        direction={{ xs: 'column', sm: 'row' }}
-                        spacing={2}
-                        alignItems={{ xs: 'stretch', sm: 'center' }}
-                      >
-                        <Avatar
-                          src={avatarDisplaySrc}
-                          alt={nameWatched || 'Paciente'}
-                          sx={{
-                            width: 80,
-                            height: 80,
-                            mx: { xs: 'auto', sm: 0 },
-                            fontSize: '1.5rem',
-                            fontWeight: 700,
-                            bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
-                            color: 'primary.dark',
-                            border: 1,
-                            borderColor: 'divider',
-                          }}
-                        >
-                          {patientInitials(nameWatched || '?')}
-                        </Avatar>
-                        <Stack spacing={0.75} sx={{ flex: 1, minWidth: 0 }}>
-                          <input
-                            ref={photoInputRef}
-                            type="file"
-                            hidden
-                            accept={PATIENT_PHOTO_ACCEPT}
-                            onChange={handlePhotoSelect}
-                          />
-                          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              startIcon={<PhotoCameraOutlinedIcon />}
-                              onClick={() => photoInputRef.current?.click()}
-                              disabled={mutation.isPending}
-                            >
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: 'auto 1fr', sm: '80px 1fr' },
+                      columnGap: 2,
+                      rowGap: 1.25,
+                      alignItems: 'start',
+                    }}
+                  >
+                    <Stack
+                      alignItems="center"
+                      spacing={0.5}
+                      sx={{ gridColumn: 1, gridRow: { xs: 1, sm: '1 / 3' } }}
+                    >
+                      <input
+                        ref={photoInputRef}
+                        type="file"
+                        hidden
+                        accept={PATIENT_PHOTO_ACCEPT}
+                        onChange={handlePhotoSelect}
+                      />
+                      <Box sx={{ position: 'relative', lineHeight: 0 }}>
+                        <Tooltip
+                          title={
+                            <Typography variant="caption" display="block" sx={{ maxWidth: 200 }}>
                               {avatarDisplaySrc ? 'Alterar foto' : 'Adicionar foto'}
-                            </Button>
-                            {avatarDisplaySrc && (
-                              <Button
-                                size="small"
-                                color="inherit"
-                                onClick={handlePhotoRemove}
-                                disabled={mutation.isPending}
-                              >
-                                Remover
-                              </Button>
-                            )}
-                          </Stack>
-                          <Typography variant="caption" color="text.secondary">
-                            JPEG, PNG ou WebP — máximo 5 MB
-                          </Typography>
-                          {photoError && (
-                            <Typography variant="caption" color="error">
-                              {photoError}
+                              <br />
+                              JPEG, PNG ou WebP — máx. 5 MB
                             </Typography>
-                          )}
-                        </Stack>
-                      </Stack>
-                    </Grid>
-                    <Grid item xs={12}>
+                          }
+                          arrow
+                          placement="top"
+                        >
+                          <Box
+                            component="button"
+                            type="button"
+                            disabled={mutation.isPending}
+                            aria-label={
+                              avatarDisplaySrc
+                                ? 'Alterar foto do paciente'
+                                : 'Adicionar foto do paciente'
+                            }
+                            onClick={() => photoInputRef.current?.click()}
+                            sx={{
+                              position: 'relative',
+                              p: 0,
+                              border: 0,
+                              bgcolor: 'transparent',
+                              borderRadius: '50%',
+                              cursor: mutation.isPending ? 'default' : 'pointer',
+                              lineHeight: 0,
+                              '&:hover .patient-photo-overlay': { opacity: 1 },
+                              '&:focus-visible': {
+                                outline: 2,
+                                outlineColor: 'primary.main',
+                                outlineOffset: 2,
+                              },
+                            }}
+                          >
+                            <Avatar
+                              src={avatarDisplaySrc}
+                              alt={nameWatched || 'Paciente'}
+                              sx={{
+                                width: { xs: 64, sm: 72 },
+                                height: { xs: 64, sm: 72 },
+                                fontSize: '1.25rem',
+                                fontWeight: 700,
+                                bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
+                                color: 'primary.dark',
+                                border: 1,
+                                borderColor: 'divider',
+                              }}
+                            >
+                              {patientInitials(nameWatched || '?')}
+                            </Avatar>
+                            <Box
+                              className="patient-photo-overlay"
+                              sx={{
+                                position: 'absolute',
+                                inset: 0,
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                bgcolor: (t) => alpha(t.palette.common.black, 0.45),
+                                color: 'common.white',
+                                opacity: avatarDisplaySrc ? 0 : 0.85,
+                                transition: 'opacity 0.2s ease',
+                              }}
+                            >
+                              <PhotoCameraOutlinedIcon sx={{ fontSize: { xs: 22, sm: 26 } }} />
+                            </Box>
+                          </Box>
+                        </Tooltip>
+                        {avatarDisplaySrc && (
+                          <IconButton
+                            size="small"
+                            aria-label="Remover foto do paciente"
+                            disabled={mutation.isPending}
+                            onClick={handlePhotoRemove}
+                            sx={{
+                              position: 'absolute',
+                              top: -4,
+                              right: -4,
+                              width: 22,
+                              height: 22,
+                              bgcolor: 'background.paper',
+                              border: 1,
+                              borderColor: 'divider',
+                              boxShadow: 1,
+                              '&:hover': { bgcolor: 'error.light', color: 'error.contrastText' },
+                            }}
+                          >
+                            <CloseIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        )}
+                      </Box>
+                      {photoError && (
+                        <Typography variant="caption" color="error" textAlign="center">
+                          {photoError}
+                        </Typography>
+                      )}
+                    </Stack>
+
+                    <Box sx={{ gridColumn: 2, gridRow: 1, minWidth: 0 }}>
                       <Controller
                         name="name"
                         control={control}
@@ -635,8 +696,19 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                           />
                         )}
                       />
-                    </Grid>
-                    <Grid item xs={12} sm={4}>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        gridColumn: { xs: '1 / -1', sm: 2 },
+                        gridRow: 2,
+                        minWidth: 0,
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+                        gap: 1.25,
+                        alignItems: 'start',
+                      }}
+                    >
                       <Controller
                         name="birthDate"
                         control={control}
@@ -659,8 +731,6 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                           />
                         )}
                       />
-                    </Grid>
-                    <Grid item xs={12} sm={4}>
                       <Controller
                         name="sex"
                         control={control}
@@ -699,8 +769,6 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                           </FormControl>
                         )}
                       />
-                    </Grid>
-                    <Grid item xs={12} sm={4}>
                       <Controller
                         name="document"
                         control={control}
@@ -729,8 +797,8 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                           />
                         )}
                       />
-                    </Grid>
-                  </Grid>
+                    </Box>
+                  </Box>
                 </FieldGroup>
 
                 <FieldGroup title="Contato">

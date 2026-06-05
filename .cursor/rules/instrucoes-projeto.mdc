@@ -1,0 +1,24 @@
+---
+description: Instruções obrigatórias do projeto Mila Barreto — ler antes de qualquer alteração
+alwaysApply: true
+---
+
+# Mila Barreto — leia antes de alterar
+
+**Obrigatório:** ler e seguir `AGENTS.md` na **raiz do repositório** (`mila-barreto-platform/AGENTS.md`) antes de qualquer mudança.
+
+Monorepo: `backend/` (NestJS + Prisma) · `frontend/` (React + Vite + MUI + TanStack Query).
+
+## Regras rápidas (não dispensam o AGENTS.md)
+
+1. **Escopo mínimo** — não refatorar fora do pedido.
+2. **Português** com o usuário · **commits em inglês** · **sem commit/push/PR** sem pedido explícito · **ao terminar alterações, sempre perguntar** se o usuário quer commitar.
+3. **Nunca** commitar `.env` ou credenciais.
+4. **R2** para uploads (`storageKey`, URLs públicas) — não Google Drive.
+5. **Prisma:** migration nova se `schema.prisma` mudou.
+6. **Frontend:** não criar `AuthContext.ts` / `AppDialogContext.ts` vazios; invalidação de Query cirúrgica; evitar UI que pisca (`keepPreviousData`, update otimista).
+7. **Modais com abas:** altura estável; não quebrar `PatientFormDialog` sem necessidade.
+8. Ler arquivos-alvo e padrões vizinhos **antes** de editar.
+9. Verificar lints nos arquivos alterados ao finalizar.
+
+Dúvida de arquitetura ou escopo → perguntar ao usuário em vez de inventar.

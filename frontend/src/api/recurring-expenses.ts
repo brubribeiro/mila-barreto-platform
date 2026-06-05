@@ -19,11 +19,18 @@ export interface GenerateResult {
 
 export interface HourlyCostSummary {
   hourlyCost: number;
+  recurringExpensesMonthly: number;
   recurringFixedMonthly: number;
+  financeExpensesMonthly: number;
   financeFixedMonthly: number;
+  includeVariable: boolean;
   weeklyHours: number;
   monthlyHours: number;
   primaryProfessional: { id: string; name: string } | null;
+}
+
+export interface HourlyCostSettings {
+  includeVariable: boolean;
 }
 
 export const recurringExpensesApi = {
@@ -31,8 +38,23 @@ export const recurringExpensesApi = {
     const { data } = await api.get<RecurringExpense[]>('/recurring-expenses');
     return data;
   },
-  getHourlyCostSummary: async (): Promise<HourlyCostSummary> => {
-    const { data } = await api.get<HourlyCostSummary>('/recurring-expenses/hourly-cost-summary');
+  getHourlyCostSettings: async (): Promise<HourlyCostSettings> => {
+    const { data } = await api.get<HourlyCostSettings>('/recurring-expenses/hourly-cost-settings');
+    return data;
+  },
+
+  updateHourlyCostSettings: async (includeVariable: boolean): Promise<HourlyCostSettings> => {
+    const { data } = await api.patch<HourlyCostSettings>(
+      '/recurring-expenses/hourly-cost-settings',
+      { includeVariable },
+    );
+    return data;
+  },
+
+  getHourlyCostSummary: async (includeVariable: boolean): Promise<HourlyCostSummary> => {
+    const { data } = await api.get<HourlyCostSummary>('/recurring-expenses/hourly-cost-summary', {
+      params: { includeVariable: includeVariable ? 'true' : 'false' },
+    });
     return data;
   },
   create: async (payload: RecurringExpensePayload): Promise<RecurringExpense> => {

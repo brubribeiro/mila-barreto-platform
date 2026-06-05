@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { computeHourlyCostSummary } from '../common/utils/hourly-cost.util';
+import {
+  computeHourlyCostSummary,
+  getHourlyCostIncludeVariable,
+} from '../common/utils/hourly-cost.util';
 import { CreateProcedureDto, ProcedureMaterialDto } from './dto/create-procedure.dto';
 import { UpdateProcedureDto } from './dto/update-procedure.dto';
 
@@ -59,8 +62,10 @@ export class ProceduresService {
     });
     const maxFeePercent = maxFee ? Number(maxFee.feePercent) : 0;
 
+    const includeVariable = await getHourlyCostIncludeVariable(this.prisma);
     const summary = await computeHourlyCostSummary(this.prisma, {
       useRecurringCatalog: false,
+      includeVariable,
     });
 
     return { maxFeePercent, hourlyCost: summary.hourlyCost };
