@@ -414,9 +414,26 @@ export function Dashboard() {
   const detailGridCols =
     visibleDetailColumns >= 4 ? 4 : visibleDetailColumns === 3 ? 3 : visibleDetailColumns === 2 ? 2 : 1;
 
+  const isImpersonating = user?.impersonating === true;
+  const dashboardViewportOffset = isImpersonating ? 168 : 128;
+
+  const detailCardScrollSx = {
+    flex: '1 1 auto',
+    overflow: 'auto',
+    pr: 0.5,
+    minHeight: 0,
+  } as const;
+
   return (
-    <Box>
-      <Card sx={{ mb: { xs: 2, sm: 3 } }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: { xs: 'auto', md: `calc(100dvh - ${dashboardViewportOffset}px)` },
+        minHeight: 0,
+      }}
+    >
+      <Card sx={{ mb: { xs: 2, sm: 3 }, flexShrink: 0 }}>
         <CardContent
           sx={{
             p: { xs: 1.5, sm: 2.5 },
@@ -595,7 +612,11 @@ export function Dashboard() {
         </CardContent>
       </Card>
 
-      <AppGrid columns={{ xs: 2, md: 4 }} gap={{ xs: 1.5, sm: 3 }} sx={{ mb: { xs: 2, sm: 3 } }}>
+      <AppGrid
+        columns={{ xs: 2, md: 4 }}
+        gap={{ xs: 1.5, sm: 3 }}
+        sx={{ mb: { xs: 2, sm: 3 }, flexShrink: 0 }}
+      >
         <SummaryCard
           label={restrictToOwnAppointments ? 'Meus agendamentos' : 'Agendamentos'}
           value={String(appointments?.length ?? 0)}
@@ -655,7 +676,15 @@ export function Dashboard() {
         )}
       </AppGrid>
 
-      <AppGrid columns={{ xs: 1, lg: detailGridCols }} gap={{ xs: 2, sm: 3 }}>
+      <AppGrid
+        columns={{ xs: 1, lg: detailGridCols }}
+        gap={{ xs: 2, sm: 3 }}
+        sx={{
+          flex: { xs: 'none', md: 1 },
+          minHeight: { md: 0 },
+          gridTemplateRows: { md: '1fr' },
+        }}
+      >
         <UpcomingDatesCard embedded />
 
         {canSeeFinance && <UpcomingExpensesCard embedded />}
@@ -665,9 +694,10 @@ export function Dashboard() {
               sx={{
                 flex: 1,
                 width: '100%',
+                height: { md: '100%' },
                 display: 'flex',
                 flexDirection: 'column',
-                minHeight: { lg: 460 },
+                minHeight: { md: 0 },
               }}
             >
               <CardContent sx={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', p: 2.5, minHeight: 0 }}>
@@ -710,7 +740,7 @@ export function Dashboard() {
                   </Button>
                 </Stack>
 
-                <Box sx={{ flex: '1 1 auto', overflow: 'auto', pr: 0.5, minHeight: 0 }}>
+                <Box sx={detailCardScrollSx}>
                   {upcomingBirthdays.length === 0 ? (
                     <DashboardEmptyState message="Nenhum aniversário neste período." />
                   ) : (
@@ -760,9 +790,10 @@ export function Dashboard() {
               sx={{
                 width: '100%',
                 flex: 1,
+                height: { md: '100%' },
                 display: 'flex',
                 flexDirection: 'column',
-                minHeight: { lg: 460 },
+                minHeight: { md: 0 },
               }}
             >
               <CardContent sx={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', p: 2.5, minHeight: 0 }}>
@@ -780,7 +811,7 @@ export function Dashboard() {
                   </Box>
                 </Stack>
 
-                <Box sx={{ flex: '1 1 auto', overflow: 'auto', pr: 0.5, minHeight: 0 }}>
+                <Box sx={detailCardScrollSx}>
                   {weekLoading ? (
                     <Typography variant="body2" color="text.secondary">
                       Carregando…

@@ -177,10 +177,10 @@ export function UpcomingDatesCard({ embedded = false }: UpcomingDatesCardProps) 
         width: '100%',
         ...(embedded
           ? {
-              height: '100%',
+              height: { md: '100%' },
               display: 'flex',
               flexDirection: 'column',
-              minHeight: { lg: 460 },
+              minHeight: { md: 0 },
             }
           : { mt: 3 }),
       }}
@@ -217,7 +217,14 @@ export function UpcomingDatesCard({ embedded = false }: UpcomingDatesCardProps) 
           </Box>
         </Stack>
 
-        <Box sx={{ flex: embedded ? '1 1 auto' : undefined, overflow: embedded ? 'auto' : undefined, pr: embedded ? 0.5 : 0 }}>
+        <Box
+          sx={{
+            flex: embedded ? '1 1 auto' : undefined,
+            overflow: embedded ? 'auto' : undefined,
+            minHeight: embedded ? 0 : undefined,
+            pr: embedded ? 0.5 : 0,
+          }}
+        >
           {upcoming.length === 0 ? (
             <DashboardEmptyState
               message={`Nenhuma data comemorativa nos próximos ${LOOKAHEAD_DAYS} dias.`}

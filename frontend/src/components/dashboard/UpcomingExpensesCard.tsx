@@ -104,10 +104,10 @@ export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardP
         width: '100%',
         ...(embedded
           ? {
-              height: '100%',
+              height: { md: '100%' },
               display: 'flex',
               flexDirection: 'column',
-              minHeight: { lg: 460 },
+              minHeight: { md: 0 },
             }
           : { mt: 3 }),
       }}
@@ -166,9 +166,8 @@ export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardP
           sx={{
             flex: embedded ? '1 1 auto' : undefined,
             overflow: 'auto',
-            maxHeight: 350,
+            ...(embedded ? { minHeight: 0 } : { maxHeight: 350 }),
             pr: 0.5,
-            minHeight: 0,
             scrollbarWidth: 'thin',
             scrollbarColor: (theme) =>
               `${alpha(theme.palette.text.secondary, 0.28)} ${alpha(theme.palette.divider, 0.12)}`,
