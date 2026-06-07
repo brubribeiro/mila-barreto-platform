@@ -6,6 +6,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -95,6 +96,20 @@ export class R2StorageService implements OnModuleInit {
     } catch (err) {
       this.logger.warn(`Falha ao excluir arquivo do R2 (${key}): ${err.message}`);
     }
+  }
+
+  /** Gera URL temporária assinada para acesso privado ao arquivo no R2. */
+  async getPresignedUrl(key: string, expiresInSeconds = 900): Promise<string> {
+    if (!this.client) throw new Error('Cloudflare R2 não está configurado.');
+
+    return getSignedUrl(
+      this.client,
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }),
+      { expiresIn: expiresInSeconds },
+    );
   }
 
   /** Retorna o conteúdo de um arquivo como Buffer (para proxy/download). */

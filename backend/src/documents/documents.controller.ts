@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 
-import { DocumentsService, CreateDocumentDto, LinkExternalFileDto } from './documents.service';
+import { DocumentsService, CreateDocumentDto } from './documents.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
@@ -70,11 +70,10 @@ export class DocumentsController {
     return this.documents.upload(dto, file);
   }
 
-  /** Vincular arquivo externo (URL manual) */
-  @RequirePermissions('documents:create')
-  @Post('link')
-  linkExternalFile(@Body() dto: LinkExternalFileDto) {
-    return this.documents.linkExternalFile(dto);
+  @RequirePermissions('documents:view')
+  @Get(':id/access-url')
+  getAccessUrl(@Param('id', ParseUUIDPipe) id: string) {
+    return this.documents.getAccessUrl(id);
   }
 
   @RequirePermissions('documents:delete')

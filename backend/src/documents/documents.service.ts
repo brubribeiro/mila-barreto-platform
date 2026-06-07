@@ -3,36 +3,11 @@ import { IsOptional, IsString, IsUUID } from 'class-validator';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { R2StorageService } from './r2-storage.service';
+import { CompressionService } from './compression.service';
 
 export class CreateDocumentDto {
   @IsString()
   name: string;
-
-  @IsOptional() @IsString()
-  category?: string;
-
-  @IsOptional() @IsString()
-  notes?: string;
-
-  @IsOptional() @IsUUID()
-  patientId?: string;
-
-  @IsOptional() @IsUUID()
-  equipmentId?: string;
-}
-
-export class LinkExternalFileDto {
-  @IsString()
-  name: string;
-
-  @IsString()
-  fileUrl: string;
-
-  @IsOptional() @IsString()
-  mimeType?: string;
-
-  @IsOptional()
-  size?: number;
 
   @IsOptional() @IsString()
   category?: string;
@@ -52,6 +27,7 @@ export class DocumentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly r2: R2StorageService,
+    private readonly compression: CompressionService,
   ) {}
 
   list(filter?: { patientId?: string; equipmentId?: string }) {
@@ -72,6 +48,21 @@ export class DocumentsService {
     const d = await this.prisma.document.findUnique({ where: { id } });
     if (!d) throw new NotFoundException('Documento não encontrado');
     return d;
+  }
+
+  /** URL temporária assinada para arquivo privado no R2. */
+  async getAccessUrl(id: string): Promise<{ url: string }> {
+    const doc = await this.findOne(id);
+
+    if (!doc.storageKey) {
+      throw new NotFoundException('Arquivo não disponível para visualização.');
+    }
+    if (!this.r2.isConfigured) {
+      throw new BadRequestException('Cloudflare R2 não está configurado.');
+    }
+
+    const url = await this.r2.getPresignedUrl(doc.storageKey);
+    return { url };
   }
 
   /** Upload de arquivo: envia para o Cloudflare R2 e salva referência no banco */
@@ -96,10 +87,13 @@ export class DocumentsService {
       if (equip) subfolder = `equipamentos/${equip.name.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '-').toLowerCase()}`;
     }
 
+    // Comprimir arquivo antes do upload
+    const compressed = await this.compression.compress(file.buffer, file.mimetype);
+
     const { key, url } = await this.r2.upload(
       dto.name || file.originalname,
-      file.mimetype,
-      file.buffer,
+      compressed.mimeType,
+      compressed.buffer,
       subfolder,
     );
 
@@ -110,26 +104,14 @@ export class DocumentsService {
         notes: dto.notes,
         storageKey: key,
         fileUrl: url,
-        mimeType: file.mimetype,
-        size: file.size,
+        mimeType: compressed.mimeType,
+        size: compressed.compressedSize,
         patientId: dto.patientId,
         equipmentId: dto.equipmentId,
       },
-    });
-  }
-
-  /** Vincular um arquivo externo (URL manual) */
-  async linkExternalFile(dto: LinkExternalFileDto) {
-    return this.prisma.document.create({
-      data: {
-        name: dto.name,
-        category: dto.category,
-        notes: dto.notes,
-        fileUrl: dto.fileUrl,
-        mimeType: dto.mimeType,
-        size: dto.size,
-        patientId: dto.patientId,
-        equipmentId: dto.equipmentId,
+      include: {
+        patient: { select: { id: true, name: true } },
+        equipment: { select: { id: true, name: true } },
       },
     });
   }
