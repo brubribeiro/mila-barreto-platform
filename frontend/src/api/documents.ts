@@ -25,22 +25,13 @@ export const documentsApi = {
     return data;
   },
 
-  /** Vincular arquivo externo por URL */
-  linkExternalFile: async (payload: {
-    name: string;
-    fileUrl: string;
-    mimeType?: string;
-    size?: number;
-    category?: string;
-    notes?: string;
-    patientId?: string;
-    equipmentId?: string;
-  }): Promise<DocumentFile> => {
-    const { data } = await api.post<DocumentFile>('/documents/link', payload);
-    return data;
-  },
-
   remove: async (id: string): Promise<void> => {
     await api.delete(`/documents/${id}`);
+  },
+
+  /** URL temporária assinada para arquivo privado no R2. */
+  getAccessUrl: async (id: string): Promise<string> => {
+    const { data } = await api.get<{ url: string }>(`/documents/${id}/access-url`);
+    return data.url;
   },
 };
