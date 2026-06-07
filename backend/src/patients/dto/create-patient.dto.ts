@@ -1,4 +1,8 @@
+import { Transform } from 'class-transformer';
 import { IsDateString, IsEmail, IsIn, IsObject, IsOptional, IsString } from 'class-validator';
+
+const emptyStringToNull = ({ value }: { value: unknown }) =>
+  value === '' ? null : value;
 
 export const PATIENT_SEX_VALUES = ['M', 'F'] as const;
 export type PatientSex = (typeof PATIENT_SEX_VALUES)[number];
@@ -30,6 +34,7 @@ export class CreatePatientDto {
 
   /** M = masculino, F = feminino */
   @IsOptional()
+  @Transform(emptyStringToNull)
   @IsIn(PATIENT_SEX_VALUES)
   sex?: PatientSex;
 
@@ -75,6 +80,7 @@ export class CreatePatientDto {
 
   /** Como conheceu a clínica */
   @IsOptional()
+  @Transform(emptyStringToNull)
   @IsIn(PATIENT_REFERRAL_SOURCE_VALUES)
   referralSource?: PatientReferralSource;
 

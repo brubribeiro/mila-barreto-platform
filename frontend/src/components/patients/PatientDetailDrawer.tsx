@@ -30,6 +30,8 @@ import { useMemo, useState, useEffect, type ReactNode } from 'react';
 
 import { patientsApi } from '../../api/patients';
 import { packagesApi } from '../../api/packages';
+import { usePermissions } from '../../contexts/usePermissions';
+import { AuditHistoryPanel } from '../audit/AuditHistoryPanel';
 import { dayjsFromDateOnlyApi, formatDateOnlyFromApi } from '../../utils/dateOnly';
 import { formatPatientAddressDisplay } from '../../utils/patientAddress';
 import { patientSexLabel } from '../../utils/patientSex';
@@ -389,6 +391,7 @@ export function PatientDetailDrawer({
   highlightAppointmentId,
 }: PatientDetailDrawerProps) {
   const [tab, setTab] = useState<ChartTab>(defaultTab);
+  const { isAdmin } = usePermissions();
 
   const { data, isLoading } = useQuery({
     queryKey: ['patient', patientId],
@@ -679,6 +682,8 @@ export function PatientDetailDrawer({
                 </Typography>
               </SectionCard>
             )}
+
+            {isAdmin && patientId && <AuditHistoryPanel entity="Patient" entityId={patientId} />}
           </Stack>
         )}
 

@@ -21,6 +21,7 @@ import { UpdatePatientDto } from './dto/update-patient.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('patients')
@@ -47,14 +48,14 @@ export class PatientsController {
 
   @RequirePermissions('patients:create')
   @Post()
-  create(@Body() dto: CreatePatientDto) {
-    return this.patients.create(dto);
+  create(@Body() dto: CreatePatientDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.patients.create(dto, user);
   }
 
   @RequirePermissions('patients:edit')
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdatePatientDto) {
-    return this.patients.update(id, dto);
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdatePatientDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.patients.update(id, dto, user);
   }
 
   @RequirePermissions('patients:edit')
@@ -88,7 +89,7 @@ export class PatientsController {
 
   @RequirePermissions('patients:delete')
   @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.patients.remove(id);
+  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.patients.remove(id, user);
   }
 }

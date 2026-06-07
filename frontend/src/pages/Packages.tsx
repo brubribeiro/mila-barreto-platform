@@ -4,6 +4,7 @@ import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HistoryIcon from '@mui/icons-material/History';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { PageHeader } from '../components/PageHeader';
@@ -12,6 +13,7 @@ import { AppDataGrid } from '../components/AppDataGrid';
 import { FILTER_FIELD_SX, matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
 import { packagesApi } from '../api/packages';
 import { PackageFormDialog } from '../components/packages/PackageFormDialog';
+import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Package } from '../types';
@@ -21,13 +23,14 @@ const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' 
 export function Packages() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
-  const { has } = usePermissions();
+  const { has, isAdmin } = usePermissions();
   const canManage = has('packages:edit');
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'COMBO' | 'SESSIONS'>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Package | null>(null);
+  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: packages = [], isLoading } = useQuery({
     queryKey: ['packages'],
@@ -140,10 +143,25 @@ export function Packages() {
         field: 'actions',
         type: 'actions',
         headerName: 'Ações',
-        width: 100,
+        width: 140,
         getActions: (params) => {
-          if (!canManage) return [];
-          return [
+          const actions = [];
+          if (isAdmin) {
+            actions.push(
+              <GridActionsCellItem
+                key="history"
+                icon={
+                  <Tooltip title="Histórico de alterações">
+                    <HistoryIcon fontSize="small" />
+                  </Tooltip>
+                }
+                label="Histórico"
+                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
+              />,
+            );
+          }
+          if (!canManage) return actions;
+          actions.push(
             <GridActionsCellItem
               key="edit"
               icon={
@@ -175,11 +193,12 @@ export function Packages() {
                 if (ok) deleteMutation.mutate(params.row.id);
               }}
             />,
-          ];
+          );
+          return actions;
         },
       },
     ],
-    [confirm, deleteMutation, canManage],
+    [confirm, deleteMutation, canManage, isAdmin],
   );
 
   return (
@@ -248,6 +267,15 @@ export function Packages() {
         onClose={() => setFormOpen(false)}
         pkg={editing}
       />
+      {auditTarget && (
+        <AuditHistoryDialog
+          open={!!auditTarget}
+          onClose={() => setAuditTarget(null)}
+          entity="Package"
+          entityId={auditTarget.id}
+          title={auditTarget.name}
+        />
+      )}
     </Box>
   );
 }

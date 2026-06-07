@@ -733,25 +733,18 @@ export function Dashboard() {
                           primaryRight={when.format('DD/MM')}
                           secondaryRight={when.format('dddd')}
                           trailing={
-                            <Tooltip
-                              title={
-                                patient.phone
-                                  ? 'Enviar mensagem no WhatsApp'
-                                  : 'Sem telefone cadastrado'
-                              }
-                            >
-                              <span>
+                            patient.phone?.trim() ? (
+                              <Tooltip title="Enviar mensagem no WhatsApp">
                                 <IconButton
                                   size="small"
-                                  disabled={!patient.phone}
                                   onClick={() => setWhatsappPatient(patient)}
                                   aria-label={`Enviar WhatsApp para ${patient.name}`}
                                   sx={{ color: '#25D366' }}
                                 >
                                   <WhatsAppIcon fontSize="small" />
                                 </IconButton>
-                              </span>
-                            </Tooltip>
+                              </Tooltip>
+                            ) : undefined
                           }
                         />
                       ))}

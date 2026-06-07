@@ -25,6 +25,7 @@ import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HistoryIcon from '@mui/icons-material/History';
 import CloseIcon from '@mui/icons-material/Close';
 import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -38,6 +39,7 @@ import { ListFiltersBar } from '../components/ListFiltersBar';
 import { AppDataGrid } from '../components/AppDataGrid';
 import { FILTER_FIELD_SX, matchFields } from '../utils/listFilters';
 import { messagesApi, MessageTemplatePayload } from '../api/messages';
+import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { proceduresApi } from '../api/procedures';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { usePermissions } from '../contexts/usePermissions';
@@ -490,7 +492,7 @@ function TemplateDialog({
 export function Messages() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
-  const { has } = usePermissions();
+  const { has, isAdmin } = usePermissions();
   const canCreate = has('messages:create');
   const canEdit = has('messages:edit');
   const canDelete = has('messages:delete');
@@ -500,6 +502,7 @@ export function Messages() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MessageTemplate | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<MessageTemplate | null>(null);
+  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ['message-templates'],
@@ -562,7 +565,7 @@ export function Messages() {
         field: 'actions',
         type: 'actions',
         headerName: 'Ações',
-        width: 130,
+        width: 170,
         getActions: (params) => {
           const actions = [
             <GridActionsCellItem
@@ -576,6 +579,20 @@ export function Messages() {
               onClick={() => setPreviewTemplate(params.row)}
             />,
           ];
+          if (isAdmin) {
+            actions.push(
+              <GridActionsCellItem
+                key="history"
+                icon={
+                  <Tooltip title="Histórico de alterações">
+                    <HistoryIcon fontSize="small" />
+                  </Tooltip>
+                }
+                label="Histórico"
+                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
+              />,
+            );
+          }
           if (canEdit) {
             actions.push(
               <GridActionsCellItem
@@ -619,7 +636,7 @@ export function Messages() {
         },
       },
     ],
-    [confirm, deleteMutation, canEdit, canDelete],
+    [confirm, deleteMutation, canEdit, canDelete, isAdmin],
   );
 
   return (
@@ -696,6 +713,15 @@ export function Messages() {
         onClose={() => setPreviewTemplate(null)}
         template={previewTemplate}
       />
+      {auditTarget && (
+        <AuditHistoryDialog
+          open={!!auditTarget}
+          onClose={() => setAuditTarget(null)}
+          entity="MessageTemplate"
+          entityId={auditTarget.id}
+          title={auditTarget.name}
+        />
+      )}
     </Box>
   );
 }

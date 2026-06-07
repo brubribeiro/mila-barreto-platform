@@ -642,6 +642,37 @@ model InventoryItem {
   @@map("inventory_items")
 }
 
+// =========================
+// AUDITORIA (histórico de alterações)
+// =========================
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model AuditLog {
+  id         String      @id @default(uuid())
+  // Qual entidade foi alterada (ex: "Patient", "Appointment")
+  entity     String
+  // ID do registro alterado
+  entityId   String
+  action     AuditAction
+  // Diff das alterações: { campo: { old: valor_anterior, new: valor_novo } }
+  // Para CREATE: apenas new. Para DELETE: apenas old.
+  changes    Json?
+  // Usuário que realizou a alteração
+  userId     String?
+  userName   String?
+  createdAt  DateTime    @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
 enum MovementType {
   IN
   OUT

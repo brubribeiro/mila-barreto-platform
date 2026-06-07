@@ -27,19 +27,19 @@ export class UsersController {
 
   @RequirePermissions('users:create')
   @Post()
-  create(@Body() dto: CreateUserDto) {
-    return this.users.create(dto);
+  create(@Body() dto: CreateUserDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.users.create(dto, user);
   }
 
   @RequirePermissions('users:edit')
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto) {
-    return this.users.update(id, dto);
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.users.update(id, dto, user);
   }
 
   @RequirePermissions('users:delete')
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() me: AuthenticatedUser) {
-    return this.users.remove(id, me.id);
+    return this.users.remove(id, me.id, me);
   }
 }

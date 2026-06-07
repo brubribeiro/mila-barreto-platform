@@ -4,6 +4,7 @@ import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HistoryIcon from '@mui/icons-material/History';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { PageHeader } from '../components/PageHeader';
@@ -12,6 +13,7 @@ import { AppDataGrid } from '../components/AppDataGrid';
 import { matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
 import { paymentMethodsApi } from '../api/paymentMethods';
 import { PaymentMethodFormDialog } from '../components/payment-methods/PaymentMethodFormDialog';
+import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { usePermissions } from '../contexts/usePermissions';
 import type { PaymentMethodEntry } from '../types';
@@ -19,7 +21,7 @@ import type { PaymentMethodEntry } from '../types';
 export function PaymentMethods() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
-  const { has } = usePermissions();
+  const { has, isAdmin } = usePermissions();
   const canCreate = has('payment-methods:create');
   const canEdit = has('payment-methods:edit');
   const canDelete = has('payment-methods:delete');
@@ -27,6 +29,7 @@ export function PaymentMethods() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<PaymentMethodEntry | null>(null);
+  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: methods = [], isLoading } = useQuery({
     queryKey: ['payment-methods'],
@@ -97,9 +100,23 @@ export function PaymentMethods() {
         field: 'actions',
         type: 'actions',
         headerName: 'Ações',
-        width: 100,
+        width: 140,
         getActions: (params) => {
           const actions = [];
+          if (isAdmin) {
+            actions.push(
+              <GridActionsCellItem
+                key="history"
+                icon={
+                  <Tooltip title="Histórico de alterações">
+                    <HistoryIcon fontSize="small" />
+                  </Tooltip>
+                }
+                label="Histórico"
+                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
+              />,
+            );
+          }
           if (canEdit) {
             actions.push(
               <GridActionsCellItem
@@ -143,7 +160,7 @@ export function PaymentMethods() {
         },
       },
     ],
-    [confirm, canEdit, canDelete, deleteMutation],
+    [confirm, canEdit, canDelete, deleteMutation, isAdmin],
   );
 
   return (
@@ -203,6 +220,15 @@ export function PaymentMethods() {
         }}
         editing={editing}
       />
+      {auditTarget && (
+        <AuditHistoryDialog
+          open={!!auditTarget}
+          onClose={() => setAuditTarget(null)}
+          entity="PaymentMethod"
+          entityId={auditTarget.id}
+          title={auditTarget.name}
+        />
+      )}
     </Box>
   );
 }

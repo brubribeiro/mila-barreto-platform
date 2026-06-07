@@ -20,6 +20,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('packages')
@@ -49,8 +50,8 @@ export class PackagesController {
 
   @RequirePermissions('packages:create')
   @Post('patient-packages')
-  createPatientPackage(@Body() dto: CreatePatientPackageDto) {
-    return this.packages.createPatientPackage(dto);
+  createPatientPackage(@Body() dto: CreatePatientPackageDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.packages.createPatientPackage(dto, user);
   }
 
   @RequirePermissions('packages:edit')
@@ -58,8 +59,9 @@ export class PackagesController {
   updatePatientPackage(
     @Param('id') id: string,
     @Body() dto: UpdatePatientPackageDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.packages.updatePatientPackage(id, dto);
+    return this.packages.updatePatientPackage(id, dto, user);
   }
 
   // ─── Package (template/catálogo) ───
@@ -78,19 +80,19 @@ export class PackagesController {
 
   @RequirePermissions('packages:create')
   @Post()
-  create(@Body() dto: CreatePackageDto) {
-    return this.packages.create(dto);
+  create(@Body() dto: CreatePackageDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.packages.create(dto, user);
   }
 
   @RequirePermissions('packages:edit')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdatePackageDto) {
-    return this.packages.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdatePackageDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.packages.update(id, dto, user);
   }
 
   @RequirePermissions('packages:delete')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.packages.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.packages.remove(id, user);
   }
 }

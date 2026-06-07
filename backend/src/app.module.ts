@@ -23,6 +23,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { AuditLogModule } from './audit-log/audit-log.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { SchedulerModule } from './scheduler/scheduler.module';
     PromotionsModule,
     PaymentMethodsModule,
     SchedulerModule,
+    AuditLogModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

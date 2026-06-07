@@ -95,6 +95,38 @@ const empty: FormValues = {
 
 const DIALOG_HEIGHT_DESKTOP = 880;
 
+function buildPatientOptionalFields(
+  values: FormValues,
+  isEditing: boolean,
+): Partial<PatientPayload> {
+  const sex = values.sex as PatientSex | '';
+  const referralSource = values.referralSource as PatientReferralSource | '';
+  const out: Partial<PatientPayload> = {};
+
+  if (isEditing || sex) {
+    out.sex = sex || null;
+  }
+
+  const trimmedNotes = values.notes?.trim() ?? '';
+  if (isEditing) {
+    out.notes = trimmedNotes;
+  } else if (trimmedNotes) {
+    out.notes = trimmedNotes;
+  }
+
+  if (referralSource === 'OTHER') {
+    out.referralSource = 'OTHER';
+    out.referralSourceOther = values.referralSourceOther?.trim() ?? '';
+  } else if (isEditing || referralSource) {
+    out.referralSource = referralSource || null;
+    if (isEditing) {
+      out.referralSourceOther = '';
+    }
+  }
+
+  return out;
+}
+
 const AUTOFILL_WHITE = {
   '& input:-webkit-autofill': {
     WebkitBoxShadow: '0 0 0 1000px #fff inset',
@@ -375,20 +407,8 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
         ...(values.email ? { email: values.email } : {}),
         ...(values.phone ? { phone: onlyDigits(values.phone) } : {}),
         ...(values.birthDate ? { birthDate: birthDatePayloadFromInput(values.birthDate) } : {}),
-        ...(patient || values.sex ? { sex: (values.sex as PatientSex | '') || '' } : {}),
         ...(values.document ? { document: onlyDigits(values.document) } : {}),
-        ...(values.notes ? { notes: values.notes } : {}),
-        ...(patient || values.referralSource
-          ? { referralSource: (values.referralSource as PatientReferralSource | '') || '' }
-          : {}),
-        ...(patient || values.referralSourceOther !== undefined
-          ? {
-              referralSourceOther:
-                values.referralSource === 'OTHER'
-                  ? values.referralSourceOther?.trim() ?? ''
-                  : '',
-            }
-          : {}),
+        ...buildPatientOptionalFields(values, !!patient),
         ...(patient
           ? {
               cep: cepDigits.length === 8 ? cepDigits : '',
@@ -442,7 +462,9 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
   const submit = handleSubmit(
     (values) => mutation.mutate(values),
     (errors) => {
-      if (errors.name || errors.document || errors.cep) setTab('basic');
+      if (errors.name || errors.document || errors.cep || errors.referralSourceOther) {
+        setTab('basic');
+      }
     },
   );
 

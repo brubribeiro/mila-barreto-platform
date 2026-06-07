@@ -64,6 +64,7 @@ import { inventoryApi } from '../../api/inventory';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAppDialog } from '../../contexts/AppDialogContext';
 import { usePermissions } from '../../contexts/usePermissions';
+import { AuditHistoryPanel } from '../audit/AuditHistoryPanel';
 import { SendWhatsAppDialog } from '../messages/SendWhatsAppDialog';
 import { PatientDetailDrawer } from '../patients/PatientDetailDrawer';
 import { varsFromAppointment } from '../../utils/whatsapp';
@@ -210,7 +211,7 @@ export function AppointmentFormDialog({
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { confirm, alert } = useAppDialog();
-  const { has, restrictToOwnAppointments } = usePermissions();
+  const { has, restrictToOwnAppointments, isAdmin } = usePermissions();
   const canDelete = has('appointments:delete');
   const canCreate = has('appointments:create');
   const canViewPatient = has('patients:view');
@@ -2000,6 +2001,9 @@ export function AppointmentFormDialog({
                 </Stack>
               </Grid>
             </Grid>
+            {isAdmin && appointment?.id && (
+              <AuditHistoryPanel entity="Appointment" entityId={appointment.id} />
+            )}
           </DialogContent>
 
           <DialogActions

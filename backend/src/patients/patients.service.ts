@@ -7,6 +7,7 @@ import { UpdatePatientDto } from './dto/update-patient.dto';
 import { composePatientAddress } from './patient-address.util';
 import { NotificationsService } from '../notifications/notifications.service';
 import { R2StorageService } from '../documents/r2-storage.service';
+import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 
 const PATIENT_PHOTO_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const PATIENT_PHOTO_MAX_BYTES = 5 * 1024 * 1024;
@@ -26,6 +27,7 @@ export class PatientsService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly r2: R2StorageService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   list(search?: string) {
@@ -60,12 +62,14 @@ export class PatientsService {
     return patient;
   }
 
-  async create(dto: CreatePatientDto) {
+  async create(dto: CreatePatientDto, user?: AuditUser) {
     const data = this.normalizePatientWritableFields(dto);
 
     const patient = await this.prisma.patient.create({
       data: data as Parameters<typeof this.prisma.patient.create>[0]['data'],
     });
+
+    this.auditLog.logCreate('Patient', patient.id, patient as unknown as Record<string, unknown>, user).catch(() => undefined);
 
     // Notifica usuários com permissão de gerenciar usuários (= admins normalmente)
     const admins = await this.notifications.findUsersWithPermission('users:view');
@@ -85,13 +89,16 @@ export class PatientsService {
     return patient;
   }
 
-  async update(id: string, dto: UpdatePatientDto) {
-    await this.findOne(id);
+  async update(id: string, dto: UpdatePatientDto, user?: AuditUser) {
+    const oldPatient = await this.prisma.patient.findUnique({ where: { id } });
+    if (!oldPatient) throw new NotFoundException('Paciente não encontrado');
     const data = this.normalizePatientWritableFields(dto);
-    return this.prisma.patient.update({
+    const updated = await this.prisma.patient.update({
       where: { id },
       data: data as Parameters<typeof this.prisma.patient.update>[0]['data'],
     });
+    this.auditLog.logUpdate('Patient', id, oldPatient as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return updated;
   }
 
   /**
@@ -316,12 +323,13 @@ export class PatientsService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, user?: AuditUser) {
     const patient = await this.findOne(id);
     if (patient.photoStorageKey) {
       await this.r2.remove(patient.photoStorageKey);
     }
     await this.prisma.patient.delete({ where: { id } });
+    this.auditLog.logDelete('Patient', id, patient as unknown as Record<string, unknown>, user).catch(() => undefined);
     return { ok: true };
   }
 }

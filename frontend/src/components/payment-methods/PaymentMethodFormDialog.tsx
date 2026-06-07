@@ -34,7 +34,6 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
-
   const { control, handleSubmit, reset } = useForm<FormValues>({
     defaultValues: { name: '', feePercent: 0, active: true },
   });

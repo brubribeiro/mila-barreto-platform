@@ -9,12 +9,14 @@ import { CreateMovementDto } from './dto/create-movement.dto';
 import { BulkPurchaseDto } from './dto/bulk-purchase.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { parseDateOnlyToUtcNoon } from '../common/utils/date-only.util';
+import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 
 @Injectable()
 export class InventoryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   list() {
@@ -36,13 +38,17 @@ export class InventoryService {
     return item;
   }
 
-  create(dto: CreateInventoryItemDto) {
-    return this.prisma.inventoryItem.create({ data: dto });
+  async create(dto: CreateInventoryItemDto, user?: AuditUser) {
+    const created = await this.prisma.inventoryItem.create({ data: dto });
+    this.auditLog.logCreate('InventoryItem', created.id, created as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return created;
   }
 
-  async update(id: string, dto: UpdateInventoryItemDto) {
-    await this.findOne(id);
-    return this.prisma.inventoryItem.update({ where: { id }, data: dto });
+  async update(id: string, dto: UpdateInventoryItemDto, user?: AuditUser) {
+    const oldData = await this.findOne(id);
+    const updated = await this.prisma.inventoryItem.update({ where: { id }, data: dto });
+    this.auditLog.logUpdate('InventoryItem', id, oldData as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return updated;
   }
 
   async getDeletionPreview(id: string) {
@@ -78,7 +84,7 @@ export class InventoryService {
     };
   }
 
-  async remove(id: string) {
+  async remove(id: string, user?: AuditUser) {
     const preview = await this.getDeletionPreview(id);
 
     if (!preview.canDelete) {
@@ -98,15 +104,21 @@ export class InventoryService {
       );
     }
 
+    const oldData = await this.prisma.inventoryItem.findUnique({ where: { id } });
+
     await this.prisma.$transaction([
       this.prisma.inventoryMovement.deleteMany({ where: { itemId: id } }),
       this.prisma.inventoryItem.delete({ where: { id } }),
     ]);
 
+    if (oldData) {
+      this.auditLog.logDelete('InventoryItem', id, oldData as unknown as Record<string, unknown>, user).catch(() => undefined);
+    }
+
     return { ok: true };
   }
 
-  async createMovement(itemId: string, dto: CreateMovementDto) {
+  async createMovement(itemId: string, dto: CreateMovementDto, user?: AuditUser) {
     const item = await this.findOne(itemId);
 
     const currentQty = Number(item.quantity);
@@ -168,8 +180,10 @@ export class InventoryService {
         });
       }
 
-      return [movement, updatedItem];
+      return [movement, updatedItem] as const;
     });
+
+    this.auditLog.logCreate('InventoryMovement', result[0].id, result[0] as unknown as Record<string, unknown>, user).catch(() => undefined);
 
     // Se a movimentação fez o estoque cruzar o mínimo, notifica quem pode editar estoque
     const minQty = Number(item.minQuantity);
@@ -192,7 +206,7 @@ export class InventoryService {
     return result;
   }
 
-  async createBulkPurchase(dto: BulkPurchaseDto) {
+  async createBulkPurchase(dto: BulkPurchaseDto, user?: AuditUser) {
     const freight = dto.freight ?? 0;
     const reason = dto.reason?.trim() || 'Compra em lote';
 

@@ -16,6 +16,7 @@ import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HistoryIcon from '@mui/icons-material/History';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -28,9 +29,10 @@ import { patientsApi } from '../api/patients';
 import { PatientFormDialog } from '../components/patients/PatientFormDialog';
 import { PatientDetailDrawer } from '../components/patients/PatientDetailDrawer';
 import { SendWhatsAppDialog } from '../components/messages/SendWhatsAppDialog';
+import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { usePermissions } from '../contexts/usePermissions';
-import { maskCPF, maskPhone } from '../utils/masks';
+import { maskPhone } from '../utils/masks';
 import { formatDateOnlyFromApi } from '../utils/dateOnly';
 import { patientSexLabel } from '../utils/patientSex';
 import { patientReferralSourceLabel } from '../utils/patientReferralSource';
@@ -40,7 +42,7 @@ import type { Patient } from '../types';
 export function Patients() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
-  const { has } = usePermissions();
+  const { has, isAdmin } = usePermissions();
   const canCreate = has('patients:create');
   const canEdit = has('patients:edit');
   const canDelete = has('patients:delete');
@@ -51,6 +53,7 @@ export function Patients() {
   const [editing, setEditing] = useState<Patient | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [whatsappPatient, setWhatsappPatient] = useState<Patient | null>(null);
+  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: patients = [], isLoading } = useQuery({
     queryKey: ['patients', search],
@@ -106,20 +109,6 @@ export function Patients() {
         valueGetter: (params) => (params.row.phone ? maskPhone(params.row.phone) : '—'),
       },
       {
-        field: 'email',
-        headerName: 'E-mail',
-        flex: 1,
-        minWidth: 180,
-        valueGetter: (params) => params.row.email ?? '—',
-      },
-      {
-        field: 'document',
-        headerName: 'CPF',
-        flex: 0.6,
-        minWidth: 130,
-        valueGetter: (params) => (params.row.document ? maskCPF(params.row.document) : '—'),
-      },
-      {
         field: 'birthDate',
         headerName: 'Nascimento',
         flex: 0.55,
@@ -158,7 +147,7 @@ export function Patients() {
         field: 'actions',
         type: 'actions',
         headerName: 'Ações',
-        width: 170,
+        width: 210,
         getActions: (params) => {
           const actions = [
             <GridActionsCellItem
@@ -185,6 +174,20 @@ export function Patients() {
               onClick={() => setWhatsappPatient(params.row)}
             />,
           ];
+          if (isAdmin) {
+            actions.push(
+              <GridActionsCellItem
+                key="history"
+                icon={
+                  <Tooltip title="Histórico de alterações">
+                    <HistoryIcon fontSize="small" />
+                  </Tooltip>
+                }
+                label="Histórico"
+                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
+              />,
+            );
+          }
           if (canEdit) {
             actions.push(
               <GridActionsCellItem
@@ -228,7 +231,7 @@ export function Patients() {
         },
       },
     ],
-    [confirm, deleteMutation, canEdit, canDelete],
+    [confirm, deleteMutation, canEdit, canDelete, isAdmin],
   );
 
   return (
@@ -302,6 +305,15 @@ export function Patients() {
         vars={{ paciente_nome: whatsappPatient?.name?.split(' ')[0] }}
         title={`Enviar mensagem para ${whatsappPatient?.name ?? ''}`}
       />
+      {auditTarget && (
+        <AuditHistoryDialog
+          open={!!auditTarget}
+          onClose={() => setAuditTarget(null)}
+          entity="Patient"
+          entityId={auditTarget.id}
+          title={auditTarget.name}
+        />
+      )}
     </Box>
   );
 }

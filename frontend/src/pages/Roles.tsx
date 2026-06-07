@@ -4,6 +4,7 @@ import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HistoryIcon from '@mui/icons-material/History';
 import LockIcon from '@mui/icons-material/Lock';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -13,6 +14,7 @@ import { AppDataGrid } from '../components/AppDataGrid';
 import { matchFields } from '../utils/listFilters';
 import { rolesApi } from '../api/roles';
 import { RoleFormDialog } from '../components/roles/RoleFormDialog';
+import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Role } from '../types';
@@ -20,7 +22,7 @@ import type { Role } from '../types';
 export function Roles() {
   const queryClient = useQueryClient();
   const { confirm, alert } = useAppDialog();
-  const { has } = usePermissions();
+  const { has, isAdmin } = usePermissions();
   const canCreate = has('roles:create');
   const canEdit = has('roles:edit');
   const canDelete = has('roles:delete');
@@ -28,6 +30,7 @@ export function Roles() {
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Role | null>(null);
+  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: roles = [], isLoading } = useQuery({
     queryKey: ['roles'],
@@ -117,9 +120,23 @@ export function Roles() {
         field: 'actions',
         type: 'actions',
         headerName: 'Ações',
-        width: 100,
+        width: 140,
         getActions: (params) => {
           const actions = [];
+          if (isAdmin) {
+            actions.push(
+              <GridActionsCellItem
+                key="history"
+                icon={
+                  <Tooltip title="Histórico de alterações">
+                    <HistoryIcon fontSize="small" />
+                  </Tooltip>
+                }
+                label="Histórico"
+                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
+              />,
+            );
+          }
           if (canEdit) {
             actions.push(
               <GridActionsCellItem
@@ -163,7 +180,7 @@ export function Roles() {
         },
       },
     ],
-    [confirm, deleteMutation, canEdit, canDelete],
+    [confirm, deleteMutation, canEdit, canDelete, isAdmin],
   );
 
   return (
@@ -212,6 +229,15 @@ export function Roles() {
       </Card>
 
       <RoleFormDialog open={formOpen} onClose={() => setFormOpen(false)} role={editing} />
+      {auditTarget && (
+        <AuditHistoryDialog
+          open={!!auditTarget}
+          onClose={() => setAuditTarget(null)}
+          entity="Role"
+          entityId={auditTarget.id}
+          title={auditTarget.name}
+        />
+      )}
     </Box>
   );
 }

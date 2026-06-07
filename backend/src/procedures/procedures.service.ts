@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 import {
   computeHourlyCostSummary,
   getHourlyCostIncludeVariable,
@@ -19,7 +20,7 @@ export interface ProcedureFinancials {
 
 @Injectable()
 export class ProceduresService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly auditLog: AuditLogService) {}
 
   /** Calcula todos os indicadores financeiros de um procedimento. */
   private computeFinancials(
@@ -105,7 +106,7 @@ export class ProceduresService {
     };
   }
 
-  async create(dto: CreateProcedureDto) {
+  async create(dto: CreateProcedureDto, user?: AuditUser) {
     const { materials, ...data } = dto;
     const created = await this.prisma.procedure.create({
       data: {
@@ -116,6 +117,7 @@ export class ProceduresService {
       },
       include: { materials: { include: { item: true } } },
     });
+    this.auditLog.logCreate('Procedure', created.id, created as unknown as Record<string, unknown>, user).catch(() => undefined);
     const shared = await this.getSharedCosts();
     return {
       ...created,
@@ -123,8 +125,8 @@ export class ProceduresService {
     };
   }
 
-  async update(id: string, dto: UpdateProcedureDto) {
-    await this.findOne(id);
+  async update(id: string, dto: UpdateProcedureDto, user?: AuditUser) {
+    const oldProcedure = await this.findOne(id);
     const { materials, ...data } = dto;
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -146,6 +148,7 @@ export class ProceduresService {
         include: { materials: { include: { item: true } } },
       });
     });
+    this.auditLog.logUpdate('Procedure', id, oldProcedure as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
     const shared = await this.getSharedCosts();
     return {
       ...updated,
@@ -153,9 +156,10 @@ export class ProceduresService {
     };
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, user?: AuditUser) {
+    const old = await this.findOne(id);
     await this.prisma.procedure.delete({ where: { id } });
+    this.auditLog.logDelete('Procedure', id, old as unknown as Record<string, unknown>, user).catch(() => undefined);
     return { ok: true };
   }
 }

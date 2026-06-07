@@ -17,6 +17,7 @@ import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HistoryIcon from '@mui/icons-material/History';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
@@ -34,8 +35,10 @@ import { financeApi } from '../api/finance';
 import { recurringExpensesApi } from '../api/recurring-expenses';
 import { appointmentsBackfillFinance } from '../api/appointments';
 import { FinanceFormDialog } from '../components/finance/FinanceFormDialog';
+import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import type { FinancialEntry } from '../types';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { usePermissions } from '../contexts/usePermissions';
 import { downloadCsv } from '../utils/csv';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -64,6 +67,7 @@ type InvoiceFilter = 'ALL' | 'PENDING' | 'ISSUED';
 export function Finance() {
   const queryClient = useQueryClient();
   const { confirm, alert } = useAppDialog();
+  const { isAdmin } = usePermissions();
   const [from, setFrom] = useState(dayjs().startOf('month').format('YYYY-MM-DD'));
   const [to, setTo] = useState(dayjs().endOf('month').format('YYYY-MM-DD'));
   const [search, setSearch] = useState('');
@@ -71,6 +75,7 @@ export function Finance() {
   const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialEntry | null>(null);
+  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
 
   const fromIso = useMemo(() => {
     const parsed = dayjs(from);
@@ -331,8 +336,24 @@ export function Finance() {
         field: 'actions',
         type: 'actions',
         headerName: '',
-        width: 80,
-        getActions: (params) => [
+        width: 120,
+        getActions: (params) => {
+          const actions = [];
+          if (isAdmin) {
+            actions.push(
+              <GridActionsCellItem
+                key="history"
+                icon={
+                  <Tooltip title="Histórico de alterações">
+                    <HistoryIcon fontSize="small" />
+                  </Tooltip>
+                }
+                label="Histórico"
+                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.description ?? '' })}
+              />,
+            );
+          }
+          actions.push(
           <GridActionsCellItem
             key="edit"
             icon={
@@ -364,10 +385,12 @@ export function Finance() {
               if (ok) deleteMutation.mutate(params.row.id);
             }}
           />,
-        ],
+          );
+          return actions;
+        },
       },
     ],
-    [confirm, deleteMutation, invoiceMutation],
+    [confirm, deleteMutation, invoiceMutation, isAdmin],
   );
 
   const exportPeriodCsv = async () => {
@@ -590,6 +613,15 @@ export function Finance() {
       </Card>
 
       <FinanceFormDialog open={formOpen} onClose={() => setFormOpen(false)} entry={editing} />
+      {auditTarget && (
+        <AuditHistoryDialog
+          open={!!auditTarget}
+          onClose={() => setAuditTarget(null)}
+          entity="FinancialEntry"
+          entityId={auditTarget.id}
+          title={auditTarget.name}
+        />
+      )}
     </Box>
   );
 }

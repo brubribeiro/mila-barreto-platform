@@ -6,6 +6,7 @@ import { UpdateProcedureDto } from './dto/update-procedure.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('procedures')
@@ -26,19 +27,19 @@ export class ProceduresController {
 
   @RequirePermissions('procedures:create')
   @Post()
-  create(@Body() dto: CreateProcedureDto) {
-    return this.procedures.create(dto);
+  create(@Body() dto: CreateProcedureDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.procedures.create(dto, user);
   }
 
   @RequirePermissions('procedures:edit')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateProcedureDto) {
-    return this.procedures.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateProcedureDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.procedures.update(id, dto, user);
   }
 
   @RequirePermissions('procedures:delete')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.procedures.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.procedures.remove(id, user);
   }
 }

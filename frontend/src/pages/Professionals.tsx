@@ -4,6 +4,7 @@ import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HistoryIcon from '@mui/icons-material/History';
 import SwitchAccountIcon from '@mui/icons-material/SwitchAccount';
 import StarIcon from '@mui/icons-material/Star';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -15,6 +16,7 @@ import { AppDataGrid } from '../components/AppDataGrid';
 import { FILTER_FIELD_SX, matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
 import { usersApi } from '../api/users';
 import { ProfessionalFormDialog } from '../components/professionals/ProfessionalFormDialog';
+import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { usePermissions } from '../contexts/usePermissions';
@@ -24,7 +26,7 @@ export function Professionals() {
   const queryClient = useQueryClient();
   const { user: me, impersonate } = useAuth();
   const { confirm } = useAppDialog();
-  const { has } = usePermissions();
+  const { has, isAdmin } = usePermissions();
   const canCreate = has('users:create');
   const canEdit = has('users:edit');
   const canDelete = has('users:delete');
@@ -35,6 +37,7 @@ export function Professionals() {
   const [appointmentsFilter, setAppointmentsFilter] = useState<'ALL' | 'YES' | 'NO'>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<UserSummary | null>(null);
+  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users'],
@@ -136,12 +139,26 @@ export function Professionals() {
         field: 'actions',
         type: 'actions',
         headerName: 'Ações',
-        width: 150,
+        width: 190,
         getActions: (params) => {
           const isSelf = params.row.id === me?.id;
-          const isAdmin = me?.roleName === 'Administrador';
+          const isCurrentUserAdmin = me?.roleName === 'Administrador';
           const actions = [];
-          if (isAdmin && !isSelf && params.row.active) {
+          if (isAdmin) {
+            actions.push(
+              <GridActionsCellItem
+                key="history"
+                icon={
+                  <Tooltip title="Histórico de alterações">
+                    <HistoryIcon fontSize="small" />
+                  </Tooltip>
+                }
+                label="Histórico"
+                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
+              />,
+            );
+          }
+          if (isCurrentUserAdmin && !isSelf && params.row.active) {
             actions.push(
               <GridActionsCellItem
                 key="impersonate"
@@ -206,7 +223,7 @@ export function Professionals() {
         },
       },
     ],
-    [confirm, deleteMutation, me?.id, me?.roleName, canEdit, canDelete, impersonate],
+    [confirm, deleteMutation, me?.id, me?.roleName, canEdit, canDelete, impersonate, isAdmin],
   );
 
   return (
@@ -288,6 +305,15 @@ export function Professionals() {
         onClose={() => setFormOpen(false)}
         user={editing}
       />
+      {auditTarget && (
+        <AuditHistoryDialog
+          open={!!auditTarget}
+          onClose={() => setAuditTarget(null)}
+          entity="User"
+          entityId={auditTarget.id}
+          title={auditTarget.name}
+        />
+      )}
     </Box>
   );
 }

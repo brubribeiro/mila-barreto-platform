@@ -19,6 +19,7 @@ import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HistoryIcon from '@mui/icons-material/History';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ScheduleIcon from '@mui/icons-material/Schedule';
@@ -31,7 +32,9 @@ import { AppDataGrid } from '../components/AppDataGrid';
 import { FILTER_FIELD_SX, matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
 import { recurringExpensesApi, type HourlyCostSettings } from '../api/recurring-expenses';
 import { RecurringExpenseFormDialog } from '../components/finance/RecurringExpenseFormDialog';
+import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { usePermissions } from '../contexts/usePermissions';
 import type { RecurringExpense } from '../types';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -39,12 +42,14 @@ const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' 
 export function RecurringExpensesPage() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
+  const { isAdmin } = usePermissions();
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'FIXED' | 'VARIABLE'>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RecurringExpense | null>(null);
   const [snack, setSnack] = useState<string | null>(null);
+  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['recurring-expenses'],
@@ -254,8 +259,24 @@ export function RecurringExpensesPage() {
         field: 'actions',
         type: 'actions',
         headerName: 'Ações',
-        width: 100,
-        getActions: (p) => [
+        width: 140,
+        getActions: (p) => {
+          const actions = [];
+          if (isAdmin) {
+            actions.push(
+              <GridActionsCellItem
+                key="history"
+                icon={
+                  <Tooltip title="Histórico de alterações">
+                    <HistoryIcon fontSize="small" />
+                  </Tooltip>
+                }
+                label="Histórico"
+                onClick={() => setAuditTarget({ id: p.row.id, name: p.row.name ?? '' })}
+              />,
+            );
+          }
+          actions.push(
           <GridActionsCellItem
             key="edit"
             icon={
@@ -287,10 +308,12 @@ export function RecurringExpensesPage() {
               if (ok) deleteMutation.mutate(p.row.id);
             }}
           />,
-        ],
+          );
+          return actions;
+        },
       },
     ],
-    [confirm, deleteMutation],
+    [confirm, deleteMutation, isAdmin],
   );
 
   return (
@@ -459,6 +482,15 @@ export function RecurringExpensesPage() {
         onClose={() => setFormOpen(false)}
         expense={editing}
       />
+      {auditTarget && (
+        <AuditHistoryDialog
+          open={!!auditTarget}
+          onClose={() => setAuditTarget(null)}
+          entity="RecurringExpense"
+          entityId={auditTarget.id}
+          title={auditTarget.name}
+        />
+      )}
 
       <Snackbar
         open={!!snack}

@@ -5,10 +5,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreatePromotionDto } from './dto/create-promotion.dto';
 import { UpdatePromotionDto } from './dto/update-promotion.dto';
 import { parseDateOnlyToUtcNoon } from '../common/utils/date-only.util';
+import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 
 @Injectable()
 export class PromotionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   private readonly defaultInclude = {
     procedures: { include: { procedure: { select: { id: true, name: true, price: true } } } },
@@ -32,8 +36,8 @@ export class PromotionsService {
     return promo;
   }
 
-  async create(dto: CreatePromotionDto) {
-    return this.prisma.promotion.create({
+  async create(dto: CreatePromotionDto, user?: AuditUser) {
+    const created = await this.prisma.promotion.create({
       data: {
         name: dto.name,
         description: dto.description,
@@ -52,13 +56,15 @@ export class PromotionsService {
       },
       include: this.defaultInclude,
     });
+    this.auditLog.logCreate('Promotion', created.id, created as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return created;
   }
 
-  async update(id: string, dto: UpdatePromotionDto) {
+  async update(id: string, dto: UpdatePromotionDto, user?: AuditUser) {
     const existing = await this.prisma.promotion.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Promoção não encontrada');
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       // Atualizar vínculos com procedimentos
       if (dto.procedureIds !== undefined) {
         await tx.promotionProcedure.deleteMany({ where: { promotionId: id } });
@@ -94,12 +100,15 @@ export class PromotionsService {
         include: this.defaultInclude,
       });
     });
+    this.auditLog.logUpdate('Promotion', id, existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return updated;
   }
 
-  async remove(id: string) {
+  async remove(id: string, user?: AuditUser) {
     const existing = await this.prisma.promotion.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Promoção não encontrada');
     await this.prisma.promotion.delete({ where: { id } });
+    this.auditLog.logDelete('Promotion', id, existing as unknown as Record<string, unknown>, user).catch(() => undefined);
     return { ok: true };
   }
 

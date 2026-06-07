@@ -18,6 +18,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AvailabilityService } from '../availability/availability.service';
 import { PackagesService } from '../packages/packages.service';
@@ -82,6 +83,7 @@ export class AppointmentsService {
     private readonly availability: AvailabilityService,
     private readonly packagesService: PackagesService,
     private readonly promotionsService: PromotionsService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   list(from?: string, to?: string, professionalId?: string) {
@@ -343,7 +345,7 @@ export class AppointmentsService {
     }
   }
 
-  async create(dto: CreateAppointmentDto) {
+  async create(dto: CreateAppointmentDto, user?: AuditUser) {
     const kind = dto.kind ?? AppointmentKind.PROCEDURE;
     if (requiresProcedure(kind) && !dto.procedureId) {
       throw new BadRequestException('Procedimento é obrigatório para agendamentos do tipo PROCEDURE.');
@@ -419,6 +421,8 @@ export class AppointmentsService {
         metadata: { appointmentId: appt.id },
       })
       .catch(() => undefined);
+
+    this.auditLog.logCreate('Appointment', appt.id, appt as unknown as Record<string, unknown>, user).catch(() => undefined);
 
     return appt;
   }
@@ -754,6 +758,8 @@ export class AppointmentsService {
       });
     });
 
+    this.auditLog.logUpdate('Appointment', id, currentForRecurrence as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>, user).catch(() => undefined);
+
     if (wasCancelledRequested) {
       this.notifications
         .notify({
@@ -916,8 +922,10 @@ export class AppointmentsService {
     });
   }
 
-  async remove(id: string) {
-    return this.prisma.$transaction(async (tx) => {
+  async remove(id: string, user?: AuditUser) {
+    const oldData = await this.prisma.appointment.findUnique({ where: { id } });
+
+    const result = await this.prisma.$transaction(async (tx) => {
       const appt = await tx.appointment.findUnique({ where: { id } });
       if (!appt) throw new NotFoundException('Agendamento não encontrado');
 
@@ -944,5 +952,11 @@ export class AppointmentsService {
       await tx.appointment.delete({ where: { id } });
       return { ok: true };
     });
+
+    if (oldData) {
+      this.auditLog.logDelete('Appointment', id, oldData as unknown as Record<string, unknown>, user).catch(() => undefined);
+    }
+
+    return result;
   }
 }

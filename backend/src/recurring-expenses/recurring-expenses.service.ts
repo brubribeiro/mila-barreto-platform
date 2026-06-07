@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 import {
   computeHourlyCostSummary,
   getHourlyCostIncludeVariable,
@@ -10,7 +11,10 @@ import { UpdateRecurringExpenseDto } from './dto/update-recurring-expense.dto';
 
 @Injectable()
 export class RecurringExpensesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   list() {
     return this.prisma.recurringExpense.findMany({
@@ -44,8 +48,8 @@ export class RecurringExpensesService {
     return item;
   }
 
-  create(dto: CreateRecurringExpenseDto) {
-    return this.prisma.recurringExpense.create({
+  async create(dto: CreateRecurringExpenseDto, user?: AuditUser) {
+    const created = await this.prisma.recurringExpense.create({
       data: {
         name: dto.name,
         description: dto.description,
@@ -56,19 +60,24 @@ export class RecurringExpensesService {
         active: dto.active ?? true,
       },
     });
+    this.auditLog.logCreate('RecurringExpense', created.id, created as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return created;
   }
 
-  async update(id: string, dto: UpdateRecurringExpenseDto) {
-    await this.findOne(id);
-    return this.prisma.recurringExpense.update({
+  async update(id: string, dto: UpdateRecurringExpenseDto, user?: AuditUser) {
+    const oldData = await this.findOne(id);
+    const updated = await this.prisma.recurringExpense.update({
       where: { id },
       data: dto,
     });
+    this.auditLog.logUpdate('RecurringExpense', id, oldData as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return updated;
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, user?: AuditUser) {
+    const oldData = await this.findOne(id);
     await this.prisma.recurringExpense.delete({ where: { id } });
+    this.auditLog.logDelete('RecurringExpense', id, oldData as unknown as Record<string, unknown>, user).catch(() => undefined);
     return { ok: true };
   }
 

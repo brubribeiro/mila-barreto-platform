@@ -18,6 +18,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('equipment')
@@ -44,14 +45,14 @@ export class EquipmentController {
 
   @RequirePermissions('equipment:create')
   @Post()
-  create(@Body() dto: CreateEquipmentDto) {
-    return this.equipment.create(dto);
+  create(@Body() dto: CreateEquipmentDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.equipment.create(dto, user);
   }
 
   @RequirePermissions('equipment:edit')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateEquipmentDto) {
-    return this.equipment.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateEquipmentDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.equipment.update(id, dto, user);
   }
 
   @RequirePermissions('equipment:edit')
@@ -62,8 +63,8 @@ export class EquipmentController {
 
   @RequirePermissions('equipment:delete')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.equipment.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.equipment.remove(id, user);
   }
 
   /** Endpoint para disparar checagem de notificações de manutenção (pode ser chamado via cron). */

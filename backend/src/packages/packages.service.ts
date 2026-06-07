@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 import { CreatePackageDto, PackageItemDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
 import {
@@ -25,7 +26,10 @@ const patientPackageInclude = {
 
 @Injectable()
 export class PackagesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   // ─── CRUD de Package (template/catálogo) ───
 
@@ -51,13 +55,13 @@ export class PackagesService {
     return pkg;
   }
 
-  async create(dto: CreatePackageDto) {
+  async create(dto: CreatePackageDto, user?: AuditUser) {
     const { items, ...data } = dto;
 
     // Calcula sessionCount a partir dos items
     const sessionCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
-    return this.prisma.package.create({
+    const created = await this.prisma.package.create({
       data: {
         ...data,
         sessionCount,
@@ -71,13 +75,15 @@ export class PackagesService {
       },
       include: packageInclude,
     });
+    this.auditLog.logCreate('Package', created.id, created as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return created;
   }
 
-  async update(id: string, dto: UpdatePackageDto) {
-    await this.findOne(id);
+  async update(id: string, dto: UpdatePackageDto, user?: AuditUser) {
+    const oldData = await this.findOne(id);
     const { items, ...data } = dto;
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       if (items !== undefined) {
         await tx.packageItem.deleteMany({ where: { packageId: id } });
         if (items.length > 0) {
@@ -101,9 +107,11 @@ export class PackagesService {
         include: packageInclude,
       });
     });
+    this.auditLog.logUpdate('Package', id, oldData as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return updated;
   }
 
-  async remove(id: string) {
+  async remove(id: string, user?: AuditUser) {
     const pkg = await this.findOne(id);
     // Verifica se há pacotes ativos vinculados a pacientes
     const activeCount = await this.prisma.patientPackage.count({
@@ -115,6 +123,7 @@ export class PackagesService {
       );
     }
     await this.prisma.package.delete({ where: { id } });
+    this.auditLog.logDelete('Package', id, pkg as unknown as Record<string, unknown>, user).catch(() => undefined);
     return { ok: true };
   }
 
@@ -148,7 +157,7 @@ export class PackagesService {
     });
   }
 
-  async createPatientPackage(dto: CreatePatientPackageDto) {
+  async createPatientPackage(dto: CreatePatientPackageDto, user?: AuditUser) {
     const pkg = await this.findOne(dto.packageId);
     const totalPaid = dto.totalPaid ?? this.resolvePackageSalePrice(pkg);
 
@@ -165,7 +174,7 @@ export class PackagesService {
       expiresAt.setDate(expiresAt.getDate() + pkg.validityDays);
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const pp = await tx.patientPackage.create({
         data: {
           patientId: dto.patientId,
@@ -215,6 +224,8 @@ export class PackagesService {
         include: patientPackageInclude,
       });
     });
+    this.auditLog.logCreate('PatientPackage', result.id, result as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return result;
   }
 
   /** Preço de venda do catálogo (totalPrice fixo ou soma dos procedimentos com desconto). */
@@ -236,13 +247,15 @@ export class PackagesService {
     return Math.round(sum * 100) / 100;
   }
 
-  async updatePatientPackage(id: string, dto: UpdatePatientPackageDto) {
-    await this.findPatientPackage(id);
-    return this.prisma.patientPackage.update({
+  async updatePatientPackage(id: string, dto: UpdatePatientPackageDto, user?: AuditUser) {
+    const oldData = await this.findPatientPackage(id);
+    const updated = await this.prisma.patientPackage.update({
       where: { id },
       data: dto as any,
       include: patientPackageInclude,
     });
+    this.auditLog.logUpdate('PatientPackage', id, oldData as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return updated;
   }
 
   // Chamado pelo módulo de appointments ao completar/cancelar agendamento

@@ -8,6 +8,7 @@ import { BulkPurchaseDto } from './dto/bulk-purchase.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('inventory')
@@ -40,32 +41,32 @@ export class InventoryController {
 
   @RequirePermissions('inventory:create')
   @Post()
-  create(@Body() dto: CreateInventoryItemDto) {
-    return this.inventory.create(dto);
+  create(@Body() dto: CreateInventoryItemDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.inventory.create(dto, user);
   }
 
   @RequirePermissions('inventory:edit')
   @Post('bulk-purchase')
-  createBulkPurchase(@Body() dto: BulkPurchaseDto) {
-    return this.inventory.createBulkPurchase(dto);
+  createBulkPurchase(@Body() dto: BulkPurchaseDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.inventory.createBulkPurchase(dto, user);
   }
 
   @RequirePermissions('inventory:edit')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateInventoryItemDto) {
-    return this.inventory.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateInventoryItemDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.inventory.update(id, dto, user);
   }
 
   @RequirePermissions('inventory:delete')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.inventory.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.inventory.remove(id, user);
   }
 
   // Movimentação manual conta como edição do item
   @RequirePermissions('inventory:edit')
   @Post(':id/movements')
-  createMovement(@Param('id') id: string, @Body() dto: CreateMovementDto) {
-    return this.inventory.createMovement(id, dto);
+  createMovement(@Param('id') id: string, @Body() dto: CreateMovementDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.inventory.createMovement(id, dto, user);
   }
 }

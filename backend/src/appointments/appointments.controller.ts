@@ -53,8 +53,8 @@ export class AppointmentsController {
 
   @RequirePermissions('appointments:create')
   @Post()
-  create(@Body() dto: CreateAppointmentDto) {
-    return this.appts.create(dto);
+  create(@Body() dto: CreateAppointmentDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.appts.create(dto, user);
   }
 
   @RequirePermissions('appointments:edit')
@@ -93,7 +93,7 @@ export class AppointmentsController {
 
   @RequirePermissions('appointments:delete')
   @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.appts.remove(id);
+  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.appts.remove(id, user);
   }
 }

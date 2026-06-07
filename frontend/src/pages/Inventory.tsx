@@ -16,6 +16,7 @@ import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HistoryIcon from '@mui/icons-material/History';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -32,6 +33,7 @@ import { inventoryApi } from '../api/inventory';
 import { InventoryFormDialog } from '../components/inventory/InventoryFormDialog';
 import { MovementDialog } from '../components/inventory/MovementDialog';
 import { BulkPurchaseDialog } from '../components/inventory/BulkPurchaseDialog';
+import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { usePermissions } from '../contexts/usePermissions';
 import type { InventoryItem } from '../types';
@@ -42,7 +44,7 @@ export function Inventory() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { confirm, alert } = useAppDialog();
-  const { has } = usePermissions();
+  const { has, isAdmin } = usePermissions();
   const canCreate = has('inventory:create');
   const canEdit = has('inventory:edit');
   const canDelete = has('inventory:delete');
@@ -53,6 +55,7 @@ export function Inventory() {
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [movementItem, setMovementItem] = useState<InventoryItem | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['inventory'],
@@ -165,7 +168,7 @@ export function Inventory() {
         field: 'actions',
         type: 'actions',
         headerName: 'Ações',
-        width: 160,
+        width: 200,
         getActions: (params) => {
           const actions = [
             <GridActionsCellItem
@@ -189,6 +192,20 @@ export function Inventory() {
               onClick={() => setMovementItem(params.row)}
             />,
           ];
+          if (isAdmin) {
+            actions.push(
+              <GridActionsCellItem
+                key="history"
+                icon={
+                  <Tooltip title="Histórico de alterações">
+                    <HistoryIcon fontSize="small" />
+                  </Tooltip>
+                }
+                label="Histórico"
+                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
+              />,
+            );
+          }
           if (canEdit) {
             actions.push(
               <GridActionsCellItem
@@ -270,7 +287,7 @@ export function Inventory() {
         },
       },
     ],
-    [alert, confirm, deleteMutation, canEdit, canDelete, navigate],
+    [alert, confirm, deleteMutation, canEdit, canDelete, navigate, isAdmin],
   );
 
   return (
@@ -361,6 +378,15 @@ export function Inventory() {
         item={movementItem}
       />
       <BulkPurchaseDialog open={bulkOpen} onClose={() => setBulkOpen(false)} />
+      {auditTarget && (
+        <AuditHistoryDialog
+          open={!!auditTarget}
+          onClose={() => setAuditTarget(null)}
+          entity="InventoryItem"
+          entityId={auditTarget.id}
+          title={auditTarget.name}
+        />
+      )}
     </Box>
   );
 }

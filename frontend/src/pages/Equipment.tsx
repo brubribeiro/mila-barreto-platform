@@ -14,6 +14,7 @@ import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HistoryIcon from '@mui/icons-material/History';
 import BuildIcon from '@mui/icons-material/Build';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -31,6 +32,7 @@ import {
 } from '../utils/listFilters';
 import { equipmentApi } from '../api/equipment';
 import { EquipmentFormDialog } from '../components/equipment/EquipmentFormDialog';
+import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Equipment } from '../types';
@@ -43,7 +45,7 @@ function formatCurrency(value?: number | null) {
 export function EquipmentPage() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
-  const { has } = usePermissions();
+  const { has, isAdmin } = usePermissions();
   const canCreate = has('equipment:create');
   const canEdit = has('equipment:edit');
   const canDelete = has('equipment:delete');
@@ -53,6 +55,7 @@ export function EquipmentPage() {
   const [maintenanceFilter, setMaintenanceFilter] = useState<MaintenanceFilter>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Equipment | null>(null);
+  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['equipment'],
@@ -182,9 +185,23 @@ export function EquipmentPage() {
         field: 'actions',
         type: 'actions',
         headerName: 'Ações',
-        width: 140,
+        width: 180,
         getActions: (p) => {
           const actions = [];
+          if (isAdmin) {
+            actions.push(
+              <GridActionsCellItem
+                key="history"
+                icon={
+                  <Tooltip title="Histórico de alterações">
+                    <HistoryIcon fontSize="small" />
+                  </Tooltip>
+                }
+                label="Histórico"
+                onClick={() => setAuditTarget({ id: p.row.id, name: p.row.name ?? '' })}
+              />,
+            );
+          }
           if (canEdit) {
             actions.push(
               <GridActionsCellItem
@@ -247,7 +264,7 @@ export function EquipmentPage() {
         },
       },
     ],
-    [confirm, deleteMutation, maintenanceMutation, canEdit, canDelete],
+    [confirm, deleteMutation, maintenanceMutation, canEdit, canDelete, isAdmin],
   );
 
   return (
@@ -318,6 +335,15 @@ export function EquipmentPage() {
         onClose={() => setFormOpen(false)}
         equipment={editing}
       />
+      {auditTarget && (
+        <AuditHistoryDialog
+          open={!!auditTarget}
+          onClose={() => setAuditTarget(null)}
+          entity="Equipment"
+          entityId={auditTarget.id}
+          title={auditTarget.name}
+        />
+      )}
     </Box>
   );
 }

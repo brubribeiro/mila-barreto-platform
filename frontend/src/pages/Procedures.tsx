@@ -4,6 +4,7 @@ import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HistoryIcon from '@mui/icons-material/History';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { PageHeader } from '../components/PageHeader';
@@ -12,6 +13,7 @@ import { AppDataGrid } from '../components/AppDataGrid';
 import { matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
 import { proceduresApi } from '../api/procedures';
 import { ProcedureFormDialog } from '../components/procedures/ProcedureFormDialog';
+import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Procedure } from '../types';
@@ -21,7 +23,7 @@ const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' 
 export function Procedures() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
-  const { has } = usePermissions();
+  const { has, isAdmin } = usePermissions();
   const canCreate = has('procedures:create');
   const canEdit = has('procedures:edit');
   const canDelete = has('procedures:delete');
@@ -30,6 +32,7 @@ export function Procedures() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Procedure | null>(null);
+  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: procedures = [], isLoading } = useQuery({
     queryKey: ['procedures'],
@@ -204,9 +207,23 @@ export function Procedures() {
         field: 'actions',
         type: 'actions',
         headerName: 'Ações',
-        width: 100,
+        width: 140,
         getActions: (params) => {
           const actions = [];
+          if (isAdmin) {
+            actions.push(
+              <GridActionsCellItem
+                key="history"
+                icon={
+                  <Tooltip title="Histórico de alterações">
+                    <HistoryIcon fontSize="small" />
+                  </Tooltip>
+                }
+                label="Histórico"
+                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
+              />,
+            );
+          }
           if (canEdit) {
             actions.push(
               <GridActionsCellItem
@@ -252,7 +269,7 @@ export function Procedures() {
         },
       },
     ],
-    [confirm, deleteMutation, canEdit, canDelete],
+    [confirm, deleteMutation, canEdit, canDelete, isAdmin],
   );
 
   return (
@@ -307,6 +324,15 @@ export function Procedures() {
         onClose={() => setFormOpen(false)}
         procedure={editing}
       />
+      {auditTarget && (
+        <AuditHistoryDialog
+          open={!!auditTarget}
+          onClose={() => setAuditTarget(null)}
+          entity="Procedure"
+          entityId={auditTarget.id}
+          title={auditTarget.name}
+        />
+      )}
     </Box>
   );
 }

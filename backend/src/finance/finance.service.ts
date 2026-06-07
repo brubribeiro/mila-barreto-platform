@@ -3,10 +3,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateFinancialEntryDto } from './dto/create-financial-entry.dto';
 import { UpdateFinancialEntryDto } from './dto/update-financial-entry.dto';
 import { parseDateOnlyToUtcNoon } from '../common/utils/date-only.util';
+import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 
 @Injectable()
 export class FinanceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly auditLog: AuditLogService) {}
 
   /** Inclui lançamentos pagos (paidAt) ou com vencimento (dueDate) no período. */
   private periodWhere(from?: string, to?: string) {
@@ -186,7 +187,7 @@ export class FinanceService {
     };
   }
 
-  async create(dto: CreateFinancialEntryDto) {
+  async create(dto: CreateFinancialEntryDto, user?: AuditUser) {
     let netAmount: number | undefined;
     let feePercent: number | undefined;
 
@@ -200,7 +201,7 @@ export class FinanceService {
       }
     }
 
-    return this.prisma.financialEntry.create({
+    const created = await this.prisma.financialEntry.create({
       data: {
         type: dto.type,
         description: dto.description,
@@ -219,9 +220,11 @@ export class FinanceService {
       },
       include: { paymentMethod: true },
     });
+    this.auditLog.logCreate('FinancialEntry', created.id, created as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return created;
   }
 
-  async update(id: string, dto: UpdateFinancialEntryDto) {
+  async update(id: string, dto: UpdateFinancialEntryDto, user?: AuditUser) {
     const existing = await this.prisma.financialEntry.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Lançamento não encontrado');
 
@@ -238,7 +241,7 @@ export class FinanceService {
       }
     }
 
-    return this.prisma.financialEntry.update({
+    const updated = await this.prisma.financialEntry.update({
       where: { id },
       data: {
         type: dto.type,
@@ -257,20 +260,26 @@ export class FinanceService {
       },
       include: { paymentMethod: true },
     });
+    this.auditLog.logUpdate('FinancialEntry', id, existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return updated;
   }
 
-  async markPaid(id: string, paid: boolean) {
+  async markPaid(id: string, paid: boolean, user?: AuditUser) {
     const existing = await this.prisma.financialEntry.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Lançamento não encontrado');
-    return this.prisma.financialEntry.update({
+    const updated = await this.prisma.financialEntry.update({
       where: { id },
       data: { paidAt: paid ? new Date() : null },
       include: { paymentMethod: true },
     });
+    this.auditLog.logUpdate('FinancialEntry', id, existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return updated;
   }
 
-  async remove(id: string) {
+  async remove(id: string, user?: AuditUser) {
+    const existing = await this.prisma.financialEntry.findUnique({ where: { id } });
     await this.prisma.financialEntry.delete({ where: { id } });
+    if (existing) this.auditLog.logDelete('FinancialEntry', id, existing as unknown as Record<string, unknown>, user).catch(() => undefined);
     return { ok: true };
   }
 }

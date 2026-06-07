@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { IsOptional, IsString } from 'class-validator';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 
 export class CreateMessageTemplateDto {
   @IsString()
@@ -39,7 +40,10 @@ export class UpdateMessageTemplateDto {
 
 @Injectable()
 export class MessagesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   list() {
     return this.prisma.messageTemplate.findMany({
@@ -57,26 +61,31 @@ export class MessagesService {
     return t;
   }
 
-  async create(dto: CreateMessageTemplateDto) {
+  async create(dto: CreateMessageTemplateDto, user?: AuditUser) {
     const exists = await this.prisma.messageTemplate.findUnique({ where: { name: dto.name } });
     if (exists) throw new ConflictException('Já existe um template com esse nome.');
-    return this.prisma.messageTemplate.create({ data: dto });
+    const created = await this.prisma.messageTemplate.create({ data: dto });
+    this.auditLog.logCreate('MessageTemplate', created.id, created as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return created;
   }
 
-  async update(id: string, dto: UpdateMessageTemplateDto) {
-    await this.findOne(id);
+  async update(id: string, dto: UpdateMessageTemplateDto, user?: AuditUser) {
+    const oldData = await this.findOne(id);
     if (dto.name) {
       const exists = await this.prisma.messageTemplate.findUnique({ where: { name: dto.name } });
       if (exists && exists.id !== id) {
         throw new ConflictException('Já existe um template com esse nome.');
       }
     }
-    return this.prisma.messageTemplate.update({ where: { id }, data: dto });
+    const updated = await this.prisma.messageTemplate.update({ where: { id }, data: dto });
+    this.auditLog.logUpdate('MessageTemplate', id, oldData as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return updated;
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, user?: AuditUser) {
+    const oldData = await this.findOne(id);
     await this.prisma.messageTemplate.delete({ where: { id } });
+    this.auditLog.logDelete('MessageTemplate', id, oldData as unknown as Record<string, unknown>, user).catch(() => undefined);
     return { ok: true };
   }
 }

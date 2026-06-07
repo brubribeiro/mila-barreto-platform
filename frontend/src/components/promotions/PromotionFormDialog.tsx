@@ -63,7 +63,6 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
-
   const { data: procedures = [] } = useQuery<Procedure[]>({
     queryKey: ['procedures'],
     queryFn: () => proceduresApi.list(),

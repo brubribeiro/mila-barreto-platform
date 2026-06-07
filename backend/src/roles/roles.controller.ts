@@ -15,6 +15,7 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('roles')
@@ -43,19 +44,19 @@ export class RolesController {
 
   @RequirePermissions('roles:create')
   @Post()
-  create(@Body() dto: CreateRoleDto) {
-    return this.roles.create(dto);
+  create(@Body() dto: CreateRoleDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.roles.create(dto, user);
   }
 
   @RequirePermissions('roles:edit')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateRoleDto) {
-    return this.roles.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateRoleDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.roles.update(id, dto, user);
   }
 
   @RequirePermissions('roles:delete')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.roles.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.roles.remove(id, user);
   }
 }

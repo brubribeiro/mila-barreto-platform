@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 
 const SAFE_SELECT = {
   id: true,
@@ -29,6 +30,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   /** Versão completa com password e relação para autenticação. */
@@ -72,7 +74,7 @@ export class UsersService {
     });
   }
 
-  async create(dto: CreateUserDto) {
+  async create(dto: CreateUserDto, user?: AuditUser) {
     const existing = await this.findByEmail(dto.email);
     if (existing) throw new ConflictException('E-mail já cadastrado');
 
@@ -103,6 +105,8 @@ export class UsersService {
       select: SAFE_SELECT,
     });
 
+    this.auditLog.logCreate('User', created.id, created as unknown as Record<string, unknown>, user).catch(() => undefined);
+
     // Notifica outros administradores (exceto o próprio recém-criado)
     const admins = await this.notifications.findUsersWithPermission('users:view');
     this.notifications
@@ -121,7 +125,7 @@ export class UsersService {
     return created;
   }
 
-  async update(id: string, dto: UpdateUserDto) {
+  async update(id: string, dto: UpdateUserDto, auditUser?: AuditUser) {
     const user = await this.findById(id);
     if (!user) throw new NotFoundException('Usuário não encontrado');
 
@@ -145,14 +149,16 @@ export class UsersService {
 
     const data: any = { ...dto };
 
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id },
       data,
       select: SAFE_SELECT,
     });
+    this.auditLog.logUpdate('User', id, user as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, auditUser).catch(() => undefined);
+    return updated;
   }
 
-  async remove(id: string, requesterId: string) {
+  async remove(id: string, requesterId: string, auditUser?: AuditUser) {
     const user = await this.findById(id);
     if (!user) throw new NotFoundException('Usuário não encontrado');
     if (id === requesterId) {
@@ -160,13 +166,16 @@ export class UsersService {
     }
     const apptCount = await this.prisma.appointment.count({ where: { professionalId: id } });
     if (apptCount > 0) {
-      return this.prisma.user.update({
+      const updated = await this.prisma.user.update({
         where: { id },
         data: { active: false },
         select: SAFE_SELECT,
       });
+      this.auditLog.logUpdate('User', id, user as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, auditUser).catch(() => undefined);
+      return updated;
     }
     await this.prisma.user.delete({ where: { id } });
+    this.auditLog.logDelete('User', id, user as unknown as Record<string, unknown>, auditUser).catch(() => undefined);
     return { ok: true };
   }
 }

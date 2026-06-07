@@ -6,6 +6,7 @@ import { UpdateFinancialEntryDto } from './dto/update-financial-entry.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('finance')
@@ -37,25 +38,25 @@ export class FinanceController {
 
   @RequirePermissions('finance:create')
   @Post()
-  create(@Body() dto: CreateFinancialEntryDto) {
-    return this.finance.create(dto);
+  create(@Body() dto: CreateFinancialEntryDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.finance.create(dto, user);
   }
 
   @RequirePermissions('finance:edit')
   @Patch(':id/paid')
-  markPaid(@Param('id', ParseUUIDPipe) id: string, @Body() body: { paid: boolean }) {
-    return this.finance.markPaid(id, !!body.paid);
+  markPaid(@Param('id', ParseUUIDPipe) id: string, @Body() body: { paid: boolean }, @CurrentUser() user: AuthenticatedUser) {
+    return this.finance.markPaid(id, !!body.paid, user);
   }
 
   @RequirePermissions('finance:edit')
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateFinancialEntryDto) {
-    return this.finance.update(id, dto);
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateFinancialEntryDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.finance.update(id, dto, user);
   }
 
   @RequirePermissions('finance:delete')
   @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.finance.remove(id);
+  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.finance.remove(id, user);
   }
 }

@@ -6,8 +6,8 @@ export interface PatientPayload {
   email?: string;
   phone?: string;
   birthDate?: string;
-  /** M = masculino, F = feminino; string vazia limpa ao editar */
-  sex?: PatientSex | '';
+  /** M = masculino, F = feminino; null ou string vazia limpa ao editar */
+  sex?: PatientSex | '' | null;
   document?: string;
   /** 8 dígitos; ao editar, string vazia limpa o CEP salvo no backend */
   cep?: string;
@@ -19,8 +19,8 @@ export interface PatientPayload {
   addressComplement?: string;
   address?: string;
   notes?: string;
-  /** string vazia limpa ao editar */
-  referralSource?: PatientReferralSource | '';
+  /** null ou string vazia limpa ao editar */
+  referralSource?: PatientReferralSource | '' | null;
   referralSourceOther?: string;
   anamnesis?: Record<string, any>;
 }

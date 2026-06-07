@@ -13,6 +13,7 @@ import { NotificationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { parseDateOnlyToUtcNoon } from '../common/utils/date-only.util';
+import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 
 export class CreateEquipmentDto {
   @IsString()
@@ -83,6 +84,7 @@ export class EquipmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   list() {
@@ -95,7 +97,7 @@ export class EquipmentService {
     return e;
   }
 
-  async create(dto: CreateEquipmentDto) {
+  async create(dto: CreateEquipmentDto, user?: AuditUser) {
     const last = parseDateOnlyToUtcNoon(dto.lastMaintenanceAt) ?? null;
     const nextMaintenanceAt = nextFromLast(last, dto.maintenanceIntervalMonths);
 
@@ -118,6 +120,8 @@ export class EquipmentService {
       },
     });
 
+    this.auditLog.logCreate('Equipment', equipment.id, equipment as unknown as Record<string, unknown>, user).catch(() => undefined);
+
     // Se já tem manutenção agendada, cria despesa automaticamente
     if (dto.scheduledMaintenanceAt && dto.maintenanceValue) {
       await this.createMaintenanceExpense(
@@ -131,7 +135,7 @@ export class EquipmentService {
     return equipment;
   }
 
-  async update(id: string, dto: UpdateEquipmentDto) {
+  async update(id: string, dto: UpdateEquipmentDto, user?: AuditUser) {
     const before = await this.findOne(id);
     const last =
       dto.lastMaintenanceAt !== undefined
@@ -162,6 +166,8 @@ export class EquipmentService {
         nextMaintenanceAt,
       },
     });
+
+    this.auditLog.logUpdate('Equipment', id, before as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
 
     // Se a data de manutenção agendada mudou e há valor de manutenção, gera despesa
     const newScheduled = parseDateOnlyToUtcNoon(dto.scheduledMaintenanceAt) ?? null;
@@ -195,9 +201,10 @@ export class EquipmentService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, user?: AuditUser) {
+    const oldData = await this.findOne(id);
     await this.prisma.equipment.delete({ where: { id } });
+    this.auditLog.logDelete('Equipment', id, oldData as unknown as Record<string, unknown>, user).catch(() => undefined);
     return { ok: true };
   }
 

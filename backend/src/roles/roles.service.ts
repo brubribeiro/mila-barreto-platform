@@ -10,10 +10,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { ALL_PERMISSIONS, isValidPermission, SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
+import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 
 @Injectable()
 export class RolesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   list() {
     return this.prisma.role.findMany({
@@ -40,13 +44,13 @@ export class RolesService {
     }
   }
 
-  async create(dto: CreateRoleDto) {
+  async create(dto: CreateRoleDto, user?: AuditUser) {
     this.validatePermissions(dto.permissions);
 
     const exists = await this.prisma.role.findUnique({ where: { name: dto.name } });
     if (exists) throw new ConflictException('Já existe um grupo com esse nome.');
 
-    return this.prisma.role.create({
+    const created = await this.prisma.role.create({
       data: {
         name: dto.name,
         description: dto.description,
@@ -55,9 +59,11 @@ export class RolesService {
         isSystem: false,
       },
     });
+    this.auditLog.logCreate('Role', created.id, created as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return created;
   }
 
-  async update(id: string, dto: UpdateRoleDto) {
+  async update(id: string, dto: UpdateRoleDto, user?: AuditUser) {
     const role = await this.findOne(id);
 
     // Roles do sistema: pode editar permissões mas não pode mudar nome nem desativar
@@ -85,7 +91,7 @@ export class RolesService {
       if (exists) throw new ConflictException('Já existe um grupo com esse nome.');
     }
 
-    return this.prisma.role.update({
+    const updated = await this.prisma.role.update({
       where: { id },
       data: {
         name: dto.name,
@@ -94,9 +100,11 @@ export class RolesService {
         restrictToOwnAppointments: dto.restrictToOwnAppointments,
       },
     });
+    this.auditLog.logUpdate('Role', id, role as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
+    return updated;
   }
 
-  async remove(id: string) {
+  async remove(id: string, user?: AuditUser) {
     const role = await this.findOne(id);
     if (role.isSystem) {
       throw new ForbiddenException('Grupos do sistema não podem ser excluídos.');
@@ -107,6 +115,7 @@ export class RolesService {
       );
     }
     await this.prisma.role.delete({ where: { id } });
+    this.auditLog.logDelete('Role', id, role as unknown as Record<string, unknown>, user).catch(() => undefined);
     return { ok: true };
   }
 

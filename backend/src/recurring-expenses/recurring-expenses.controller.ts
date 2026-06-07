@@ -17,6 +17,7 @@ import { HourlyCostSettingsDto } from './dto/hourly-cost-settings.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('recurring-expenses')
@@ -67,19 +68,19 @@ export class RecurringExpensesController {
 
   @RequirePermissions('finance:create')
   @Post()
-  create(@Body() dto: CreateRecurringExpenseDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreateRecurringExpenseDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.service.create(dto, user);
   }
 
   @RequirePermissions('finance:edit')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateRecurringExpenseDto) {
-    return this.service.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateRecurringExpenseDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.service.update(id, dto, user);
   }
 
   @RequirePermissions('finance:delete')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.service.remove(id, user);
   }
 }

@@ -22,6 +22,7 @@ import {
 import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HistoryIcon from '@mui/icons-material/History';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import LinkIcon from '@mui/icons-material/Link';
@@ -34,6 +35,7 @@ import { PageHeader } from '../components/PageHeader';
 import { ListFiltersBar } from '../components/ListFiltersBar';
 import { AppDataGrid } from '../components/AppDataGrid';
 import { FILTER_FIELD_SX, matchFields } from '../utils/listFilters';
+import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { documentsApi } from '../api/documents';
 import { patientsApi } from '../api/patients';
 import { equipmentApi } from '../api/equipment';
@@ -368,7 +370,7 @@ function LinkUrlDialog({ open, onClose }: { open: boolean; onClose: () => void }
 export function Documents() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
-  const { has } = usePermissions();
+  const { has, isAdmin } = usePermissions();
   const canCreate = has('documents:create');
   const canDelete = has('documents:delete');
 
@@ -377,6 +379,7 @@ export function Documents() {
   const [linkFilter, setLinkFilter] = useState<'ALL' | 'PATIENT' | 'EQUIPMENT' | 'NONE'>('ALL');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: docs = [], isLoading } = useQuery({
     queryKey: ['documents'],
@@ -446,7 +449,7 @@ export function Documents() {
       field: 'actions',
       type: 'actions',
       headerName: 'Ações',
-      width: 110,
+      width: 150,
       getActions: (p) => {
         const actions = [];
         if (p.row.fileUrl) {
@@ -460,6 +463,20 @@ export function Documents() {
               }
               label="Abrir"
               onClick={() => window.open(p.row.fileUrl, '_blank')}
+            />,
+          );
+        }
+        if (isAdmin) {
+          actions.push(
+            <GridActionsCellItem
+              key="history"
+              icon={
+                <Tooltip title="Histórico de alterações">
+                  <HistoryIcon fontSize="small" />
+                </Tooltip>
+              }
+              label="Histórico"
+              onClick={() => setAuditTarget({ id: p.row.id, name: p.row.name ?? '' })}
             />,
           );
         }
@@ -574,6 +591,15 @@ export function Documents() {
 
       <UploadDialog open={uploadOpen} onClose={() => setUploadOpen(false)} />
       <LinkUrlDialog open={linkOpen} onClose={() => setLinkOpen(false)} />
+      {auditTarget && (
+        <AuditHistoryDialog
+          open={!!auditTarget}
+          onClose={() => setAuditTarget(null)}
+          entity="Document"
+          entityId={auditTarget.id}
+          title={auditTarget.name}
+        />
+      )}
     </Box>
   );
 }
