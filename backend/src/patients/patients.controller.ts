@@ -46,6 +46,12 @@ export class PatientsController {
     return this.patients.getReliabilityStats(id);
   }
 
+  @RequirePermissions('patients:view')
+  @Get(':id/photo-url')
+  getPhotoAccessUrl(@Param('id', ParseUUIDPipe) id: string) {
+    return this.patients.getPhotoAccessUrl(id);
+  }
+
   @RequirePermissions('patients:create')
   @Post()
   create(@Body() dto: CreatePatientDto, @CurrentUser() user: AuthenticatedUser) {

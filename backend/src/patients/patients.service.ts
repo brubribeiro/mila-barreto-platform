@@ -11,6 +11,7 @@ import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 
 const PATIENT_PHOTO_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const PATIENT_PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+const PATIENT_PHOTO_URL_TTL_SECONDS = 3600;
 
 const ADDRESS_STRING_FIELDS = [
   'addressStreet',
@@ -30,8 +31,8 @@ export class PatientsService {
     private readonly auditLog: AuditLogService,
   ) {}
 
-  list(search?: string) {
-    return this.prisma.patient.findMany({
+  async list(search?: string) {
+    const patients = await this.prisma.patient.findMany({
       where: search
         ? {
             OR: [
@@ -43,6 +44,7 @@ export class PatientsService {
         : undefined,
       orderBy: { name: 'asc' },
     });
+    return this.withPhotoAccessUrls(patients);
   }
 
   async findOne(id: string) {
@@ -59,7 +61,42 @@ export class PatientsService {
       },
     });
     if (!patient) throw new NotFoundException('Paciente não encontrado');
-    return patient;
+    return this.withPhotoAccessUrl(patient);
+  }
+
+  /** URL temporária assinada para foto privada no R2. */
+  async getPhotoAccessUrl(id: string): Promise<{ url: string }> {
+    const patient = await this.prisma.patient.findUnique({
+      where: { id },
+      select: { photoStorageKey: true },
+    });
+    if (!patient) throw new NotFoundException('Paciente não encontrado');
+    if (!patient.photoStorageKey) {
+      throw new NotFoundException('Paciente não possui foto.');
+    }
+    if (!this.r2.isConfigured) {
+      throw new BadRequestException('Cloudflare R2 não está configurado.');
+    }
+    const url = await this.r2.getPresignedUrl(patient.photoStorageKey, PATIENT_PHOTO_URL_TTL_SECONDS);
+    return { url };
+  }
+
+  private async withPhotoAccessUrl<T extends { photoStorageKey?: string | null; photoUrl?: string | null }>(
+    patient: T,
+  ): Promise<T> {
+    if (!patient.photoStorageKey || !this.r2.isConfigured) return patient;
+    try {
+      const url = await this.r2.getPresignedUrl(patient.photoStorageKey, PATIENT_PHOTO_URL_TTL_SECONDS);
+      return { ...patient, photoUrl: url };
+    } catch {
+      return { ...patient, photoUrl: null };
+    }
+  }
+
+  private async withPhotoAccessUrls<T extends { photoStorageKey?: string | null; photoUrl?: string | null }>(
+    patients: T[],
+  ): Promise<T[]> {
+    return Promise.all(patients.map((patient) => this.withPhotoAccessUrl(patient)));
   }
 
   async create(dto: CreatePatientDto, user?: AuditUser) {
@@ -86,7 +123,7 @@ export class PatientsService {
       )
       .catch(() => undefined);
 
-    return patient;
+    return this.withPhotoAccessUrl(patient);
   }
 
   async update(id: string, dto: UpdatePatientDto, user?: AuditUser) {
@@ -98,7 +135,7 @@ export class PatientsService {
       data: data as Parameters<typeof this.prisma.patient.update>[0]['data'],
     });
     this.auditLog.logUpdate('Patient', id, oldPatient as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
-    return updated;
+    return this.withPhotoAccessUrl(updated);
   }
 
   /**
@@ -299,28 +336,31 @@ export class PatientsService {
 
     const ext =
       file.mimetype === 'image/png' ? 'png' : file.mimetype === 'image/webp' ? 'webp' : 'jpg';
-    const { key, url } = await this.r2.upload(
+    const { key } = await this.r2.upload(
       `foto.${ext}`,
       file.mimetype,
       file.buffer,
       `pacientes/${id}`,
     );
 
-    return this.prisma.patient.update({
+    const updated = await this.prisma.patient.update({
       where: { id },
-      data: { photoStorageKey: key, photoUrl: url },
+      data: { photoStorageKey: key, photoUrl: null },
     });
+    return this.withPhotoAccessUrl(updated);
   }
 
   async removePhoto(id: string) {
-    const patient = await this.findOne(id);
+    const patient = await this.prisma.patient.findUnique({ where: { id } });
+    if (!patient) throw new NotFoundException('Paciente não encontrado');
     if (patient.photoStorageKey) {
       await this.r2.remove(patient.photoStorageKey);
     }
-    return this.prisma.patient.update({
+    const updated = await this.prisma.patient.update({
       where: { id },
       data: { photoStorageKey: null, photoUrl: null },
     });
+    return this.withPhotoAccessUrl(updated);
   }
 
   async remove(id: string, user?: AuditUser) {

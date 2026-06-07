@@ -63,6 +63,12 @@ export const patientsApi = {
     const { data } = await api.delete<Patient>(`/patients/${id}/photo`);
     return data;
   },
+
+  /** URL temporária assinada para foto privada no R2. */
+  getPhotoAccessUrl: async (id: string): Promise<string> => {
+    const { data } = await api.get<{ url: string }>(`/patients/${id}/photo-url`);
+    return data.url;
+  },
   getReliability: async (id: string): Promise<PatientReliability> => {
     const { data } = await api.get<PatientReliability>(`/patients/${id}/reliability`);
     return data;
