@@ -46,6 +46,10 @@ export const patientsApi = {
     const { data } = await api.patch<Patient>(`/patients/${id}`, payload);
     return data;
   },
+  updateAnamnesis: async (id: string, anamnesis: Record<string, unknown>): Promise<Patient> => {
+    const { data } = await api.patch<Patient>(`/patients/${id}`, { anamnesis });
+    return data;
+  },
   remove: async (id: string): Promise<void> => {
     await api.delete(`/patients/${id}`);
   },

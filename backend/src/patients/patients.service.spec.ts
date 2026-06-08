@@ -133,6 +133,22 @@ describe('PatientsService', () => {
       expect(prisma.patient.update).toHaveBeenCalled();
     });
 
+    it('should update only anamnesis when provided in dto', async () => {
+      prisma.patient.findUnique.mockResolvedValue(mockPatient);
+      const anamnesis = {
+        gestante: true,
+        queixaPrincipal: 'Acne ativa',
+        tabagismo: 'Não',
+      };
+
+      await service.update('patient-1', { anamnesis } as any);
+
+      expect(prisma.patient.update).toHaveBeenCalledWith({
+        where: { id: 'patient-1' },
+        data: expect.objectContaining({ anamnesis }),
+      });
+    });
+
     it('should throw NotFoundException if patient does not exist', async () => {
       prisma.patient.findUnique.mockResolvedValue(null);
       await expect(service.update('invalid', {} as any)).rejects.toThrow(NotFoundException);

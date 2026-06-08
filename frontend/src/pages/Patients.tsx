@@ -18,6 +18,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import HistoryIcon from '@mui/icons-material/History';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -27,6 +28,7 @@ import { AppDataGrid } from '../components/AppDataGrid';
 import { FILTER_FIELD_SX } from '../utils/listFilters';
 import { patientsApi } from '../api/patients';
 import { PatientFormDialog } from '../components/patients/PatientFormDialog';
+import { AnamnesisFormDialog } from '../components/patients/AnamnesisFormDialog';
 import { PatientDetailDrawer } from '../components/patients/PatientDetailDrawer';
 import { SendWhatsAppDialog } from '../components/messages/SendWhatsAppDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
@@ -52,6 +54,7 @@ export function Patients() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [anamnesisPatientId, setAnamnesisPatientId] = useState<string | null>(null);
   const [whatsappPatient, setWhatsappPatient] = useState<Patient | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -147,7 +150,7 @@ export function Patients() {
         field: 'actions',
         type: 'actions',
         headerName: 'Ações',
-        width: 210,
+        width: 250,
         getActions: (params) => {
           const actions = [
             <GridActionsCellItem
@@ -176,6 +179,16 @@ export function Patients() {
           ];
           if (canEdit) {
             actions.push(
+              <GridActionsCellItem
+                key="anamnesis"
+                icon={
+                  <Tooltip title="Anamnese">
+                    <AssignmentOutlinedIcon fontSize="small" />
+                  </Tooltip>
+                }
+                label="Anamnese"
+                onClick={() => setAnamnesisPatientId(params.row.id)}
+              />,
               <GridActionsCellItem
                 key="edit"
                 icon={
@@ -293,7 +306,16 @@ export function Patients() {
         onClose={() => setFormOpen(false)}
         patient={editing}
       />
-      <PatientDetailDrawer patientId={detailId} onClose={() => setDetailId(null)} />
+      <PatientDetailDrawer
+        patientId={detailId}
+        onClose={() => setDetailId(null)}
+        onEditAnamnesis={canEdit ? setAnamnesisPatientId : undefined}
+      />
+      <AnamnesisFormDialog
+        open={!!anamnesisPatientId}
+        patientId={anamnesisPatientId}
+        onClose={() => setAnamnesisPatientId(null)}
+      />
       <SendWhatsAppDialog
         open={!!whatsappPatient}
         onClose={() => setWhatsappPatient(null)}

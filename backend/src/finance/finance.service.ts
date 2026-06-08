@@ -45,12 +45,13 @@ export class FinanceService {
     });
   }
 
-  async list(from?: string, to?: string, pendingInvoice?: boolean, expenseType?: string) {
+  async list(from?: string, to?: string, pendingInvoice?: boolean, expenseType?: string, patientId?: string) {
     const entries = await this.prisma.financialEntry.findMany({
       where: {
         ...this.periodWhere(from, to),
         ...(pendingInvoice ? { invoiceIssued: false, type: 'INCOME' } : {}),
         ...(expenseType ? { expenseType: expenseType as any, type: 'EXPENSE' } : {}),
+        ...(patientId ? { patientId } : {}),
       },
       include: {
         patient: true,

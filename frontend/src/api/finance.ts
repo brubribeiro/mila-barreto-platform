@@ -28,6 +28,7 @@ export const financeApi = {
     to?: string,
     pendingInvoice?: boolean,
     expenseType?: 'FIXED' | 'VARIABLE',
+    patientId?: string,
   ): Promise<FinancialEntry[]> => {
     const { data } = await api.get<FinancialEntry[]>('/finance', {
       params: {
@@ -35,6 +36,7 @@ export const financeApi = {
         to,
         pendingInvoice: pendingInvoice ? 'true' : undefined,
         expenseType,
+        patientId,
       },
     });
     return data;

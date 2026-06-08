@@ -73,6 +73,7 @@ export interface Patient {
   referralSourceOther?: string | null;
   photoStorageKey?: string | null;
   photoUrl?: string | null;
+  anamnesis?: Record<string, any> | null;
   createdAt: string;
 }
 

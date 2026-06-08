@@ -1,6 +1,7 @@
 import {
   Avatar,
   Box,
+  Button,
   Chip,
   CircularProgress,
   Drawer,
@@ -10,10 +11,14 @@ import {
   Stack,
   Tab,
   Tabs,
+  Tooltip,
   Typography,
   alpha,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import EventNoteOutlinedIcon from '@mui/icons-material/EventNoteOutlined';
@@ -27,9 +32,11 @@ import WcOutlinedIcon from '@mui/icons-material/WcOutlined';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { patientsApi } from '../../api/patients';
 import { packagesApi } from '../../api/packages';
+import { AnamnesisView, hasAnamnesisData } from './AnamnesisView';
 import { dayjsFromDateOnlyApi, formatDateOnlyFromApi } from '../../utils/dateOnly';
 import { formatPatientAddressDisplay } from '../../utils/patientAddress';
 import { patientSexLabel } from '../../utils/patientSex';
@@ -78,13 +85,14 @@ const kindLabel: Record<AppointmentKind, string> = {
   RETURN: 'Retorno',
 };
 
-type ChartTab = 'notes' | 'general' | 'appointments' | 'packages';
+type ChartTab = 'notes' | 'general' | 'appointments' | 'packages' | 'anamnesis';
 
 interface PatientDetailDrawerProps {
   patientId: string | null;
   onClose: () => void;
   defaultTab?: ChartTab;
   highlightAppointmentId?: string | null;
+  onEditAnamnesis?: (patientId: string) => void;
 }
 
 function patientAgeLabel(birthDate?: string | null) {
@@ -387,8 +395,10 @@ export function PatientDetailDrawer({
   onClose,
   defaultTab = 'general',
   highlightAppointmentId,
+  onEditAnamnesis,
 }: PatientDetailDrawerProps) {
   const [tab, setTab] = useState<ChartTab>(defaultTab);
+  const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
     queryKey: ['patient', patientId],
@@ -467,7 +477,19 @@ export function PatientDetailDrawer({
           bgcolor: 'background.paper',
         }}
       >
-        <Stack direction="row" justifyContent="flex-end" sx={{ px: 2, pt: 1.5 }}>
+        <Stack direction="row" justifyContent="flex-end" spacing={0.5} sx={{ px: 2, pt: 1.5 }}>
+          <Tooltip title="Expandir ficha">
+            <IconButton
+              onClick={() => {
+                handleClose();
+                navigate(`/pacientes/${patientId}`);
+              }}
+              aria-label="Expandir ficha"
+              size="small"
+            >
+              <OpenInFullIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
           <IconButton onClick={handleClose} aria-label="Fechar ficha" size="small">
             <CloseIcon />
           </IconButton>
@@ -599,6 +621,7 @@ export function PatientDetailDrawer({
           }}
         >
           <Tab value="general" label="Visão geral" icon={<PersonOutlineIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
+          <Tab value="anamnesis" label="Anamnese" icon={<AssignmentOutlinedIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
           <Tab value="notes" label="Anotações" icon={<DescriptionOutlinedIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
           <Tab value="appointments" label="Agendamentos" icon={<EventNoteOutlinedIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
           <Tab value="packages" label="Pacotes" icon={<ViewInArIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
@@ -680,6 +703,24 @@ export function PatientDetailDrawer({
               </SectionCard>
             )}
 
+          </Stack>
+        )}
+
+        {data && tab === 'anamnesis' && (
+          <Stack spacing={2}>
+            {onEditAnamnesis && (
+              <Stack direction="row" justifyContent="flex-end">
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<EditOutlinedIcon />}
+                  onClick={() => onEditAnamnesis(data.id)}
+                >
+                  {hasAnamnesisData(data.anamnesis) ? 'Editar anamnese' : 'Preencher anamnese'}
+                </Button>
+              </Stack>
+            )}
+            <AnamnesisView anamnesis={data.anamnesis} />
           </Stack>
         )}
 

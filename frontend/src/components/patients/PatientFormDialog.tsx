@@ -93,7 +93,7 @@ const empty: FormValues = {
   referralSourceOther: '',
 };
 
-const DIALOG_HEIGHT_DESKTOP = 880;
+const DIALOG_HEIGHT_DESKTOP = 780;
 
 function buildPatientOptionalFields(
   values: FormValues,
@@ -160,7 +160,6 @@ const AUTO_FIELD_SX = {
     WebkitTextFillColor: '#2A2A2A',
   },
 } as const;
-
 
 function TabPanel({ active, children }: { active: boolean; children: ReactNode }) {
   return (
@@ -450,7 +449,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
   );
 
   const isEditing = !!patient;
-  const tabIndex = tab === 'basic' ? 0 : 1;
+  const tabIndex = TABS.findIndex((t) => t.id === tab);
 
   return (
     <Dialog

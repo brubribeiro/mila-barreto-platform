@@ -5,6 +5,7 @@ import { TermsOfUse } from './pages/TermsOfUse';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { Dashboard } from './pages/Dashboard';
 import { Patients } from './pages/Patients';
+import { PatientDetail } from './pages/PatientDetail';
 import { Appointments } from './pages/Appointments';
 import { Procedures } from './pages/Procedures';
 import { Finance } from './pages/Finance';
@@ -44,6 +45,14 @@ export default function App() {
           element={
             <PermissionRoute permission="patients:view">
               <Patients />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="/pacientes/:id"
+          element={
+            <PermissionRoute permission="patients:view">
+              <PatientDetail />
             </PermissionRoute>
           }
         />

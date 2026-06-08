@@ -20,8 +20,9 @@ export class FinanceController {
     @Query('to') to?: string,
     @Query('pendingInvoice') pendingInvoice?: string,
     @Query('expenseType') expenseType?: string,
+    @Query('patientId') patientId?: string,
   ) {
-    return this.finance.list(from, to, pendingInvoice === 'true', expenseType);
+    return this.finance.list(from, to, pendingInvoice === 'true', expenseType, patientId);
   }
 
   @RequirePermissions('finance:edit')
