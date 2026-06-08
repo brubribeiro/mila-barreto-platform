@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -20,6 +20,8 @@ import {
   ListItemText,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
   useMediaQuery,
@@ -49,7 +51,6 @@ const DAYS = [
   'Sábado',
 ];
 
-/** Ordem usual no Brasil: segunda → domingo */
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
 
 type DayScheduleEdit = {
@@ -59,6 +60,38 @@ type DayScheduleEdit = {
 };
 
 const DEFAULT_DAY: DayScheduleEdit = { works: false, startTime: '08:00', endTime: '18:00' };
+
+const UNAVAIL_REASON_SUGGESTIONS = [
+  'Férias',
+  'Folga',
+  'Compromisso pessoal',
+  'Consulta médica',
+  'Capacitação',
+] as const;
+
+const UNAVAIL_PERIOD_FIELD_SX = {
+  flex: 1,
+  minWidth: 0,
+  width: '100%',
+} as const;
+
+const UNAVAIL_DATETIME_FIELD_SX = {
+  ...UNAVAIL_PERIOD_FIELD_SX,
+  '& .MuiInputBase-input': {
+    textAlign: 'left',
+  },
+  '& input[type="datetime-local"]': {
+    textAlign: 'left',
+  },
+  '& input[type="datetime-local"]::-webkit-datetime-edit': {
+    textAlign: 'left',
+  },
+  '& input[type="datetime-local"]::-webkit-calendar-picker-indicator': {
+    marginLeft: 0,
+  },
+} as const;
+
+const UNAVAIL_DIALOG_HEIGHT = 740;
 
 function buildWeekFromRemote(remote: WorkingHours[]): Record<number, DayScheduleEdit> {
   const result: Record<number, DayScheduleEdit> = {};
@@ -101,7 +134,6 @@ export function Availability() {
   const [selectedUserId, setSelectedUserId] = useState<string>(me?.id ?? '');
   const [unavailDialogOpen, setUnavailDialogOpen] = useState(false);
 
-  // Lista de usuários para o dropdown (apenas se pode editar outros)
   const { data: users = [] } = useQuery({
     queryKey: ['users', 'appointment-providers'],
     queryFn: () => usersApi.listAppointmentProviders(),
@@ -454,19 +486,35 @@ export function Availability() {
         open={unavailDialogOpen}
         onClose={() => setUnavailDialogOpen(false)}
         userId={userId}
+        professionalName={canEditOthers ? selectedUser?.name : undefined}
       />
     </Box>
   );
+}
+
+function nextWeekdayRange(weekdayStart: number, weekdayEnd: number) {
+  const today = dayjs();
+  let start = today;
+  while (start.day() !== weekdayStart) {
+    start = start.add(1, 'day');
+  }
+  let end = start;
+  while (end.day() !== weekdayEnd) {
+    end = end.add(1, 'day');
+  }
+  return { start: start.format('YYYY-MM-DD'), end: end.format('YYYY-MM-DD') };
 }
 
 function UnavailabilityDialog({
   open,
   onClose,
   userId,
+  professionalName,
 }: {
   open: boolean;
   onClose: () => void;
   userId: string;
+  professionalName?: string;
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -494,18 +542,75 @@ function UnavailabilityDialog({
     [allDay, startDate, endDate],
   );
 
+  const datetimeRangeInvalid = useMemo(
+    () =>
+      !allDay &&
+      !!startAt &&
+      !!endAt &&
+      (dayjs(endAt).isBefore(dayjs(startAt)) || dayjs(endAt).isSame(dayjs(startAt))),
+    [allDay, startAt, endAt],
+  );
+
+  const periodPreview = useMemo(() => {
+    if (allDay) {
+      if (!startDate || !endDate || dateRangeInvalid) return null;
+      return formatUnavailabilityPeriod(
+        dayjs(startDate).startOf('day').toISOString(),
+        dayjs(endDate).endOf('day').toISOString(),
+      );
+    }
+    if (!startAt || !endAt || datetimeRangeInvalid) return null;
+    return formatUnavailabilityPeriod(new Date(startAt).toISOString(), new Date(endAt).toISOString());
+  }, [allDay, startDate, endDate, startAt, endAt, dateRangeInvalid, datetimeRangeInvalid]);
+
+  const formInvalid = dateRangeInvalid || datetimeRangeInvalid;
+
+  const periodHelperMessage = useMemo(() => {
+    if (dateRangeInvalid) {
+      return { text: 'A data final deve ser igual ou posterior à inicial', color: 'error.main' as const };
+    }
+    if (datetimeRangeInvalid) {
+      return { text: 'O término deve ser posterior ao início', color: 'error.main' as const };
+    }
+    if (allDay) {
+      return {
+        text: 'Use a mesma data nos dois campos para bloquear um único dia',
+        color: 'text.secondary' as const,
+      };
+    }
+    return { text: '\u00A0', color: 'text.secondary' as const };
+  }, [allDay, dateRangeInvalid, datetimeRangeInvalid]);
+
+  const switchMode = (nextAllDay: boolean) => {
+    if (nextAllDay === allDay) return;
+    setAllDay(nextAllDay);
+    if (nextAllDay) {
+      setStartDate(dayjs(startAt).format('YYYY-MM-DD'));
+      setEndDate(dayjs(endAt).format('YYYY-MM-DD'));
+      return;
+    }
+    const start = dayjs(startDate).hour(dayjs(startAt).hour()).minute(dayjs(startAt).minute());
+    const end = dayjs(endDate).hour(dayjs(endAt).hour()).minute(dayjs(endAt).minute());
+    setStartAt(start.format('YYYY-MM-DDTHH:mm'));
+    setEndAt(
+      end.isAfter(start)
+        ? end.format('YYYY-MM-DDTHH:mm')
+        : start.add(1, 'hour').format('YYYY-MM-DDTHH:mm'),
+    );
+  };
+
   const mutation = useMutation({
     mutationFn: () => {
       const payload = allDay
         ? {
             startAt: dayjs(startDate).startOf('day').toISOString(),
             endAt: dayjs(endDate).endOf('day').toISOString(),
-            reason: reason || undefined,
+            reason: reason.trim() || undefined,
           }
         : {
             startAt: new Date(startAt).toISOString(),
             endAt: new Date(endAt).toISOString(),
-            reason: reason || undefined,
+            reason: reason.trim() || undefined,
           };
       return availabilityApi.createUnavailability(userId, payload);
     },
@@ -517,121 +622,279 @@ function UnavailabilityDialog({
     },
   });
 
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!formInvalid && !mutation.isPending) {
+      mutation.mutate();
+    }
+  };
+
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="xs"
+      maxWidth="sm"
       fullWidth
       fullScreen={isMobile}
-      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+      PaperProps={{
+        sx: {
+          ...dialogPaperSx(isMobile),
+          ...(isMobile
+            ? { height: '100%', maxHeight: '100dvh' }
+            : { height: UNAVAIL_DIALOG_HEIGHT, maxHeight: '94vh' }),
+        },
+      }}
     >
-      <DialogHeader
-        onClose={onClose}
-        isMobile={isMobile}
-        title="Nova indisponibilidade"
-        subtitle="Bloqueie horários na agenda"
-        icon={<EventBusyOutlinedIcon fontSize="small" />}
-      />
-      <DialogContent dividers>
-        <Stack spacing={2} sx={{ mt: 0.5 }}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={allDay}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setAllDay(checked);
-                  if (checked) {
-                    const start = dayjs(startAt);
-                    setStartDate(start.format('YYYY-MM-DD'));
-                    setEndDate(dayjs(endAt).format('YYYY-MM-DD'));
-                  } else {
-                    const start = dayjs(startDate).hour(9).minute(0);
-                    setStartAt(start.format('YYYY-MM-DDTHH:mm'));
-                    setEndAt(start.add(1, 'hour').format('YYYY-MM-DDTHH:mm'));
-                  }
-                }}
-              />
-            }
-            label="Dia inteiro"
-          />
-
-          {allDay ? (
-            <>
-              <TextField
-                type="date"
-                label="De"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  if (dayjs(endDate).isBefore(dayjs(e.target.value), 'day')) {
-                    setEndDate(e.target.value);
-                  }
-                }}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-              <TextField
-                type="date"
-                label="Até"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-                error={dateRangeInvalid}
-                helperText={
-                  dateRangeInvalid
-                    ? 'A data final deve ser igual ou posterior à inicial'
-                    : 'Use a mesma data para bloquear um único dia'
-                }
-              />
-            </>
-          ) : (
-            <>
-              <TextField
-                type="datetime-local"
-                label="Início"
-                value={startAt}
-                onChange={(e) => setStartAt(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-              <TextField
-                type="datetime-local"
-                label="Término"
-                value={endAt}
-                onChange={(e) => setEndAt(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-            </>
-          )}
-
-          <TextField
-            label="Motivo (opcional)"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Férias, folga, compromisso..."
-            fullWidth
-          />
-          {mutation.isError && (
-            <Alert severity="error">
-              {(mutation.error as any)?.response?.data?.message ?? 'Erro ao salvar'}
-            </Alert>
-          )}
-        </Stack>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={onClose}>Cancelar</Button>
-        <Button
-          variant="contained"
-          disabled={mutation.isPending || dateRangeInvalid}
-          onClick={() => mutation.mutate()}
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
+      >
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title="Nova indisponibilidade"
+          subtitle={
+            professionalName
+              ? `Bloqueio na agenda de ${professionalName}`
+              : 'Bloqueie horários na agenda'
+          }
+          icon={<EventBusyOutlinedIcon fontSize="small" />}
+        />
+        <DialogContent
+          dividers
+          sx={{
+            px: { xs: 2, sm: 3 },
+            py: { xs: 2, sm: 2.5 },
+            flex: 1,
+            minHeight: 0,
+            overflow: isMobile ? 'auto' : 'hidden',
+          }}
         >
-          {mutation.isPending ? 'Salvando...' : 'Salvar'}
-        </Button>
-      </DialogActions>
+          <Stack spacing={2}>
+            <Box>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={600}
+                sx={{ mb: 1, display: 'block', letterSpacing: '0.04em' }}
+              >
+                Tipo de bloqueio
+              </Typography>
+              <ToggleButtonGroup
+                exclusive
+                fullWidth
+                size="small"
+                color="primary"
+                value={allDay ? 'allDay' : 'partial'}
+                onChange={(_, val) => {
+                  if (val === 'allDay') switchMode(true);
+                  if (val === 'partial') switchMode(false);
+                }}
+              >
+                <ToggleButton value="partial">Horário específico</ToggleButton>
+                <ToggleButton value="allDay">Dia(s) inteiro(s)</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            <Box>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={600}
+                sx={{ mb: 1, display: 'block', letterSpacing: '0.04em' }}
+              >
+                Período
+              </Typography>
+              <Stack spacing={1.5}>
+                <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 0.75, mx: 0 }}>
+                  {(allDay
+                    ? [
+                        { label: 'Hoje', onClick: () => {
+                          const d = dayjs().format('YYYY-MM-DD');
+                          setStartDate(d);
+                          setEndDate(d);
+                        }},
+                        { label: 'Amanhã', onClick: () => {
+                          const d = dayjs().add(1, 'day').format('YYYY-MM-DD');
+                          setStartDate(d);
+                          setEndDate(d);
+                        }},
+                        { label: 'Seg–Sex (próx.)', onClick: () => {
+                          const range = nextWeekdayRange(1, 5);
+                          setStartDate(range.start);
+                          setEndDate(range.end);
+                        }},
+                      ]
+                    : [
+                        { label: 'Próxima hora', onClick: () => {
+                          const now = dayjs();
+                          setStartAt(now.format('YYYY-MM-DDTHH:mm'));
+                          setEndAt(now.add(1, 'hour').format('YYYY-MM-DDTHH:mm'));
+                        }},
+                        { label: 'Manhã (hoje)', onClick: () => {
+                          const start = dayjs().hour(8).minute(0).second(0);
+                          setStartAt(start.format('YYYY-MM-DDTHH:mm'));
+                          setEndAt(start.hour(12).format('YYYY-MM-DDTHH:mm'));
+                        }},
+                        { label: 'Tarde (hoje)', onClick: () => {
+                          const start = dayjs().hour(13).minute(0).second(0);
+                          setStartAt(start.format('YYYY-MM-DDTHH:mm'));
+                          setEndAt(start.hour(18).format('YYYY-MM-DDTHH:mm'));
+                        }},
+                      ]
+                  ).map((preset) => (
+                    <Chip
+                      key={preset.label}
+                      label={preset.label}
+                      size="small"
+                      clickable
+                      variant="outlined"
+                      onClick={preset.onClick}
+                    />
+                  ))}
+                </Stack>
+
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={2}
+                  sx={{ width: '100%' }}
+                >
+                  {allDay ? (
+                    <>
+                      <TextField
+                        type="date"
+                        label="De"
+                        value={startDate}
+                        onChange={(e) => {
+                          setStartDate(e.target.value);
+                          if (dayjs(endDate).isBefore(dayjs(e.target.value), 'day')) {
+                            setEndDate(e.target.value);
+                          }
+                        }}
+                        InputLabelProps={{ shrink: true }}
+                        fullWidth
+                        error={dateRangeInvalid}
+                        sx={UNAVAIL_PERIOD_FIELD_SX}
+                      />
+                      <TextField
+                        type="date"
+                        label="Até"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                        fullWidth
+                        error={dateRangeInvalid}
+                        sx={UNAVAIL_PERIOD_FIELD_SX}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <TextField
+                        type="datetime-local"
+                        label="Início"
+                        value={startAt}
+                        onChange={(e) => {
+                          const newStart = e.target.value;
+                          setStartAt(newStart);
+                          if (
+                            !dayjs(endAt).isAfter(dayjs(newStart)) &&
+                            dayjs(newStart).isValid()
+                          ) {
+                            setEndAt(dayjs(newStart).add(1, 'hour').format('YYYY-MM-DDTHH:mm'));
+                          }
+                        }}
+                        InputLabelProps={{ shrink: true }}
+                        fullWidth
+                        error={datetimeRangeInvalid}
+                        sx={UNAVAIL_DATETIME_FIELD_SX}
+                      />
+                      <TextField
+                        type="datetime-local"
+                        label="Término"
+                        value={endAt}
+                        onChange={(e) => setEndAt(e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                        fullWidth
+                        error={datetimeRangeInvalid}
+                        sx={UNAVAIL_DATETIME_FIELD_SX}
+                      />
+                    </>
+                  )}
+                </Stack>
+
+                <Typography variant="caption" color={periodHelperMessage.color} sx={{ display: 'block' }}>
+                    {periodHelperMessage.text}
+                </Typography>
+              </Stack>
+            </Box>
+
+            <Alert
+              severity="info"
+              icon={false}
+              sx={{
+                py: 0.75,
+                mx: 0,
+                alignItems: 'center',
+                visibility: periodPreview ? 'visible' : 'hidden',
+              }}
+            >
+              <Typography variant="body2">
+                Será bloqueado: <strong>{periodPreview ?? '—'}</strong>
+              </Typography>
+            </Alert>
+
+            <Box>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={600}
+                sx={{ mb: 1, display: 'block', letterSpacing: '0.04em' }}
+              >
+                Motivo (opcional)
+              </Typography>
+              <Stack spacing={1.5}>
+                <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 0.75 }}>
+                  {UNAVAIL_REASON_SUGGESTIONS.map((suggestion) => (
+                    <Chip
+                      key={suggestion}
+                      label={suggestion}
+                      size="small"
+                      clickable
+                      color={reason === suggestion ? 'primary' : 'default'}
+                      variant={reason === suggestion ? 'filled' : 'outlined'}
+                      onClick={() => setReason(suggestion)}
+                    />
+                  ))}
+                </Stack>
+                <TextField
+                  label="Descreva o motivo"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Ou digite outro motivo..."
+                  fullWidth
+                  multiline
+                  minRows={2}
+                />
+              </Stack>
+            </Box>
+
+            {mutation.isError && (
+              <Alert severity="error" sx={{ mx: 0 }}>
+                {(mutation.error as any)?.response?.data?.message ?? 'Erro ao salvar'}
+              </Alert>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
+          <Button onClick={onClose} type="button">
+            Cancelar
+          </Button>
+          <Button variant="contained" type="submit" disabled={mutation.isPending || formInvalid}>
+            {mutation.isPending ? 'Salvando...' : 'Salvar bloqueio'}
+          </Button>
+        </DialogActions>
+      </Box>
     </Dialog>
   );
 }
