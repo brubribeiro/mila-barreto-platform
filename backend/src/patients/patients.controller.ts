@@ -82,15 +82,16 @@ export class PatientsController {
   uploadPhoto(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!file) throw new BadRequestException('Arquivo de imagem é obrigatório.');
-    return this.patients.uploadPhoto(id, file);
+    return this.patients.uploadPhoto(id, file, user);
   }
 
   @RequirePermissions('patients:edit')
   @Delete(':id/photo')
-  removePhoto(@Param('id', ParseUUIDPipe) id: string) {
-    return this.patients.removePhoto(id);
+  removePhoto(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.patients.removePhoto(id, user);
   }
 
   @RequirePermissions('patients:delete')

@@ -316,7 +316,7 @@ export class PatientsService {
     };
   }
 
-  async uploadPhoto(id: string, file: Express.Multer.File) {
+  async uploadPhoto(id: string, file: Express.Multer.File, user?: AuditUser) {
     if (!this.r2.isConfigured) {
       throw new BadRequestException(
         'Cloudflare R2 não está configurado. Não é possível enviar a foto.',
@@ -329,9 +329,11 @@ export class PatientsService {
       throw new BadRequestException('A foto deve ter no máximo 5 MB.');
     }
 
-    const patient = await this.findOne(id);
-    if (patient.photoStorageKey) {
-      await this.r2.remove(patient.photoStorageKey);
+    const oldPatient = await this.prisma.patient.findUnique({ where: { id } });
+    if (!oldPatient) throw new NotFoundException('Paciente não encontrado');
+
+    if (oldPatient.photoStorageKey) {
+      await this.r2.remove(oldPatient.photoStorageKey);
     }
 
     const ext =
@@ -347,19 +349,25 @@ export class PatientsService {
       where: { id },
       data: { photoStorageKey: key, photoUrl: null },
     });
+    this.auditLog
+      .logUpdate('Patient', id, oldPatient as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user)
+      .catch(() => undefined);
     return this.withPhotoAccessUrl(updated);
   }
 
-  async removePhoto(id: string) {
-    const patient = await this.prisma.patient.findUnique({ where: { id } });
-    if (!patient) throw new NotFoundException('Paciente não encontrado');
-    if (patient.photoStorageKey) {
-      await this.r2.remove(patient.photoStorageKey);
+  async removePhoto(id: string, user?: AuditUser) {
+    const oldPatient = await this.prisma.patient.findUnique({ where: { id } });
+    if (!oldPatient) throw new NotFoundException('Paciente não encontrado');
+    if (oldPatient.photoStorageKey) {
+      await this.r2.remove(oldPatient.photoStorageKey);
     }
     const updated = await this.prisma.patient.update({
       where: { id },
       data: { photoStorageKey: null, photoUrl: null },
     });
+    this.auditLog
+      .logUpdate('Patient', id, oldPatient as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user)
+      .catch(() => undefined);
     return this.withPhotoAccessUrl(updated);
   }
 

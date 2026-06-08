@@ -4,6 +4,7 @@ import { IsOptional, IsString, IsUUID } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.service';
 import { R2StorageService } from './r2-storage.service';
 import { CompressionService } from './compression.service';
+import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 
 export class CreateDocumentDto {
   @IsString()
@@ -28,6 +29,7 @@ export class DocumentsService {
     private readonly prisma: PrismaService,
     private readonly r2: R2StorageService,
     private readonly compression: CompressionService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   list(filter?: { patientId?: string; equipmentId?: string }) {
@@ -66,7 +68,7 @@ export class DocumentsService {
   }
 
   /** Upload de arquivo: envia para o Cloudflare R2 e salva referência no banco */
-  async upload(dto: CreateDocumentDto, file: Express.Multer.File) {
+  async upload(dto: CreateDocumentDto, file: Express.Multer.File, user?: AuditUser) {
     if (!this.r2.isConfigured) {
       throw new BadRequestException('Cloudflare R2 não está configurado. Verifique as variáveis de ambiente.');
     }
@@ -97,7 +99,7 @@ export class DocumentsService {
       subfolder,
     );
 
-    return this.prisma.document.create({
+    const created = await this.prisma.document.create({
       data: {
         name: dto.name || file.originalname,
         category: dto.category,
@@ -114,14 +116,21 @@ export class DocumentsService {
         equipment: { select: { id: true, name: true } },
       },
     });
+
+    this.auditLog
+      .logCreate('Document', created.id, created as unknown as Record<string, unknown>, user)
+      .catch(() => undefined);
+
+    return created;
   }
 
-  async remove(id: string) {
+  async remove(id: string, user?: AuditUser) {
     const d = await this.findOne(id);
     if (d.storageKey) {
       await this.r2.remove(d.storageKey);
     }
     await this.prisma.document.delete({ where: { id } });
+    this.auditLog.logDelete('Document', id, d as unknown as Record<string, unknown>, user).catch(() => undefined);
     return { ok: true };
   }
 }

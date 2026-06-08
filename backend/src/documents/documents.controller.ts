@@ -18,6 +18,7 @@ import { DocumentsService, CreateDocumentDto } from './documents.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 const ALLOWED_MIMES = new Set([
   'application/pdf',
@@ -65,9 +66,10 @@ export class DocumentsController {
   async upload(
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: CreateDocumentDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!file) throw new BadRequestException('Arquivo é obrigatório.');
-    return this.documents.upload(dto, file);
+    return this.documents.upload(dto, file, user);
   }
 
   @RequirePermissions('documents:view')
@@ -78,7 +80,7 @@ export class DocumentsController {
 
   @RequirePermissions('documents:delete')
   @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.documents.remove(id);
+  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.documents.remove(id, user);
   }
 }
