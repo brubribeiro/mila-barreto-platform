@@ -1,20 +1,27 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
-  Checkbox,
+  Alert,
+  Box,
+  Button,
   Dialog,
   DialogActions,
   DialogContent,
-  FormControlLabel,
+  InputAdornment,
+  Paper,
   Stack,
   TextField,
-  Button,
-  InputAdornment,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import PaymentIcon from '@mui/icons-material/Payment';
-import { useForm, Controller } from 'react-hook-form';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import PercentOutlinedIcon from '@mui/icons-material/PercentOutlined';
+import { useForm, Controller, type Control } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { paymentMethodsApi, CreatePaymentMethodPayload } from '../../api/paymentMethods';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { PaymentMethodEntry } from '../../types';
@@ -31,25 +38,74 @@ interface FormValues {
   active: boolean;
 }
 
+const DIALOG_MAX_WIDTH = 620;
+const DIALOG_HEIGHT_DESKTOP = 560;
+
+const SECTION_LABEL_SX = {
+  mb: 1,
+  display: 'block',
+  letterSpacing: '0.04em',
+} as const;
+
+const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+function PaymentMethodActiveToggle({
+  control,
+  fullWidth = false,
+}: {
+  control: Control<FormValues>;
+  fullWidth?: boolean;
+}) {
+  return (
+    <Controller
+      name="active"
+      control={control}
+      render={({ field }) => (
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          color="primary"
+          fullWidth={fullWidth}
+          value={field.value ? 'active' : 'inactive'}
+          onChange={(_, val) => {
+            if (val === 'active') field.onChange(true);
+            if (val === 'inactive') field.onChange(false);
+          }}
+        >
+          <ToggleButton value="active" sx={{ px: fullWidth ? 2 : 1.75 }}>
+            Ativa
+          </ToggleButton>
+          <ToggleButton value="inactive" sx={{ px: fullWidth ? 2 : 1.75 }}>
+            Inativa
+          </ToggleButton>
+        </ToggleButtonGroup>
+      )}
+    />
+  );
+}
+
 export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
-  const { control, handleSubmit, reset } = useForm<FormValues>({
-    defaultValues: { name: '', feePercent: 0, active: true },
+
+  const { control, handleSubmit, reset, watch } = useForm<FormValues>({
+    defaultValues: { name: '', feePercent: '', active: true },
   });
 
+  const watchedFee = watch('feePercent');
+
   useEffect(() => {
-    if (open) {
-      if (editing) {
-        reset({
-          name: editing.name,
-          feePercent: Number(editing.feePercent),
-          active: editing.active,
-        });
-      } else {
-        reset({ name: '', feePercent: 0, active: true });
-      }
+    if (!open) return;
+    if (editing) {
+      reset({
+        name: editing.name,
+        feePercent: Number(editing.feePercent),
+        active: editing.active,
+      });
+    } else {
+      reset({ name: '', feePercent: '', active: true });
     }
   }, [open, editing, reset]);
 
@@ -72,8 +128,8 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
 
   const onSubmit = (values: FormValues) => {
     const payload: CreatePaymentMethodPayload = {
-      name: values.name,
-      feePercent: Number(values.feePercent),
+      name: values.name.trim(),
+      feePercent: values.feePercent === '' ? 0 : Number(values.feePercent),
       active: values.active,
     };
 
@@ -85,84 +141,194 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
   };
 
   const saving = createMutation.isPending || updateMutation.isPending;
+  const mutationError = createMutation.error ?? updateMutation.error;
+
+  const feePreview = useMemo(() => {
+    const fee = watchedFee === '' ? 0 : Number(watchedFee);
+    if (Number.isNaN(fee) || fee < 0) return null;
+
+    const exampleAmount = 100;
+    const netAmount = exampleAmount * (1 - fee / 100);
+
+    if (fee === 0) {
+      return `Sem desconto de taxa — ${brl.format(exampleAmount)} líquidos em vendas de ${brl.format(exampleAmount)}.`;
+    }
+
+    return `Taxa de ${fee.toFixed(2).replace('.', ',')}% — em ${brl.format(exampleAmount)} você recebe ${brl.format(netAmount)}.`;
+  }, [watchedFee]);
+
+  const usageCount = editing?._count?.financialEntries ?? 0;
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="xs"
+      maxWidth={false}
       fullWidth
       fullScreen={isMobile}
-      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+      PaperProps={{
+        sx: {
+          ...dialogPaperSx(isMobile),
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          ...(isMobile
+            ? { height: '100%', maxHeight: '100dvh' }
+            : {
+                maxWidth: DIALOG_MAX_WIDTH,
+                height: DIALOG_HEIGHT_DESKTOP,
+                maxHeight: '94vh',
+                overflow: 'hidden',
+              }),
+        },
+      }}
     >
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <Box
+        component="form"
+        onSubmit={handleSubmit(onSubmit)}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          ...(isMobile ? { height: '100%' } : {}),
+        }}
+      >
         <DialogHeader
           onClose={onClose}
           isMobile={isMobile}
           title={editing ? 'Editar forma de pagamento' : 'Nova forma de pagamento'}
-          subtitle="Nome, taxa da maquininha e status"
-          icon={<PaymentIcon fontSize="small" />}
+          subtitle={
+            editing
+              ? `${editing.name}${usageCount > 0 ? ` · ${usageCount} lançamento(s)` : ''}`
+              : 'Nome, taxa da maquininha e disponibilidade no financeiro'
+          }
+          icon={editing ? <EditOutlinedIcon fontSize="small" /> : <PaymentIcon fontSize="small" />}
+          trailing={!isCompact ? <PaymentMethodActiveToggle control={control} /> : undefined}
+          bottom={
+            isCompact ? (
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.75, display: 'block' }}>
+                  Disponível para lançamentos
+                </Typography>
+                <PaymentMethodActiveToggle control={control} fullWidth />
+              </Box>
+            ) : undefined
+          }
         />
-        <DialogContent>
-          <Stack spacing={2.5} sx={{ mt: 1 }}>
-            <Controller
-              name="name"
-              control={control}
-              rules={{ required: 'Nome é obrigatório' }}
-              render={({ field, fieldState }) => (
-                <TextField
-                  {...field}
-                  label="Nome"
-                  placeholder="Ex: Crédito à vista"
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message}
-                  fullWidth
-                />
-              )}
-            />
 
-            <Controller
-              name="feePercent"
-              control={control}
-              rules={{
-                min: { value: 0, message: 'Não pode ser negativo' },
-                max: { value: 100, message: 'Máximo 100%' },
+        <DialogContent
+          dividers
+          sx={{
+            px: { xs: 2, sm: 3 },
+            py: { xs: 2, sm: 2.5 },
+            flex: 1,
+            minHeight: 0,
+            overflow: 'auto',
+          }}
+        >
+          <Stack spacing={2.5}>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: { xs: 1.5, sm: 2 },
+                borderRadius: 2,
+                bgcolor: 'background.paper',
               }}
-              render={({ field, fieldState }) => (
-                <TextField
-                  {...field}
-                  label="Taxa da maquininha"
-                  type="number"
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message ?? 'Percentual descontado pela operadora'}
-                  fullWidth
-                  inputProps={{ step: 0.01, min: 0, max: 100 }}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                  }}
+            >
+              <Typography variant="caption" color="text.secondary" fontWeight={600} sx={SECTION_LABEL_SX}>
+                Identificação
+              </Typography>
+              <Stack spacing={2}>
+                <Controller
+                  name="name"
+                  control={control}
+                  rules={{ required: 'Nome é obrigatório' }}
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      {...field}
+                      label="Nome da forma de pagamento"
+                      placeholder="Ex.: Crédito à vista"
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      fullWidth
+                      required
+                      autoFocus={!editing}
+                    />
+                  )}
                 />
-              )}
-            />
+              </Stack>
+            </Paper>
 
-            <Controller
-              name="active"
-              control={control}
-              render={({ field }) => (
-                <FormControlLabel
-                  control={<Checkbox checked={field.value} onChange={field.onChange} />}
-                  label="Ativa"
+            <Paper
+              variant="outlined"
+              sx={{
+                p: { xs: 1.5, sm: 2 },
+                borderRadius: 2,
+                bgcolor: 'background.paper',
+              }}
+            >
+              <Typography variant="caption" color="text.secondary" fontWeight={600} sx={SECTION_LABEL_SX}>
+                Taxa da maquininha
+              </Typography>
+              <Stack spacing={2}>
+                <Controller
+                  name="feePercent"
+                  control={control}
+                  rules={{
+                    min: { value: 0, message: 'Não pode ser negativo' },
+                    max: { value: 100, message: 'Máximo 100%' },
+                  }}
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      {...field}
+                      label="Percentual da operadora"
+                      type="number"
+                      error={!!fieldState.error}
+                      helperText={
+                        fieldState.error?.message ??
+                        'Desconto aplicado automaticamente nos lançamentos financeiros'
+                      }
+                      fullWidth
+                      inputProps={{ step: 0.01, min: 0, max: 100 }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <PercentOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                          </InputAdornment>
+                        ),
+                        endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                      }}
+                    />
+                  )}
                 />
-              )}
-            />
+
+                {feePreview && (
+                  <Alert severity="info" sx={{ py: 0.75 }}>
+                    {feePreview}
+                  </Alert>
+                )}
+              </Stack>
+            </Paper>
+
+            {mutationError && (
+              <Alert severity="error" variant="outlined">
+                {(mutationError as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+                  'Erro ao salvar forma de pagamento'}
+              </Alert>
+            )}
           </Stack>
         </DialogContent>
-        <DialogActions sx={dialogActionsBorderSx}>
-          <Button onClick={onClose}>Cancelar</Button>
+
+        <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
+          <Button onClick={onClose} type="button" disabled={saving}>
+            Cancelar
+          </Button>
           <Button type="submit" variant="contained" disabled={saving}>
-            {editing ? 'Salvar' : 'Criar'}
+            {saving ? 'Salvando…' : editing ? 'Salvar' : 'Criar forma'}
           </Button>
         </DialogActions>
-      </form>
+      </Box>
     </Dialog>
   );
 }
