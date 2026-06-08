@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Box, Button, Card, Chip, MenuItem, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Card, Chip, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -37,7 +37,7 @@ export function Professionals() {
   const [appointmentsFilter, setAppointmentsFilter] = useState<'ALL' | 'YES' | 'NO'>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<UserSummary | null>(null);
-  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users'],
@@ -144,20 +144,6 @@ export function Professionals() {
           const isSelf = params.row.id === me?.id;
           const isCurrentUserAdmin = me?.roleName === 'Administrador';
           const actions = [];
-          if (isAdmin) {
-            actions.push(
-              <GridActionsCellItem
-                key="history"
-                icon={
-                  <Tooltip title="Histórico de alterações">
-                    <HistoryIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Histórico"
-                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
-              />,
-            );
-          }
           if (isCurrentUserAdmin && !isSelf && params.row.active) {
             actions.push(
               <GridActionsCellItem
@@ -223,7 +209,7 @@ export function Professionals() {
         },
       },
     ],
-    [confirm, deleteMutation, me?.id, me?.roleName, canEdit, canDelete, impersonate, isAdmin],
+    [confirm, deleteMutation, me?.id, me?.roleName, canEdit, canDelete, impersonate],
   );
 
   return (
@@ -232,18 +218,29 @@ export function Professionals() {
         title="Profissionais"
         subtitle="Usuários da plataforma, permissões e quem realiza atendimentos"
         action={
-          canCreate && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              Novo profissional
-            </Button>
-          )
+          <Stack direction="row" spacing={1}>
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                startIcon={<HistoryIcon />}
+                onClick={() => setHistoryOpen(true)}
+              >
+                Histórico
+              </Button>
+            )}
+            {canCreate && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setEditing(null);
+                  setFormOpen(true);
+                }}
+              >
+                Novo profissional
+              </Button>
+            )}
+          </Stack>
         }
       />
 
@@ -305,15 +302,12 @@ export function Professionals() {
         onClose={() => setFormOpen(false)}
         user={editing}
       />
-      {auditTarget && (
-        <AuditHistoryDialog
-          open={!!auditTarget}
-          onClose={() => setAuditTarget(null)}
-          entity="User"
-          entityId={auditTarget.id}
-          title={auditTarget.name}
-        />
-      )}
+      <AuditHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        entity="User"
+        title="Profissionais"
+      />
     </Box>
   );
 }

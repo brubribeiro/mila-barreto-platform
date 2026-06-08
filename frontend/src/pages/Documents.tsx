@@ -26,6 +26,7 @@ import {
   alpha,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import HistoryIcon from '@mui/icons-material/History';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
@@ -524,7 +525,7 @@ export function Documents() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const triggerFilePicker = useCallback(() => {
     fileInputRef.current?.click();
@@ -718,11 +719,22 @@ export function Documents() {
         title="Documentos"
         subtitle="Contratos, certificados e arquivos da clínica"
         action={
-          canCreate ? (
-            <Button variant="contained" startIcon={<UploadFileIcon />} onClick={triggerFilePicker}>
-              Enviar arquivo
-            </Button>
-          ) : undefined
+          <Stack direction="row" spacing={1}>
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                startIcon={<HistoryIcon />}
+                onClick={() => setHistoryOpen(true)}
+              >
+                Histórico
+              </Button>
+            )}
+            {canCreate && (
+              <Button variant="contained" startIcon={<UploadFileIcon />} onClick={triggerFilePicker}>
+                Enviar arquivo
+              </Button>
+            )}
+          </Stack>
         }
       />
 
@@ -877,9 +889,7 @@ export function Documents() {
                     key={doc.id}
                     doc={doc}
                     canDelete={canDelete}
-                    showHistory={isAdmin}
                     onOpen={() => void handleOpenDocument(doc)}
-                    onHistory={() => setAuditTarget({ id: doc.id, name: doc.name })}
                     onDelete={() => handleDelete(doc)}
                   />
                 ))}
@@ -897,15 +907,12 @@ export function Documents() {
           onDocumentCreated={handleDocumentCreated}
         />
       )}
-      {auditTarget && (
-        <AuditHistoryDialog
-          open={!!auditTarget}
-          onClose={() => setAuditTarget(null)}
-          entity="Document"
-          entityId={auditTarget.id}
-          title={auditTarget.name}
-        />
-      )}
+      <AuditHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        entity="Document"
+        title="Documentos"
+      />
     </Box>
   );
 }

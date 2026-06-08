@@ -53,7 +53,7 @@ export function Patients() {
   const [editing, setEditing] = useState<Patient | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [whatsappPatient, setWhatsappPatient] = useState<Patient | null>(null);
-  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: patients = [], isLoading } = useQuery({
     queryKey: ['patients', search],
@@ -174,20 +174,6 @@ export function Patients() {
               onClick={() => setWhatsappPatient(params.row)}
             />,
           ];
-          if (isAdmin) {
-            actions.push(
-              <GridActionsCellItem
-                key="history"
-                icon={
-                  <Tooltip title="Histórico de alterações">
-                    <HistoryIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Histórico"
-                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
-              />,
-            );
-          }
           if (canEdit) {
             actions.push(
               <GridActionsCellItem
@@ -231,7 +217,7 @@ export function Patients() {
         },
       },
     ],
-    [confirm, deleteMutation, canEdit, canDelete, isAdmin],
+    [confirm, deleteMutation, canEdit, canDelete],
   );
 
   return (
@@ -240,18 +226,29 @@ export function Patients() {
         title="Pacientes"
         subtitle="Cadastro, histórico e contato"
         action={
-          canCreate && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              Novo paciente
-            </Button>
-          )
+          <Stack direction="row" spacing={1}>
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                startIcon={<HistoryIcon />}
+                onClick={() => setHistoryOpen(true)}
+              >
+                Histórico
+              </Button>
+            )}
+            {canCreate && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setEditing(null);
+                  setFormOpen(true);
+                }}
+              >
+                Novo paciente
+              </Button>
+            )}
+          </Stack>
         }
       />
 
@@ -305,15 +302,12 @@ export function Patients() {
         vars={{ paciente_nome: whatsappPatient?.name?.split(' ')[0] }}
         title={`Enviar mensagem para ${whatsappPatient?.name ?? ''}`}
       />
-      {auditTarget && (
-        <AuditHistoryDialog
-          open={!!auditTarget}
-          onClose={() => setAuditTarget(null)}
-          entity="Patient"
-          entityId={auditTarget.id}
-          title={auditTarget.name}
-        />
-      )}
+      <AuditHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        entity="Patient"
+        title="Pacientes"
+      />
     </Box>
   );
 }

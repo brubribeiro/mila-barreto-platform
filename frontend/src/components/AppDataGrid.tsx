@@ -85,6 +85,8 @@ export const appDataGridSx: SxProps<Theme> = {
 
 type AppDataGridProps = DataGridProps & {
   height?: number | string;
+  /** Mantém altura constante mesmo sem linhas (evita modal redimensionar). */
+  fixedHeight?: boolean;
 };
 
 const EMPTY_GRID_SX: SxProps<Theme> = {
@@ -96,7 +98,14 @@ const EMPTY_GRID_SX: SxProps<Theme> = {
   },
 };
 
-export function AppDataGrid({ height = 560, sx, rows, loading, ...props }: AppDataGridProps) {
+export function AppDataGrid({
+  height = 560,
+  fixedHeight = false,
+  sx,
+  rows,
+  loading,
+  ...props
+}: AppDataGridProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -107,9 +116,17 @@ export function AppDataGrid({ height = 560, sx, rows, loading, ...props }: AppDa
   const responsiveHeight = isMobile ? 420 : height;
   const loadingEmptyHeight = isMobile ? 280 : 320;
 
+  const wrapperHeight = fixedHeight
+    ? responsiveHeight
+    : isEmpty
+      ? undefined
+      : isLoadingEmpty
+        ? loadingEmptyHeight
+        : responsiveHeight;
+
   const mergedSx = [
     appDataGridSx,
-    isEmpty && EMPTY_GRID_SX,
+    isEmpty && !fixedHeight && EMPTY_GRID_SX,
     ...(sx ? (Array.isArray(sx) ? sx : [sx]) : []),
   ];
 
@@ -117,9 +134,7 @@ export function AppDataGrid({ height = 560, sx, rows, loading, ...props }: AppDa
     <Box
       sx={{
         width: '100%',
-        ...(isEmpty
-          ? {}
-          : { height: isLoadingEmpty ? loadingEmptyHeight : responsiveHeight }),
+        ...(wrapperHeight != null ? { height: wrapperHeight, minHeight: wrapperHeight } : {}),
         overflowX: 'auto',
         WebkitOverflowScrolling: 'touch',
         '& .MuiDataGrid-root': {
@@ -133,7 +148,7 @@ export function AppDataGrid({ height = 560, sx, rows, loading, ...props }: AppDa
         initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
         rows={rows}
         loading={loading}
-        autoHeight={isEmpty}
+        autoHeight={!fixedHeight && isEmpty}
         {...props}
         sx={mergedSx}
       />

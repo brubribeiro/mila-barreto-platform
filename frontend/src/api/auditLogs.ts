@@ -11,8 +11,36 @@ export interface AuditLogEntry {
   createdAt: string;
 }
 
+export interface AuditLogPaginated {
+  data: AuditLogEntry[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface AuditLogFilters {
+  entity?: string;
+  entityId?: string;
+  userId?: string;
+  action?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}
+
 export const auditLogsApi = {
   /** Busca logs de uma entidade + ID específicos (para exibir dentro do detalhe) */
   byEntity: (entity: string, entityId: string) =>
     api.get<AuditLogEntry[]>(`/audit-logs/${entity}/${entityId}`),
+
+  /** Busca geral de logs com filtros e paginação */
+  findAll: (filters: AuditLogFilters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') params.append(key, String(value));
+    });
+    return api.get<AuditLogPaginated>(`/audit-logs?${params.toString()}`);
+  },
 };

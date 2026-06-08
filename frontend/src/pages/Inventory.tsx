@@ -55,7 +55,7 @@ export function Inventory() {
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [movementItem, setMovementItem] = useState<InventoryItem | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['inventory'],
@@ -192,20 +192,6 @@ export function Inventory() {
               onClick={() => setMovementItem(params.row)}
             />,
           ];
-          if (isAdmin) {
-            actions.push(
-              <GridActionsCellItem
-                key="history"
-                icon={
-                  <Tooltip title="Histórico de alterações">
-                    <HistoryIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Histórico"
-                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
-              />,
-            );
-          }
           if (canEdit) {
             actions.push(
               <GridActionsCellItem
@@ -287,7 +273,7 @@ export function Inventory() {
         },
       },
     ],
-    [alert, confirm, deleteMutation, canEdit, canDelete, navigate, isAdmin],
+    [alert, confirm, deleteMutation, canEdit, canDelete, navigate],
   );
 
   return (
@@ -297,6 +283,15 @@ export function Inventory() {
         subtitle="Controle de materiais e insumos"
         action={
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                startIcon={<HistoryIcon />}
+                onClick={() => setHistoryOpen(true)}
+              >
+                Histórico
+              </Button>
+            )}
             <Button variant="outlined" startIcon={<FileDownloadIcon />} onClick={exportCsv}>
               Exportar CSV
             </Button>
@@ -378,15 +373,12 @@ export function Inventory() {
         item={movementItem}
       />
       <BulkPurchaseDialog open={bulkOpen} onClose={() => setBulkOpen(false)} />
-      {auditTarget && (
-        <AuditHistoryDialog
-          open={!!auditTarget}
-          onClose={() => setAuditTarget(null)}
-          entity="InventoryItem"
-          entityId={auditTarget.id}
-          title={auditTarget.name}
-        />
-      )}
+      <AuditHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        entity="InventoryItem"
+        title="Estoque"
+      />
     </Box>
   );
 }

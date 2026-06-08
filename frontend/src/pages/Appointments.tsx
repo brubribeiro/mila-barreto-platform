@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Box, Button, Card, Checkbox, Chip, FormControl, InputLabel, ListItemText, MenuItem, OutlinedInput, Select, Stack, useMediaQuery, useTheme } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import HistoryIcon from '@mui/icons-material/History';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -14,6 +15,7 @@ import { appointmentsApi } from '../api/appointments';
 import { availabilityApi } from '../api/availability';
 import { usersApi } from '../api/users';
 import { AppointmentFormDialog } from '../components/appointments/AppointmentFormDialog';
+import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Appointment, AppointmentStatus, UnavailabilityCalendarItem } from '../types';
@@ -46,8 +48,9 @@ export function Appointments() {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useAuth();
-  const { has, restrictToOwnAppointments } = usePermissions();
+  const { has, restrictToOwnAppointments, isAdmin } = usePermissions();
   const canCreate = has('appointments:create');
+  const [historyOpen, setHistoryOpen] = useState(false);
   const calendarRef = useRef<FullCalendar | null>(null);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -289,6 +292,16 @@ export function Appointments() {
                 </Select>
               </FormControl>
             )}
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                startIcon={<HistoryIcon />}
+                onClick={() => setHistoryOpen(true)}
+                size={isMobile ? 'small' : 'medium'}
+              >
+                Histórico
+              </Button>
+            )}
             {canCreate && (
               <Button
                 variant="contained"
@@ -513,6 +526,12 @@ export function Appointments() {
         }}
         appointment={editing}
         defaultStart={defaultStart}
+      />
+      <AuditHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        entity="Appointment"
+        title="Agendamentos"
       />
     </Box>
   );

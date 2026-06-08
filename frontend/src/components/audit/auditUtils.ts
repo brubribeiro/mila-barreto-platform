@@ -56,7 +56,20 @@ export const fieldLabels: Record<string, string> = {
   professionalId: 'Profissional',
   patientId: 'Paciente',
   procedureId: 'Procedimento',
+  equipmentId: 'Equipamento',
   paymentMethodId: 'Forma de pagamento',
+  photoStorageKey: 'Foto',
+  storageKey: 'Arquivo',
+  mimeType: 'Tipo do arquivo',
+  size: 'Tamanho (bytes)',
+  title: 'Título',
+  body: 'Mensagem',
+  channel: 'Canal',
+  trigger: 'Gatilho',
+  isDefault: 'Padrão',
+  frequency: 'Frequência',
+  dayOfMonth: 'Dia do mês',
+  includeVariable: 'Incluir variável',
   cep: 'CEP',
   addressStreet: 'Rua',
   addressNeighborhood: 'Bairro',
@@ -91,7 +104,9 @@ const HIDDEN_AUDIT_FIELDS = new Set([
   'procedure',
   'role',
   'package',
-  'photoStorageKey',
+  'photoUrl',
+  'fileUrl',
+  'paymentMethod',
   'referralSourceOther',
 ]);
 
@@ -105,6 +120,7 @@ function isEmptyAuditValue(val: unknown): boolean {
 
 export function formatAuditValue(field: string, val: unknown): string {
   if (isEmptyAuditValue(val)) return '—';
+  if (field === 'photoStorageKey' || field === 'storageKey') return val ? 'Sim' : '—';
   if (field === 'sex') return patientSexLabel(val as string);
   if (field === 'referralSource') return patientReferralSourceLabel(val as string);
   if (typeof val === 'boolean') return val ? 'Sim' : 'Não';
@@ -123,7 +139,7 @@ function getVisibleChanges(changes: Record<string, unknown> | null): [string, un
     if (HIDDEN_AUDIT_FIELDS.has(field)) return false;
 
     const change = value as { old?: unknown; new?: unknown } | unknown;
-    if (typeof change === 'object' && change !== null && 'old' in change) {
+    if (typeof change === 'object' && change !== null && ('old' in change || 'new' in change)) {
       const c = change as { old?: unknown; new?: unknown };
       return !(isEmptyAuditValue(c.old) && isEmptyAuditValue(c.new));
     }

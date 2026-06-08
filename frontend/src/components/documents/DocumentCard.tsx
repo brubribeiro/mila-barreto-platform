@@ -11,7 +11,6 @@ import {
 } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import HistoryIcon from '@mui/icons-material/History';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
 import dayjs from 'dayjs';
@@ -22,18 +21,14 @@ import { categoryMeta, canOpenDocument, documentFileIcon, fmtFileSize } from './
 interface DocumentCardProps {
   doc: DocumentFile;
   canDelete: boolean;
-  showHistory: boolean;
   onOpen: () => void;
-  onHistory: () => void;
   onDelete: () => void;
 }
 
 export function DocumentCard({
   doc,
   canDelete,
-  showHistory,
   onOpen,
-  onHistory,
   onDelete,
 }: DocumentCardProps) {
   const category = categoryMeta(doc.category);
@@ -128,13 +123,6 @@ export function DocumentCard({
           <Tooltip title="Abrir arquivo">
             <IconButton size="small" onClick={onOpen} aria-label="Abrir arquivo">
               <OpenInNewIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        )}
-        {showHistory && (
-          <Tooltip title="Histórico de alterações">
-            <IconButton size="small" onClick={onHistory} aria-label="Histórico">
-              <HistoryIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         )}

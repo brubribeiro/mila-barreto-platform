@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Box, Button, Card, Chip, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Card, Chip, Stack, Tooltip, Typography } from '@mui/material';
 import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -29,7 +29,7 @@ export function PaymentMethods() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<PaymentMethodEntry | null>(null);
-  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: methods = [], isLoading } = useQuery({
     queryKey: ['payment-methods'],
@@ -103,20 +103,6 @@ export function PaymentMethods() {
         width: 140,
         getActions: (params) => {
           const actions = [];
-          if (isAdmin) {
-            actions.push(
-              <GridActionsCellItem
-                key="history"
-                icon={
-                  <Tooltip title="Histórico de alterações">
-                    <HistoryIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Histórico"
-                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
-              />,
-            );
-          }
           if (canEdit) {
             actions.push(
               <GridActionsCellItem
@@ -160,7 +146,7 @@ export function PaymentMethods() {
         },
       },
     ],
-    [confirm, canEdit, canDelete, deleteMutation, isAdmin],
+    [confirm, canEdit, canDelete, deleteMutation],
   );
 
   return (
@@ -169,18 +155,29 @@ export function PaymentMethods() {
         title="Formas de pagamento"
         subtitle="Cadastre as formas de pagamento e suas taxas de maquininha"
         action={
-          canCreate && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              Nova forma de pagamento
-            </Button>
-          )
+          <Stack direction="row" spacing={1}>
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                startIcon={<HistoryIcon />}
+                onClick={() => setHistoryOpen(true)}
+              >
+                Histórico
+              </Button>
+            )}
+            {canCreate && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setEditing(null);
+                  setFormOpen(true);
+                }}
+              >
+                Nova forma de pagamento
+              </Button>
+            )}
+          </Stack>
         }
       />
 
@@ -220,15 +217,12 @@ export function PaymentMethods() {
         }}
         editing={editing}
       />
-      {auditTarget && (
-        <AuditHistoryDialog
-          open={!!auditTarget}
-          onClose={() => setAuditTarget(null)}
-          entity="PaymentMethod"
-          entityId={auditTarget.id}
-          title={auditTarget.name}
-        />
-      )}
+      <AuditHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        entity="PaymentMethod"
+        title="Formas de pagamento"
+      />
     </Box>
   );
 }

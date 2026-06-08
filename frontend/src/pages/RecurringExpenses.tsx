@@ -49,7 +49,7 @@ export function RecurringExpensesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RecurringExpense | null>(null);
   const [snack, setSnack] = useState<string | null>(null);
-  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['recurring-expenses'],
@@ -262,20 +262,6 @@ export function RecurringExpensesPage() {
         width: 140,
         getActions: (p) => {
           const actions = [];
-          if (isAdmin) {
-            actions.push(
-              <GridActionsCellItem
-                key="history"
-                icon={
-                  <Tooltip title="Histórico de alterações">
-                    <HistoryIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Histórico"
-                onClick={() => setAuditTarget({ id: p.row.id, name: p.row.name ?? '' })}
-              />,
-            );
-          }
           actions.push(
           <GridActionsCellItem
             key="edit"
@@ -313,7 +299,7 @@ export function RecurringExpensesPage() {
         },
       },
     ],
-    [confirm, deleteMutation, isAdmin],
+    [confirm, deleteMutation],
   );
 
   return (
@@ -323,6 +309,15 @@ export function RecurringExpensesPage() {
         subtitle="Cadastre despesas fixas e variáveis que se repetem mensalmente"
         action={
           <Stack direction="row" spacing={1}>
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                startIcon={<HistoryIcon />}
+                onClick={() => setHistoryOpen(true)}
+              >
+                Histórico
+              </Button>
+            )}
             <Button
               variant="outlined"
               startIcon={<AutorenewIcon />}
@@ -482,15 +477,12 @@ export function RecurringExpensesPage() {
         onClose={() => setFormOpen(false)}
         expense={editing}
       />
-      {auditTarget && (
-        <AuditHistoryDialog
-          open={!!auditTarget}
-          onClose={() => setAuditTarget(null)}
-          entity="RecurringExpense"
-          entityId={auditTarget.id}
-          title={auditTarget.name}
-        />
-      )}
+      <AuditHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        entity="RecurringExpense"
+        title="Despesas recorrentes"
+      />
 
       <Snackbar
         open={!!snack}

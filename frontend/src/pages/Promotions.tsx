@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Box, Button, Card, Chip, MenuItem, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Card, Chip, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -40,7 +40,7 @@ export function Promotions() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Promotion | null>(null);
   const [initialCommemorativeDate, setInitialCommemorativeDate] = useState<string | undefined>();
-  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Abrir formulário automaticamente quando vem do Dashboard com ?data=
@@ -176,20 +176,6 @@ export function Promotions() {
         width: 140,
         getActions: (params) => {
           const actions = [];
-          if (isAdmin) {
-            actions.push(
-              <GridActionsCellItem
-                key="history"
-                icon={
-                  <Tooltip title="Histórico de alterações">
-                    <HistoryIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Histórico"
-                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
-              />,
-            );
-          }
           if (canEdit) {
             actions.push(
               <GridActionsCellItem
@@ -233,7 +219,7 @@ export function Promotions() {
         },
       },
     ],
-    [confirm, canEdit, canDelete, deleteMutation, isAdmin],
+    [confirm, canEdit, canDelete, deleteMutation],
   );
 
   return (
@@ -242,19 +228,30 @@ export function Promotions() {
         title="Promoções"
         subtitle="Gerencie promoções e descontos para datas comemorativas"
         action={
-          canCreate && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setEditing(null);
-                setInitialCommemorativeDate(undefined);
-                setFormOpen(true);
-              }}
-            >
-              Nova promoção
-            </Button>
-          )
+          <Stack direction="row" spacing={1}>
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                startIcon={<HistoryIcon />}
+                onClick={() => setHistoryOpen(true)}
+              >
+                Histórico
+              </Button>
+            )}
+            {canCreate && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setEditing(null);
+                  setInitialCommemorativeDate(undefined);
+                  setFormOpen(true);
+                }}
+              >
+                Nova promoção
+              </Button>
+            )}
+          </Stack>
         }
       />
 
@@ -310,15 +307,12 @@ export function Promotions() {
         editing={editing}
         initialCommemorativeDate={initialCommemorativeDate}
       />
-      {auditTarget && (
-        <AuditHistoryDialog
-          open={!!auditTarget}
-          onClose={() => setAuditTarget(null)}
-          entity="Promotion"
-          entityId={auditTarget.id}
-          title={auditTarget.name}
-        />
-      )}
+      <AuditHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        entity="Promotion"
+        title="Promoções"
+      />
     </Box>
   );
 }

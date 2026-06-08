@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Box, Button, Card, Chip, MenuItem, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Card, Chip, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -30,7 +30,7 @@ export function Packages() {
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'COMBO' | 'SESSIONS'>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Package | null>(null);
-  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: packages = [], isLoading } = useQuery({
     queryKey: ['packages'],
@@ -146,20 +146,6 @@ export function Packages() {
         width: 140,
         getActions: (params) => {
           const actions = [];
-          if (isAdmin) {
-            actions.push(
-              <GridActionsCellItem
-                key="history"
-                icon={
-                  <Tooltip title="Histórico de alterações">
-                    <HistoryIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Histórico"
-                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
-              />,
-            );
-          }
           if (!canManage) return actions;
           actions.push(
             <GridActionsCellItem
@@ -198,7 +184,7 @@ export function Packages() {
         },
       },
     ],
-    [confirm, deleteMutation, canManage, isAdmin],
+    [confirm, deleteMutation, canManage],
   );
 
   return (
@@ -211,18 +197,29 @@ export function Packages() {
             : 'Catálogo de pacotes disponíveis (apenas leitura)'
         }
         action={
-          canManage && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              Novo pacote
-            </Button>
-          )
+          <Stack direction="row" spacing={1}>
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                startIcon={<HistoryIcon />}
+                onClick={() => setHistoryOpen(true)}
+              >
+                Histórico
+              </Button>
+            )}
+            {canManage && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setEditing(null);
+                  setFormOpen(true);
+                }}
+              >
+                Novo pacote
+              </Button>
+            )}
+          </Stack>
         }
       />
 
@@ -267,15 +264,12 @@ export function Packages() {
         onClose={() => setFormOpen(false)}
         pkg={editing}
       />
-      {auditTarget && (
-        <AuditHistoryDialog
-          open={!!auditTarget}
-          onClose={() => setAuditTarget(null)}
-          entity="Package"
-          entityId={auditTarget.id}
-          title={auditTarget.name}
-        />
-      )}
+      <AuditHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        entity="Package"
+        title="Pacotes"
+      />
     </Box>
   );
 }

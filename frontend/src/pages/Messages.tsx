@@ -502,7 +502,7 @@ export function Messages() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MessageTemplate | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<MessageTemplate | null>(null);
-  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ['message-templates'],
@@ -579,20 +579,6 @@ export function Messages() {
               onClick={() => setPreviewTemplate(params.row)}
             />,
           ];
-          if (isAdmin) {
-            actions.push(
-              <GridActionsCellItem
-                key="history"
-                icon={
-                  <Tooltip title="Histórico de alterações">
-                    <HistoryIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Histórico"
-                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
-              />,
-            );
-          }
           if (canEdit) {
             actions.push(
               <GridActionsCellItem
@@ -636,7 +622,7 @@ export function Messages() {
         },
       },
     ],
-    [confirm, deleteMutation, canEdit, canDelete, isAdmin],
+    [confirm, deleteMutation, canEdit, canDelete],
   );
 
   return (
@@ -645,18 +631,29 @@ export function Messages() {
         title="Mensagens"
         subtitle="Templates de mensagens WhatsApp"
         action={
-          canCreate && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              Novo template
-            </Button>
-          )
+          <Stack direction="row" spacing={1}>
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                startIcon={<HistoryIcon />}
+                onClick={() => setHistoryOpen(true)}
+              >
+                Histórico
+              </Button>
+            )}
+            {canCreate && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setEditing(null);
+                  setFormOpen(true);
+                }}
+              >
+                Novo template
+              </Button>
+            )}
+          </Stack>
         }
       />
 
@@ -713,15 +710,12 @@ export function Messages() {
         onClose={() => setPreviewTemplate(null)}
         template={previewTemplate}
       />
-      {auditTarget && (
-        <AuditHistoryDialog
-          open={!!auditTarget}
-          onClose={() => setAuditTarget(null)}
-          entity="MessageTemplate"
-          entityId={auditTarget.id}
-          title={auditTarget.name}
-        />
-      )}
+      <AuditHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        entity="MessageTemplate"
+        title="Mensagens"
+      />
     </Box>
   );
 }

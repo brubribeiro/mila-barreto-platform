@@ -75,7 +75,7 @@ export function Finance() {
   const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialEntry | null>(null);
-  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const fromIso = useMemo(() => {
     const parsed = dayjs(from);
@@ -95,6 +95,7 @@ export function Finance() {
       );
       await queryClient.invalidateQueries({ queryKey: ['finance'] });
       await queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+      await queryClient.invalidateQueries({ queryKey: ['finance-upcoming-expenses'] });
       return true;
     },
     staleTime: 60_000,
@@ -108,6 +109,7 @@ export function Finance() {
       if (result.created > 0) {
         await queryClient.invalidateQueries({ queryKey: ['finance'] });
         await queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+        await queryClient.invalidateQueries({ queryKey: ['finance-upcoming-expenses'] });
       }
       return result;
     },
@@ -339,20 +341,6 @@ export function Finance() {
         width: 120,
         getActions: (params) => {
           const actions = [];
-          if (isAdmin) {
-            actions.push(
-              <GridActionsCellItem
-                key="history"
-                icon={
-                  <Tooltip title="Histórico de alterações">
-                    <HistoryIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Histórico"
-                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.description ?? '' })}
-              />,
-            );
-          }
           actions.push(
           <GridActionsCellItem
             key="edit"
@@ -390,7 +378,7 @@ export function Finance() {
         },
       },
     ],
-    [confirm, deleteMutation, invoiceMutation, isAdmin],
+    [confirm, deleteMutation, invoiceMutation],
   );
 
   const exportPeriodCsv = async () => {
@@ -444,6 +432,15 @@ export function Finance() {
         subtitle="Receitas, despesas, fluxo de caixa e notas de serviço"
         action={
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                startIcon={<HistoryIcon />}
+                onClick={() => setHistoryOpen(true)}
+              >
+                Histórico
+              </Button>
+            )}
             <Button variant="outlined" startIcon={<FileDownloadIcon />} onClick={exportPeriodCsv}>
               Exportar período
             </Button>
@@ -613,15 +610,12 @@ export function Finance() {
       </Card>
 
       <FinanceFormDialog open={formOpen} onClose={() => setFormOpen(false)} entry={editing} />
-      {auditTarget && (
-        <AuditHistoryDialog
-          open={!!auditTarget}
-          onClose={() => setAuditTarget(null)}
-          entity="FinancialEntry"
-          entityId={auditTarget.id}
-          title={auditTarget.name}
-        />
-      )}
+      <AuditHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        entity="FinancialEntry"
+        title="Financeiro"
+      />
     </Box>
   );
 }

@@ -30,7 +30,7 @@ export function Roles() {
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Role | null>(null);
-  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: roles = [], isLoading } = useQuery({
     queryKey: ['roles'],
@@ -123,20 +123,6 @@ export function Roles() {
         width: 140,
         getActions: (params) => {
           const actions = [];
-          if (isAdmin) {
-            actions.push(
-              <GridActionsCellItem
-                key="history"
-                icon={
-                  <Tooltip title="Histórico de alterações">
-                    <HistoryIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Histórico"
-                onClick={() => setAuditTarget({ id: params.row.id, name: params.row.name ?? '' })}
-              />,
-            );
-          }
           if (canEdit) {
             actions.push(
               <GridActionsCellItem
@@ -180,7 +166,7 @@ export function Roles() {
         },
       },
     ],
-    [confirm, deleteMutation, canEdit, canDelete, isAdmin],
+    [confirm, deleteMutation, canEdit, canDelete],
   );
 
   return (
@@ -189,18 +175,29 @@ export function Roles() {
         title="Grupos e permissões"
         subtitle="Defina o que cada grupo pode acessar, criar, editar e excluir"
         action={
-          canCreate && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              Novo grupo
-            </Button>
-          )
+          <Stack direction="row" spacing={1}>
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                startIcon={<HistoryIcon />}
+                onClick={() => setHistoryOpen(true)}
+              >
+                Histórico
+              </Button>
+            )}
+            {canCreate && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setEditing(null);
+                  setFormOpen(true);
+                }}
+              >
+                Novo grupo
+              </Button>
+            )}
+          </Stack>
         }
       />
 
@@ -229,15 +226,12 @@ export function Roles() {
       </Card>
 
       <RoleFormDialog open={formOpen} onClose={() => setFormOpen(false)} role={editing} />
-      {auditTarget && (
-        <AuditHistoryDialog
-          open={!!auditTarget}
-          onClose={() => setAuditTarget(null)}
-          entity="Role"
-          entityId={auditTarget.id}
-          title={auditTarget.name}
-        />
-      )}
+      <AuditHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        entity="Role"
+        title="Grupos"
+      />
     </Box>
   );
 }

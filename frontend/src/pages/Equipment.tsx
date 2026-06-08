@@ -6,6 +6,7 @@ import {
   Card,
   Chip,
   MenuItem,
+  Stack,
   TextField,
   Tooltip,
   Typography,
@@ -55,7 +56,7 @@ export function EquipmentPage() {
   const [maintenanceFilter, setMaintenanceFilter] = useState<MaintenanceFilter>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Equipment | null>(null);
-  const [auditTarget, setAuditTarget] = useState<{ id: string; name: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['equipment'],
@@ -188,20 +189,6 @@ export function EquipmentPage() {
         width: 180,
         getActions: (p) => {
           const actions = [];
-          if (isAdmin) {
-            actions.push(
-              <GridActionsCellItem
-                key="history"
-                icon={
-                  <Tooltip title="Histórico de alterações">
-                    <HistoryIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Histórico"
-                onClick={() => setAuditTarget({ id: p.row.id, name: p.row.name ?? '' })}
-              />,
-            );
-          }
           if (canEdit) {
             actions.push(
               <GridActionsCellItem
@@ -264,7 +251,7 @@ export function EquipmentPage() {
         },
       },
     ],
-    [confirm, deleteMutation, maintenanceMutation, canEdit, canDelete, isAdmin],
+    [confirm, deleteMutation, maintenanceMutation, canEdit, canDelete],
   );
 
   return (
@@ -273,18 +260,29 @@ export function EquipmentPage() {
         title="Equipamentos"
         subtitle="Cadastro de máquinas e controle de manutenção preventiva"
         action={
-          canCreate && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              Novo equipamento
-            </Button>
-          )
+          <Stack direction="row" spacing={1}>
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                startIcon={<HistoryIcon />}
+                onClick={() => setHistoryOpen(true)}
+              >
+                Histórico
+              </Button>
+            )}
+            {canCreate && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setEditing(null);
+                  setFormOpen(true);
+                }}
+              >
+                Novo equipamento
+              </Button>
+            )}
+          </Stack>
         }
       />
 
@@ -335,15 +333,12 @@ export function EquipmentPage() {
         onClose={() => setFormOpen(false)}
         equipment={editing}
       />
-      {auditTarget && (
-        <AuditHistoryDialog
-          open={!!auditTarget}
-          onClose={() => setAuditTarget(null)}
-          entity="Equipment"
-          entityId={auditTarget.id}
-          title={auditTarget.name}
-        />
-      )}
+      <AuditHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        entity="Equipment"
+        title="Equipamentos"
+      />
     </Box>
   );
 }
