@@ -6,7 +6,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Grid,
   InputAdornment,
   MenuItem,
@@ -14,9 +13,11 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { inventoryApi, InventoryItemPayload } from '../../api/inventory';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { InventoryItem } from '../../types';
 
 interface InventoryFormDialogProps {
@@ -103,9 +104,22 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
   });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+    >
       <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
-        <DialogTitle>{item ? 'Editar item' : 'Novo item de estoque'}</DialogTitle>
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title={item ? 'Editar item' : 'Novo item de estoque'}
+          subtitle="Nome, unidade, estoque mínimo e custo"
+          icon={<Inventory2OutlinedIcon fontSize="small" />}
+        />
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12} sm={8}>

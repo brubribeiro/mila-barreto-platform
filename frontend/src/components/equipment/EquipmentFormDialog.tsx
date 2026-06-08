@@ -6,7 +6,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   FormControlLabel,
   Grid,
   InputAdornment,
@@ -15,9 +14,11 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import HandymanOutlinedIcon from '@mui/icons-material/HandymanOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { equipmentApi, EquipmentPayload } from '../../api/equipment';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { dateInputValueFromApi, dateOnlyToApiIso } from '../../utils/dateOnly';
 import type { Equipment } from '../../types';
 
@@ -123,9 +124,23 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
   });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+    >
       <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
-        <DialogTitle>{equipment ? 'Editar equipamento' : 'Novo equipamento'}</DialogTitle>
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title={equipment ? 'Editar equipamento' : 'Novo equipamento'}
+          subtitle={equipment?.name ?? 'Dados, aquisição e manutenção'}
+          subtitleTitle={equipment?.name}
+          icon={<HandymanOutlinedIcon fontSize="small" />}
+        />
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             {/* --- Dados gerais --- */}

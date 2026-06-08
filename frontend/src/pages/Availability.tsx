@@ -11,7 +11,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Divider,
   FormControlLabel,
   Grid,
@@ -28,10 +27,12 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
 import { PageHeader } from '../components/PageHeader';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../components/DialogCloseButton';
 import { availabilityApi } from '../api/availability';
 import { usersApi } from '../api/users';
 import { useAuth } from '../contexts/AuthContext';
@@ -517,8 +518,21 @@ function UnavailabilityDialog({
   });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth fullScreen={isMobile}>
-      <DialogTitle>Nova indisponibilidade</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+    >
+      <DialogHeader
+        onClose={onClose}
+        isMobile={isMobile}
+        title="Nova indisponibilidade"
+        subtitle="Bloqueie horários na agenda"
+        icon={<EventBusyOutlinedIcon fontSize="small" />}
+      />
       <DialogContent dividers>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
           <FormControlLabel

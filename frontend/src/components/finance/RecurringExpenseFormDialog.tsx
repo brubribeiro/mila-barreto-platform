@@ -6,7 +6,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   FormControlLabel,
   Grid,
   InputAdornment,
@@ -16,9 +15,11 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import EventRepeatOutlinedIcon from '@mui/icons-material/EventRepeatOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { recurringExpensesApi, RecurringExpensePayload } from '../../api/recurring-expenses';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { ExpenseType, RecurringExpense } from '../../types';
 
 interface Props {
@@ -92,11 +93,22 @@ export function RecurringExpenseFormDialog({ open, onClose, expense }: Props) {
   });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+    >
       <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
-        <DialogTitle>
-          {expense ? 'Editar despesa recorrente' : 'Nova despesa recorrente'}
-        </DialogTitle>
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title={expense ? 'Editar despesa recorrente' : 'Nova despesa recorrente'}
+          subtitle="Valor, vencimento e tipo fixo ou variável"
+          icon={<EventRepeatOutlinedIcon fontSize="small" />}
+        />
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12}>

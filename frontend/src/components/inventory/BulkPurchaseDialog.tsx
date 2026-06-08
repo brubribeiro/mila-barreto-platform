@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Divider,
   Grid,
   IconButton,
@@ -34,6 +33,7 @@ import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { inventoryApi } from '../../api/inventory';
+import { DialogHeader } from '../DialogCloseButton';
 import { dateOnlyToApiIso, formatDateOnlyFromApi } from '../../utils/dateOnly';
 import type { InventoryItem } from '../../types';
 
@@ -395,36 +395,14 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
         sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
       >
-        <DialogTitle
-          sx={{
-            px: { xs: 2, sm: 3 },
-            pt: { xs: 1.5, sm: 2 },
-            pb: { xs: 1.5, sm: 2 },
-            borderBottom: 1,
-            borderColor: 'divider',
-            flexShrink: 0,
-            bgcolor: 'background.paper',
-          }}
-        >
-          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
-            {isMobile && (
-              <IconButton edge="start" onClick={onClose} aria-label="Fechar" size="small">
-                <CloseIcon />
-              </IconButton>
-            )}
-            {!isMobile && (
-              <HeaderIcon>
-                <ShoppingCartOutlinedIcon fontSize="small" />
-              </HeaderIcon>
-            )}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600} noWrap>
-                Compra em lote
-              </Typography>
-              <Typography variant="body2" color="text.secondary" noWrap>
-                Vários materiais, validade por item e frete rateado no custo
-              </Typography>
-            </Box>
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title="Compra em lote"
+          subtitle="Vários materiais, validade por item e frete rateado no custo"
+          icon={<ShoppingCartOutlinedIcon fontSize="small" />}
+          sx={{ bgcolor: 'background.paper' }}
+          trailing={
             <Stack direction="row" spacing={0.75} flexWrap="wrap" justifyContent="flex-end">
               <Chip
                 size="small"
@@ -444,8 +422,8 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
                 />
               )}
             </Stack>
-          </Stack>
-        </DialogTitle>
+          }
+        />
 
         <DialogContent
           dividers={false}

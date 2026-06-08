@@ -10,7 +10,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Grid,
   IconButton,
   List,
@@ -30,7 +29,6 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddIcon from '@mui/icons-material/Add';
 import InventoryIcon from '@mui/icons-material/Inventory2Outlined';
@@ -64,6 +62,7 @@ import { inventoryApi } from '../../api/inventory';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAppDialog } from '../../contexts/AppDialogContext';
 import { usePermissions } from '../../contexts/usePermissions';
+import { DialogHeader, dialogPaperSx } from '../DialogCloseButton';
 import { SendWhatsAppDialog } from '../messages/SendWhatsAppDialog';
 import { PatientDetailDrawer } from '../patients/PatientDetailDrawer';
 import { varsFromAppointment } from '../../utils/whatsapp';
@@ -1042,173 +1041,142 @@ export function AppointmentFormDialog({
           onSubmit={handleSubmit(onSubmit)}
           sx={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}
         >
-          <DialogTitle
-            sx={{
-              px: { xs: 2, sm: 3 },
-              pt: { xs: 1.5, sm: 2.5 },
-              pb: { xs: 1.5, sm: 2 },
-              flexShrink: 0,
-              borderBottom: 1,
-              borderColor: 'divider',
-              bgcolor: 'background.paper',
-            }}
-          >
-            <Stack spacing={isMobile ? 1.5 : 0}>
-              <Stack
-                direction="row"
-                alignItems="center"
-                justifyContent="space-between"
-                spacing={1}
-              >
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
-                  {isMobile && (
-                    <IconButton edge="start" onClick={onClose} aria-label="Fechar" size="small">
-                      <CloseIcon />
-                    </IconButton>
-                  )}
-                  {!isMobile && (
-                    <SectionIcon>
-                      <EventAvailableOutlinedIcon fontSize="small" />
-                    </SectionIcon>
-                  )}
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600} noWrap>
-                      {appointment ? 'Editar agendamento' : 'Novo agendamento'}
-                    </Typography>
-                    {!isMobile && (
-                      <Typography variant="body2" color="text.secondary" noWrap>
-                        {selectedPatient
-                          ? `${selectedPatient.name}${slotValid ? ` · ${dayjs(selectedDate).format('DD/MM/YYYY')} às ${selectedStartTime}` : ''}`
-                          : 'Preencha os dados para reservar o horário'}
-                      </Typography>
-                    )}
-                  </Box>
-                </Stack>
-
-                {/* Status selector — sempre visível no header quando editando */}
-                {appointment && !isMobile && (
-                  <Stack direction="row" spacing={1.5} alignItems="center" flexShrink={0}>
-                    {(isInProgress || hasStartedAt) && (
-                      <Box
+          <DialogHeader
+            onClose={onClose}
+            isMobile={isMobile}
+            title={appointment ? 'Editar agendamento' : 'Novo agendamento'}
+            subtitle={
+              !isMobile
+                ? selectedPatient
+                  ? `${selectedPatient.name}${slotValid ? ` · ${dayjs(selectedDate).format('DD/MM/YYYY')} às ${selectedStartTime}` : ''}`
+                  : 'Preencha os dados para reservar o horário'
+                : undefined
+            }
+            icon={<EventAvailableOutlinedIcon fontSize="small" />}
+            sx={{ pt: { xs: 1.5, sm: 2.5 }, bgcolor: 'background.paper' }}
+            trailing={
+              appointment && !isMobile ? (
+                <Stack direction="row" spacing={1.5} alignItems="center" flexShrink={0}>
+                  {(isInProgress || hasStartedAt) && (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.75,
+                        px: 1.5,
+                        py: 0.5,
+                        borderRadius: 2,
+                        bgcolor: isInProgress && !hasFinishedAt
+                          ? (theme) => alpha(theme.palette.success.main, 0.1)
+                          : (theme) => alpha(theme.palette.grey[500], 0.1),
+                        border: '1px solid',
+                        borderColor: isInProgress && !hasFinishedAt
+                          ? (theme) => alpha(theme.palette.success.main, 0.3)
+                          : 'divider',
+                      }}
+                    >
+                      <TimerOutlinedIcon
+                        fontSize="small"
+                        sx={{ color: isInProgress && !hasFinishedAt ? 'success.main' : 'text.secondary' }}
+                      />
+                      <Typography
+                        variant="h6"
+                        fontWeight={700}
                         sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 0.75,
-                          px: 1.5,
-                          py: 0.5,
-                          borderRadius: 2,
-                          bgcolor: isInProgress && !hasFinishedAt
-                            ? (theme) => alpha(theme.palette.success.main, 0.1)
-                            : (theme) => alpha(theme.palette.grey[500], 0.1),
-                          border: '1px solid',
-                          borderColor: isInProgress && !hasFinishedAt
-                            ? (theme) => alpha(theme.palette.success.main, 0.3)
-                            : 'divider',
+                          fontVariantNumeric: 'tabular-nums',
+                          color: isInProgress && !hasFinishedAt ? 'success.main' : 'text.primary',
                         }}
                       >
-                        <TimerOutlinedIcon
-                          fontSize="small"
-                          sx={{ color: isInProgress && !hasFinishedAt ? 'success.main' : 'text.secondary' }}
-                        />
-                        <Typography
-                          variant="h6"
-                          fontWeight={700}
-                          sx={{
-                            fontVariantNumeric: 'tabular-nums',
-                            color: isInProgress && !hasFinishedAt ? 'success.main' : 'text.primary',
-                          }}
-                        >
-                          {formatElapsed(elapsed)}
-                        </Typography>
-                      </Box>
-                    )}
+                        {formatElapsed(elapsed)}
+                      </Typography>
+                    </Box>
+                  )}
 
-                    {showSessionControls && (
-                      <>
-                        <Box sx={{ width: 116, flexShrink: 0 }}>
-                          {canStartSession && !isInProgress && !hasFinishedAt ? (
-                            <Button
-                              variant="contained"
-                              color="primary"
-                              size="small"
-                              fullWidth
-                              startIcon={<PlayArrowIcon />}
-                              disabled={startMutation.isPending}
-                              onClick={() => startMutation.mutate()}
-                              sx={{ whiteSpace: 'nowrap' }}
-                            >
-                              {startMutation.isPending ? 'Iniciando...' : 'Iniciar'}
-                            </Button>
-                          ) : isInProgress && !hasFinishedAt ? (
-                            <Button
-                              variant="outlined"
-                              color="inherit"
-                              size="small"
-                              fullWidth
-                              startIcon={<PauseIcon />}
-                              disabled={pauseMutation.isPending}
-                              onClick={() => pauseMutation.mutate()}
-                              sx={{ whiteSpace: 'nowrap' }}
-                            >
-                              {pauseMutation.isPending ? 'Pausando...' : 'Pausar'}
-                            </Button>
-                          ) : hasFinishedAt && isInProgress ? (
-                            <Button
-                              variant="outlined"
-                              color="primary"
-                              size="small"
-                              fullWidth
-                              startIcon={<PlayArrowIcon />}
-                              disabled={resumeMutation.isPending}
-                              onClick={() => resumeMutation.mutate()}
-                              sx={{ whiteSpace: 'nowrap' }}
-                            >
-                              {resumeMutation.isPending ? 'Retomando...' : 'Retomar'}
-                            </Button>
-                          ) : null}
-                        </Box>
-                        <Box sx={{ width: 116, flexShrink: 0 }}>
+                  {showSessionControls && (
+                    <>
+                      <Box sx={{ width: 116, flexShrink: 0 }}>
+                        {canStartSession && !isInProgress && !hasFinishedAt ? (
                           <Button
                             variant="contained"
-                            color="success"
+                            color="primary"
                             size="small"
                             fullWidth
-                            startIcon={<CheckCircleOutlineIcon />}
-                            disabled={!canFinishSession || mutation.isPending}
-                            onClick={() => setConfirmFinishOpen(true)}
+                            startIcon={<PlayArrowIcon />}
+                            disabled={startMutation.isPending}
+                            onClick={() => startMutation.mutate()}
                             sx={{ whiteSpace: 'nowrap' }}
                           >
-                            Finalizar
+                            {startMutation.isPending ? 'Iniciando...' : 'Iniciar'}
                           </Button>
-                        </Box>
-                      </>
-                    )}
-
-                    <Controller
-                      name="status"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          select
-                          label="Status"
+                        ) : isInProgress && !hasFinishedAt ? (
+                          <Button
+                            variant="outlined"
+                            color="inherit"
+                            size="small"
+                            fullWidth
+                            startIcon={<PauseIcon />}
+                            disabled={pauseMutation.isPending}
+                            onClick={() => pauseMutation.mutate()}
+                            sx={{ whiteSpace: 'nowrap' }}
+                          >
+                            {pauseMutation.isPending ? 'Pausando...' : 'Pausar'}
+                          </Button>
+                        ) : hasFinishedAt && isInProgress ? (
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            size="small"
+                            fullWidth
+                            startIcon={<PlayArrowIcon />}
+                            disabled={resumeMutation.isPending}
+                            onClick={() => resumeMutation.mutate()}
+                            sx={{ whiteSpace: 'nowrap' }}
+                          >
+                            {resumeMutation.isPending ? 'Retomando...' : 'Retomar'}
+                          </Button>
+                        ) : null}
+                      </Box>
+                      <Box sx={{ width: 116, flexShrink: 0 }}>
+                        <Button
+                          variant="contained"
+                          color="success"
                           size="small"
-                          sx={{ minWidth: 180, flexShrink: 0 }}
+                          fullWidth
+                          startIcon={<CheckCircleOutlineIcon />}
+                          disabled={!canFinishSession || mutation.isPending}
+                          onClick={() => setConfirmFinishOpen(true)}
+                          sx={{ whiteSpace: 'nowrap' }}
                         >
-                          {statusOptions.map((opt) => (
-                            <MenuItem key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </MenuItem>
-                          ))}
-                        </TextField>
-                      )}
-                    />
-                  </Stack>
-                )}
-              </Stack>
+                          Finalizar
+                        </Button>
+                      </Box>
+                    </>
+                  )}
 
-              {/* Mobile: controles de sessão e status em linha separada */}
-              {appointment && isMobile && (
+                  <Controller
+                    name="status"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        select
+                        label="Status"
+                        size="small"
+                        sx={{ minWidth: 180, flexShrink: 0 }}
+                      >
+                        {statusOptions.map((opt) => (
+                          <MenuItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    )}
+                  />
+                </Stack>
+              ) : undefined
+            }
+            bottom={
+              appointment && isMobile ? (
                 <Stack spacing={1}>
                   <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                     {(isInProgress || hasStartedAt) && (
@@ -1270,9 +1238,9 @@ export function AppointmentFormDialog({
                     )}
                   />
                 </Stack>
-              )}
-            </Stack>
-          </DialogTitle>
+              ) : undefined
+            }
+          />
 
           <DialogContent
             sx={{
@@ -2093,12 +2061,15 @@ export function AppointmentFormDialog({
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <PaymentIcon color="primary" />
-            <span>Registrar pagamento</span>
-          </Stack>
-        </DialogTitle>
+        <DialogHeader
+          onClose={() => {
+            setPaymentDialogOpen(false);
+            setPendingFormValues(null);
+          }}
+          title="Registrar pagamento"
+          subtitle="Forma de pagamento ao concluir o atendimento"
+          icon={<PaymentIcon fontSize="small" />}
+        />
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
             Ao concluir este agendamento, uma receita de{' '}
@@ -2152,12 +2123,12 @@ export function AppointmentFormDialog({
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <EventRepeatIcon color="primary" />
-            <span>Agendar retorno?</span>
-          </Stack>
-        </DialogTitle>
+        <DialogHeader
+          onClose={() => setReturnDialogOpen(false)}
+          title="Agendar retorno?"
+          subtitle="Confirme a data do próximo atendimento"
+          icon={<EventRepeatIcon fontSize="small" />}
+        />
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 0.5 }}>
             {pendingReturn && pendingReturnProcedure?.recurrenceDays ? (
@@ -2269,12 +2240,12 @@ export function AppointmentFormDialog({
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <AddShoppingCartIcon color="primary" />
-            <span>Adquirir pacote</span>
-          </Stack>
-        </DialogTitle>
+        <DialogHeader
+          onClose={() => setSellDialogOpen(false)}
+          title="Adquirir pacote"
+          subtitle="Vincular pacote ao paciente selecionado"
+          icon={<AddShoppingCartIcon fontSize="small" />}
+        />
         <DialogContent>
           {sellPackageTarget && (
             <Stack spacing={2} sx={{ mt: 1 }}>
@@ -2384,12 +2355,12 @@ export function AppointmentFormDialog({
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <CalendarMonthIcon color="primary" />
-            <span>Agendar sessões do pacote</span>
-          </Stack>
-        </DialogTitle>
+        <DialogHeader
+          onClose={() => setBatchDialogOpen(false)}
+          title="Agendar sessões do pacote"
+          subtitle="Distribua as sessões restantes na agenda"
+          icon={<CalendarMonthIcon fontSize="small" />}
+        />
         <DialogContent>
           {batchPatientPkg && selectedProcedure && (
             <Stack spacing={2} sx={{ mt: 1 }}>
@@ -2534,7 +2505,11 @@ export function AppointmentFormDialog({
 
       {/* Modal de confirmação para finalizar atendimento */}
       <Dialog open={confirmFinishOpen} onClose={() => setConfirmFinishOpen(false)} maxWidth="xs">
-        <DialogTitle>Concluir atendimento?</DialogTitle>
+        <DialogHeader
+          onClose={() => setConfirmFinishOpen(false)}
+          title="Concluir atendimento?"
+          subtitle={`Tempo registrado: ${formatElapsed(elapsed)}`}
+        />
         <DialogContent>
           <Typography variant="body2">
             Tempo registrado: <strong>{formatElapsed(elapsed)}</strong>.

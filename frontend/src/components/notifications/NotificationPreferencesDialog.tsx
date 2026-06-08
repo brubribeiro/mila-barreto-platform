@@ -3,8 +3,6 @@ import {
   CircularProgress,
   Dialog,
   DialogContent,
-  DialogTitle,
-  IconButton,
   List,
   ListItem,
   ListItemText,
@@ -14,10 +12,11 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
+import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { notificationsApi } from '../../api/notifications';
+import { DialogHeader, dialogPaperSx } from '../DialogCloseButton';
 import { NOTIFICATION_TYPES } from '../../contexts/notificationsLabels';
 import type { NotificationType } from '../../types';
 
@@ -52,20 +51,21 @@ export function NotificationPreferencesDialog({
     prefs.find((p) => p.type === type)?.enabled ?? true;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
-      <DialogTitle>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Box>
-            <Typography variant="h6">Preferências de notificação</Typography>
-            <Typography variant="caption" color="text.secondary">
-              Escolha quais notificações você quer receber
-            </Typography>
-          </Box>
-          <IconButton onClick={onClose}>
-            <CloseIcon />
-          </IconButton>
-        </Stack>
-      </DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+    >
+      <DialogHeader
+        onClose={onClose}
+        isMobile={isMobile}
+        title="Preferências de notificação"
+        subtitle="Escolha quais notificações você quer receber"
+        icon={<NotificationsOutlinedIcon fontSize="small" />}
+      />
       <DialogContent dividers sx={{ p: 0 }}>
         {isLoading ? (
           <Box display="flex" justifyContent="center" py={4}>

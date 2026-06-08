@@ -4,7 +4,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   FormControlLabel,
   Stack,
   TextField,
@@ -13,9 +12,11 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import PaymentIcon from '@mui/icons-material/Payment';
 import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentMethodsApi, CreatePaymentMethodPayload } from '../../api/paymentMethods';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { PaymentMethodEntry } from '../../types';
 
 interface Props {
@@ -86,9 +87,22 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
   const saving = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth fullScreen={isMobile}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+    >
       <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogTitle>{editing ? 'Editar forma de pagamento' : 'Nova forma de pagamento'}</DialogTitle>
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title={editing ? 'Editar forma de pagamento' : 'Nova forma de pagamento'}
+          subtitle="Nome, taxa da maquininha e status"
+          icon={<PaymentIcon fontSize="small" />}
+        />
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 1 }}>
             <Controller
@@ -142,7 +156,7 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
             />
           </Stack>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={dialogActionsBorderSx}>
           <Button onClick={onClose}>Cancelar</Button>
           <Button type="submit" variant="contained" disabled={saving}>
             {editing ? 'Salvar' : 'Criar'}

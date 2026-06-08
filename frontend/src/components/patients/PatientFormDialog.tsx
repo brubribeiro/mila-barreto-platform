@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Divider,
   FormControl,
   Grid,
@@ -44,6 +43,7 @@ import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { patientsApi, PatientPayload } from '../../api/patients';
+import { DialogHeader } from '../DialogCloseButton';
 import type { Patient, PatientSex, PatientReferralSource } from '../../types';
 import { isValidCPF, maskCPF, maskCEP, maskPhone, onlyDigits } from '../../utils/masks';
 import { birthDatePayloadFromInput, dateInputValueFromApi } from '../../utils/dateOnly';
@@ -161,25 +161,6 @@ const AUTO_FIELD_SX = {
   },
 } as const;
 
-function HeaderIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
 
 function TabPanel({ active, children }: { active: boolean; children: ReactNode }) {
   return (
@@ -493,41 +474,20 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
         onSubmit={submit}
         sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
       >
-        <DialogTitle
-          sx={{
-            px: { xs: 2, sm: 3 },
-            pt: { xs: 1.5, sm: 2 },
-            pb: { xs: 1, sm: 1.5 },
-            borderBottom: 1,
-            borderColor: 'divider',
-            flexShrink: 0,
-          }}
-        >
-          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
-            {isMobile && (
-              <IconButton edge="start" onClick={onClose} aria-label="Fechar" size="small">
-                <CloseIcon />
-              </IconButton>
-            )}
-            {!isMobile && (
-              <HeaderIcon>
-                {isEditing ? (
-                  <PersonOutlineIcon fontSize="small" />
-                ) : (
-                  <PersonAddOutlinedIcon fontSize="small" />
-                )}
-              </HeaderIcon>
-            )}
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600} noWrap>
-                {isEditing ? 'Editar paciente' : 'Novo paciente'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" noWrap>
-                {isEditing ? patient.name : 'Dados do cadastro e observações'}
-              </Typography>
-            </Box>
-          </Stack>
-        </DialogTitle>
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title={isEditing ? 'Editar paciente' : 'Novo paciente'}
+          subtitle={isEditing ? patient.name : 'Dados do cadastro e observações'}
+          icon={
+            isEditing ? (
+              <PersonOutlineIcon fontSize="small" />
+            ) : (
+              <PersonAddOutlinedIcon fontSize="small" />
+            )
+          }
+          sx={{ pb: { xs: 1, sm: 1.5 } }}
+        />
 
         <Box
           sx={{

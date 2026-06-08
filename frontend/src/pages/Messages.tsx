@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Grid,
   IconButton,
   MenuItem,
@@ -26,8 +25,9 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import HistoryIcon from '@mui/icons-material/History';
-import CloseIcon from '@mui/icons-material/Close';
 import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import { useForm, Controller } from 'react-hook-form';
@@ -35,6 +35,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
 import { PageHeader } from '../components/PageHeader';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../components/DialogCloseButton';
 import { ListFiltersBar } from '../components/ListFiltersBar';
 import { AppDataGrid } from '../components/AppDataGrid';
 import { FILTER_FIELD_SX, matchFields } from '../utils/listFilters';
@@ -227,8 +228,13 @@ function PreviewDialog({
 }) {
   if (!template) return null;
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>Preview — {template.name}</DialogTitle>
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: dialogPaperSx(false) }}>
+      <DialogHeader
+        onClose={onClose}
+        title={`Preview — ${template.name}`}
+        subtitle={template.category ?? 'Visualização do template'}
+        icon={<VisibilityOutlinedIcon fontSize="small" />}
+      />
       <DialogContent>
         <WhatsAppPreview
           content={template.content}
@@ -335,19 +341,16 @@ function TemplateDialog({
       fullWidth
       fullScreen={isMobile}
       PaperProps={{
-        sx: isMobile ? {} : { borderRadius: 2 },
+        sx: dialogPaperSx(isMobile),
       }}
     >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Typography variant="h6" component="span">
-          {template ? 'Editar template' : 'Novo template'}
-        </Typography>
-        {isMobile && (
-          <IconButton onClick={onClose} edge="end">
-            <CloseIcon />
-          </IconButton>
-        )}
-      </DialogTitle>
+      <DialogHeader
+        onClose={onClose}
+        isMobile={isMobile}
+        title={template ? 'Editar template' : 'Novo template'}
+        subtitle="Nome, categoria e conteúdo da mensagem"
+        icon={<EditNoteOutlinedIcon fontSize="small" />}
+      />
 
       <DialogContent dividers sx={{ p: { xs: 1.5, sm: 3 } }}>
         <form id="template-form" onSubmit={handleSubmit((v) => mutation.mutate(v))}>

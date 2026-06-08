@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   FormControlLabel,
   Grid,
   IconButton,
@@ -36,6 +35,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { proceduresApi, ProcedurePayload } from '../../api/procedures';
 import { inventoryApi } from '../../api/inventory';
+import { DialogHeader } from '../DialogCloseButton';
 import type { Procedure } from '../../types';
 
 interface ProcedureFormDialogProps {
@@ -261,35 +261,13 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
         sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
       >
-        <DialogTitle
-          sx={{
-            px: { xs: 2, sm: 3 },
-            pt: { xs: 1.5, sm: 2 },
-            pb: { xs: 1.5, sm: 2 },
-            borderBottom: 1,
-            borderColor: 'divider',
-            flexShrink: 0,
-          }}
-        >
-          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
-            {isMobile && (
-              <IconButton edge="start" onClick={onClose} aria-label="Fechar" size="small">
-                <CloseIcon />
-              </IconButton>
-            )}
-            {!isMobile && (
-              <HeaderIcon>
-                <SpaOutlinedIcon fontSize="small" />
-              </HeaderIcon>
-            )}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600} noWrap>
-                {isEditing ? 'Editar procedimento' : 'Novo procedimento'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" noWrap>
-                {watchedName?.trim() || 'Nome, valores, retorno e materiais do estoque'}
-              </Typography>
-            </Box>
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title={isEditing ? 'Editar procedimento' : 'Novo procedimento'}
+          subtitle={watchedName?.trim() || 'Nome, valores, retorno e materiais do estoque'}
+          icon={<SpaOutlinedIcon fontSize="small" />}
+          trailing={
             <Stack direction="row" spacing={0.75} flexWrap="wrap" justifyContent="flex-end">
               {watchedDuration > 0 && (
                 <Chip
@@ -309,8 +287,8 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                 variant={watchedActive ? 'filled' : 'outlined'}
               />
             </Stack>
-          </Stack>
-        </DialogTitle>
+          }
+        />
 
         <DialogContent
           sx={{

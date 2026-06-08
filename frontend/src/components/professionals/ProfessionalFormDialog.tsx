@@ -6,7 +6,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   FormControlLabel,
   Grid,
   MenuItem,
@@ -16,10 +15,12 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { usersApi, UserPayload } from '../../api/users';
 import { rolesApi } from '../../api/roles';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { UserSummary } from '../../types';
 
 interface ProfessionalFormDialogProps {
@@ -102,9 +103,23 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
   });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+    >
       <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
-        <DialogTitle>{user ? 'Editar profissional' : 'Novo profissional'}</DialogTitle>
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title={user ? 'Editar profissional' : 'Novo profissional'}
+          subtitle={user?.email ?? 'Dados de acesso e permissões'}
+          subtitleTitle={user?.email}
+          icon={<BadgeOutlinedIcon fontSize="small" />}
+        />
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12}>

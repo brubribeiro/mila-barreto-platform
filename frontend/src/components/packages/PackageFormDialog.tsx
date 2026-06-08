@@ -7,7 +7,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Divider,
   FormControlLabel,
   Grid,
@@ -24,10 +23,12 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import RedeemOutlinedIcon from '@mui/icons-material/RedeemOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { packagesApi, PackagePayload } from '../../api/packages';
 import { proceduresApi } from '../../api/procedures';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { Package } from '../../types';
 
 interface PackageFormDialogProps {
@@ -139,9 +140,22 @@ export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps
   const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+    >
       <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
-        <DialogTitle>{pkg ? 'Editar pacote' : 'Novo pacote'}</DialogTitle>
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title={pkg ? 'Editar pacote' : 'Novo pacote'}
+          subtitle="Procedimentos, sessões e validade"
+          icon={<RedeemOutlinedIcon fontSize="small" />}
+        />
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             {/* Nome */}

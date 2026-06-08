@@ -7,7 +7,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   FormControlLabel,
   MenuItem,
   Stack,
@@ -16,9 +15,11 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { promotionsApi, CreatePromotionPayload } from '../../api/promotions';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { dateInputValueFromApi, dateOnlyToApiIso } from '../../utils/dateOnly';
 import { proceduresApi } from '../../api/procedures';
 import { packagesApi } from '../../api/packages';
@@ -163,9 +164,22 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
   const saving = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+    >
       <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogTitle>{editing ? 'Editar promoção' : 'Nova promoção'}</DialogTitle>
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title={editing ? 'Editar promoção' : 'Nova promoção'}
+          subtitle="Desconto, vigência e procedimentos elegíveis"
+          icon={<LocalOfferOutlinedIcon fontSize="small" />}
+        />
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 1 }}>
             <Controller

@@ -1,13 +1,11 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Box,
   Chip,
   Dialog,
   DialogContent,
-  DialogTitle,
   FormControl,
-  IconButton,
   InputLabel,
   MenuItem,
   Select,
@@ -18,7 +16,6 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
 import HistoryIcon from '@mui/icons-material/History';
 import { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
 import { useQuery } from '@tanstack/react-query';
@@ -26,6 +23,7 @@ import dayjs from 'dayjs';
 
 import { auditLogsApi, type AuditLogFilters } from '../../api/auditLogs';
 import { AppDataGrid } from '../AppDataGrid';
+import { DialogHeader } from '../DialogCloseButton';
 import { actionConfig, flattenAuditLogs, type AuditChangeRow } from './auditUtils';
 
 const ACTION_OPTIONS = [
@@ -35,25 +33,6 @@ const ACTION_OPTIONS = [
   { value: 'DELETE', label: 'Exclusão' },
 ];
 
-function AuditHeaderIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 40,
-        height: 40,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
 
 interface AuditHistoryDialogProps {
   open: boolean;
@@ -193,45 +172,24 @@ export function AuditHistoryDialog({ open, onClose, entity, title }: AuditHistor
       }}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-        <DialogTitle
-          sx={{
-            px: { xs: 2, sm: 3 },
-            pt: { xs: 1.5, sm: 2 },
-            pb: { xs: 1.5, sm: 2 },
-            borderBottom: 1,
-            borderColor: 'divider',
-            flexShrink: 0,
-          }}
-        >
-          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
-            {isMobile && (
-              <IconButton edge="start" onClick={handleClose} aria-label="Fechar" size="small">
-                <CloseIcon />
-              </IconButton>
-            )}
-            {!isMobile && (
-              <AuditHeaderIcon>
-                <HistoryIcon fontSize="small" />
-              </AuditHeaderIcon>
-            )}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600} noWrap>
-                Histórico de alterações
-              </Typography>
-              <Typography variant="body2" color="text.secondary" noWrap title={title}>
-                {title ?? 'Registro de criações, edições e exclusões'}
-              </Typography>
-            </Box>
-            {data?.total != null && (
+        <DialogHeader
+          onClose={handleClose}
+          isMobile={isMobile}
+          title="Histórico de alterações"
+          subtitle={title ?? 'Registro de criações, edições e exclusões'}
+          subtitleTitle={title}
+          icon={<HistoryIcon fontSize="small" />}
+          trailing={
+            data?.total != null ? (
               <Chip
                 size="small"
                 label={`${data.total} ${data.total === 1 ? 'registro' : 'registros'}`}
                 variant="outlined"
                 sx={{ flexShrink: 0 }}
               />
-            )}
-          </Stack>
-        </DialogTitle>
+            ) : undefined
+          }
+        />
 
         <DialogContent
           sx={{

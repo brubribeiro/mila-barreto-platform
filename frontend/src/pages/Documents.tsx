@@ -10,7 +10,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Grid,
   InputAdornment,
   List,
@@ -27,7 +26,6 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import HistoryIcon from '@mui/icons-material/History';
-import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
@@ -40,10 +38,10 @@ import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import IconButton from '@mui/material/IconButton';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { PageHeader } from '../components/PageHeader';
+import { DialogHeader } from '../components/DialogCloseButton';
 import { AppGrid } from '../components/AppGrid';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { DocumentCard } from '../components/documents/DocumentCard';
@@ -239,38 +237,17 @@ function UploadDialog({
       }}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-        <DialogTitle
-          sx={{
-            px: { xs: 2, sm: 3 },
-            pt: { xs: 1.5, sm: 2 },
-            pb: { xs: 1.5, sm: 2 },
-            borderBottom: 1,
-            borderColor: 'divider',
-            flexShrink: 0,
-          }}
-        >
-          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
-            {isMobile && (
-              <IconButton edge="start" onClick={onClose} aria-label="Fechar" size="small">
-                <CloseIcon />
-              </IconButton>
-            )}
-            {!isMobile && (
-              <UploadHeaderIcon>
-                <UploadFileIcon fontSize="small" />
-              </UploadHeaderIcon>
-            )}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600} noWrap>
-                Enviar documento
-              </Typography>
-              <Typography variant="body2" color="text.secondary" noWrap title={file.name}>
-                {file.name}
-              </Typography>
-            </Box>
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title="Enviar documento"
+          subtitle={file.name}
+          subtitleTitle={file.name}
+          icon={<UploadFileIcon fontSize="small" />}
+          trailing={
             <Chip size="small" label={fmtFileSize(file.size)} variant="outlined" sx={{ flexShrink: 0 }} />
-          </Stack>
-        </DialogTitle>
+          }
+        />
 
         <DialogContent
           sx={{

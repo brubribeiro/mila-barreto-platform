@@ -13,12 +13,14 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   List,
   ListItem,
   ListItemText,
   Typography,
 } from '@mui/material';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../components/DialogCloseButton';
 
 const DIALOG_TRANSITION_MS = 180;
 
@@ -130,8 +132,14 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
         TransitionProps={dialogTransitionProps}
         onTransitionExited={finishCloseConfirm}
         BackdropProps={{ transitionDuration: DIALOG_TRANSITION_MS }}
+        PaperProps={{ sx: dialogPaperSx(false) }}
       >
-        <DialogTitle>{confirmSession?.options.title ?? 'Confirmar'}</DialogTitle>
+        <DialogHeader
+          onClose={() => beginCloseConfirm(false)}
+          title={confirmSession?.options.title ?? 'Confirmar'}
+          subtitle={confirmSession?.options.disableConfirm ? 'Ação bloqueada' : 'Revise antes de continuar'}
+          icon={<HelpOutlineIcon fontSize="small" />}
+        />
         <DialogContent>
           <Typography variant="body2">{confirmSession?.options.message}</Typography>
           {confirmSession?.options.disableConfirm && (
@@ -159,7 +167,7 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
+        <DialogActions sx={dialogActionsBorderSx}>
           <Button type="button" onClick={() => beginCloseConfirm(false)}>
             {confirmSession?.options.disableConfirm
               ? 'Fechar'
@@ -188,8 +196,14 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
         TransitionProps={dialogTransitionProps}
         onTransitionExited={finishCloseAlert}
         BackdropProps={{ transitionDuration: DIALOG_TRANSITION_MS }}
+        PaperProps={{ sx: dialogPaperSx(false) }}
       >
-        <DialogTitle>{alertSession?.options.title ?? 'Aviso'}</DialogTitle>
+        <DialogHeader
+          onClose={beginCloseAlert}
+          title={alertSession?.options.title ?? 'Aviso'}
+          subtitle="Informação do sistema"
+          icon={<InfoOutlinedIcon fontSize="small" />}
+        />
         <DialogContent>
           {alertSession?.options.severity ? (
             <Alert severity={alertSession.options.severity} sx={{ mt: 0.5 }}>
@@ -199,7 +213,7 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
             <Typography variant="body2">{alertSession?.options.message}</Typography>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
+        <DialogActions sx={dialogActionsBorderSx}>
           <Button type="button" variant="contained" onClick={beginCloseAlert}>
             OK
           </Button>

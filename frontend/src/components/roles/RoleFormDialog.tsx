@@ -7,7 +7,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Divider,
   FormControlLabel,
   Grid,
@@ -18,9 +17,11 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { rolesApi, RolePayload } from '../../api/roles';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { PermissionsMatrix } from './PermissionsMatrix';
 import type { Role } from '../../types';
 
@@ -80,9 +81,22 @@ export function RoleFormDialog({ open, onClose, role }: RoleFormDialogProps) {
   });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+    >
       <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
-        <DialogTitle>{role ? 'Editar grupo' : 'Novo grupo'}</DialogTitle>
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title={role ? 'Editar grupo' : 'Novo grupo'}
+          subtitle="Permissões e acesso dos profissionais"
+          icon={<GroupOutlinedIcon fontSize="small" />}
+        />
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12} sm={6}>
@@ -172,7 +186,7 @@ export function RoleFormDialog({ open, onClose, role }: RoleFormDialogProps) {
             )}
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ px: { xs: 2, sm: 3 }, py: { xs: 1.5, sm: 2 } }}>
+        <DialogActions sx={dialogActionsBorderSx}>
           <Button onClick={onClose}>Cancelar</Button>
           <Button type="submit" variant="contained" disabled={mutation.isPending}>
             {mutation.isPending ? 'Salvando...' : 'Salvar'}

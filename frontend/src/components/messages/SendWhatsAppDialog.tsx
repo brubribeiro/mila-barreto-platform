@@ -7,7 +7,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   MenuItem,
   Stack,
   TextField,
@@ -21,6 +20,7 @@ import dayjs from 'dayjs';
 
 import { patientsApi } from '../../api/patients';
 import { messagesApi } from '../../api/messages';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import {
   renderTemplate,
   whatsappLink,
@@ -143,8 +143,21 @@ export function SendWhatsAppDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
-      <DialogTitle>{title}</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+    >
+      <DialogHeader
+        onClose={onClose}
+        isMobile={isMobile}
+        title={title}
+        subtitle="Escolha o template e revise a mensagem"
+        icon={<WhatsAppIcon fontSize="small" />}
+      />
       <DialogContent dividers>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
           {!phone && (

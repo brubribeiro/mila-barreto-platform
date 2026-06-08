@@ -6,7 +6,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Grid,
   InputAdornment,
   TextField,
@@ -16,9 +15,11 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { inventoryApi, MovementType } from '../../api/inventory';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { dateOnlyToApiIso } from '../../utils/dateOnly';
 import type { InventoryItem } from '../../types';
 
@@ -94,13 +95,23 @@ export function MovementDialog({ open, onClose, item }: MovementDialogProps) {
   if (!item) return null;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth fullScreen={isMobile}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+    >
       <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
-        <DialogTitle>Movimentar estoque</DialogTitle>
-        <DialogContent dividers>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            <strong>{item.name}</strong> — atual: {item.quantity} {item.unit ?? ''}
-          </Typography>
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title="Movimentar estoque"
+          subtitle={`${item.name} · atual: ${item.quantity} ${item.unit ?? ''}`}
+          icon={<SwapHorizOutlinedIcon fontSize="small" />}
+        />
+        <DialogContent dividers sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 2.5 } }}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
               <Controller

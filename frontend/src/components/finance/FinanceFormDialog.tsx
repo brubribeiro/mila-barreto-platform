@@ -1,34 +1,28 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
   Alert,
   Autocomplete,
-  Box,
   Button,
   Chip,
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Grid,
-  IconButton,
   InputAdornment,
   MenuItem,
-  Stack,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
-  Typography,
-  alpha,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import CloseIcon from '@mui/icons-material/Close';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { financeApi, FinancialEntryPayload } from '../../api/finance';
 import { dateInputValueFromApi, dateOnlyToApiIso } from '../../utils/dateOnly';
 import { patientsApi } from '../../api/patients';
@@ -62,26 +56,6 @@ const empty: FormValues = {
   patientId: '',
   expenseType: '',
 };
-
-function FinanceHeaderIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 40,
-        height: 40,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
 
 export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogProps) {
   const theme = useTheme();
@@ -152,49 +126,20 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
       fullWidth
       fullScreen={isMobile}
       PaperProps={{
-        sx: {
-          borderRadius: isMobile ? 0 : 3,
-          overflow: 'hidden',
-        },
+        sx: dialogPaperSx(isMobile),
       }}
     >
       <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
-        <DialogTitle
-          sx={{
-            px: { xs: 2, sm: 3 },
-            pt: { xs: 1.5, sm: 2 },
-            pb: { xs: 1.5, sm: 2 },
-            borderBottom: 1,
-            borderColor: 'divider',
-            flexShrink: 0,
-          }}
-        >
-          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
-            {isMobile && (
-              <IconButton edge="start" onClick={onClose} aria-label="Fechar" size="small">
-                <CloseIcon />
-              </IconButton>
-            )}
-            {!isMobile && (
-              <FinanceHeaderIcon>
-                {entry ? <EditOutlinedIcon fontSize="small" /> : <AttachMoneyIcon fontSize="small" />}
-              </FinanceHeaderIcon>
-            )}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600} noWrap>
-                {entry ? 'Editar lançamento' : 'Novo lançamento'}
-              </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                noWrap
-                title={entry?.description}
-              >
-                {entry
-                  ? entry.description
-                  : 'Registre receitas e despesas manualmente'}
-              </Typography>
-            </Box>
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title={entry ? 'Editar lançamento' : 'Novo lançamento'}
+          subtitle={entry ? entry.description : 'Registre receitas e despesas manualmente'}
+          subtitleTitle={entry?.description}
+          icon={
+            entry ? <EditOutlinedIcon fontSize="small" /> : <AttachMoneyIcon fontSize="small" />
+          }
+          trailing={
             <Chip
               size="small"
               label={type === 'INCOME' ? 'Receita' : 'Despesa'}
@@ -202,8 +147,8 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
               variant="outlined"
               sx={{ flexShrink: 0 }}
             />
-          </Stack>
-        </DialogTitle>
+          }
+        />
         <DialogContent dividers sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 2.5 } }}>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12}>
@@ -367,14 +312,7 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
             )}
           </Grid>
         </DialogContent>
-        <DialogActions
-          sx={{
-            px: { xs: 2, sm: 3 },
-            py: { xs: 1.5, sm: 2 },
-            borderTop: 1,
-            borderColor: 'divider',
-          }}
-        >
+        <DialogActions sx={dialogActionsBorderSx}>
           <Button onClick={onClose}>Cancelar</Button>
           <Button type="submit" variant="contained" disabled={mutation.isPending}>
             {mutation.isPending ? 'Salvando...' : 'Salvar'}
