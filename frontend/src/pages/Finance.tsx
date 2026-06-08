@@ -13,6 +13,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -36,12 +37,72 @@ import { recurringExpensesApi } from '../api/recurring-expenses';
 import { appointmentsBackfillFinance } from '../api/appointments';
 import { FinanceFormDialog } from '../components/finance/FinanceFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
-import type { FinancialEntry } from '../types';
+import type { ExpenseType, FinancialEntry } from '../types';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { usePermissions } from '../contexts/usePermissions';
 import { downloadCsv } from '../utils/csv';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+const EXPENSE_TYPE_LABEL: Record<ExpenseType, string> = {
+  FIXED: 'Fixa',
+  VARIABLE: 'Variável',
+};
+
+function FinanceTypeCell({ row }: { row: FinancialEntry }) {
+  const isIncome = row.type === 'INCOME';
+  const palette = isIncome ? 'success' : 'error';
+  const Icon = isIncome ? TrendingUpIcon : TrendingDownIcon;
+  const label = isIncome ? 'Receita' : 'Despesa';
+
+  const details: string[] = [];
+  if (!isIncome) {
+    if (row.expenseType) details.push(EXPENSE_TYPE_LABEL[row.expenseType]);
+    if (row.recurringExpenseId) details.push('Recorrente');
+  } else if (row.appointmentId) {
+    details.push('Agendamento');
+  }
+
+  const tooltip = [
+    label,
+    details.length > 0 ? details.join(' · ') : null,
+    row.appointment?.procedure?.name ? `Procedimento: ${row.appointment.procedure.name}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  return (
+    <Tooltip title={tooltip} placement="top" arrow>
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, py: 0.25 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 28,
+            height: 28,
+            borderRadius: 1.5,
+            flexShrink: 0,
+            bgcolor: (theme) => alpha(theme.palette[palette].main, 0.12),
+            color: `${palette}.main`,
+          }}
+        >
+          <Icon sx={{ fontSize: 16 }} />
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="body2" fontWeight={600} color={`${palette}.main`} noWrap>
+            {label}
+          </Typography>
+          {details.length > 0 && (
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {details.join(' · ')}
+            </Typography>
+          )}
+        </Box>
+      </Stack>
+    </Tooltip>
+  );
+}
 
 function monthsInRange(from: string, to: string): { year: number; month: number }[] {
   const start = dayjs(from).startOf('month');
@@ -192,20 +253,9 @@ export function Finance() {
       {
         field: 'type',
         headerName: 'Tipo',
-        flex: 0.55,
-        minWidth: 120,
-        renderCell: (params) => (
-          <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap" useFlexGap>
-            {params.value === 'INCOME' ? (
-              <Chip size="small" label="Receita" color="success" variant="outlined" />
-            ) : (
-              <Chip size="small" label="Despesa" color="error" variant="outlined" />
-            )}
-            {params.row.recurringExpenseId && (
-              <Chip size="small" label="Recorrente" color="info" variant="outlined" />
-            )}
-          </Stack>
-        ),
+        flex: 0.65,
+        minWidth: 132,
+        renderCell: (params) => <FinanceTypeCell row={params.row} />,
       },
       { field: 'description', headerName: 'Descrição', flex: 1.3, minWidth: 200 },
       {
