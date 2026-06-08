@@ -1,21 +1,22 @@
 import { useEffect, useMemo } from 'react';
-import { useForm, Controller, useFieldArray } from 'react-hook-form';
+import { useForm, Controller, useFieldArray, type Control } from 'react-hook-form';
 import {
+  Alert,
   Autocomplete,
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
-  Divider,
-  FormControlLabel,
   Grid,
   IconButton,
   InputAdornment,
-  MenuItem,
+  Paper,
   Stack,
-  Switch,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
   useMediaQuery,
@@ -61,9 +62,56 @@ const empty: FormValues = {
   items: [{ procedureId: '', quantity: 1, sortOrder: 0 }],
 };
 
+const PACKAGE_DIALOG_HEIGHT = 820;
+const PACKAGE_DIALOG_MAX_WIDTH = 1000;
+
+const SECTION_LABEL_SX = {
+  mb: 1,
+  display: 'block',
+  letterSpacing: '0.04em',
+} as const;
+
+const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+function PackageActiveToggle({
+  control,
+  fullWidth = false,
+}: {
+  control: Control<FormValues>;
+  fullWidth?: boolean;
+}) {
+  return (
+    <Controller
+      name="active"
+      control={control}
+      render={({ field }) => (
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          color="primary"
+          fullWidth={fullWidth}
+          value={field.value ? 'active' : 'inactive'}
+          onChange={(_, val) => {
+            if (val === 'active') field.onChange(true);
+            if (val === 'inactive') field.onChange(false);
+          }}
+        >
+          <ToggleButton value="active" sx={{ px: fullWidth ? 2 : 1.75 }}>
+            Ativo
+          </ToggleButton>
+          <ToggleButton value="inactive" sx={{ px: fullWidth ? 2 : 1.75 }}>
+            Inativo
+          </ToggleButton>
+        </ToggleButtonGroup>
+      )}
+    />
+  );
+}
+
 export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
   const { control, handleSubmit, reset, watch } = useForm<FormValues>({
     defaultValues: empty,
@@ -129,7 +177,6 @@ export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps
     },
   });
 
-  // Calcula preço somando procedimentos
   const calculatedPrice = useMemo(() => {
     return watchedItems.reduce((sum, item) => {
       const proc = procedures.find((p) => p.id === item.procedureId);
@@ -137,238 +184,376 @@ export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps
     }, 0);
   }, [watchedItems, procedures]);
 
-  const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="md"
+      maxWidth={false}
       fullWidth
       fullScreen={isMobile}
-      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+      PaperProps={{
+        sx: {
+          ...dialogPaperSx(isMobile),
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          ...(isMobile
+            ? { height: '100%', maxHeight: '100dvh' }
+            : {
+                maxWidth: PACKAGE_DIALOG_MAX_WIDTH,
+                height: PACKAGE_DIALOG_HEIGHT,
+                maxHeight: '94vh',
+                overflow: 'hidden',
+              }),
+        },
+      }}
     >
-      <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
+      <Box
+        component="form"
+        onSubmit={handleSubmit((v) => mutation.mutate(v))}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          ...(isMobile ? { height: '100%' } : {}),
+        }}
+      >
         <DialogHeader
           onClose={onClose}
           isMobile={isMobile}
           title={pkg ? 'Editar pacote' : 'Novo pacote'}
-          subtitle="Procedimentos, sessões e validade"
+          subtitle="Procedimentos, precificação e validade"
           icon={<RedeemOutlinedIcon fontSize="small" />}
+          trailing={!isCompact ? <PackageActiveToggle control={control} /> : undefined}
+          bottom={
+            isCompact ? (
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.75, display: 'block' }}>
+                  Disponível para venda
+                </Typography>
+                <PackageActiveToggle control={control} fullWidth />
+              </Box>
+            ) : undefined
+          }
         />
-        <DialogContent dividers>
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            {/* Nome */}
-            <Grid item xs={12} sm={8}>
-              <Controller
-                name="name"
-                control={control}
-                rules={{ required: 'Nome é obrigatório' }}
-                render={({ field, fieldState }) => (
-                  <TextField
-                    {...field}
-                    label="Nome do pacote"
-                    fullWidth
-                    required
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                  />
-                )}
-              />
-            </Grid>
 
-            {/* Tipo */}
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name="type"
-                control={control}
-                render={({ field }) => (
-                  <TextField {...field} select label="Tipo" fullWidth>
-                    <MenuItem value="COMBO">Combo (procedimentos diferentes)</MenuItem>
-                    <MenuItem value="SESSIONS">Sessões (mesmo procedimento)</MenuItem>
-                  </TextField>
-                )}
-              />
-            </Grid>
-
-            {/* Descrição */}
-            <Grid item xs={12}>
-              <Controller
-                name="description"
-                control={control}
-                render={({ field }) => (
-                  <TextField {...field} label="Descrição" fullWidth multiline rows={2} />
-                )}
-              />
-            </Grid>
-
-            {/* Preço fixo */}
-            <Grid item xs={4}>
-              <Controller
-                name="totalPrice"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    type="number"
-                    label="Preço fixo"
-                    fullWidth
-                    inputProps={{ step: '0.01', min: 0 }}
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                    }}
-                    helperText="Deixe vazio para usar desconto %"
-                  />
-                )}
-              />
-            </Grid>
-
-            {/* Desconto percentual */}
-            <Grid item xs={4}>
-              <Controller
-                name="discountPercent"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    type="number"
-                    label="Desconto"
-                    fullWidth
-                    inputProps={{ step: '0.01', min: 0, max: 100 }}
-                    InputProps={{
-                      endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                    }}
-                    helperText="Alternativo ao preço fixo"
-                  />
-                )}
-              />
-            </Grid>
-
-            {/* Validade */}
-            <Grid item xs={4}>
-              <Controller
-                name="validityDays"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    type="number"
-                    label="Validade"
-                    fullWidth
-                    inputProps={{ min: 1 }}
-                    InputProps={{
-                      endAdornment: <InputAdornment position="end">dias</InputAdornment>,
-                    }}
-                    helperText="Deixe vazio = sem validade"
-                  />
-                )}
-              />
-            </Grid>
-
-            {/* Ativo */}
-            <Grid item xs={12}>
-              <Controller
-                name="active"
-                control={control}
-                render={({ field }) => (
-                  <FormControlLabel
-                    control={<Switch checked={field.value} onChange={field.onChange} />}
-                    label="Pacote ativo (disponível para venda)"
-                  />
-                )}
-              />
-            </Grid>
-
-            {/* Procedimentos do pacote */}
-            <Grid item xs={12}>
-              <Divider sx={{ my: 1 }} />
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                <Typography variant="subtitle2">
-                  Procedimentos do pacote
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Soma dos procedimentos: {brl.format(calculatedPrice)}
-                </Typography>
-              </Stack>
-
-              {fields.map((field, index) => {
-                const currentId = watchedItems[index]?.procedureId;
-                return (
-                  <Stack key={field.id} direction="row" spacing={1} sx={{ mb: 1 }} alignItems="center">
+        <DialogContent
+          dividers
+          sx={{
+            px: { xs: 2, sm: 3 },
+            py: { xs: 2, sm: 2.5 },
+            flex: 1,
+            minHeight: 0,
+            overflow: isCompact ? 'auto' : 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <Grid
+            container
+            spacing={2.5}
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              alignItems: 'stretch',
+              ...(isCompact ? {} : { height: '100%' }),
+            }}
+          >
+            <Grid item xs={12} md={6}>
+              <Stack spacing={2.5} sx={{ width: '100%' }}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600} sx={SECTION_LABEL_SX}>
+                    Identificação
+                  </Typography>
+                  <Stack spacing={2}>
                     <Controller
-                      name={`items.${index}.procedureId`}
+                      name="name"
                       control={control}
-                      rules={{ required: true }}
-                      render={({ field: f }) => (
-                        <Autocomplete
-                          sx={{ flex: 1 }}
-                          options={procedures.filter(
-                            (p) => p.active && (!usedProcIds.has(p.id) || p.id === currentId),
-                          )}
-                          getOptionLabel={(o) =>
-                            typeof o === 'string' ? o : `${o.name} (${brl.format(Number(o.price))})`
-                          }
-                          value={procedures.find((p) => p.id === f.value) ?? null}
-                          onChange={(_, v) => f.onChange(v?.id ?? '')}
-                          renderInput={(params) => (
-                            <TextField {...params} label="Procedimento" size="small" required />
-                          )}
-                          isOptionEqualToValue={(o, v) => o.id === v.id}
-                        />
-                      )}
-                    />
-                    <Controller
-                      name={`items.${index}.quantity`}
-                      control={control}
-                      rules={{ required: true, min: 1 }}
-                      render={({ field: f }) => (
+                      rules={{ required: 'Nome é obrigatório' }}
+                      render={({ field, fieldState }) => (
                         <TextField
-                          {...f}
-                          type="number"
-                          label="Qtd"
-                          size="small"
-                          sx={{ width: 90 }}
-                          inputProps={{ min: 1 }}
+                          {...field}
+                          label="Nome do pacote"
+                          fullWidth
+                          required
+                          error={!!fieldState.error}
+                          helperText={fieldState.error?.message}
                         />
                       )}
                     />
-                    <Tooltip title="Remover">
-                      <IconButton
-                        size="small"
-                        onClick={() => remove(index)}
-                        disabled={fields.length <= 1}
-                      >
-                        <DeleteOutlineIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Stack>
-                );
-              })}
 
-              <Button
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={() => append({ procedureId: '', quantity: 1, sortOrder: fields.length })}
-                disabled={watchedType === 'SESSIONS' && fields.length >= 1}
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                        Tipo de pacote
+                      </Typography>
+                      <Controller
+                        name="type"
+                        control={control}
+                        render={({ field }) => (
+                          <ToggleButtonGroup
+                            exclusive
+                            fullWidth
+                            size="small"
+                            color="primary"
+                            value={field.value}
+                            onChange={(_, val) => val && field.onChange(val)}
+                          >
+                            <ToggleButton value="COMBO">Combo</ToggleButton>
+                            <ToggleButton value="SESSIONS">Sessões</ToggleButton>
+                          </ToggleButtonGroup>
+                        )}
+                      />
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, display: 'block' }}>
+                        {watchedType === 'COMBO'
+                          ? 'Vários procedimentos diferentes no mesmo pacote'
+                          : 'Um procedimento repetido em várias sessões'}
+                      </Typography>
+                    </Box>
+
+                    <Controller
+                      name="description"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField {...field} label="Descrição" fullWidth multiline minRows={2} />
+                      )}
+                    />
+                  </Stack>
+                </Box>
+
+                <Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600} sx={SECTION_LABEL_SX}>
+                    Precificação
+                  </Typography>
+                  <Stack spacing={2}>
+                    <Stack spacing={2}>
+                      <Controller
+                        name="totalPrice"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            type="number"
+                            label="Preço fixo"
+                            fullWidth
+                            inputProps={{ step: '0.01', min: 0 }}
+                            InputProps={{
+                              startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                            }}
+                          />
+                        )}
+                      />
+                      <Controller
+                        name="discountPercent"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            type="number"
+                            label="Desconto"
+                            fullWidth
+                            inputProps={{ step: '0.01', min: 0, max: 100 }}
+                            InputProps={{
+                              endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                            }}
+                          />
+                        )}
+                      />
+                      <Controller
+                        name="validityDays"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            type="number"
+                            label="Validade"
+                            fullWidth
+                            inputProps={{ min: 1 }}
+                            InputProps={{
+                              endAdornment: <InputAdornment position="end">dias</InputAdornment>,
+                            }}
+                          />
+                        )}
+                      />
+                    </Stack>
+
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                      Use preço fixo ou desconto percentual sobre a soma dos procedimentos. Validade vazia = sem prazo.
+                    </Typography>
+
+                    {calculatedPrice > 0 && isCompact && (
+                      <Alert severity="info" icon={false} sx={{ py: 0.75 }}>
+                        Soma dos procedimentos: <strong>{brl.format(calculatedPrice)}</strong>
+                      </Alert>
+                    )}
+
+                    {mutation.isError && (
+                      <Alert severity="error" sx={{ mx: 0 }}>
+                        {(mutation.error as any)?.response?.data?.message ?? 'Erro ao salvar pacote'}
+                      </Alert>
+                    )}
+                  </Stack>
+                </Box>
+              </Stack>
+            </Grid>
+
+            <Grid
+              item
+              xs={12}
+              md={6}
+              sx={{
+                display: 'flex',
+                minHeight: 0,
+                ...(isCompact ? {} : { height: '100%' }),
+              }}
+            >
+              <Paper
+                variant="outlined"
+                sx={{
+                  flex: 1,
+                  minHeight: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  p: { xs: 1.5, sm: 2 },
+                  borderRadius: 2,
+                  bgcolor: 'background.paper',
+                  ...(isCompact ? {} : { height: '100%' }),
+                }}
               >
-                Adicionar procedimento
-              </Button>
-              {watchedType === 'SESSIONS' && fields.length >= 1 && (
-                <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                  Pacote de sessões aceita apenas 1 procedimento (ajuste a quantidade)
-                </Typography>
-              )}
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  spacing={1}
+                  sx={{ mb: 1.5, flexShrink: 0 }}
+                >
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                    sx={{ ...SECTION_LABEL_SX, mb: 0 }}
+                  >
+                    Procedimentos
+                  </Typography>
+                  {calculatedPrice > 0 && (
+                    <Chip size="small" label={brl.format(calculatedPrice)} color="primary" variant="outlined" />
+                  )}
+                </Stack>
+
+                {!isCompact && calculatedPrice > 0 && (
+                  <Alert severity="info" icon={false} sx={{ py: 0.75, mb: 1.5, flexShrink: 0 }}>
+                    Soma dos procedimentos: <strong>{brl.format(calculatedPrice)}</strong>
+                  </Alert>
+                )}
+
+                <Box
+                  sx={{
+                    flex: isCompact ? undefined : 1,
+                    minHeight: isCompact ? undefined : 0,
+                    overflow: isCompact ? 'visible' : 'auto',
+                    pr: isCompact ? 0 : 0.25,
+                  }}
+                >
+                  <Stack spacing={1.5}>
+                    {fields.map((field, index) => {
+                      const currentId = watchedItems[index]?.procedureId;
+                      return (
+                        <Paper
+                          key={field.id}
+                          variant="outlined"
+                          sx={{
+                            p: { xs: 1.5, sm: 1.75 },
+                            borderRadius: 2,
+                            bgcolor: 'background.default',
+                          }}
+                        >
+                          <Stack spacing={1.5}>
+                            <Controller
+                              name={`items.${index}.procedureId`}
+                              control={control}
+                              rules={{ required: true }}
+                              render={({ field: f }) => (
+                                <Autocomplete
+                                  sx={{ width: '100%' }}
+                                  options={procedures.filter(
+                                    (p) => p.active && (!usedProcIds.has(p.id) || p.id === currentId),
+                                  )}
+                                  getOptionLabel={(o) =>
+                                    typeof o === 'string' ? o : `${o.name} (${brl.format(Number(o.price))})`
+                                  }
+                                  value={procedures.find((p) => p.id === f.value) ?? null}
+                                  onChange={(_, v) => f.onChange(v?.id ?? '')}
+                                  renderInput={(params) => (
+                                    <TextField {...params} label="Procedimento" size="small" required />
+                                  )}
+                                  isOptionEqualToValue={(o, v) => o.id === v.id}
+                                />
+                              )}
+                            />
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Controller
+                                name={`items.${index}.quantity`}
+                                control={control}
+                                rules={{ required: true, min: 1 }}
+                                render={({ field: f }) => (
+                                  <TextField
+                                    {...f}
+                                    type="number"
+                                    label="Qtd"
+                                    size="small"
+                                    sx={{ width: 96 }}
+                                    inputProps={{ min: 1 }}
+                                  />
+                                )}
+                              />
+                              <Tooltip title="Remover">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => remove(index)}
+                                  disabled={fields.length <= 1}
+                                  aria-label="Remover procedimento"
+                                >
+                                  <DeleteOutlineIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Stack>
+                          </Stack>
+                        </Paper>
+                    );
+                  })}
+                  </Stack>
+                </Box>
+
+                <Stack spacing={1} sx={{ mt: 1.5, flexShrink: 0 }}>
+                  <Button
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() => append({ procedureId: '', quantity: 1, sortOrder: fields.length })}
+                    disabled={watchedType === 'SESSIONS' && fields.length >= 1}
+                    sx={{ alignSelf: 'flex-start' }}
+                  >
+                    Adicionar procedimento
+                  </Button>
+                  {watchedType === 'SESSIONS' && fields.length >= 1 && (
+                    <Typography variant="caption" color="text.secondary">
+                      Pacote de sessões aceita apenas 1 procedimento — ajuste a quantidade
+                    </Typography>
+                  )}
+                </Stack>
+              </Paper>
             </Grid>
           </Grid>
         </DialogContent>
 
-        <DialogActions>
-          <Button onClick={onClose}>Cancelar</Button>
+        <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
+          <Button onClick={onClose} type="button">
+            Cancelar
+          </Button>
           <Button type="submit" variant="contained" disabled={mutation.isPending}>
-            {pkg ? 'Salvar' : 'Criar pacote'}
+            {mutation.isPending ? 'Salvando...' : pkg ? 'Salvar' : 'Criar pacote'}
           </Button>
         </DialogActions>
-      </form>
+      </Box>
     </Dialog>
   );
 }
