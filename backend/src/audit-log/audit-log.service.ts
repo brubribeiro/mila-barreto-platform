@@ -144,6 +144,7 @@ export class AuditLogService {
       if (this.isInternalField(key)) continue;
       const oldVal = oldData[key];
       const newVal = newData[key];
+      if (this.isRelationValue(oldVal) || this.isRelationValue(newVal)) continue;
       if (!this.isEqual(oldVal, newVal)) {
         changes[key] = { old: this.serializeValue(oldVal), new: this.serializeValue(newVal) };
       }
@@ -163,7 +164,14 @@ export class AuditLogService {
   }
 
   private isInternalField(key: string): boolean {
-    return ['password', 'createdAt', 'updatedAt'].includes(key);
+    return [
+      'password',
+      'createdAt',
+      'updatedAt',
+      'id',
+      'photoUrl',
+      'fileUrl',
+    ].includes(key);
   }
 
   private serializeValue(val: unknown): unknown {
@@ -178,7 +186,21 @@ export class AuditLogService {
   private isEqual(a: unknown, b: unknown): boolean {
     const sa = this.serializeValue(a);
     const sb = this.serializeValue(b);
+    if (this.isEmptyValue(sa) && this.isEmptyValue(sb)) return true;
     if (sa === sb) return true;
     return JSON.stringify(sa) === JSON.stringify(sb);
+  }
+
+  /** Valores vazios equivalentes (null, undefined, string vazia). */
+  private isEmptyValue(val: unknown): boolean {
+    return val === null || val === undefined || val === '';
+  }
+
+  /** Relações Prisma incluídas no objeto — não são campos persistidos do registro. */
+  private isRelationValue(val: unknown): boolean {
+    if (val === null || val === undefined) return false;
+    if (val instanceof Date) return false;
+    if (Array.isArray(val)) return false;
+    return typeof val === 'object';
   }
 }
