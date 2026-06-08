@@ -39,6 +39,12 @@ export const financeApi = {
     });
     return data;
   },
+  listUpcomingUnpaidExpenses: async (from?: string, to?: string): Promise<FinancialEntry[]> => {
+    const { data } = await api.get<FinancialEntry[]>('/finance/upcoming-expenses', {
+      params: { from, to },
+    });
+    return data;
+  },
   setInvoiceIssued: async (id: string, issued: boolean): Promise<FinancialEntry> => {
     const { data } = await api.patch<FinancialEntry>(`/finance/${id}/invoice`, { issued });
     return data;

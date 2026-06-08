@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import {
   Avatar,
   Box,
@@ -49,23 +49,42 @@ interface UpcomingExpensesCardProps {
 }
 
 export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardProps) {
-  const today = dayjs().startOf('day');
-  const from = today.subtract(30, 'day').toISOString();
-  const to = today.add(LOOKAHEAD_DAYS, 'day').endOf('day').toISOString();
+  const todayRef = useRef(dayjs().startOf('day'));
+  const today = todayRef.current;
+  const from = useMemo(() => today.subtract(30, 'day').toISOString(), [today]);
+  const to = useMemo(() => today.add(LOOKAHEAD_DAYS, 'day').endOf('day').toISOString(), [today]);
   const queryClient = useQueryClient();
   const { has } = usePermissions();
   const canEdit = has('finance:edit');
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ['finance-upcoming-expenses', from, to],
-    queryFn: () => financeApi.list(from, to),
+    queryFn: () => financeApi.listUpcomingUnpaidExpenses(from, to),
   });
 
   const markPaidMutation = useMutation({
-    mutationFn: (id: string) =>
-      financeApi.markPaid(id, true),
-    onSuccess: () => {
+    mutationFn: (id: string) => financeApi.markPaid(id, true),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['finance-upcoming-expenses'] });
+      const previousEntries = queryClient.getQueryData<FinancialEntry[]>([
+        'finance-upcoming-expenses',
+        from,
+        to,
+      ]);
+      queryClient.setQueryData<FinancialEntry[]>(
+        ['finance-upcoming-expenses', from, to],
+        (current) => current?.filter((entry) => entry.id !== id) ?? [],
+      );
+      return { previousEntries };
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previousEntries) {
+        queryClient.setQueryData(['finance-upcoming-expenses', from, to], context.previousEntries);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['finance-upcoming-expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
       queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
     },
   });
@@ -75,9 +94,7 @@ export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardP
 
     return entries
       .filter((e: FinancialEntry) => {
-        if (e.type !== 'EXPENSE') return false;
         if (!e.dueDate) return false;
-        if (e.paidAt) return false;
         const due = dayjsFromDateOnlyApi(e.dueDate);
         if (!due) return false;
         return due.isBefore(limit) || due.isSame(limit, 'day');

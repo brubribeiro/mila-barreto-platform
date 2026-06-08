@@ -36,6 +36,12 @@ export class FinanceController {
     return this.finance.summary(from, to);
   }
 
+  @RequirePermissions('finance:view')
+  @Get('upcoming-expenses')
+  listUpcomingUnpaidExpenses(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.finance.listUpcomingUnpaidExpenses(from, to);
+  }
+
   @RequirePermissions('finance:create')
   @Post()
   create(@Body() dto: CreateFinancialEntryDto, @CurrentUser() user: AuthenticatedUser) {

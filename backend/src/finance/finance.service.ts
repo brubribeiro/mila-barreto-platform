@@ -25,6 +25,26 @@ export class FinanceService {
     };
   }
 
+  /** Despesas pendentes (paidAt nulo) com vencimento no intervalo — usado na dashboard. */
+  async listUpcomingUnpaidExpenses(from?: string, to?: string) {
+    const fromDate = from ? new Date(from) : undefined;
+    const toDate = to ? new Date(to) : undefined;
+
+    return this.prisma.financialEntry.findMany({
+      where: {
+        type: 'EXPENSE',
+        paidAt: null,
+        dueDate: {
+          not: null,
+          ...(fromDate ? { gte: fromDate } : {}),
+          ...(toDate ? { lte: toDate } : {}),
+        },
+      },
+      include: { paymentMethod: true },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
   async list(from?: string, to?: string, pendingInvoice?: boolean, expenseType?: string) {
     const entries = await this.prisma.financialEntry.findMany({
       where: {

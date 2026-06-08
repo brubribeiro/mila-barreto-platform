@@ -61,6 +61,27 @@ describe('FinanceService', () => {
     service = module.get<FinanceService>(FinanceService);
   });
 
+  describe('listUpcomingUnpaidExpenses', () => {
+    it('should list only unpaid expenses with dueDate in range', async () => {
+      await service.listUpcomingUnpaidExpenses('2026-01-01', '2026-01-31');
+
+      expect(prisma.financialEntry.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            type: 'EXPENSE',
+            paidAt: null,
+            dueDate: expect.objectContaining({
+              not: null,
+              gte: expect.any(Date),
+              lte: expect.any(Date),
+            }),
+          }),
+          orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+        }),
+      );
+    });
+  });
+
   describe('summary', () => {
     it('should compute balance from income and expense', async () => {
       prisma.financialEntry.aggregate
