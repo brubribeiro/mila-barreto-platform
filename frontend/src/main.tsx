@@ -24,7 +24,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <QueryClientProvider client={queryClient}>
-          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <BrowserRouter basename="/painel" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AuthProvider>
               <AppDialogProvider>
                 <App />
