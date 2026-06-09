@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type ReactElement, type ReactNode } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
   Alert,
@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  Divider,
   FormControl,
   Grid,
   IconButton,
@@ -29,6 +28,8 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
@@ -43,7 +44,7 @@ import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { patientsApi, PatientPayload } from '../../api/patients';
-import { DialogHeader } from '../DialogCloseButton';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { Patient, PatientSex, PatientReferralSource } from '../../types';
 import { isValidCPF, maskCPF, maskCEP, maskPhone, onlyDigits } from '../../utils/masks';
 import { birthDatePayloadFromInput, dateInputValueFromApi } from '../../utils/dateOnly';
@@ -69,7 +70,7 @@ interface PatientFormDialogProps {
 type FormValues = PatientPayload;
 type PatientFormTab = 'basic' | 'notes';
 
-const TABS: { id: PatientFormTab; label: string; icon: ReactNode }[] = [
+const TABS: { id: PatientFormTab; label: string; icon: ReactElement }[] = [
   { id: 'basic', label: 'Informações básicas', icon: <BadgeOutlinedIcon fontSize="small" /> },
   { id: 'notes', label: 'Observações', icon: <StickyNote2OutlinedIcon fontSize="small" /> },
 ];
@@ -93,7 +94,56 @@ const empty: FormValues = {
   referralSourceOther: '',
 };
 
-const DIALOG_HEIGHT_DESKTOP = 780;
+const DIALOG_MAX_WIDTH = 900;
+const DIALOG_HEIGHT_DESKTOP = 880;
+
+const FORM_CARD_SX = {
+  p: { xs: 1.5, sm: 1.75 },
+  borderRadius: 2,
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+} as const;
+
+const FORM_CARD_FILL_SX = {
+  ...FORM_CARD_SX,
+  flex: 1,
+  minHeight: 0,
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+} as const;
+
+function SectionIcon({ children }: { children: ReactNode }) {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 36,
+        height: 36,
+        borderRadius: 2,
+        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+        color: 'primary.main',
+        flexShrink: 0,
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
+
+function SectionTitle({ icon, title }: { icon: ReactNode; title: string }) {
+  return (
+    <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 1.5 }}>
+      <SectionIcon>{icon}</SectionIcon>
+      <Typography variant="subtitle1" fontWeight={600} letterSpacing="-0.01em">
+        {title}
+      </Typography>
+    </Stack>
+  );
+}
 
 function buildPatientOptionalFields(
   values: FormValues,
@@ -152,8 +202,8 @@ const FIELD_SX = {
 /** Campos preenchidos pelo CEP (somente leitura). */
 const AUTO_FIELD_SX = {
   '& .MuiOutlinedInput-root.Mui-disabled': {
-    bgcolor: 'grey.50',
-    WebkitTextFillColor: (theme) => theme.palette.text.primary,
+    bgcolor: 'background.default',
+    WebkitTextFillColor: 'text.primary',
   },
   '& input:-webkit-autofill:disabled': {
     WebkitBoxShadow: '0 0 0 1000px #F4F4F2 inset',
@@ -171,50 +221,11 @@ function TabPanel({ active, children }: { active: boolean; children: ReactNode }
         inset: 0,
         display: 'flex',
         flexDirection: 'column',
-        p: { xs: 1.5, sm: 2.5 },
         overflow: 'auto',
         visibility: active ? 'visible' : 'hidden',
         pointerEvents: active ? 'auto' : 'none',
       }}
     >
-      {children}
-    </Box>
-  );
-}
-
-function FieldsCard({ children }: { children: ReactNode }) {
-  return (
-    <Paper
-      variant="outlined"
-      sx={{
-        flex: 1,
-        minHeight: 0,
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        p: { xs: 1.5, sm: 2 },
-        bgcolor: '#fff',
-        borderColor: 'divider',
-        borderRadius: 2,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-        overflow: 'hidden',
-      }}
-    >
-      {children}
-    </Paper>
-  );
-}
-
-function FieldGroup({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Box>
-      <Typography
-        variant="overline"
-        color="text.secondary"
-        sx={{ display: 'block', mb: 0.75, letterSpacing: '0.06em' }}
-      >
-        {title}
-      </Typography>
       {children}
     </Box>
   );
@@ -455,23 +466,36 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="md"
+      maxWidth={false}
       fullWidth
       fullScreen={isMobile}
       PaperProps={{
         sx: {
-          borderRadius: isMobile ? 0 : 3,
-          overflow: 'hidden',
+          ...dialogPaperSx(isMobile),
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
-            : { height: DIALOG_HEIGHT_DESKTOP, maxHeight: '94vh' }),
+            : {
+                maxWidth: DIALOG_MAX_WIDTH,
+                height: DIALOG_HEIGHT_DESKTOP,
+                maxHeight: '94vh',
+                overflow: 'hidden',
+              }),
         },
       }}
     >
       <Box
         component="form"
         onSubmit={submit}
-        sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          ...(isMobile ? { height: '100%' } : {}),
+        }}
       >
         <DialogHeader
           onClose={onClose}
@@ -480,12 +504,11 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
           subtitle={isEditing ? patient.name : 'Dados do cadastro e observações'}
           icon={
             isEditing ? (
-              <PersonOutlineIcon fontSize="small" />
+              <EditOutlinedIcon fontSize="small" />
             ) : (
               <PersonAddOutlinedIcon fontSize="small" />
             )
           }
-          sx={{ pb: { xs: 1, sm: 1.5 } }}
         />
 
         <Box
@@ -512,12 +535,13 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
         </Box>
 
         <DialogContent
-          dividers={false}
+          dividers
           sx={{
-            p: 0,
+            px: { xs: 2, sm: 3 },
+            py: { xs: 2, sm: 2.5 },
             flex: 1,
             minHeight: 0,
-            bgcolor: 'grey.50',
+            bgcolor: (t) => t.palette.background.default,
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
@@ -525,9 +549,9 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
         >
           <Box sx={{ position: 'relative', flex: 1, minHeight: 0 }}>
           <TabPanel active={tab === 'basic'}>
-            <FieldsCard>
-              <Stack spacing={1.5} divider={<Divider flexItem />} sx={{ flex: 1, minHeight: 0 }}>
-                <FieldGroup title="Identificação">
+            <Stack spacing={2.5}>
+              <Paper variant="outlined" sx={FORM_CARD_SX}>
+                <SectionTitle icon={<LabelOutlinedIcon fontSize="small" />} title="Identificação" />
                   <Box
                     sx={{
                       display: 'grid',
@@ -540,7 +564,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                     <Stack
                       alignItems="center"
                       spacing={0.5}
-                      sx={{ gridColumn: 1, gridRow: { xs: 1, sm: '1 / 3' } }}
+                      sx={{ gridColumn: 1, gridRow: { xs: 1, sm: '1 / 4' } }}
                     >
                       <input
                         ref={photoInputRef}
@@ -779,12 +803,18 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                         )}
                       />
                     </Box>
-                  </Box>
-                </FieldGroup>
 
-                <FieldGroup title="Contato">
-                  <Grid container spacing={1.25}>
-                    <Grid item xs={12} sm={6}>
+                    <Box
+                      sx={{
+                        gridColumn: { xs: '1 / -1', sm: 2 },
+                        gridRow: 3,
+                        minWidth: 0,
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                        gap: 1.25,
+                        alignItems: 'start',
+                      }}
+                    >
                       <Controller
                         name="phone"
                         control={control}
@@ -808,8 +838,6 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                           />
                         )}
                       />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
                       <Controller
                         name="email"
                         control={control}
@@ -831,11 +859,12 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                           />
                         )}
                       />
-                    </Grid>
-                  </Grid>
-                </FieldGroup>
+                    </Box>
+                  </Box>
+              </Paper>
 
-                <FieldGroup title="Como conheceu a clínica">
+              <Paper variant="outlined" sx={FORM_CARD_SX}>
+                <SectionTitle icon={<BadgeOutlinedIcon fontSize="small" />} title="Como conheceu a clínica" />
                   <Grid container spacing={1.25}>
                     <Grid item xs={12} sm={referralSourceWatched === 'OTHER' ? 6 : 12}>
                       <Controller
@@ -893,9 +922,10 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                       </Grid>
                     )}
                   </Grid>
-                </FieldGroup>
+              </Paper>
 
-                <FieldGroup title="Endereço">
+              <Paper variant="outlined" sx={FORM_CARD_SX}>
+                <SectionTitle icon={<LocationOnOutlinedIcon fontSize="small" />} title="Endereço" />
                   <Grid container spacing={1.25}>
                     <Grid item xs={12} sm={4}>
                       <Controller
@@ -1059,13 +1089,13 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                       </Typography>
                     </Grid>
                   </Grid>
-                </FieldGroup>
-              </Stack>
-            </FieldsCard>
+              </Paper>
+            </Stack>
           </TabPanel>
 
           <TabPanel active={tab === 'notes'}>
-            <FieldsCard>
+            <Paper variant="outlined" sx={FORM_CARD_FILL_SX}>
+              <SectionTitle icon={<StickyNote2OutlinedIcon fontSize="small" />} title="Observações" />
               <Stack sx={{ flex: 1, minHeight: 0, height: '100%' }}>
                 <Controller
                   name="notes"
@@ -1097,41 +1127,28 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                   Visível na ficha do paciente e na aba de anotações.
                 </Typography>
               </Stack>
-            </FieldsCard>
+            </Paper>
           </TabPanel>
           </Box>
 
           {mutation.isError && (
-            <Alert severity="error" variant="outlined" sx={{ mx: { xs: 2, sm: 3 }, mb: 2 }}>
+            <Alert severity="error" variant="outlined" sx={{ mt: 2, flexShrink: 0 }}>
               {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
                 ?.message ?? 'Erro ao salvar paciente'}
             </Alert>
           )}
         </DialogContent>
 
-        <DialogActions
-          sx={{
-            px: { xs: 2, sm: 3 },
-            py: { xs: 1.5, sm: 2 },
-            gap: 1,
-            borderTop: 1,
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            flexShrink: 0,
-          }}
-        >
-          <Box sx={{ flex: 1 }} />
-          <Button onClick={onClose} color="inherit" disabled={mutation.isPending}>
+        <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
+          <Button onClick={onClose} type="button" disabled={mutation.isPending}>
             Cancelar
           </Button>
           <Button
             type="submit"
             variant="contained"
-            disableElevation
             disabled={mutation.isPending || formState.isSubmitting}
-            sx={{ minWidth: 120 }}
           >
-            {mutation.isPending ? 'Salvando…' : isEditing ? 'Salvar' : 'Cadastrar'}
+            {mutation.isPending ? 'Salvando…' : isEditing ? 'Salvar' : 'Criar paciente'}
           </Button>
         </DialogActions>
       </Box>
