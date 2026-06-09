@@ -1,10 +1,9 @@
-import { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useEffect, type ReactNode } from 'react';
 import {
   Alert,
+  alpha,
   Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -18,7 +17,11 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
+import WarehouseOutlinedIcon from '@mui/icons-material/WarehouseOutlined';
+import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { inventoryApi, InventoryItemPayload } from '../../api/inventory';
@@ -51,12 +54,16 @@ const empty: FormValues = {
   expiryNotifyDaysBefore: '',
 };
 
-const INVENTORY_DIALOG_MAX_WIDTH = 820;
+const DIALOG_MAX_WIDTH = 900;
+const DIALOG_HEIGHT_DESKTOP = 650;
 
-const SECTION_LABEL_SX = {
-  mb: 1,
-  display: 'block',
-  letterSpacing: '0.04em',
+const FORM_CARD_SX = {
+  p: { xs: 1.5, sm: 1.75 },
+  borderRadius: 2,
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+  height: '100%',
 } as const;
 
 const unitOptions = [
@@ -73,19 +80,50 @@ const unitOptions = [
   { value: 'amp', label: 'Ampola (amp)' },
 ] as const;
 
-const COMMON_UNIT_VALUES = ['un', 'ml', 'fr', 'amp', 'g', 'kg'] as const;
+function SectionIcon({ children }: { children: ReactNode }) {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 36,
+        height: 36,
+        borderRadius: 2,
+        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+        color: 'primary.main',
+        flexShrink: 0,
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
 
-const unitLabelByValue = Object.fromEntries(unitOptions.map((opt) => [opt.value, opt.label])) as Record<
-  string,
-  string
->;
+function SectionTitle({ icon, title }: { icon: ReactNode; title: string }) {
+  return (
+    <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 1.5 }}>
+      <SectionIcon>{icon}</SectionIcon>
+      <Typography variant="subtitle1" fontWeight={600} letterSpacing="-0.01em">
+        {title}
+      </Typography>
+    </Stack>
+  );
+}
+
+function SubsectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
+      {children}
+    </Typography>
+  );
+}
 
 export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialogProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
-  const { control, handleSubmit, reset, watch, setValue } = useForm<FormValues>({ defaultValues: empty });
-  const watchedUnit = watch('unit');
+  const { control, handleSubmit, reset } = useForm<FormValues>({ defaultValues: empty });
 
   useEffect(() => {
     if (!open) return;
@@ -134,12 +172,31 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
       PaperProps={{
         sx: {
           ...dialogPaperSx(isMobile),
+          display: 'flex',
+          flexDirection: 'column',
           width: '100%',
-          maxWidth: isMobile ? undefined : INVENTORY_DIALOG_MAX_WIDTH,
+          ...(isMobile
+            ? { height: '100%', maxHeight: '100dvh' }
+            : {
+                maxWidth: DIALOG_MAX_WIDTH,
+                height: DIALOG_HEIGHT_DESKTOP,
+                maxHeight: '94vh',
+                overflow: 'hidden',
+              }),
         },
       }}
     >
-      <Box component="form" onSubmit={handleSubmit((v) => mutation.mutate(v))}>
+      <Box
+        component="form"
+        onSubmit={handleSubmit((v) => mutation.mutate(v))}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          ...(isMobile ? { height: '100%' } : {}),
+        }}
+      >
         <DialogHeader
           onClose={onClose}
           isMobile={isMobile}
@@ -149,82 +206,72 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
               ? `${item.name} · ${item.quantity} ${item.unit ?? 'un'} em estoque`
               : 'Cadastre o produto e configure estoque mínimo e custo'
           }
-          icon={<Inventory2OutlinedIcon fontSize="small" />}
+          icon={
+            item ? <EditOutlinedIcon fontSize="small" /> : <Inventory2OutlinedIcon fontSize="small" />
+          }
         />
 
-        <DialogContent dividers sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 2.5 } }}>
-          <Grid container spacing={2.5} alignItems="flex-start">
+        <DialogContent
+          dividers
+          sx={{
+            px: { xs: 2, sm: 3 },
+            py: { xs: 2, sm: 2.5 },
+            flex: 1,
+            minHeight: 0,
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: (t) => t.palette.background.default,
+          }}
+        >
+          <Grid container spacing={2.5} alignItems="stretch">
             <Grid item xs={12} md={6}>
-              <Typography variant="caption" color="text.secondary" fontWeight={600} sx={SECTION_LABEL_SX}>
-                Identificação
-              </Typography>
-              <Stack spacing={2}>
-                <Controller
-                  name="name"
-                  control={control}
-                  rules={{ required: 'Nome é obrigatório' }}
-                  render={({ field, fieldState }) => (
-                    <TextField
-                      {...field}
-                      label="Nome do produto"
-                      fullWidth
-                      required
-                      autoFocus={!item}
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
-                    />
-                  )}
-                />
-                <Controller
-                  name="sku"
-                  control={control}
-                  render={({ field }) => <TextField {...field} label="SKU / Código" fullWidth />}
-                />
-                <Controller
-                  name="description"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} label="Descrição" fullWidth multiline minRows={3} />
-                  )}
-                />
-              </Stack>
+              <Paper variant="outlined" sx={FORM_CARD_SX}>
+                <SectionTitle icon={<LabelOutlinedIcon fontSize="small" />} title="Identificação" />
+                <Stack spacing={2}>
+                  <Controller
+                    name="name"
+                    control={control}
+                    rules={{ required: 'Nome é obrigatório' }}
+                    render={({ field, fieldState }) => (
+                      <TextField
+                        {...field}
+                        label="Nome do produto"
+                        fullWidth
+                        required
+                        autoFocus={!item}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name="sku"
+                    control={control}
+                    render={({ field }) => <TextField {...field} label="SKU / Código" fullWidth />}
+                  />
+                  <Controller
+                    name="description"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField {...field} label="Descrição" fullWidth multiline minRows={3} />
+                    )}
+                  />
+                </Stack>
+              </Paper>
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: { xs: 1.5, sm: 2 },
-                  borderRadius: 2,
-                  bgcolor: 'background.paper',
-                }}
-              >
-                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={SECTION_LABEL_SX}>
-                  Estoque e custo
-                </Typography>
+              <Paper variant="outlined" sx={FORM_CARD_SX}>
+                <SectionTitle icon={<WarehouseOutlinedIcon fontSize="small" />} title="Estoque e custo" />
                 <Stack spacing={2}>
                   <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                      Unidade de medida
-                    </Typography>
-                    <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 0.75, mb: 1.5 }}>
-                      {COMMON_UNIT_VALUES.map((value) => (
-                        <Chip
-                          key={value}
-                          label={unitLabelByValue[value]?.replace(/\s*\(.+\)$/, '') ?? value}
-                          size="small"
-                          clickable
-                          color={watchedUnit === value ? 'primary' : 'default'}
-                          variant={watchedUnit === value ? 'filled' : 'outlined'}
-                          onClick={() => setValue('unit', value, { shouldDirty: true })}
-                        />
-                      ))}
-                    </Stack>
+                    <SubsectionLabel>Unidade de medida</SubsectionLabel>
                     <Controller
                       name="unit"
                       control={control}
                       render={({ field }) => (
-                        <TextField {...field} select label="Unidade" fullWidth size="small">
+                        <TextField {...field} select label="Unidade" fullWidth>
                           <MenuItem value="">
                             <em>Nenhuma</em>
                           </MenuItem>
@@ -273,9 +320,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                   </Stack>
 
                   <Box>
-                    <Typography variant="caption" color="text.secondary" fontWeight={600} sx={SECTION_LABEL_SX}>
-                      Validade
-                    </Typography>
+                    <SubsectionLabel>Validade</SubsectionLabel>
                     <Controller
                       name="expiryNotifyDaysBefore"
                       control={control}
@@ -297,29 +342,32 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                     </Typography>
                   </Box>
 
-                  <Alert severity="info" icon={false} sx={{ py: 0.75 }}>
+                  <Alert severity="info" sx={{ py: 0.75 }}>
                     {item
                       ? 'Para alterar quantidade ou lote com validade, use a movimentação de entrada.'
                       : 'O estoque inicial é zero. Após criar, registre uma entrada para adicionar quantidade.'}
                   </Alert>
-
-                  {mutation.isError && (
-                    <Alert severity="error">
-                      {(mutation.error as any)?.response?.data?.message ?? 'Erro ao salvar item'}
-                    </Alert>
-                  )}
                 </Stack>
               </Paper>
             </Grid>
+
+            {mutation.isError && (
+              <Grid item xs={12}>
+                <Alert severity="error" variant="outlined">
+                  {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
+                    ?.message ?? 'Erro ao salvar item'}
+                </Alert>
+              </Grid>
+            )}
           </Grid>
         </DialogContent>
 
-        <DialogActions sx={dialogActionsBorderSx}>
-          <Button onClick={onClose} type="button">
+        <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
+          <Button onClick={onClose} type="button" disabled={mutation.isPending}>
             Cancelar
           </Button>
           <Button type="submit" variant="contained" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Salvando...' : item ? 'Salvar' : 'Criar item'}
+            {mutation.isPending ? 'Salvando…' : item ? 'Salvar' : 'Criar item'}
           </Button>
         </DialogActions>
       </Box>
