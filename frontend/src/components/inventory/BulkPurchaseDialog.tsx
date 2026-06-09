@@ -30,10 +30,11 @@ import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
+import PlaylistAddCheckOutlinedIcon from '@mui/icons-material/PlaylistAddCheckOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { inventoryApi } from '../../api/inventory';
-import { DialogHeader } from '../DialogCloseButton';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { dateOnlyToApiIso, formatDateOnlyFromApi } from '../../utils/dateOnly';
 import type { InventoryItem } from '../../types';
 
@@ -64,6 +65,14 @@ interface FormValues {
 
 const DIALOG_HEIGHT_DESKTOP = 860;
 const DIALOG_MAX_WIDTH = 1280;
+
+const FORM_CARD_SX = {
+  p: { xs: 1.5, sm: 1.75 },
+  borderRadius: 2,
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+} as const;
 
 const FIELD_SX = {
   '& .MuiOutlinedInput-root': { bgcolor: '#fff' },
@@ -130,15 +139,15 @@ const defaultValues: FormValues = {
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
-function HeaderIcon({ children }: { children: ReactNode }) {
+function SectionIcon({ children }: { children: ReactNode }) {
   return (
     <Box
       sx={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: 40,
-        height: 40,
+        width: 36,
+        height: 36,
         borderRadius: 2,
         bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
         color: 'primary.main',
@@ -171,10 +180,7 @@ function FormSection({
     <Paper
       variant="outlined"
       sx={{
-        p: { xs: 2, sm: 2 },
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+        ...FORM_CARD_SX,
         display: 'flex',
         flexDirection: 'column',
         ...(fill ? { flex: 1, minHeight: 0, overflow: 'hidden' } : { flexShrink: 0 }),
@@ -189,7 +195,7 @@ function FormSection({
         sx={{ mb: 1.5, flexShrink: 0 }}
       >
         <Stack direction="row" spacing={1.25} alignItems="flex-start" sx={{ minWidth: 0 }}>
-          <HeaderIcon>{icon}</HeaderIcon>
+          <SectionIcon>{icon}</SectionIcon>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="subtitle1" fontWeight={600} letterSpacing="-0.01em">
               {title}
@@ -375,7 +381,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
       fullScreen={isMobile}
       PaperProps={{
         sx: {
-          borderRadius: isMobile ? 0 : 3,
+          ...dialogPaperSx(isMobile),
           overflow: 'hidden',
           width: '100%',
           display: 'flex',
@@ -401,7 +407,6 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
           title="Compra em lote"
           subtitle="Vários materiais, validade por item e frete rateado no custo"
           icon={<ShoppingCartOutlinedIcon fontSize="small" />}
-          sx={{ bgcolor: 'background.paper' }}
           trailing={
             <Stack direction="row" spacing={0.75} flexWrap="wrap" justifyContent="flex-end">
               <Chip
@@ -426,18 +431,16 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
         />
 
         <DialogContent
-          dividers={false}
+          dividers
           sx={{
             flex: 1,
             minHeight: 0,
             overflow: 'hidden',
-            p: { xs: 2, sm: 3 },
-            bgcolor: (t) => alpha(t.palette.primary.main, 0.02),
+            px: { xs: 2, sm: 3 },
+            py: { xs: 2, sm: 2.5 },
+            bgcolor: (t) => t.palette.background.default,
             display: 'flex',
             flexDirection: 'column',
-            '&.MuiDialogContent-root': {
-              paddingTop: { xs: 2, sm: 3 },
-            },
           }}
         >
           <Box
@@ -526,13 +529,11 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
                   <Paper
                     variant="outlined"
                     sx={{
+                      ...FORM_CARD_SX,
                       flex: 1,
                       minHeight: 0,
                       display: 'flex',
                       flexDirection: 'column',
-                      p: { xs: 1.5, sm: 2 },
-                      borderColor: 'divider',
-                      bgcolor: 'background.paper',
                       overflow: 'hidden',
                       height: '100%',
                     }}
@@ -661,9 +662,9 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
                                 borderRadius: 2,
                                 border: '1px solid',
                                 borderColor: 'divider',
-                                bgcolor: 'grey.50',
+                                bgcolor: (t) => t.palette.background.default,
                                 '& .MuiInputLabel-root': {
-                                  backgroundColor: 'grey.50',
+                                  backgroundColor: (t) => t.palette.background.default,
                                 },
                               }}
                             >
@@ -911,33 +912,15 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
                 overflow: 'hidden',
               }}
             >
-                  <Paper
-                    variant="outlined"
-                    sx={{
-                      flex: 1,
-                      minHeight: 0,
-                      height: { xs: 280, lg: '100%' },
-                      display: 'flex',
-                      flexDirection: 'column',
-                      p: 1.5,
-                      borderColor: 'divider',
-                      bgcolor: 'grey.50',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1, flexShrink: 0 }}>
-                      Itens na compra
-                      <Typography
-                        component="span"
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ ml: 0.75, fontWeight: 400 }}
-                      >
-                        ({fields.length})
-                      </Typography>
-                    </Typography>
-
-                    <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.25 }}>
+              <FormSection
+                fill
+                title="Itens na compra"
+                subtitle="Clique em um item para editar"
+                icon={<PlaylistAddCheckOutlinedIcon fontSize="small" />}
+                sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+              >
+                <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                  <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.25 }}>
                       {fields.map((field, i) => {
                         const line = watchedLines[i];
                         if (!line) return null;
@@ -1054,14 +1037,15 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
                       color="text.secondary"
                       sx={{ pt: 1, flexShrink: 0, display: 'block', borderTop: 1, borderColor: 'divider' }}
                     >
-                      Clique em um item para editar. Use o botão à esquerda para incluir outro.
+                      Use o botão à esquerda para incluir outro material.
                     </Typography>
-                  </Paper>
+                  </Box>
+              </FormSection>
             </Box>
           </Box>
 
           {mutation.isError && (
-            <Alert severity="error" sx={{ mt: 2, flexShrink: 0 }}>
+            <Alert severity="error" variant="outlined" sx={{ mt: 2, flexShrink: 0 }}>
               {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
                 ?.message ?? 'Erro ao registrar compra em lote'}
             </Alert>
@@ -1075,7 +1059,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
             py: 1.5,
             borderTop: 1,
             borderColor: 'divider',
-            bgcolor: 'grey.50',
+            bgcolor: (t) => t.palette.background.default,
             display: 'flex',
             flexWrap: 'wrap',
             alignItems: 'center',
@@ -1099,22 +1083,12 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
           </Typography>
         </Box>
 
-        <DialogActions
-          sx={{
-            flexShrink: 0,
-            px: { xs: 2, sm: 3 },
-            py: { xs: 1.5, sm: 2 },
-            borderTop: 1,
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            gap: 1,
-          }}
-        >
-          <Button onClick={onClose} color="inherit">
+        <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
+          <Button onClick={onClose} type="button" disabled={mutation.isPending}>
             Cancelar
           </Button>
           <Button type="submit" variant="contained" disabled={mutation.isPending || !canSubmit}>
-            {mutation.isPending ? 'Salvando...' : 'Confirmar compra'}
+            {mutation.isPending ? 'Salvando…' : 'Confirmar compra'}
           </Button>
         </DialogActions>
       </Box>
