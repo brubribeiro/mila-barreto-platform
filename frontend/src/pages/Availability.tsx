@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -18,18 +18,22 @@ import {
   List,
   ListItem,
   ListItemText,
+  Paper,
   Stack,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
   Tooltip,
   Typography,
+  alpha,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
+import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
+import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
@@ -91,7 +95,47 @@ const UNAVAIL_DATETIME_FIELD_SX = {
   },
 } as const;
 
-const UNAVAIL_DIALOG_HEIGHT = 740;
+const UNAVAIL_DIALOG_MAX_WIDTH = 760;
+const UNAVAIL_DIALOG_HEIGHT = 760;
+
+const UNAVAIL_FORM_CARD_SX = {
+  p: { xs: 1.5, sm: 1.75 },
+  borderRadius: 2,
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+} as const;
+
+function UnavailSectionIcon({ children }: { children: ReactNode }) {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 36,
+        height: 36,
+        borderRadius: 2,
+        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+        color: 'primary.main',
+        flexShrink: 0,
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
+
+function UnavailSectionTitle({ icon, title }: { icon: ReactNode; title: string }) {
+  return (
+    <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 1.5 }}>
+      <UnavailSectionIcon>{icon}</UnavailSectionIcon>
+      <Typography variant="subtitle1" fontWeight={600} letterSpacing="-0.01em">
+        {title}
+      </Typography>
+    </Stack>
+  );
+}
 
 function buildWeekFromRemote(remote: WorkingHours[]): Record<number, DayScheduleEdit> {
   const result: Record<number, DayScheduleEdit> = {};
@@ -633,22 +677,36 @@ function UnavailabilityDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="sm"
+      maxWidth={false}
       fullWidth
       fullScreen={isMobile}
       PaperProps={{
         sx: {
           ...dialogPaperSx(isMobile),
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
-            : { height: UNAVAIL_DIALOG_HEIGHT, maxHeight: '94vh' }),
+            : {
+                maxWidth: UNAVAIL_DIALOG_MAX_WIDTH,
+                height: UNAVAIL_DIALOG_HEIGHT,
+                maxHeight: '94vh',
+                overflow: 'hidden',
+              }),
         },
       }}
     >
       <Box
         component="form"
         onSubmit={handleSubmit}
-        sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          ...(isMobile ? { height: '100%' } : {}),
+        }}
       >
         <DialogHeader
           onClose={onClose}
@@ -668,45 +726,29 @@ function UnavailabilityDialog({
             py: { xs: 2, sm: 2.5 },
             flex: 1,
             minHeight: 0,
-            overflow: isMobile ? 'auto' : 'hidden',
+            overflow: 'auto',
+            bgcolor: (t) => t.palette.background.default,
           }}
         >
-          <Stack spacing={2}>
-            <Box>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                fontWeight={600}
-                sx={{ mb: 1, display: 'block', letterSpacing: '0.04em' }}
-              >
-                Tipo de bloqueio
-              </Typography>
-              <ToggleButtonGroup
-                exclusive
-                fullWidth
-                size="small"
-                color="primary"
-                value={allDay ? 'allDay' : 'partial'}
-                onChange={(_, val) => {
-                  if (val === 'allDay') switchMode(true);
-                  if (val === 'partial') switchMode(false);
-                }}
-              >
-                <ToggleButton value="partial">Horário específico</ToggleButton>
-                <ToggleButton value="allDay">Dia(s) inteiro(s)</ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
-
-            <Box>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                fontWeight={600}
-                sx={{ mb: 1, display: 'block', letterSpacing: '0.04em' }}
-              >
-                Período
-              </Typography>
+          <Stack spacing={2.5}>
+            <Paper variant="outlined" sx={UNAVAIL_FORM_CARD_SX}>
+              <UnavailSectionTitle icon={<EventOutlinedIcon fontSize="small" />} title="Período" />
               <Stack spacing={1.5}>
+                <ToggleButtonGroup
+                  exclusive
+                  fullWidth
+                  size="small"
+                  color="primary"
+                  value={allDay ? 'allDay' : 'partial'}
+                  onChange={(_, val) => {
+                    if (val === 'allDay') switchMode(true);
+                    if (val === 'partial') switchMode(false);
+                  }}
+                >
+                  <ToggleButton value="partial">Horário específico</ToggleButton>
+                  <ToggleButton value="allDay">Dia(s) inteiro(s)</ToggleButton>
+                </ToggleButtonGroup>
+
                 <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 0.75, mx: 0 }}>
                   {(allDay
                     ? [
@@ -824,36 +866,30 @@ function UnavailabilityDialog({
                 </Stack>
 
                 <Typography variant="caption" color={periodHelperMessage.color} sx={{ display: 'block' }}>
-                    {periodHelperMessage.text}
+                  {periodHelperMessage.text}
                 </Typography>
+
+                <Alert
+                  severity="info"
+                  icon={false}
+                  sx={{
+                    py: 0.75,
+                    visibility: periodPreview ? 'visible' : 'hidden',
+                  }}
+                >
+                  <Typography variant="body2">
+                    Será bloqueado: <strong>{periodPreview ?? '—'}</strong>
+                  </Typography>
+                </Alert>
               </Stack>
-            </Box>
+            </Paper>
 
-            <Alert
-              severity="info"
-              icon={false}
-              sx={{
-                py: 0.75,
-                mx: 0,
-                alignItems: 'center',
-                visibility: periodPreview ? 'visible' : 'hidden',
-              }}
-            >
-              <Typography variant="body2">
-                Será bloqueado: <strong>{periodPreview ?? '—'}</strong>
-              </Typography>
-            </Alert>
-
-            <Box>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                fontWeight={600}
-                sx={{ mb: 1, display: 'block', letterSpacing: '0.04em' }}
-              >
-                Motivo (opcional)
-              </Typography>
+            <Paper variant="outlined" sx={UNAVAIL_FORM_CARD_SX}>
+              <UnavailSectionTitle icon={<LabelOutlinedIcon fontSize="small" />} title="Motivo" />
               <Stack spacing={1.5}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -0.5 }}>
+                  Opcional — ajuda a identificar o bloqueio na agenda
+                </Typography>
                 <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 0.75 }}>
                   {UNAVAIL_REASON_SUGGESTIONS.map((suggestion) => (
                     <Chip
@@ -877,21 +913,22 @@ function UnavailabilityDialog({
                   minRows={2}
                 />
               </Stack>
-            </Box>
+            </Paper>
 
             {mutation.isError && (
-              <Alert severity="error" sx={{ mx: 0 }}>
-                {(mutation.error as any)?.response?.data?.message ?? 'Erro ao salvar'}
+              <Alert severity="error" variant="outlined">
+                {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
+                  ?.message ?? 'Erro ao salvar'}
               </Alert>
             )}
           </Stack>
         </DialogContent>
         <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
-          <Button onClick={onClose} type="button">
+          <Button onClick={onClose} type="button" disabled={mutation.isPending}>
             Cancelar
           </Button>
           <Button variant="contained" type="submit" disabled={mutation.isPending || formInvalid}>
-            {mutation.isPending ? 'Salvando...' : 'Salvar bloqueio'}
+            {mutation.isPending ? 'Salvando…' : 'Criar bloqueio'}
           </Button>
         </DialogActions>
       </Box>
