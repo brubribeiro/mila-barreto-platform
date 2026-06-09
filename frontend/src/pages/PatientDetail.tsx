@@ -93,16 +93,12 @@ const kindLabel: Record<AppointmentKind, string> = {
 
 type DetailTab = 'general' | 'notes' | 'appointments' | 'packages' | 'anamnesis' | 'finance' | 'documents';
 
-/* ─── Helpers ─── */
-
 function patientAgeLabel(birthDate?: string | null) {
   const birth = dayjsFromDateOnlyApi(birthDate);
   if (!birth) return null;
   const age = dayjs().diff(birth, 'year');
   return age >= 0 ? `${age} anos` : null;
 }
-
-/* ─── Reusable sub-components ─── */
 
 function HeaderIcon({ children }: { children: ReactNode }) {
   return (
@@ -187,8 +183,6 @@ function NoteBlock({ label, text }: { label: string; text: string }) {
     </Box>
   );
 }
-
-/* ─── Tab content components ─── */
 
 function GeneralTab({ data, ageLabel, addressLine }: { data: any; ageLabel: string | null; addressLine: string }) {
   return (
@@ -438,8 +432,6 @@ function DocumentsTab({
   );
 }
 
-/* ─── Card sub-components (same as drawer) ─── */
-
 function AppointmentNotesCard({ appt }: { appt: Appointment }) {
   const hasNotes = !!(appt.notes?.trim() || appt.clinicalNotes?.trim());
   const accent = statusAccent[appt.status] ?? 'primary.main';
@@ -574,8 +566,6 @@ function PackageCard({
   );
 }
 
-/* ─── Main page ─── */
-
 export function PatientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -656,7 +646,6 @@ export function PatientDetail() {
 
   return (
     <Box>
-      {/* Back button */}
       <Button
         startIcon={<ArrowBackIcon />}
         onClick={() => navigate('/pacientes')}
@@ -665,7 +654,6 @@ export function PatientDetail() {
         Voltar para pacientes
       </Button>
 
-      {/* Header */}
       <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderColor: 'divider' }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2.5} alignItems={{ sm: 'flex-start' }}>
           <Avatar
@@ -719,7 +707,6 @@ export function PatientDetail() {
           </Box>
         </Stack>
 
-        {/* Stat cards */}
         <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap sx={{ mt: 2.5 }}>
           <Paper variant="outlined" sx={{ px: 2, py: 1.25, minWidth: 110, flex: 1, borderColor: 'divider' }}>
             <Typography variant="h6" fontWeight={700}>{data.appointments?.length ?? 0}</Typography>
@@ -736,7 +723,6 @@ export function PatientDetail() {
         </Stack>
       </Paper>
 
-      {/* Tabs */}
       <Paper variant="outlined" sx={{ borderColor: 'divider', mb: 3 }}>
         <Tabs
           value={tab}
@@ -759,7 +745,6 @@ export function PatientDetail() {
         </Tabs>
       </Paper>
 
-      {/* Tab content */}
       <Box sx={{ minHeight: 300 }}>
         {tab === 'general' && <GeneralTab data={data} ageLabel={ageLabel} addressLine={addressLine} />}
         {tab === 'notes' && <NotesTab data={data} appointmentsWithNotes={appointmentsWithNotes} />}

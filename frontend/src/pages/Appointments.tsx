@@ -27,7 +27,6 @@ import {
 } from '../utils/unavailabilityCalendar';
 import { slotOverlapsProfessionalAppointment } from '../utils/appointmentScheduling';
 
-// Cores dos eventos por status (paleta tiffany + neutros)
 const statusColors: Record<AppointmentStatus, { bg: string; border: string; text: string }> = {
   SCHEDULED: { bg: '#B8E5E2', border: '#0ABAB5', text: '#07807C' },
   CONFIRMED: { bg: '#0ABAB5', border: '#07807C', text: '#FFFFFF' },
@@ -58,7 +57,6 @@ export function Appointments() {
   const [defaultStart, setDefaultStart] = useState<Date | null>(null);
   const [filterProfessionalIds, setFilterProfessionalIds] = useState<string[]>([]);
 
-  // Intervalo visível do calendário — atualizado pelo FullCalendar quando muda visão/navegação
   const [range, setRange] = useState<{ from: string; to: string }>(() => {
     const now = new Date();
     const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -167,7 +165,6 @@ export function Appointments() {
     setRange({ from: info.start.toISOString(), to: info.end.toISOString() });
   };
 
-  // Drag em week/day OU clique em célula (vira drag mínimo)
   const handleSelect = (info: DateSelectArg) => {
     if (!canCreate) return;
     if (slotOverlapsUnavailability(info.start, info.end, unavailabilityItems)) return;
@@ -181,7 +178,6 @@ export function Appointments() {
     openNew(info.start);
   };
 
-  // Clique simples em um dia no mês
   const handleDateClick = (info: DateClickArg) => {
     if (!canCreate) return;
     openNew(info.date);
@@ -329,7 +325,6 @@ export function Appointments() {
           '&:focus-visible': {
             boxShadow: `0 0 0 2px ${theme.palette.primary.main}`,
           },
-          // Customização do FullCalendar para casar com o tema neutro + tiffany
           '& .fc': {
             height: '100% !important',
             fontFamily: theme.typography.fontFamily,
@@ -404,11 +399,9 @@ export function Appointments() {
             cursor: 'pointer',
             fontSize: '0.8rem',
           },
-          /* Mês */
           '& .fc-dayGridMonth-view .fc-event, & .fc-dayGridMonth-view .fc-daygrid-event': {
             borderRadius: 8,
           },
-          /* Semana/dia */
           '& .fc-timeGridWeek-view, & .fc-timeGridDay-view': {
             '& .fc-event, & .fc-timegrid-event, & .fc-v-event, & .fc-daygrid-event, & .fc-daygrid-block-event':
               {

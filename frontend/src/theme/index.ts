@@ -1,10 +1,6 @@
 import { createTheme } from '@mui/material/styles';
 import { ptBR } from '@mui/material/locale';
 
-// Paleta neutra com acento em azul Tiffany
-// - Primary: Tiffany Blue (#0ABAB5) como cor de marca / CTAs
-// - Secondary: cinza quente, para textos e elementos secundários
-// - Fundos: off-white neutro
 const baseTheme = createTheme();
 
 export const theme = createTheme(
@@ -12,13 +8,13 @@ export const theme = createTheme(
     palette: {
       mode: 'light',
       primary: {
-        main: '#0ABAB5', // Tiffany Blue clássico
+        main: '#0ABAB5',
         light: '#5BCCC7',
         dark: '#07807C',
         contrastText: '#FFFFFF',
       },
       secondary: {
-        main: '#8B8680', // cinza quente / taupe
+        main: '#8B8680',
         light: '#B5B1AC',
         dark: '#5C5854',
         contrastText: '#FFFFFF',
@@ -39,7 +35,7 @@ export const theme = createTheme(
         dark: '#8A3F33',
       },
       background: {
-        default: '#F8F8F6', // off-white neutro
+        default: '#F8F8F6',
         paper: '#FFFFFF',
       },
       text: {
@@ -120,7 +116,7 @@ export const theme = createTheme(
         styleOverrides: {
           root: {
             '&.Mui-selected': {
-              backgroundColor: '#E5F4F3', // tiffany muito pálido
+              backgroundColor: '#E5F4F3',
               color: '#07807C',
               '& .MuiListItemIcon-root': { color: '#0ABAB5' },
               '&:hover': { backgroundColor: '#D6EDEC' },

@@ -21,7 +21,6 @@ export const usersApi = {
     });
     return data;
   },
-  /** Profissionais que realizam atendimentos (agenda / agendamentos). */
   listAppointmentProviders: async (): Promise<UserSummary[]> => {
     return usersApi.listActive(true);
   },

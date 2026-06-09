@@ -63,7 +63,6 @@ interface HolidaySeed {
   date: Date;
   title: string;
   scope: HolidayScope;
-  /** chave estável por ano + slug */
   idSuffix: string;
 }
 
@@ -79,7 +78,6 @@ function seedsForBrazilAndCaieiras(year: number): HolidaySeed[] {
     });
   };
 
-  // —— Feriados nacionais fixos (amplamente observados em calendários oficiais) ——
   pushFixed(0, 1, 'Confraternização Universal', 'nacional', 'ano-novo');
   pushFixed(3, 21, 'Tiradentes', 'nacional', 'tiradentes');
   pushFixed(4, 1, 'Dia do Trabalho', 'nacional', 'trabalho');
@@ -90,7 +88,6 @@ function seedsForBrazilAndCaieiras(year: number): HolidaySeed[] {
   pushFixed(10, 20, 'Dia Nacional de Zumbi e da Consciência Negra', 'nacional', 'consciencia-negra');
   pushFixed(11, 25, 'Natal', 'nacional', 'natal');
 
-  // —— Móveis nacionais de calendário (Páscoa) ——
   seeds.push({
     date: carnivalTuesday(year),
     title: 'Carnaval',
@@ -112,7 +109,6 @@ function seedsForBrazilAndCaieiras(year: number): HolidaySeed[] {
     idSuffix: 'corpus-christi',
   });
 
-  // —— Feriados municipais de Caieiras-SP —— (datas fixas leis 3.472/03 e 4.676/13)
   pushFixed(5, 13, 'Padroeiro do Município (Caieiras)', 'municipal', 'padroeiro-caieiras');
   pushFixed(11, 14, 'Emancipação política — Aniversário de Caieiras', 'municipal', 'aniversario-caieiras');
 
@@ -123,9 +119,6 @@ function atLocalStartOfDay(d: Date): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 }
 
-/**
- * Monta eventos FullCalendar (`allDay`) dentro do intervalo visível `from`–`to` (instantes ISO).
- */
 export function buildBrazilCaieirasHolidayEvents(fromIso: string, toIso: string): EventInput[] {
   const from = new Date(fromIso);
   const to = new Date(toIso);

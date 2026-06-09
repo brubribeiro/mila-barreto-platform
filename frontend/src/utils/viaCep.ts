@@ -1,7 +1,3 @@
-/**
- * ViaCEP (https://viacep.com.br) — apenas leitura, sem token.
- */
-
 export interface ViaCepOk {
   cep: string;
   logradouro: string;

@@ -27,14 +27,11 @@ const DIALOG_TRANSITION_MS = 180;
 export type ConfirmOptions = {
   title?: string;
   message: string;
-  /** Título da lista de detalhes (ex.: "Procedimentos que usam este item:"). */
   detailsTitle?: string;
-  /** Linhas da lista (ex.: nomes dos procedimentos). */
   details?: string[];
   confirmLabel?: string;
   cancelLabel?: string;
   confirmColor?: 'primary' | 'error' | 'warning' | 'inherit';
-  /** Oculta o botão de confirmação (ex.: exclusão bloqueada). */
   disableConfirm?: boolean;
 };
 

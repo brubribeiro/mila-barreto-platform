@@ -65,7 +65,6 @@ interface NavRouteItem {
   permission?: Permission;
 }
 
-/** Blocos temáticos; entre cada bloco aparece um separador horizontal fino no menu */
 const navGrouped: NavRouteItem[][] = [
   [{ label: 'Dashboard', path: '/', icon: <DashboardIcon /> }],
   [
@@ -216,7 +215,6 @@ export function Layout() {
         bgcolor: '#FFFFFF',
       }}
     >
-      {/* Header + recolher menu (desktop) */}
       <Box
         sx={{
           flexShrink: 0,
@@ -288,7 +286,6 @@ export function Layout() {
         </Box>
       </Box>
 
-      {/* Nav items */}
       <Box sx={navScrollSx}>
         {visibleGroups.map((group, groupIndex) => (
           <Fragment key={group.map((it) => it.path).join('-')}>
@@ -383,7 +380,6 @@ export function Layout() {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
-      {/* Banner de personificação */}
       {isImpersonating && (
         <Box
           sx={{

@@ -153,7 +153,6 @@ function UploadFormSection({
   );
 }
 
-// ─── Dialog de Upload (abre após selecionar o arquivo) ───
 function UploadDialog({
   file,
   open,
@@ -488,7 +487,6 @@ function StatMiniCard({
   );
 }
 
-// ─── Página principal ───
 export function Documents() {
   const queryClient = useQueryClient();
   const { confirm, alert } = useAppDialog();

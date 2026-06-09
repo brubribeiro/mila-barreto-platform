@@ -1,20 +1,15 @@
 import { onlyDigits } from './masks';
 import dayjs from 'dayjs';
 
-/**
- * Variáveis aceitas nos templates de mensagem.
- * Permite passar valores opcionais — variáveis ausentes ficam vazias na mensagem.
- */
 export interface TemplateVars {
   paciente_nome?: string;
   procedimento?: string;
-  data?: string; // formatada DD/MM/YYYY
-  hora?: string; // HH:mm
+  data?: string;
+  hora?: string;
   profissional?: string;
   clinica?: string;
 }
 
-/** Substitui {variavel} por valores. Tags sem valor viram string vazia. */
 export function renderTemplate(content: string, vars: TemplateVars): string {
   return content.replace(/\{(\w+)\}/g, (_, key) => {
     const v = (vars as any)[key];
@@ -22,10 +17,6 @@ export function renderTemplate(content: string, vars: TemplateVars): string {
   });
 }
 
-/**
- * Monta a URL `https://wa.me/...` com texto pré-preenchido.
- * Adiciona +55 se o telefone tiver 10 ou 11 dígitos (formato BR).
- */
 export function whatsappLink(phone: string, message: string): string {
   let digits = onlyDigits(phone);
   if (digits.length === 10 || digits.length === 11) {
@@ -34,7 +25,6 @@ export function whatsappLink(phone: string, message: string): string {
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
-/** Helper para criar vars a partir de um appointment populado. */
 export function varsFromAppointment(appt: {
   patient?: { name?: string };
   procedure?: { name?: string };

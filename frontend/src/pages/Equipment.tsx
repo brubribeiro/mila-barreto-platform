@@ -73,7 +73,6 @@ export function EquipmentPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['equipment'] }),
   });
 
-  // Itens com manutenção em até 30 dias ou já vencida
   const isMaintenanceDue = (e: Equipment) => {
     const next = e.scheduledMaintenanceAt ?? e.nextMaintenanceAt;
     const d = dayjsFromDateOnlyApi(next);

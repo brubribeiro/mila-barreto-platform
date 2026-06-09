@@ -43,7 +43,6 @@ export function Promotions() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Abrir formulário automaticamente quando vem do Dashboard com ?data=
   useEffect(() => {
     const data = searchParams.get('data');
     if (data && canCreate) {

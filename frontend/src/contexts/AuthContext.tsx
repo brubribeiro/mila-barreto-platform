@@ -33,7 +33,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  /** Processa resposta de login (comum entre login normal e Google). */
   async function handleLoginResponse(data: { access_token: string; user: User }) {
     localStorage.setItem('access_token', data.access_token);
     try {

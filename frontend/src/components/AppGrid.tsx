@@ -22,7 +22,6 @@ interface AppGridProps {
   sx?: SxProps<Theme>;
 }
 
-/** Grade com gap uniforme — sem margem negativa do Grid legado do MUI */
 export function AppGrid({ children, columns = { xs: 1 }, gap = 2, sx }: AppGridProps) {
   const { xs = 1, sm, md, lg } = columns;
 

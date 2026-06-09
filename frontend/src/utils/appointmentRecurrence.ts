@@ -1,6 +1,5 @@
 import dayjs from 'dayjs';
 
-/** Data mínima (YYYY-MM-DD) para agendar após o último atendimento concluído. */
 export function computeEarliestRecurrenceDate(
   lastCompletedAt: string | Date,
   recurrenceDays: number,

@@ -1,8 +1,3 @@
-/**
- * Helpers para exportar CSV no navegador.
- * Gera o arquivo e dispara o download via <a download>.
- */
-/** Retorna false se não houver linhas para exportar. */
 export function downloadCsv(filename: string, rows: Record<string, any>[], headers?: string[]) {
   if (rows.length === 0) {
     return false;

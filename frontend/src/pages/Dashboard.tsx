@@ -50,10 +50,8 @@ import { DashboardDetailItem } from '../components/dashboard/DashboardDetailItem
 import { DashboardEmptyState } from '../components/dashboard/DashboardEmptyState';
 import { AppGrid } from '../components/AppGrid';
 
-/** Dias à frente para listar próximos aniversários na dashboard */
 const UPCOMING_BIRTHDAY_WINDOW_DAYS = 30;
 
-/** Rosa: só fundo do ícone e borda esquerda dos cards de aniversário. */
 const BIRTHDAY_ACCENT = '#C2185B';
 
 function getNextBirthdayDate(birthDateStr: string): dayjs.Dayjs | null {
@@ -203,7 +201,6 @@ export function Dashboard() {
   const todayStr = dayjs().format('YYYY-MM-DD');
   const weekBounds = useMemo(() => mondayToSundayWeekBounds(todayStr), [todayStr]);
 
-  // Mês atual
   const [mode, setMode] = useState<RangeMode>('MONTH');
   const [selectedYear, setSelectedYear] = useState(dayjs().year());
   const [selectedMonth, setSelectedMonth] = useState(dayjs().month() + 1);
@@ -215,7 +212,6 @@ export function Dashboard() {
   const [whatsappPatient, setWhatsappPatient] = useState<Patient | null>(null);
   const [monthMenuAnchor, setMonthMenuAnchor] = useState<HTMLElement | null>(null);
 
-  // Calcula intervalo efetivo conforme o modo
   const { from, to } = useMemo(() => {
     if (mode === 'CUSTOM') {
       return {

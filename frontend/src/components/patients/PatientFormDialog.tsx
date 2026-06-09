@@ -191,7 +191,6 @@ const AUTOFILL_WHITE = {
   },
 } as const;
 
-/** Fundo branco nos campos editáveis. */
 const FIELD_SX = {
   '& .MuiOutlinedInput-root': {
     bgcolor: '#fff',
@@ -199,7 +198,6 @@ const FIELD_SX = {
   ...AUTOFILL_WHITE,
 } as const;
 
-/** Campos preenchidos pelo CEP (somente leitura). */
 const AUTO_FIELD_SX = {
   '& .MuiOutlinedInput-root.Mui-disabled': {
     bgcolor: 'background.default',

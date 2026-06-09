@@ -22,10 +22,6 @@ interface PermissionsMatrixProps {
   disableClear?: boolean;
 }
 
-/**
- * Matriz de checkboxes 7 recursos × 4 ações.
- * Permite marcar/desmarcar linha inteira (recurso) e coluna inteira (ação).
- */
 export function PermissionsMatrix({ value, onChange, disabled, disableClear }: PermissionsMatrixProps) {
   const set = useMemo(() => new Set(value), [value]);
 

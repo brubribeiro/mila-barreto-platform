@@ -1,9 +1,5 @@
 import type { NotificationType } from '../types';
 
-/**
- * Catálogo de tipos de notificação com rótulos e descrições para a UI.
- * Espelha o enum do backend.
- */
 export const NOTIFICATION_TYPES: {
   type: NotificationType;
   label: string;

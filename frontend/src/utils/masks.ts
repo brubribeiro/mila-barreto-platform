@@ -1,7 +1,3 @@
-/**
- * Máscaras e validadores para campos do formulário (sem dependências externas).
- */
-
 /** Mantém apenas dígitos. */
 export const onlyDigits = (s: string): string => s.replace(/\D/g, '');
 
@@ -34,7 +30,7 @@ export function maskCEP(value: string): string {
 export function isValidCPF(value: string): boolean {
   const d = onlyDigits(value);
   if (d.length !== 11) return false;
-  if (/^(\d)\1{10}$/.test(d)) return false; // sequências iguais
+  if (/^(\d)\1{10}$/.test(d)) return false;
 
   const calc = (sliceEnd: number, weightStart: number) => {
     let sum = 0;

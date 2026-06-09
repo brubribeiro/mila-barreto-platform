@@ -2,7 +2,6 @@ import { ReactNode } from 'react';
 import { Box, Chip, Paper, Stack, Typography } from '@mui/material';
 import type { ChipProps } from '@mui/material';
 
-/** Altura fixa dos itens internos dos cards da dashboard */
 export const DASHBOARD_ITEM_HEIGHT = 88;
 
 export type DashboardItemChip = {

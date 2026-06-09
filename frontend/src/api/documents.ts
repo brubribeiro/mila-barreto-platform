@@ -7,7 +7,6 @@ export const documentsApi = {
     return data;
   },
 
-  /** Upload de arquivo para o Cloudflare R2 */
   upload: async (
     file: File,
     meta: { name?: string; category?: string; notes?: string; patientId?: string; equipmentId?: string },
@@ -29,7 +28,6 @@ export const documentsApi = {
     await api.delete(`/documents/${id}`);
   },
 
-  /** URL temporária assinada para arquivo privado no R2. */
   getAccessUrl: async (id: string): Promise<string> => {
     const { data } = await api.get<{ url: string }>(`/documents/${id}/access-url`);
     return data.url;

@@ -333,7 +333,6 @@ export function AppointmentFormDialog({
   );
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
 
-  // ─── Confiabilidade do paciente ───
   const { data: reliability } = useQuery<PatientReliability>({
     queryKey: ['patient-reliability', selectedPatientId],
     queryFn: () => patientsApi.getReliability(selectedPatientId),
@@ -347,7 +346,6 @@ export function AppointmentFormDialog({
     return 'error' as const;
   }, [reliability]);
 
-  // ─── Pacotes ───
   const [selectedPackageId, setSelectedPackageId] = useState<string>('');
   const [sellDialogOpen, setSellDialogOpen] = useState(false);
   const [sellPackageTarget, setSellPackageTarget] = useState<Package | null>(null);
@@ -358,7 +356,6 @@ export function AppointmentFormDialog({
   const [batchCreating, setBatchCreating] = useState(false);
   const [batchSessions, setBatchSessions] = useState<{ date: string; startTime: string }[]>([]);
 
-  // Pacotes ativos do paciente
   const { data: activePatientPackages = [] } = useQuery({
     queryKey: ['patient-packages-active', selectedPatientId],
     queryFn: () => packagesApi.listActiveForPatient(selectedPatientId),
@@ -382,7 +379,6 @@ export function AppointmentFormDialog({
 
   const recurrenceEarliestDate = recurrenceLimit?.earliestDate ?? null;
 
-  // Inicializar sessões editáveis quando o dialog de lote abre
   useEffect(() => {
     if (!batchDialogOpen || !batchPatientPkg || !selectedProcedure?.recurrenceDays) {
       return;
@@ -399,14 +395,12 @@ export function AppointmentFormDialog({
     setBatchSessions(sessions);
   }, [batchDialogOpen, batchPatientPkg, selectedProcedure?.recurrenceDays, selectedDate, selectedStartTime]);
 
-  // Pacotes do catálogo que contêm o procedimento selecionado
   const { data: allCatalogPackages = [] } = useQuery({
     queryKey: ['packages'],
     queryFn: () => packagesApi.list(),
     enabled: open,
   });
 
-  // Filtrar: pacotes ativos do paciente que contêm o procedimento selecionado
   const filteredPatientPackages = useMemo(() => {
     if (!selectedProcedureId) return [];
     return activePatientPackages.filter((pp) =>
@@ -414,7 +408,6 @@ export function AppointmentFormDialog({
     );
   }, [activePatientPackages, selectedProcedureId]);
 
-  // Pacotes do catálogo que contêm o procedimento e que o paciente NÃO possui ativos
   const availableCatalogPackages = useMemo(() => {
     if (!selectedProcedureId) return [];
     const activePackageIds = new Set(activePatientPackages.map((pp) => pp.packageId));
@@ -426,7 +419,6 @@ export function AppointmentFormDialog({
     );
   }, [allCatalogPackages, selectedProcedureId, activePatientPackages]);
 
-  // Resetar seleção de pacote quando paciente ou procedimento muda
   useEffect(() => {
     if (appointment?.patientPackageId) {
       setSelectedPackageId(appointment.patientPackageId);
@@ -677,7 +669,6 @@ export function AppointmentFormDialog({
     },
   });
 
-  // ─── Controle de tempo de atendimento ───
   const isInProgress = appointmentDetail?.status === 'IN_PROGRESS' || appointment?.status === 'IN_PROGRESS';
   const hasStartedAt = !!(appointmentDetail?.startedAt ?? appointment?.startedAt);
   const hasFinishedAt = !!(appointmentDetail?.finishedAt ?? appointment?.finishedAt);
@@ -768,7 +759,6 @@ export function AppointmentFormDialog({
       const duration = selectedProcedure?.durationMinutes ?? 60;
       const end = start.add(duration, 'minute');
 
-      // Procedure só vai no payload quando kind === PROCEDURE
       const procedureIdForPayload =
         values.kind === 'PROCEDURE' ? values.procedureId : undefined;
       const payload: AppointmentPayload = {
@@ -797,7 +787,6 @@ export function AppointmentFormDialog({
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['appointment', saved.id] });
       queryClient.invalidateQueries({ queryKey: ['patient', saved.patientId] });
-      // Se acabou de ser marcado como COMPLETED, pergunta se quer agendar retorno
       const wasNotCompleted = appointment?.status !== 'COMPLETED';
       const isNowCompleted = saved.status === 'COMPLETED';
       if (
@@ -842,7 +831,6 @@ export function AppointmentFormDialog({
     mutation.mutate({ values });
   };
 
-  /** Intercepta o submit: se está concluindo com procedimento, mostra diálogo de pagamento */
   const onSubmit = (values: FormValues) => {
     if (!appointmentProviders.some((p) => p.id === values.professionalId)) {
       return;
@@ -2034,7 +2022,6 @@ export function AppointmentFormDialog({
         </Box>
       </Dialog>
 
-      {/* WhatsApp de confirmação - usa template de categoria 'confirmacao' */}
       {appointment && (
         <SendWhatsAppDialog
           open={whatsappOpen}
@@ -2051,7 +2038,6 @@ export function AppointmentFormDialog({
         />
       )}
 
-      {/* Dialog de método de pagamento ao concluir */}
       <Dialog
         open={paymentDialogOpen}
         onClose={() => {
@@ -2116,7 +2102,6 @@ export function AppointmentFormDialog({
         </DialogActions>
       </Dialog>
 
-      {/* Dialog de agendar retorno após COMPLETED */}
       <Dialog
         open={returnDialogOpen}
         onClose={closeReturnDialog}
@@ -2230,7 +2215,6 @@ export function AppointmentFormDialog({
         </DialogActions>
       </Dialog>
 
-      {/* ─── Dialog de venda inline de pacote ─── */}
       <Dialog
         open={sellDialogOpen}
         onClose={() => {
@@ -2324,9 +2308,7 @@ export function AppointmentFormDialog({
                 queryClient.invalidateQueries({ queryKey: ['patient-packages'] });
                 setSellDialogOpen(false);
                 setSellPackageTarget(null);
-                // Selecionar o pacote recém-criado
                 setSelectedPackageId(created.id);
-                // Oferecer agendamento em lote se tem mais de 1 sessão
                 if (created.sessionsTotal > 1 && selectedProcedure?.recurrenceDays) {
                   setBatchPatientPkg(created);
                   setBatchDialogOpen(true);
@@ -2345,7 +2327,6 @@ export function AppointmentFormDialog({
         </DialogActions>
       </Dialog>
 
-      {/* ─── Dialog de agendamento em lote de sessões ─── */}
       <Dialog
         open={batchDialogOpen}
         onClose={() => {
@@ -2503,7 +2484,6 @@ export function AppointmentFormDialog({
         highlightAppointmentId={appointment?.id ?? null}
       />
 
-      {/* Modal de confirmação para finalizar atendimento */}
       <Dialog open={confirmFinishOpen} onClose={() => setConfirmFinishOpen(false)} maxWidth="xs">
         <DialogHeader
           onClose={() => setConfirmFinishOpen(false)}

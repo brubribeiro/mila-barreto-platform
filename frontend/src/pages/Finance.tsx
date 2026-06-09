@@ -162,7 +162,6 @@ export function Finance() {
     staleTime: 60_000,
   });
 
-  // Gera receitas retroativas de agendamentos concluídos que ainda não têm lançamento
   useQuery({
     queryKey: ['backfill-finance'],
     queryFn: async () => {

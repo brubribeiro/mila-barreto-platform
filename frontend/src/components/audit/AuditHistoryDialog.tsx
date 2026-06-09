@@ -37,7 +37,6 @@ const ACTION_OPTIONS = [
 interface AuditHistoryDialogProps {
   open: boolean;
   onClose: () => void;
-  /** Nome da entidade no backend (ex: "Procedure", "Patient") */
   entity: string;
   title?: string;
 }
@@ -149,7 +148,6 @@ export function AuditHistoryDialog({ open, onClose, entity, title }: AuditHistor
 
   const handleClose = () => {
     onClose();
-    // Reset filters on close
     setFilters({});
     setPaginationModel({ page: 0, pageSize: 25 });
   };
@@ -203,7 +201,6 @@ export function AuditHistoryDialog({ open, onClose, entity, title }: AuditHistor
             '&.MuiDialogContent-root': { paddingTop: { xs: 2, sm: 3 } },
           }}
         >
-        {/* Filtros */}
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2, flexShrink: 0 }}>
           <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>Ação</InputLabel>

@@ -31,11 +31,9 @@ export interface AuditLogFilters {
 }
 
 export const auditLogsApi = {
-  /** Busca logs de uma entidade + ID específicos (para exibir dentro do detalhe) */
   byEntity: (entity: string, entityId: string) =>
     api.get<AuditLogEntry[]>(`/audit-logs/${entity}/${entityId}`),
 
-  /** Busca geral de logs com filtros e paginação */
   findAll: (filters: AuditLogFilters = {}) => {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {

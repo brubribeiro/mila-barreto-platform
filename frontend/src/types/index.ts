@@ -10,10 +10,6 @@ export interface Role {
   _count?: { users: number };
 }
 
-/**
- * Usuário tal como retornado por /auth/me e /auth/login.
- * Inclui permissões já achatadas para checagem rápida no front.
- */
 export interface User {
   id: string;
   name: string;
@@ -29,7 +25,6 @@ export interface User {
   impersonatorName?: string;
 }
 
-/** Forma resumida do usuário usada em listagens/dropdowns. */
 export interface UserSummary {
   id: string;
   name: string;
@@ -144,8 +139,6 @@ export interface Appointment {
   finishedAt?: string | null;
 }
 
-// ─── Pacotes ───
-
 export type PackageType = 'COMBO' | 'SESSIONS';
 export type PatientPackageStatus = 'ACTIVE' | 'COMPLETED' | 'EXPIRED' | 'CANCELLED';
 
@@ -194,8 +187,6 @@ export interface PatientPackage {
 export type FinancialType = 'INCOME' | 'EXPENSE';
 
 export type ExpenseType = 'FIXED' | 'VARIABLE';
-
-// ─── Formas de pagamento ───
 
 export interface PaymentMethodEntry {
   id: string;
@@ -263,8 +254,8 @@ export interface MessageTemplate {
 export interface WorkingHours {
   id: string;
   userId: string;
-  dayOfWeek: number; // 0-6
-  startTime: string; // HH:mm
+  dayOfWeek: number;
+  startTime: string;
   endTime: string;
 }
 
@@ -327,8 +318,6 @@ export interface InventoryItem {
   expiresAt?: string;
   expiryNotifyDaysBefore?: number;
 }
-
-// ─── Promoções ───
 
 export type DiscountType = 'PERCENTAGE' | 'FIXED';
 

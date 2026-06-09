@@ -183,7 +183,6 @@ export function AuditLogs() {
         </Typography>
       </Stack>
 
-      {/* Filtros */}
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         spacing={2}

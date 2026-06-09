@@ -59,7 +59,6 @@ interface Batch {
 function buildBatches(movements: InventoryMovement[]): Batch[] {
   const map = new Map<string, { totalIn: number; totalOut: number; movements: InventoryMovement[] }>();
 
-  // Agrupa entradas por data de validade
   for (const m of movements) {
     if (m.type === 'IN' && m.expiresAt) {
       const key = m.expiresAt.substring(0, 10);
@@ -172,7 +171,6 @@ export function InventoryDetail() {
         }
       />
 
-      {/* ── Dados gerais ── */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -228,7 +226,6 @@ export function InventoryDetail() {
         </CardContent>
       </Card>
 
-      {/* ── Lotes (entradas agrupadas por validade) ── */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -284,7 +281,6 @@ export function InventoryDetail() {
         </CardContent>
       </Card>
 
-      {/* ── Histórico completo de movimentações ── */}
       <Card>
         <CardContent>
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>

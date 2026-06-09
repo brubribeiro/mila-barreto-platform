@@ -85,7 +85,6 @@ export const appDataGridSx: SxProps<Theme> = {
 
 type AppDataGridProps = DataGridProps & {
   height?: number | string;
-  /** Mantém altura constante mesmo sem linhas (evita modal redimensionar). */
   fixedHeight?: boolean;
 };
 

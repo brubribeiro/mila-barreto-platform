@@ -72,7 +72,6 @@ const metricsCardContentSx = {
   '&:last-child': { pb: { xs: 2, sm: 2.5 } },
 } as const;
 
-// ─── KPI Card ───
 
 interface KpiCardProps {
   title: string;
@@ -145,7 +144,6 @@ function KpiCard({ title, value, subtitle, icon, color }: KpiCardProps) {
   );
 }
 
-// ─── Section Card ───
 
 function ChartPlaceholder({ message = 'Sem dados no período.' }: { message?: string }) {
   return (
@@ -191,7 +189,6 @@ function SectionCard({
   );
 }
 
-// ─── Appointment Tab ───
 
 function AppointmentsTab({ data }: { data: MetricsResult }) {
   const theme = useTheme();
@@ -352,7 +349,6 @@ function AppointmentsTab({ data }: { data: MetricsResult }) {
   );
 }
 
-// ─── Patients Tab ───
 
 function PatientsTab({ data }: { data: MetricsResult }) {
   const theme = useTheme();
@@ -440,7 +436,6 @@ function PatientsTab({ data }: { data: MetricsResult }) {
   );
 }
 
-// ─── Procedures Tab ───
 
 function ProceduresTab({ data }: { data: MetricsResult }) {
   const theme = useTheme();
@@ -650,7 +645,6 @@ function buildDailyFlowChartData(entries: FinancialEntry[]) {
   });
 }
 
-// ─── Financial Tab ───
 
 function FinancialTab({ entries }: { entries: FinancialEntry[] }) {
   const theme = useTheme();
@@ -686,7 +680,6 @@ function FinancialTab({ entries }: { entries: FinancialEntry[] }) {
   );
 }
 
-// ─── Packages Tab ───
 
 function PackagesTab({ data }: { data: MetricsResult }) {
   const theme = useTheme();
@@ -765,7 +758,6 @@ function PackagesTab({ data }: { data: MetricsResult }) {
   );
 }
 
-// ─── Main Page ───
 
 type MetricsTab = 'appointments' | 'patients' | 'procedures' | 'packages' | 'finance';
 

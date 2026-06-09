@@ -68,7 +68,6 @@ export const patientsApi = {
     return data;
   },
 
-  /** URL temporária assinada para foto privada no R2. */
   getPhotoAccessUrl: async (id: string): Promise<string> => {
     const { data } = await api.get<{ url: string }>(`/patients/${id}/photo-url`);
     return data.url;

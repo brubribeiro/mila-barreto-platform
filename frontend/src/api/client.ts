@@ -4,7 +4,6 @@ export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '/api',
 });
 
-// Interceptor: anexa token JWT em cada requisição
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');
   if (token) {
@@ -14,7 +13,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Interceptor: redireciona para login em 401
 api.interceptors.response.use(
   (res) => res,
   (err) => {

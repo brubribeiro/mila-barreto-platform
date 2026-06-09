@@ -78,7 +78,6 @@ const FIELD_SX = {
   '& .MuiOutlinedInput-root': { bgcolor: '#fff' },
 } as const;
 
-/** Campos da seção Materiais — labels sempre visíveis e legíveis */
 const MATERIAL_FIELD_SX = {
   ...FIELD_SX,
   '& .MuiInputLabel-root': {

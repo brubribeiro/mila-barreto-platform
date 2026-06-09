@@ -1,8 +1,6 @@
 import { api } from './client';
 import type { Package, PatientPackage } from '../types';
 
-// ─── Payloads ───
-
 export interface PackageItemInput {
   procedureId: string;
   quantity: number;
@@ -28,10 +26,7 @@ export interface PatientPackagePayload {
   notes?: string;
 }
 
-// ─── API ───
-
 export const packagesApi = {
-  // Package (template)
   list: async (): Promise<Package[]> => {
     const { data } = await api.get<Package[]>('/packages');
     return data;
@@ -52,7 +47,6 @@ export const packagesApi = {
     await api.delete(`/packages/${id}`);
   },
 
-  // PatientPackage (venda/vínculo)
   listPatientPackages: async (patientId?: string): Promise<PatientPackage[]> => {
     const params = patientId ? { patientId } : {};
     const { data } = await api.get<PatientPackage[]>('/packages/patient-packages/list', { params });

@@ -34,9 +34,7 @@ interface SendWhatsAppDialogProps {
   onClose: () => void;
   phone?: string;
   vars: TemplateVars;
-  /** Quando definido (ex.: pela lista de pacientes), permite escolher agendamento em templates de confirmação/retorno. */
   patientId?: string | null;
-  /** Categoria preferida (ex: 'confirmacao') — pré-seleciona o template se houver. */
   preferredCategory?: string;
   title?: string;
 }
@@ -103,13 +101,11 @@ export function SendWhatsAppDialog({
     return { ...base, ...fromAppt };
   }, [vars, selectedAppointment, patientDetail]);
 
-  // Ao abrir/fechar ou mudar de paciente: limpa agendamento escolhido
   useEffect(() => {
     if (!open) return;
     setSelectedAppointment(null);
   }, [open, patientId]);
 
-  // Pré-seleciona template pela categoria ao abrir (ou quando chegam os templates)
   useEffect(() => {
     if (!open) return;
     if (templates.length === 0) return;
@@ -124,7 +120,6 @@ export function SendWhatsAppDialog({
     if (!showAppointmentPicker) setSelectedAppointment(null);
   }, [showAppointmentPicker]);
 
-  // Atualiza o texto sempre que mudar template ou variáveis (ex.: agendamento escolhido)
   useEffect(() => {
     if (!open) return;
     const t = templates.find((x) => x.id === templateId);

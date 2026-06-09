@@ -11,10 +11,6 @@ interface PermissionRouteProps {
   fallback?: string;
 }
 
-/**
- * Protege uma rota exigindo uma permissão específica.
- * Sem permissão → redireciona para o fallback (padrão: /).
- */
 export function PermissionRoute({ permission, children, fallback = '/' }: PermissionRouteProps) {
   const { has, permissions } = usePermissions();
   if (permissions.length === 0) return <Navigate to="/login" replace />;
