@@ -1,6 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  Alert,
   Box,
   Button,
   Card,
@@ -8,215 +7,36 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  Grid,
-  IconButton,
   MenuItem,
-  Paper,
-  Popover,
   Stack,
   TextField,
   Tooltip,
   Typography,
-  useMediaQuery,
-  useTheme,
 } from '@mui/material';
 import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import HistoryIcon from '@mui/icons-material/History';
-import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import DoneAllIcon from '@mui/icons-material/DoneAll';
-import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import dayjs from 'dayjs';
 
 import { PageHeader } from '../components/PageHeader';
-import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../components/DialogCloseButton';
+import { DialogHeader, dialogPaperSx } from '../components/DialogCloseButton';
 import { ListFiltersBar } from '../components/ListFiltersBar';
 import { AppDataGrid } from '../components/AppDataGrid';
+import { MessageTemplateFormDialog } from '../components/messages/MessageTemplateFormDialog';
+import { WhatsAppPreview } from '../components/messages/WhatsAppPreview';
+import { categoryLabel, categoryOptions } from '../components/messages/messageTemplateConstants';
 import { FILTER_FIELD_SX, matchFields } from '../utils/listFilters';
-import { messagesApi, MessageTemplatePayload } from '../api/messages';
+import { messagesApi } from '../api/messages';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { proceduresApi } from '../api/procedures';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { usePermissions } from '../contexts/usePermissions';
-import type { MessageTemplate, Procedure } from '../types';
+import type { MessageTemplate } from '../types';
 
-// ─── Categorias ───
-const categoryOptions = [
-  { value: '', label: '—' },
-  { value: 'confirmacao', label: 'Confirmação' },
-  { value: 'lembrete', label: 'Lembrete' },
-  { value: 'retorno', label: 'Retorno' },
-  { value: 'aniversario', label: 'Aniversário' },
-  { value: 'promocao', label: 'Promoção' },
-  { value: 'livre', label: 'Livre' },
-];
-
-const categoryLabel: Record<string, string> = Object.fromEntries(
-  categoryOptions.filter((c) => c.value).map((c) => [c.value, c.label]),
-);
-
-const VARIABLES = ['{paciente_nome}', '{procedimento}', '{data}', '{hora}', '{profissional}', '{valor}'];
-
-// ─── Emoji picker simples ───
-const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
-  {
-    label: 'Rostos',
-    emojis: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','😐','😑','😶','😏','😒','🙄','😬','😮‍💨','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤧','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐'],
-  },
-  {
-    label: 'Gestos',
-    emojis: ['👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏'],
-  },
-  {
-    label: 'Objetos',
-    emojis: ['💄','💅','💇','💆','🧖','💈','💉','💊','🩺','🩹','🧴','🧽','🧼','🪥','🪒','✂️','📋','📌','📎','🔗','📞','📱','💻','⏰','🎁','🎉','🎊','🎈','🏷️','💰','💳','📦','🚚','✈️','🏥','🏪'],
-  },
-  {
-    label: 'Símbolos',
-    emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','❣️','💕','💞','💓','💗','💖','💘','💝','⭐','🌟','✨','💫','🔥','💥','💯','✅','❌','⚠️','📢','🔔','💬','🗨️','👁️‍🗨️','🆕','🆓','🔝','▶️','⏩','🔴','🟢','🔵','⚪','⚫'],
-  },
-];
-
-function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void }) {
-  const [tab, setTab] = useState(0);
-  return (
-    <Box sx={{ width: 320, p: 1 }}>
-      <Stack direction="row" spacing={0.5} sx={{ mb: 1, overflowX: 'auto' }}>
-        {EMOJI_GROUPS.map((g, i) => (
-          <Chip
-            key={g.label}
-            label={g.label}
-            size="small"
-            variant={tab === i ? 'filled' : 'outlined'}
-            onClick={() => setTab(i)}
-            sx={{ cursor: 'pointer' }}
-          />
-        ))}
-      </Stack>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25, maxHeight: 200, overflowY: 'auto' }}>
-        {EMOJI_GROUPS[tab].emojis.map((e) => (
-          <Box
-            key={e}
-            onClick={() => onSelect(e)}
-            sx={{
-              cursor: 'pointer',
-              fontSize: 22,
-              width: 34,
-              height: 34,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 1,
-              '&:hover': { bgcolor: 'action.hover' },
-            }}
-          >
-            {e}
-          </Box>
-        ))}
-      </Box>
-    </Box>
-  );
-}
-
-// ─── Preview estilo WhatsApp ───
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-
-function WhatsAppPreview({
-  content,
-  category,
-  procedure,
-}: {
-  content: string;
-  category?: string;
-  procedure?: Procedure | null;
-}) {
-  const preview = content
-    .replace(/\{paciente_nome\}/g, 'Maria Silva')
-    .replace(/\{procedimento\}/g, procedure?.name ?? 'Limpeza de pele')
-    .replace(/\{data\}/g, dayjs().add(3, 'day').format('DD/MM/YYYY'))
-    .replace(/\{hora\}/g, '14:00')
-    .replace(/\{profissional\}/g, 'Dra. Mila')
-    .replace(/\{valor\}/g, procedure?.price ? brl.format(Number(procedure.price)) : 'R$ 150,00');
-
-  return (
-    <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-      <Paper
-        elevation={0}
-        sx={{
-          width: '100%',
-          maxWidth: 360,
-          bgcolor: '#e5ddd5',
-          backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'6\' height=\'6\' viewBox=\'0 0 6 6\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23c7bfb5\' fill-opacity=\'0.15\'%3E%3Cpath d=\'M5 0h1L0 6V5zM6 5v1H5z\'/%3E%3C/g%3E%3C/svg%3E")',
-          borderRadius: 2,
-          p: 1.5,
-          minHeight: 120,
-        }}
-      >
-        <Box
-          sx={{
-            bgcolor: '#dcf8c6',
-            borderRadius: '8px 8px 0 8px',
-            p: 1.5,
-            maxWidth: '92%',
-            ml: 'auto',
-            position: 'relative',
-            boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
-          }}
-        >
-          {category === 'promocao' && procedure && (
-            <Box
-              sx={{
-                bgcolor: '#c8e6c9',
-                borderRadius: 1,
-                px: 1,
-                py: 0.5,
-                mb: 1,
-                display: 'inline-block',
-              }}
-            >
-              <Typography variant="caption" fontWeight={600} sx={{ color: '#2e7d32' }}>
-                ✨ PROMOÇÃO — {procedure.name}
-              </Typography>
-              <Typography variant="caption" display="block" sx={{ color: '#388e3c' }}>
-                {brl.format(Number(procedure.price))}
-              </Typography>
-            </Box>
-          )}
-          <Typography
-            variant="body2"
-            sx={{
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              color: '#303030',
-              fontSize: 14,
-              lineHeight: 1.45,
-            }}
-          >
-            {preview || (
-              <Typography component="span" variant="body2" color="text.disabled" fontStyle="italic">
-                Digite o conteúdo para ver o preview...
-              </Typography>
-            )}
-          </Typography>
-          <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={0.5} sx={{ mt: 0.5 }}>
-            <Typography variant="caption" sx={{ color: '#8d9fa5', fontSize: 11 }}>
-              {dayjs().format('HH:mm')}
-            </Typography>
-            <DoneAllIcon sx={{ fontSize: 16, color: '#53bdeb' }} />
-          </Stack>
-        </Box>
-      </Paper>
-    </Box>
-  );
-}
-
-// ─── Dialog de preview (apenas leitura) ───
 function PreviewDialog({
   open,
   onClose,
@@ -239,7 +59,7 @@ function PreviewDialog({
         <WhatsAppPreview
           content={template.content}
           category={template.category ?? undefined}
-          procedure={template.procedure as any}
+          procedure={template.procedure ?? null}
         />
       </DialogContent>
       <DialogActions>
@@ -249,249 +69,6 @@ function PreviewDialog({
   );
 }
 
-// ─── Dialog de criação/edição ───
-interface FormValues {
-  name: string;
-  category: string;
-  content: string;
-  procedureId: string;
-}
-
-const empty: FormValues = { name: '', category: '', content: '', procedureId: '' };
-
-function TemplateDialog({
-  open,
-  onClose,
-  template,
-  procedures,
-}: {
-  open: boolean;
-  onClose: () => void;
-  template?: MessageTemplate | null;
-  procedures: Procedure[];
-}) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const queryClient = useQueryClient();
-  const { control, handleSubmit, reset, setValue, getValues, watch } = useForm<FormValues>({
-    defaultValues: empty,
-  });
-
-  const contentRef = useRef<HTMLTextAreaElement | null>(null);
-  const [emojiAnchor, setEmojiAnchor] = useState<HTMLElement | null>(null);
-
-  useMemo(() => {
-    if (open) {
-      reset(
-        template
-          ? {
-              name: template.name,
-              category: template.category ?? '',
-              content: template.content,
-              procedureId: template.procedureId ?? '',
-            }
-          : empty,
-      );
-    }
-  }, [open, template, reset]);
-
-  const category = watch('category');
-  const content = watch('content');
-  const procedureId = watch('procedureId');
-  const selectedProcedure = procedures.find((p) => p.id === procedureId) ?? null;
-
-  const mutation = useMutation({
-    mutationFn: (values: FormValues) => {
-      const payload: MessageTemplatePayload = {
-        name: values.name,
-        content: values.content,
-        ...(values.category ? { category: values.category } : {}),
-        procedureId: values.category === 'promocao' && values.procedureId ? values.procedureId : null,
-      };
-      return template ? messagesApi.update(template.id, payload) : messagesApi.create(payload);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['message-templates'] });
-      onClose();
-    },
-  });
-
-  const insertAtCursor = (text: string) => {
-    const el = contentRef.current;
-    const current = getValues('content') ?? '';
-    if (el) {
-      const start = el.selectionStart ?? current.length;
-      const end = el.selectionEnd ?? start;
-      const next = current.slice(0, start) + text + current.slice(end);
-      setValue('content', next);
-      requestAnimationFrame(() => {
-        el.focus();
-        el.setSelectionRange(start + text.length, start + text.length);
-      });
-    } else {
-      setValue('content', current + text);
-    }
-  };
-
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      fullScreen={isMobile}
-      PaperProps={{
-        sx: dialogPaperSx(isMobile),
-      }}
-    >
-      <DialogHeader
-        onClose={onClose}
-        isMobile={isMobile}
-        title={template ? 'Editar template' : 'Novo template'}
-        subtitle="Nome, categoria e conteúdo da mensagem"
-        icon={<EditNoteOutlinedIcon fontSize="small" />}
-      />
-
-      <DialogContent dividers sx={{ p: { xs: 1.5, sm: 3 } }}>
-        <form id="template-form" onSubmit={handleSubmit((v) => mutation.mutate(v))}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name="name"
-                control={control}
-                rules={{ required: 'Obrigatório' }}
-                render={({ field, fieldState }) => (
-                  <TextField
-                    {...field}
-                    label="Nome do template"
-                    fullWidth
-                    size="small"
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name="category"
-                control={control}
-                render={({ field }) => (
-                  <TextField {...field} select label="Categoria" fullWidth size="small">
-                    {categoryOptions.map((o) => (
-                      <MenuItem key={o.value} value={o.value}>
-                        {o.label}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                )}
-              />
-            </Grid>
-
-            {category === 'promocao' && (
-              <Grid item xs={12}>
-                <Controller
-                  name="procedureId"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} select label="Procedimento vinculado" fullWidth size="small">
-                      <MenuItem value="">Nenhum</MenuItem>
-                      {procedures.map((p) => (
-                        <MenuItem key={p.id} value={p.id}>
-                          {p.name} — {brl.format(Number(p.price))}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  )}
-                />
-              </Grid>
-            )}
-
-            <Grid item xs={12}>
-              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
-                {VARIABLES.map((v) => (
-                  <Chip
-                    key={v}
-                    label={v}
-                    size="small"
-                    variant="outlined"
-                    onClick={() => insertAtCursor(v)}
-                    sx={{ cursor: 'pointer', mb: 0.5 }}
-                  />
-                ))}
-                <Tooltip title="Inserir emoji">
-                  <IconButton
-                    size="small"
-                    onClick={(e) => setEmojiAnchor(e.currentTarget)}
-                  >
-                    <EmojiEmotionsIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-              <Popover
-                open={!!emojiAnchor}
-                anchorEl={emojiAnchor}
-                onClose={() => setEmojiAnchor(null)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-              >
-                <EmojiPicker
-                  onSelect={(emoji) => {
-                    insertAtCursor(emoji);
-                    setEmojiAnchor(null);
-                  }}
-                />
-              </Popover>
-              <Controller
-                name="content"
-                control={control}
-                rules={{ required: 'Obrigatório' }}
-                render={({ field, fieldState }) => (
-                  <TextField
-                    {...field}
-                    inputRef={contentRef}
-                    label="Conteúdo da mensagem"
-                    fullWidth
-                    multiline
-                    minRows={4}
-                    maxRows={10}
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                  />
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                Preview
-              </Typography>
-              <WhatsAppPreview
-                content={content}
-                category={category || undefined}
-                procedure={selectedProcedure}
-              />
-            </Grid>
-          </Grid>
-        </form>
-      </DialogContent>
-
-      <DialogActions sx={{ px: { xs: 1.5, sm: 3 }, py: 1.5, flexWrap: 'wrap', gap: 1 }}>
-        {!isMobile && <Button onClick={onClose}>Cancelar</Button>}
-        <Button
-          type="submit"
-          form="template-form"
-          variant="contained"
-          disabled={mutation.isPending}
-          fullWidth={isMobile}
-        >
-          {template ? 'Salvar' : 'Criar'}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
-// ─── Página principal ───
 export function Messages() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
@@ -702,7 +279,7 @@ export function Messages() {
         />
       </Card>
 
-      <TemplateDialog
+      <MessageTemplateFormDialog
         open={formOpen}
         onClose={() => setFormOpen(false)}
         template={editing}
