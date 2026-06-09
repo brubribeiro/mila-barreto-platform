@@ -92,16 +92,25 @@ describe('RolesService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should throw ForbiddenException if removing permissions from admin', async () => {
-      prisma.role.findUnique.mockResolvedValue({
+    it('should sync admin permissions to full catalog on update', async () => {
+      const adminRole = {
         ...mockRole,
         isSystem: true,
-        name: 'Administrador do Sistema',
-      });
+        name: 'Administrador',
+        permissions: ['appointments:view'],
+      };
+      prisma.role.findUnique.mockResolvedValue(adminRole);
+      prisma.role.update.mockResolvedValue(adminRole);
 
-      await expect(
-        service.update('role-1', { permissions: ['appointments:view'] } as any),
-      ).rejects.toThrow(ForbiddenException);
+      await service.update('role-1', { permissions: ['appointments:view'] } as any);
+
+      expect(prisma.role.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            permissions: expect.arrayContaining(['appointments:view', 'patients:view']),
+          }),
+        }),
+      );
     });
   });
 

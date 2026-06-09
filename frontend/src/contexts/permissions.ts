@@ -35,3 +35,21 @@ export type Permission = `${ResourceKey}:${ActionKey}`;
 export const ALL_PERMISSIONS: Permission[] = RESOURCES.flatMap((r) =>
   ACTIONS.map((a) => `${r.key}:${a.key}` as Permission),
 );
+
+/** Role de sistema com acesso total fixo (espelha o backend). */
+export const SYSTEM_ADMIN_ROLE_NAME = 'Administrador';
+
+const PERMISSIONS_CATALOG = new Set<string>(ALL_PERMISSIONS);
+
+/** Conta permissões válidas do catálogo (ignora legadas e duplicadas). */
+export function countCatalogPermissions(permissions: readonly string[]): number {
+  let count = 0;
+  const seen = new Set<string>();
+  for (const permission of permissions) {
+    if (PERMISSIONS_CATALOG.has(permission) && !seen.has(permission)) {
+      seen.add(permission);
+      count += 1;
+    }
+  }
+  return count;
+}

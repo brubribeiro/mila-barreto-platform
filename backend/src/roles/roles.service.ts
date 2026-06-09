@@ -19,11 +19,18 @@ export class RolesService {
     private readonly auditLog: AuditLogService,
   ) {}
 
+  private normalizeRole<T extends { name: string; permissions: string[] }>(role: T): T {
+    if (role.name === SYSTEM_ADMIN_ROLE_NAME) {
+      return { ...role, permissions: [...ALL_PERMISSIONS] };
+    }
+    return role;
+  }
+
   list() {
     return this.prisma.role.findMany({
       orderBy: [{ isSystem: 'desc' }, { name: 'asc' }],
       include: { _count: { select: { users: true } } },
-    });
+    }).then((roles) => roles.map((role) => this.normalizeRole(role)));
   }
 
   async findOne(id: string) {
@@ -32,7 +39,7 @@ export class RolesService {
       include: { _count: { select: { users: true } } },
     });
     if (!role) throw new NotFoundException('Grupo não encontrado');
-    return role;
+    return this.normalizeRole(role);
   }
 
   private validatePermissions(perms: string[]) {
@@ -73,17 +80,10 @@ export class RolesService {
       }
     }
 
-    if (dto.permissions) {
+    if (role.isSystem && role.name === SYSTEM_ADMIN_ROLE_NAME) {
+      dto.permissions = [...ALL_PERMISSIONS];
+    } else if (dto.permissions) {
       this.validatePermissions(dto.permissions);
-      // O grupo "Administrador" precisa manter todas as permissões para não travar o sistema
-      if (role.isSystem && role.name === SYSTEM_ADMIN_ROLE_NAME) {
-        const missing = ALL_PERMISSIONS.filter((p) => !dto.permissions!.includes(p));
-        if (missing.length > 0) {
-          throw new ForbiddenException(
-            'O grupo Administrador precisa manter todas as permissões.',
-          );
-        }
-      }
     }
 
     if (dto.name && dto.name !== role.name) {
@@ -101,7 +101,7 @@ export class RolesService {
       },
     });
     this.auditLog.logUpdate('Role', id, role as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
-    return updated;
+    return this.normalizeRole(updated);
   }
 
   async remove(id: string, user?: AuditUser) {

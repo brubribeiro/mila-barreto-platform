@@ -12,20 +12,21 @@ import {
 } from '@mui/material';
 import { useMemo } from 'react';
 
-import { ACTIONS, RESOURCES } from '../../contexts/permissions';
+import { ACTIONS, ALL_PERMISSIONS, countCatalogPermissions, RESOURCES } from '../../contexts/permissions';
 import type { Permission } from '../../contexts/permissions';
 
 interface PermissionsMatrixProps {
   value: string[];
   onChange: (next: string[]) => void;
   disabled?: boolean;
+  disableClear?: boolean;
 }
 
 /**
  * Matriz de checkboxes 7 recursos × 4 ações.
  * Permite marcar/desmarcar linha inteira (recurso) e coluna inteira (ação).
  */
-export function PermissionsMatrix({ value, onChange, disabled }: PermissionsMatrixProps) {
+export function PermissionsMatrix({ value, onChange, disabled, disableClear }: PermissionsMatrixProps) {
   const set = useMemo(() => new Set(value), [value]);
 
   const toggle = (perm: Permission) => {
@@ -62,12 +63,12 @@ export function PermissionsMatrix({ value, onChange, disabled }: PermissionsMatr
         <Button size="small" onClick={selectAll} disabled={disabled}>
           Marcar todas
         </Button>
-        <Button size="small" onClick={clearAll} disabled={disabled}>
+        <Button size="small" onClick={clearAll} disabled={disabled || disableClear}>
           Limpar
         </Button>
         <Box sx={{ flex: 1 }} />
         <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
-          {value.length} permissão(ões) selecionada(s)
+          {countCatalogPermissions(value)} de {ALL_PERMISSIONS.length} selecionada(s)
         </Typography>
       </Stack>
 

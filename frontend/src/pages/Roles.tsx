@@ -17,6 +17,7 @@ import { RoleFormDialog } from '../components/roles/RoleFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { usePermissions } from '../contexts/usePermissions';
+import { ALL_PERMISSIONS, countCatalogPermissions } from '../contexts/permissions';
 import type { Role } from '../types';
 
 export function Roles() {
@@ -86,14 +87,17 @@ export function Roles() {
         headerName: 'Permissões',
         flex: 0.6,
         minWidth: 130,
-        renderCell: (params) => (
-          <Chip
-            size="small"
-            label={`${params.row.permissions.length} de 28`}
-            variant="outlined"
-            color="primary"
-          />
-        ),
+        renderCell: (params) => {
+          const selected = countCatalogPermissions(params.row.permissions);
+          return (
+            <Chip
+              size="small"
+              label={`${selected} de ${ALL_PERMISSIONS.length}`}
+              variant="outlined"
+              color="primary"
+            />
+          );
+        },
       },
       {
         field: 'restrictToOwnAppointments',
