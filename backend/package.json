@@ -1,6 +1,6 @@
 {
   "name": "mila-barreto-backend",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "API NestJS para plataforma de gestão de clínica de estética",
   "private": true,
   "scripts": {

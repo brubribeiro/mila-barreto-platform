@@ -159,7 +159,7 @@ export function RoleFormDialog({ open, onClose, role }: RoleFormDialogProps) {
             : {
                 maxWidth: DIALOG_MAX_WIDTH,
                 height: DIALOG_HEIGHT_DESKTOP,
-                maxHeight: '94vh',
+                maxHeight: '94dvh',
                 overflow: 'hidden',
               }),
         },
@@ -211,7 +211,7 @@ export function RoleFormDialog({ open, onClose, role }: RoleFormDialogProps) {
             py: { xs: 2, sm: 2.5 },
             flex: 1,
             minHeight: 0,
-            overflow: isCompact ? 'auto' : 'hidden',
+            overflow: 'auto',
             display: 'flex',
             flexDirection: 'column',
             bgcolor: (t) => t.palette.background.default,
@@ -224,7 +224,6 @@ export function RoleFormDialog({ open, onClose, role }: RoleFormDialogProps) {
               flex: 1,
               minHeight: 0,
               alignItems: 'stretch',
-              ...(isCompact ? {} : { height: '100%' }),
             }}
           >
             <Grid item xs={12} md={4}>

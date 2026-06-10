@@ -691,7 +691,7 @@ function UnavailabilityDialog({
             : {
                 maxWidth: UNAVAIL_DIALOG_MAX_WIDTH,
                 height: UNAVAIL_DIALOG_HEIGHT,
-                maxHeight: '94vh',
+                maxHeight: '94dvh',
                 overflow: 'hidden',
               }),
         },

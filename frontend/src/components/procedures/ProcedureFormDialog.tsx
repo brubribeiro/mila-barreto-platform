@@ -251,7 +251,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
             : {
                 maxWidth: DIALOG_MAX_WIDTH,
                 height: DIALOG_HEIGHT_DESKTOP,
-                maxHeight: '96vh',
+                maxHeight: '96dvh',
               }),
         },
       }}
@@ -294,7 +294,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
           sx={{
             flex: 1,
             minHeight: 0,
-            overflow: isMobile ? 'auto' : 'hidden',
+            overflow: 'auto',
             p: { xs: 2, sm: 3 },
             bgcolor: (t) => alpha(t.palette.primary.main, 0.02),
             display: 'flex',

@@ -40,6 +40,23 @@ export const dialogPaperSx = (isMobile: boolean): SxProps<Theme> => ({
   overflow: 'hidden',
 });
 
+/** Scrollable body for flex-column dialogs on short viewports. */
+export const dialogContentScrollSx: SxProps<Theme> = {
+  flex: 1,
+  minHeight: 0,
+  overflow: 'auto',
+  display: 'flex',
+  flexDirection: 'column',
+};
+
+export const dialogFormLayoutSx = (isMobile: boolean): SxProps<Theme> => ({
+  display: 'flex',
+  flexDirection: 'column',
+  flex: 1,
+  minHeight: 0,
+  ...(isMobile ? { height: '100%' } : {}),
+});
+
 export const dialogActionsBorderSx: SxProps<Theme> = {
   px: { xs: 2, sm: 3 },
   py: { xs: 1.5, sm: 2 },

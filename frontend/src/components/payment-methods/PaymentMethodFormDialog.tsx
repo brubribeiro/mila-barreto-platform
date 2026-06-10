@@ -214,7 +214,7 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
             : {
                 maxWidth: DIALOG_MAX_WIDTH,
                 height: DIALOG_HEIGHT_DESKTOP,
-                maxHeight: '94vh',
+                maxHeight: '94dvh',
                 overflow: 'hidden',
               }),
         },

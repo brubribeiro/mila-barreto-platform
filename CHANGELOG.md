@@ -4,6 +4,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-09
+
+### Fixed
+
+- Logout e redirect de sessão expirada passam a respeitar o base path `/painel`.
+- Modais de formulário com scroll em monitores de altura reduzida (conteúdo não fica mais cortado).
+
 ## [0.1.0] - 2026-06-08
 
 ### Added

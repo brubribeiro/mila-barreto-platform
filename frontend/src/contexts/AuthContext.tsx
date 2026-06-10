@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { api } from '../api/client';
 import type { User } from '../types';
+import { appPath } from '../utils/appPath';
 
 interface AuthContextValue {
   user: User | null;
@@ -73,14 +74,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!adminToken) return;
     localStorage.setItem('access_token', adminToken);
     localStorage.removeItem('admin_token');
-    window.location.href = '/';
+    window.location.href = appPath('/');
   }
 
   function logout() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('admin_token');
     setUser(null);
-    window.location.href = '/login';
+    window.location.href = appPath('/login');
   }
 
   return (

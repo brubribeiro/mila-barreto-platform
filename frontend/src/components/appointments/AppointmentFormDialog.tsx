@@ -1016,7 +1016,7 @@ export function AppointmentFormDialog({
           sx: {
             maxWidth: isMobile ? '100%' : 1280,
             width: '100%',
-            maxHeight: isMobile ? '100%' : '92vh',
+            maxHeight: isMobile ? '100%' : '94dvh',
             borderRadius: isMobile ? 0 : 3,
             overflow: 'hidden',
             display: 'flex',
@@ -1237,7 +1237,7 @@ export function AppointmentFormDialog({
               bgcolor: 'grey.50',
               flex: 1,
               minHeight: 0,
-              overflow: isMobile ? 'auto' : 'hidden',
+              overflow: 'auto',
               display: 'flex',
               flexDirection: 'column',
               '&&': {

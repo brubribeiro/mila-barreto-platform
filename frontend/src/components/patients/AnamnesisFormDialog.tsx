@@ -127,7 +127,7 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
           overflow: 'hidden',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
-            : { height: DIALOG_HEIGHT_DESKTOP, maxHeight: '94vh' }),
+            : { height: DIALOG_HEIGHT_DESKTOP, maxHeight: '94dvh' }),
         },
       }}
     >

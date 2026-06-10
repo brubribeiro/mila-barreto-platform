@@ -163,9 +163,11 @@ export function AuditHistoryDialog({ open, onClose, entity, title }: AuditHistor
         sx: {
           borderRadius: isMobile ? 0 : 3,
           overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
-            : { height: AUDIT_DIALOG_HEIGHT, maxHeight: '94vh' }),
+            : { height: AUDIT_DIALOG_HEIGHT, maxHeight: '94dvh' }),
         },
       }}
     >
@@ -193,7 +195,7 @@ export function AuditHistoryDialog({ open, onClose, entity, title }: AuditHistor
           sx={{
             flex: 1,
             minHeight: 0,
-            overflow: 'hidden',
+            overflow: 'auto',
             p: { xs: 2, sm: 3 },
             bgcolor: (t) => alpha(t.palette.primary.main, 0.02),
             display: 'flex',

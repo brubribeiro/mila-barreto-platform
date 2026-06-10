@@ -390,7 +390,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
             : {
                 maxWidth: DIALOG_MAX_WIDTH,
                 height: DIALOG_HEIGHT_DESKTOP,
-                maxHeight: '96vh',
+                maxHeight: '96dvh',
               }),
         },
       }}
@@ -434,7 +434,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
           sx={{
             flex: 1,
             minHeight: 0,
-            overflow: 'hidden',
+            overflow: 'auto',
             px: { xs: 2, sm: 3 },
             py: { xs: 2, sm: 2.5 },
             bgcolor: (t) => t.palette.background.default,

@@ -231,7 +231,7 @@ function UploadDialog({
           overflow: 'hidden',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
-            : { height: 800, maxHeight: '94vh' }),
+            : { height: 800, maxHeight: '94dvh' }),
         },
       }}
     >
@@ -252,7 +252,7 @@ function UploadDialog({
           sx={{
             flex: 1,
             minHeight: 0,
-            overflow: 'hidden',
+            overflow: 'auto',
             p: 2,
             bgcolor: (t) => alpha(t.palette.primary.main, 0.02),
             display: 'flex',

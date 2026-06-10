@@ -288,7 +288,7 @@ export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps
             : {
                 maxWidth: PACKAGE_DIALOG_MAX_WIDTH,
                 height: PACKAGE_DIALOG_HEIGHT,
-                maxHeight: '94vh',
+                maxHeight: '94dvh',
                 overflow: 'hidden',
               }),
         },
@@ -333,7 +333,7 @@ export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps
             py: { xs: 2, sm: 2.5 },
             flex: 1,
             minHeight: 0,
-            overflow: isCompact ? 'auto' : 'hidden',
+            overflow: 'auto',
             display: 'flex',
             flexDirection: 'column',
             bgcolor: (t) => t.palette.background.default,
@@ -346,7 +346,6 @@ export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps
               flex: 1,
               minHeight: 0,
               alignItems: 'stretch',
-              ...(isCompact ? {} : { height: '100%' }),
             }}
           >
             <Grid item xs={12} md={6}>
