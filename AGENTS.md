@@ -118,4 +118,17 @@ mila-barreto-platform/
 
 ---
 
+## 10. Versionamento
+
+- **Fonte da verdade:** arquivo `VERSION` na raiz (`MAJOR.MINOR.PATCH`).
+- **Sincronizar:** `npm run version:sync` na raiz (atualiza `package.json` do monorepo, frontend e backend).
+- **Changelog:** registrar mudanças em `CHANGELOG.md`.
+- **Quando bumpar:** a partir de agora, avaliar bump SemVer ao entregar funcionalidade, correção relevante ou release; PATCH (bugfix), MINOR (feature), MAJOR (breaking).
+- **UI:** versão exibida no menu lateral e na tela de login (`frontend/src/version.ts`).
+- **API:** `GET /api/health` retorna `{ status, version }`.
+
+Detalhes completos: `.cursor/rules/versioning.mdc`.
+
+---
+
 *Última atualização: junho/2026 — manter este arquivo alinhado quando novas convenções forem adotadas.*

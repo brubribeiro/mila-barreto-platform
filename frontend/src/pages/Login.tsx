@@ -20,6 +20,7 @@ import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
+import { APP_VERSION } from '../version';
 
 const FEATURES = [
   {
@@ -300,7 +301,7 @@ export function Login() {
 
       <Stack spacing={0.5} sx={{ mt: 3, textAlign: 'center' }}>
         <Typography variant="caption" color="text.secondary">
-          © {new Date().getFullYear()} Mila Barreto · Uso interno da clínica
+          © {new Date().getFullYear()} Mila Barreto · Uso interno da clínica · v{APP_VERSION}
         </Typography>
         <Stack direction="row" spacing={1} justifyContent="center">
           <MuiLink component={Link} to="/termos" variant="caption" color="text.secondary">

@@ -1,0 +1,8 @@
+{
+  "name": "mila-barreto-platform",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "version:sync": "node scripts/sync-version.mjs"
+  }
+}

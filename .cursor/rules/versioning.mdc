@@ -1,0 +1,41 @@
+---
+description: Versionamento SemVer da plataforma Mila Barreto
+alwaysApply: true
+---
+
+# Versionamento
+
+## Fonte da verdade
+
+- Arquivo **`VERSION`** na raiz do repositório (`MAJOR.MINOR.PATCH`).
+- **Nunca** manter versões diferentes em `frontend/package.json` e `backend/package.json`.
+
+## Quando atualizar
+
+A partir de agora, **sempre que entregar mudança relevante para release**, avaliar bump de versão:
+
+| Tipo | Quando | Exemplo |
+|------|--------|---------|
+| **PATCH** | correção de bug, ajuste visual pequeno, refactor interno | `0.1.0` → `0.1.1` |
+| **MINOR** | nova funcionalidade compatível, redesign de tela, novo endpoint | `0.1.1` → `0.2.0` |
+| **MAJOR** | breaking change de API, migration destrutiva, mudança incompatível | `0.2.0` → `1.0.0` |
+
+Se o escopo for trivial (typo, comentário, só docs internas), **não** bumpar.
+
+## Passos obrigatórios ao bumpar
+
+1. Editar **`VERSION`** na raiz.
+2. Rodar **`npm run version:sync`** na raiz (atualiza os `package.json`).
+3. Registrar em **`CHANGELOG.md`** (seção `[Unreleased]` ou nova versão datada).
+4. Mencionar a versão no commit quando o usuário pedir commit de release.
+
+## Onde a versão aparece
+
+- Frontend: `__APP_VERSION__` (Vite) → `src/version.ts` → UI (menu lateral, login).
+- Backend: `GET /api/health` → `{ status, version }`.
+
+## Não fazer
+
+- Hardcodar versão em componentes ou controllers.
+- Bumpar só em um `package.json` sem sincronizar.
+- Commitar `frontend/tsconfig.tsbuildinfo`.

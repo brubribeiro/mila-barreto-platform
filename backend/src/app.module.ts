@@ -24,6 +24,7 @@ import { PromotionsModule } from './promotions/promotions.module';
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { AuditLogModule } from './audit-log/audit-log.module';
     SchedulerModule,
     AuditLogModule,
   ],
+  controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

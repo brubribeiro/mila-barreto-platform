@@ -50,6 +50,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Permission } from '../contexts/permissions';
 import { NotificationsBell } from './notifications/NotificationsBell';
+import { APP_VERSION } from '../version';
 
 const DRAWER_WIDTH = 258;
 const DRAWER_COLLAPSED_WIDTH = 68;
@@ -374,6 +375,32 @@ export function Layout() {
             )}
           </Fragment>
         ))}
+      </Box>
+
+      <Box
+        sx={{
+          flexShrink: 0,
+          px: isCollapsed ? 0.5 : 2,
+          py: 1.25,
+          borderTop: '1px solid',
+          borderColor: alpha(theme.palette.divider, 0.85),
+        }}
+      >
+        {isCollapsed ? (
+          <Tooltip title={`Versão ${APP_VERSION}`} placement="right">
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'block', textAlign: 'center', fontSize: '0.62rem', lineHeight: 1.3 }}
+            >
+              v{APP_VERSION}
+            </Typography>
+          </Tooltip>
+        ) : (
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center' }}>
+            Versão {APP_VERSION}
+          </Typography>
+        )}
       </Box>
     </Box>
   );
