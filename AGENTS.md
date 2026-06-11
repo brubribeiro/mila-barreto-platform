@@ -122,8 +122,9 @@ mila-barreto-platform/
 
 - **Fonte da verdade:** arquivo `VERSION` na raiz (`MAJOR.MINOR.PATCH`).
 - **Sincronizar:** `npm run version:sync` na raiz (atualiza `package.json` do monorepo, frontend e backend).
-- **Changelog:** registrar mudanças em `CHANGELOG.md`.
-- **Quando bumpar:** a partir de agora, avaliar bump SemVer ao entregar funcionalidade, correção relevante ou release; PATCH (bugfix), MINOR (feature), MAJOR (breaking).
+- **Changelog:** registrar mudanças técnicas em `CHANGELOG.md`.
+- **Release notes:** registrar mudanças para usuários em `RELEASE_NOTES.md` (português).
+- **Quando bumpar:** a partir de agora, avaliar bump SemVer ao entregar funcionalidade, correção relevante ou release; PATCH (bugfix), MINOR (feature), MAJOR (breaking). Ao commitar release, subir versão e atualizar changelog + release notes no mesmo commit.
 - **UI:** versão exibida no menu lateral e na tela de login (`frontend/src/version.ts`).
 - **API:** `GET /api/health` retorna `{ status, version }`.
 

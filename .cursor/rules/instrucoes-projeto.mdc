@@ -20,6 +20,6 @@ Monorepo: `backend/` (NestJS + Prisma) · `frontend/` (React + Vite + MUI + TanS
 7. **Modais com abas:** altura estável; não quebrar `PatientFormDialog` sem necessidade.
 8. Ler arquivos-alvo e padrões vizinhos **antes** de editar.
 9. Verificar lints nos arquivos alterados ao finalizar.
-10. **Versionamento:** fonte em `VERSION` na raiz; ao bumpar, rodar `npm run version:sync` e atualizar `CHANGELOG.md` (ver `.cursor/rules/versioning.mdc`).
+10. **Versionamento:** fonte em `VERSION` na raiz; ao bumpar, rodar `npm run version:sync`, atualizar `CHANGELOG.md` e `RELEASE_NOTES.md` (ver `.cursor/rules/versioning.mdc`).
 
 Dúvida de arquitetura ou escopo → perguntar ao usuário em vez de inventar.

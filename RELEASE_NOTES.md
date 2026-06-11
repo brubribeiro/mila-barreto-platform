@@ -4,6 +4,24 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ---
 
+## v0.1.3 — 11 jun 2026
+
+### Correções
+
+**Agendamento de procedimentos**
+- Corrigido erro ao agendar atendimentos do tipo **Procedimento** em produção (mensagem genérica “Internal Server Error”). Avaliações e demais tipos já funcionavam; procedimentos com materiais de estoque falhavam na API hospedada no Render.
+- Ao salvar agendamento, erros passam a exibir mensagem clara (ex.: estoque insuficiente, horário indisponível, procedimento inválido), em vez de erro genérico.
+
+**Formulário de agendamento**
+- Validação mais rigorosa antes de enviar (procedimento e profissional válidos).
+- Melhor feedback quando a disponibilidade do profissional ainda está sendo verificada.
+
+### Onde ver a versão
+
+Menu lateral (rodapé) e tela de login exibem **v0.1.3**.
+
+---
+
 ## v0.1.2 — 9 jun 2026
 
 ### Correções
