@@ -47,10 +47,13 @@ describe('AppointmentsService', () => {
         delete: jest.fn().mockResolvedValue(mockAppointment),
       },
       user: {
-        findUnique: jest.fn().mockResolvedValue({ active: true, providesAppointments: true }),
+        findUnique: jest.fn().mockResolvedValue({ id: 'user-1', active: true, providesAppointments: true }),
+      },
+      patient: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'patient-1' }),
       },
       procedure: {
-        findUnique: jest.fn().mockResolvedValue({ recurrenceDays: 0 }),
+        findUnique: jest.fn().mockResolvedValue({ id: 'proc-1', active: true, recurrenceDays: 0 }),
       },
       procedureMaterial: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -188,6 +191,22 @@ describe('AppointmentsService', () => {
 
       expect(prisma.appointment.create).toHaveBeenCalled();
       expect(notifications.notify).toHaveBeenCalled();
+    });
+
+    it('should throw if procedure does not exist', async () => {
+      prisma.patient.findUnique.mockResolvedValue({ id: 'patient-1' });
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      prisma.procedure.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.create({
+          patientId: 'patient-1',
+          procedureId: 'missing-proc',
+          professionalId: 'user-1',
+          startAt: '2025-01-15T10:00:00Z',
+          endAt: '2025-01-15T11:00:00Z',
+        } as any),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

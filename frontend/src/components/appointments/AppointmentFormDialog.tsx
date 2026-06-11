@@ -71,6 +71,7 @@ import {
   formatRecurrenceEarliestLabel,
   isDateBeforeRecurrenceEarliest,
 } from '../../utils/appointmentRecurrence';
+import { getApiErrorMessage } from '../../utils/apiError';
 import type { Appointment, AppointmentKind, AppointmentStatus, PatientPackage, Package, PaymentMethodEntry, Procedure } from '../../types';
 
 function selectValueIfListed(value: string, options: { id: string }[]) {
@@ -331,6 +332,22 @@ export function AppointmentFormDialog({
     () => procedureOptions.find((p) => p.id === selectedProcedureId),
     [procedureOptions, selectedProcedureId],
   );
+
+  useEffect(() => {
+    if (!open) return;
+    if (selectedKind !== 'PROCEDURE') {
+      setValue('procedureId', '');
+      return;
+    }
+    const currentProcedureId = getValues('procedureId');
+    if (
+      currentProcedureId &&
+      !procedureOptions.some((procedure) => procedure.id === currentProcedureId)
+    ) {
+      setValue('procedureId', '');
+    }
+  }, [open, selectedKind, procedureOptions, getValues, setValue]);
+
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
 
   const { data: reliability } = useQuery<PatientReliability>({
@@ -469,7 +486,7 @@ export function AppointmentFormDialog({
   );
   const slotValid = slotStart.isValid() && slotEnd.isValid() && slotEnd.isAfter(slotStart);
 
-  const { data: availableProfessionals = [], isLoading: loadingProfessionals } = useQuery({
+  const { data: availableProfessionals = [], isLoading: loadingProfessionals, isFetching: fetchingProfessionals } = useQuery({
     queryKey: [
       'available-professionals',
       selectedDate,
@@ -485,6 +502,8 @@ export function AppointmentFormDialog({
       ),
     enabled: open && slotValid,
   });
+
+  const checkingAvailability = loadingProfessionals || fetchingProfessionals;
 
   const professionalOptions = useMemo(() => {
     const byId = new Map<string, { id: string; name: string }>();
@@ -535,7 +554,7 @@ export function AppointmentFormDialog({
         setValue('professionalId', '');
         return;
       }
-      if (!slotValid || loadingProfessionals) return;
+      if (!slotValid || checkingAvailability) return;
       if (availableProfessionals.some((p) => p.id === user.id)) {
         setValue('professionalId', user.id);
       } else {
@@ -544,7 +563,7 @@ export function AppointmentFormDialog({
       return;
     }
 
-    if (!slotValid || loadingProfessionals) return;
+    if (!slotValid || checkingAvailability) return;
 
     if (availableProfessionals.length === 0) {
       setValue('professionalId', '');
@@ -563,7 +582,7 @@ export function AppointmentFormDialog({
     restrictToOwnAppointments,
     user,
     slotValid,
-    loadingProfessionals,
+    checkingAvailability,
     availableProfessionals,
     selectedProfessionalId,
     loggedUserCannotBeScheduled,
@@ -573,7 +592,7 @@ export function AppointmentFormDialog({
   const noProfessionalAvailable =
     !appointment &&
     slotValid &&
-    !loadingProfessionals &&
+    !checkingAvailability &&
     !loggedUserCannotBeScheduled &&
     !selectedProfessionalId;
 
@@ -597,7 +616,7 @@ export function AppointmentFormDialog({
 
   const scheduleSlotBlocked =
     slotValid &&
-    !loadingProfessionals &&
+    !checkingAvailability &&
     !!selectedProfessionalId &&
     !availableProfessionals.some((p) => p.id === selectedProfessionalId);
 
@@ -756,24 +775,33 @@ export function AppointmentFormDialog({
   const mutation = useMutation({
     mutationFn: ({ values, paymentMethodId }: { values: FormValues; paymentMethodId?: string }) => {
       const start = dayjs(`${values.date}T${values.startTime}`);
+      if (!start.isValid()) {
+        throw new Error('Data ou horário inválidos.');
+      }
       const duration = selectedProcedure?.durationMinutes ?? 60;
       const end = start.add(duration, 'minute');
+      if (!end.isValid() || !end.isAfter(start)) {
+        throw new Error('Intervalo de horário inválido.');
+      }
 
-      const procedureIdForPayload =
-        values.kind === 'PROCEDURE' ? values.procedureId : undefined;
+      const procedureId =
+        values.kind === 'PROCEDURE' && values.procedureId.trim()
+          ? values.procedureId.trim()
+          : undefined;
+
       const payload: AppointmentPayload = {
         patientId: values.patientId,
-        procedureId: procedureIdForPayload,
         professionalId: values.professionalId,
         startAt: start.toISOString(),
         endAt: end.toISOString(),
         status: appointment ? values.status : 'SCHEDULED',
         kind: values.kind,
-        ...(values.notes ? { notes: values.notes } : {}),
-        ...(values.clinicalNotes ? { clinicalNotes: values.clinicalNotes } : {}),
+        ...(values.notes.trim() ? { notes: values.notes.trim() } : {}),
+        ...(values.clinicalNotes.trim() ? { clinicalNotes: values.clinicalNotes.trim() } : {}),
         ...(paymentMethodId ? { paymentMethodId } : {}),
-        patientPackageId: selectedPackageId || null,
-        extraMaterials: normalizedExtraMaterials,
+        ...(procedureId ? { procedureId } : {}),
+        ...(selectedPackageId ? { patientPackageId: selectedPackageId } : {}),
+        ...(normalizedExtraMaterials.length > 0 ? { extraMaterials: normalizedExtraMaterials } : {}),
       };
       return appointment
         ? appointmentsApi.update(appointment.id, payload)
@@ -832,7 +860,23 @@ export function AppointmentFormDialog({
   };
 
   const onSubmit = (values: FormValues) => {
-    if (!appointmentProviders.some((p) => p.id === values.professionalId)) {
+    if (loggedUserCannotBeScheduled || noProfessionalAvailable || professionalSlotConflict) {
+      return;
+    }
+    if (!values.professionalId || !selectedPerformsAppointments) {
+      void alert({
+        title: 'Profissional inválido',
+        message: 'Selecione um profissional que realiza atendimentos e esteja disponível neste horário.',
+        severity: 'warning',
+      });
+      return;
+    }
+    if (values.kind === 'PROCEDURE' && !selectedProcedure) {
+      void alert({
+        title: 'Procedimento inválido',
+        message: 'Selecione um procedimento válido antes de salvar.',
+        severity: 'warning',
+      });
       return;
     }
 
@@ -996,10 +1040,7 @@ export function AppointmentFormDialog({
       closeReturnDialog();
     },
     onError: (err: unknown) => {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        (err instanceof Error ? err.message : null) ??
-        'Não foi possível agendar o retorno.';
+      const message = getApiErrorMessage(err, 'Não foi possível agendar o retorno.');
       setReturnCreateError(message);
     },
   });
@@ -1245,6 +1286,11 @@ export function AppointmentFormDialog({
               },
             }}
           >
+            {mutation.isError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {getApiErrorMessage(mutation.error, 'Erro ao salvar agendamento')}
+              </Alert>
+            )}
             <Grid container spacing={{ xs: 1.5, sm: 2.5 }} sx={{ flex: 1, minHeight: 0, alignItems: 'stretch' }}>
               <Grid
                 item
@@ -1387,7 +1433,7 @@ export function AppointmentFormDialog({
                           <TextField
                             label="Profissional"
                             value={
-                              loadingProfessionals && slotValid
+                              checkingAvailability && slotValid
                                 ? 'Verificando disponibilidade...'
                                 : (assignedProfessional?.name ?? user?.name ?? '—')
                             }
@@ -1422,7 +1468,7 @@ export function AppointmentFormDialog({
                                 label="Profissional"
                                 fullWidth
                                 required
-                                disabled={!slotValid || (loadingProfessionals && professionalOptions.length === 0)}
+                                disabled={!slotValid || (checkingAvailability && professionalOptions.length === 0)}
                                 error={
                                   !!fieldState.error ||
                                   noProfessionalAvailable ||
@@ -1436,12 +1482,12 @@ export function AppointmentFormDialog({
                                       ? 'Este profissional já possui agendamento neste horário'
                                       : noProfessionalAvailable
                                         ? 'Nenhum profissional disponível neste horário'
-                                        : loadingProfessionals && slotValid && professionalOptions.length === 0
+                                        : checkingAvailability && slotValid && professionalOptions.length === 0
                                           ? 'Verificando disponibilidade...'
                                           : 'Somente profissionais que realizam atendimentos')
                                 }
                               >
-                                {loadingProfessionals && slotValid && professionalOptions.length === 0 ? (
+                                {checkingAvailability && slotValid && professionalOptions.length === 0 ? (
                                   <MenuItem disabled value="">
                                     Verificando disponibilidade...
                                   </MenuItem>
@@ -1948,11 +1994,6 @@ export function AppointmentFormDialog({
                     </Alert>
                   )}
 
-                  {mutation.isError && (
-                    <Alert severity="error">
-                      {(mutation.error as any)?.response?.data?.message ?? 'Erro ao salvar agendamento'}
-                    </Alert>
-                  )}
                 </Stack>
               </Grid>
             </Grid>
@@ -2009,6 +2050,7 @@ export function AppointmentFormDialog({
               fullWidth={isMobile}
               disabled={
                 mutation.isPending ||
+                checkingAvailability ||
                 loggedUserCannotBeScheduled ||
                 noProfessionalAvailable ||
                 professionalSlotConflict ||
@@ -2316,7 +2358,7 @@ export function AppointmentFormDialog({
               } catch (err: any) {
                 await alert({
                   title: 'Erro',
-                  message: err?.response?.data?.message ?? 'Erro ao vincular pacote',
+                  message: getApiErrorMessage(err, 'Erro ao vincular pacote'),
                   severity: 'error',
                 });
               }
@@ -2464,7 +2506,7 @@ export function AppointmentFormDialog({
               } catch (err: any) {
                 await alert({
                   title: 'Erro',
-                  message: err?.response?.data?.message ?? 'Erro ao criar agendamentos em lote',
+                  message: getApiErrorMessage(err, 'Erro ao criar agendamentos em lote'),
                   severity: 'error',
                 });
               } finally {

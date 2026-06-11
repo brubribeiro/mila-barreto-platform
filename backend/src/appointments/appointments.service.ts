@@ -268,7 +268,42 @@ export class AppointmentsService {
     reason: string,
   ) {
     const materials = await tx.procedureMaterial.findMany({ where: { procedureId } });
-    await this.deductMaterialItems(tx, materials, reason);
+    await this.deductMaterialItems(
+      tx,
+      materials.map(({ itemId, quantity }) => ({ itemId, quantity })),
+      reason,
+    );
+  }
+
+  private async assertCreateReferences(dto: CreateAppointmentDto, kind: AppointmentKind) {
+    const patient = await this.prisma.patient.findUnique({
+      where: { id: dto.patientId },
+      select: { id: true },
+    });
+    if (!patient) {
+      throw new BadRequestException('Paciente não encontrado.');
+    }
+
+    const professional = await this.prisma.user.findUnique({
+      where: { id: dto.professionalId },
+      select: { id: true },
+    });
+    if (!professional) {
+      throw new BadRequestException('Profissional não encontrado.');
+    }
+
+    if (!dto.procedureId) return;
+
+    const procedure = await this.prisma.procedure.findUnique({
+      where: { id: dto.procedureId },
+      select: { id: true, active: true },
+    });
+    if (!procedure) {
+      throw new BadRequestException('Procedimento não encontrado.');
+    }
+    if (requiresProcedure(kind) && !procedure.active) {
+      throw new BadRequestException('Procedimento inativo.');
+    }
   }
 
   private async returnMaterials(
@@ -351,6 +386,8 @@ export class AppointmentsService {
       throw new BadRequestException('Procedimento é obrigatório para agendamentos do tipo PROCEDURE.');
     }
 
+    await this.assertCreateReferences(dto, kind);
+
     // Validação de disponibilidade (working hours + indisponibilidade + conflitos)
     await this.checkAvailability(
       dto.professionalId,
@@ -363,6 +400,15 @@ export class AppointmentsService {
 
     if (dto.procedureId) {
       await this.assertRecurrenceInterval(dto.patientId, dto.procedureId, startAt);
+    }
+
+    if (dto.patientPackageId) {
+      const patientPkg = await this.prisma.patientPackage.findFirst({
+        where: { id: dto.patientPackageId, patientId: dto.patientId },
+      });
+      if (!patientPkg) {
+        throw new BadRequestException('Pacote selecionado não pertence a este paciente ou não existe.');
+      }
     }
 
     const appt = await this.prisma.$transaction(async (tx) => {
