@@ -28,6 +28,19 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         status = HttpStatus.NOT_FOUND;
         message = 'Registro não encontrado.';
         break;
+      case 'P2028':
+        status = HttpStatus.SERVICE_UNAVAILABLE;
+        message = 'Banco de dados indisponível no momento. Tente novamente em alguns segundos.';
+        break;
+      case 'P2034':
+        status = HttpStatus.CONFLICT;
+        message = 'Conflito ao salvar. Tente novamente.';
+        break;
+      default:
+        if (process.env.NODE_ENV !== 'production') {
+          message = `${message} (${exception.code}: ${exception.message})`;
+        }
+        break;
     }
 
     response.status(status).json({ statusCode: status, message });
