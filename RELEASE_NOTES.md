@@ -1,0 +1,64 @@
+# Release Notes — Mila Barreto Platform
+
+Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGELOG.md](./CHANGELOG.md).
+
+---
+
+## v0.1.2 — 9 jun 2026
+
+### Correções
+
+**Preferências de notificação**
+- Os toggles na modal de preferências passam a responder na hora ao toque, sem atraso perceptível enquanto a preferência é salva.
+
+### Onde ver a versão
+
+Menu lateral (rodapé) e tela de login exibem **v0.1.2**.
+
+---
+
+## v0.1.1 — 9 jun 2026
+
+Correções de estabilidade no painel web, principalmente após o deploy em `/painel`.
+
+### Correções
+
+**Logout e sessão expirada**
+- Ao sair da conta ou quando a sessão expira, o sistema redireciona corretamente para a tela de login (`/painel/login`), em vez de abrir uma página em branco.
+
+**Modais em monitores menores**
+- Formulários em modal (agendamento, paciente, pacote, procedimento, estoque, financeiro e outros) passam a rolar quando a altura da tela é insuficiente — o conteúdo não fica mais cortado sem barra de scroll.
+
+**Navegação no Vercel**
+- Atualizar a página ou acessar um link direto dentro do painel (ex.: `/painel/agendamentos`) deixa de retornar erro 404; o roteamento client-side funciona após refresh.
+
+### Onde ver a versão
+
+Menu lateral (rodapé) e tela de login exibem **v0.1.1**.
+
+---
+
+## v0.1.0 — 8 jun 2026
+
+Primeira versão versionada da plataforma.
+
+### Novidades
+
+**Versão visível no painel**
+- Número da versão exibido no menu lateral e na tela de login, facilitando suporte e diagnóstico.
+
+**Deploy do painel em `/painel`**
+- Frontend configurado para rodar sob o caminho `/painel`, alinhado ao deploy em produção.
+
+**Infraestrutura**
+- API com endpoint `GET /api/health` retornando status e versão.
+- Configuração de deploy no Render (backend) e suporte a connection pooling do Neon/Prisma.
+
+**Interface — modais padronizadas**
+- Redesign visual compartilhado nos formulários de: agendamento, pacientes, indisponibilidade, pacotes, estoque (item e compra em lote), financeiro, despesas recorrentes, formas de pagamento, promoções, profissionais, perfis de acesso, mensagens, equipamentos e procedimentos.
+
+---
+
+## Próximas versões
+
+Itens em desenvolvimento serão listados aqui antes de cada release. Consulte a seção `[Unreleased]` do [CHANGELOG.md](./CHANGELOG.md) para o registro técnico em andamento.

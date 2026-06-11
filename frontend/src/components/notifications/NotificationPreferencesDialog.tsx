@@ -18,7 +18,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { notificationsApi } from '../../api/notifications';
 import { DialogHeader, dialogPaperSx } from '../DialogCloseButton';
 import { NOTIFICATION_TYPES } from '../../contexts/notificationsLabels';
-import type { NotificationType } from '../../types';
+import type { NotificationPreference, NotificationType } from '../../types';
 
 interface NotificationPreferencesDialogProps {
   open: boolean;
@@ -42,8 +42,26 @@ export function NotificationPreferencesDialog({
   const mutation = useMutation({
     mutationFn: ({ type, enabled }: { type: NotificationType; enabled: boolean }) =>
       notificationsApi.setPreference(type, enabled),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
+    onMutate: async ({ type, enabled }) => {
+      await queryClient.cancelQueries({ queryKey: ['notification-preferences'] });
+      const previous = queryClient.getQueryData<NotificationPreference[]>([
+        'notification-preferences',
+      ]);
+      queryClient.setQueryData<NotificationPreference[]>(
+        ['notification-preferences'],
+        (old = []) => {
+          const exists = old.some((p) => p.type === type);
+          return exists
+            ? old.map((p) => (p.type === type ? { ...p, enabled } : p))
+            : [...old, { type, enabled }];
+        },
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(['notification-preferences'], context.previous);
+      }
     },
   });
 

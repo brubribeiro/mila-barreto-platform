@@ -4,12 +4,23 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-06-09
+
+### Fixed
+
+- Toggle de preferências de notificação responde na hora (atualização otimista, sem esperar a API).
+
+### Added
+
+- Notas de release para usuários em `RELEASE_NOTES.md`.
+
 ## [0.1.1] - 2026-06-09
 
 ### Fixed
 
 - Logout e redirect de sessão expirada passam a respeitar o base path `/painel`.
 - Modais de formulário com scroll em monitores de altura reduzida (conteúdo não fica mais cortado).
+- Rewrites no Vercel para rotas SPA sob `/painel` (refresh e links diretos deixam de retornar 404).
 
 ## [0.1.0] - 2026-06-08
 

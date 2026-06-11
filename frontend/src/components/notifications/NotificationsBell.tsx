@@ -115,6 +115,10 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
               <IconButton
                 size="small"
                 onClick={() => {
+                  void queryClient.prefetchQuery({
+                    queryKey: ['notification-preferences'],
+                    queryFn: () => notificationsApi.getPreferences(),
+                  });
                   setPrefsOpen(true);
                   handleClose();
                 }}
