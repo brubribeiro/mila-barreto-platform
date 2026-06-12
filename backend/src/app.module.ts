@@ -29,7 +29,11 @@ import { AppController } from './app.controller';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      // .env.local (primeiro) sobrescreve .env no desenvolvimento local
+      envFilePath: ['.env.local', '.env'],
+    }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     PrismaModule,
     AuthModule,
