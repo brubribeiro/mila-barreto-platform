@@ -26,6 +26,8 @@ import { useForm, Controller, type Control } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { paymentMethodsApi, CreatePaymentMethodPayload } from '../../api/paymentMethods';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { PaymentMethodEntry } from '../../types';
 
@@ -126,6 +128,7 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
 
   const { control, handleSubmit, reset, watch } = useForm<FormValues>({
     defaultValues: { name: '', feePercent: '', active: true },
@@ -150,7 +153,11 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
     mutationFn: (payload: CreatePaymentMethodPayload) => paymentMethodsApi.create(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
+      toast.success('Forma de pagamento criada.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível criar a forma de pagamento.'));
     },
   });
 
@@ -159,7 +166,11 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
       paymentMethodsApi.update(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
+      toast.success('Forma de pagamento atualizada.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível atualizar a forma de pagamento.'));
     },
   });
 

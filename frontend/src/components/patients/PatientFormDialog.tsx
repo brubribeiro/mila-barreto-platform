@@ -44,6 +44,8 @@ import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { patientsApi, PatientPayload } from '../../api/patients';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { Patient, PatientSex, PatientReferralSource } from '../../types';
 import { isValidCPF, maskCPF, maskCEP, maskPhone, onlyDigits } from '../../utils/masks';
@@ -233,6 +235,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const { control, handleSubmit, reset, watch, setValue, formState } = useForm<FormValues>({
     defaultValues: empty,
   });
@@ -444,7 +447,11 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       queryClient.invalidateQueries({ queryKey: ['patient'] });
+      toast.success(patient ? 'Paciente atualizado.' : 'Paciente criado.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar o paciente.'));
     },
   });
 

@@ -34,6 +34,8 @@ import PlaylistAddCheckOutlinedIcon from '@mui/icons-material/PlaylistAddCheckOu
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { inventoryApi } from '../../api/inventory';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { dateOnlyToApiIso, formatDateOnlyFromApi } from '../../utils/dateOnly';
 import type { InventoryItem } from '../../types';
@@ -257,6 +259,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const { control, handleSubmit, reset } = useForm<FormValues>({ defaultValues });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'lines' });
@@ -338,7 +341,11 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['finance'] });
       queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+      toast.success('Compra registrada.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível registrar a compra.'));
     },
   });
 

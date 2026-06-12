@@ -16,6 +16,8 @@ import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { notificationsApi } from '../../api/notifications';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogPaperSx } from '../DialogCloseButton';
 import { NOTIFICATION_TYPES } from '../../contexts/notificationsLabels';
 import type { NotificationPreference, NotificationType } from '../../types';
@@ -32,6 +34,7 @@ export function NotificationPreferencesDialog({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
 
   const { data: prefs = [], isLoading } = useQuery({
     queryKey: ['notification-preferences'],
@@ -58,10 +61,11 @@ export function NotificationPreferencesDialog({
       );
       return { previous };
     },
-    onError: (_err, _vars, context) => {
+    onError: (err, _vars, context) => {
       if (context?.previous !== undefined) {
         queryClient.setQueryData(['notification-preferences'], context.previous);
       }
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar a preferência.'));
     },
   });
 

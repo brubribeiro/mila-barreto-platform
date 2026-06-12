@@ -29,6 +29,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { usersApi, UserPayload } from '../../api/users';
 import { rolesApi } from '../../api/roles';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { ALL_PERMISSIONS, countCatalogPermissions } from '../../contexts/permissions';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { UserSummary } from '../../types';
@@ -113,6 +115,7 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
 
   const { control, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
     defaultValues: empty,
@@ -165,7 +168,11 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['users', 'appointment-providers'] });
       queryClient.invalidateQueries({ queryKey: ['available-professionals'] });
+      toast.success(user ? 'Profissional atualizado.' : 'Profissional criado.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar o profissional.'));
     },
   });
 

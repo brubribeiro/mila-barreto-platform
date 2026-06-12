@@ -15,6 +15,8 @@ import { proceduresApi } from '../api/procedures';
 import { ProcedureFormDialog } from '../components/procedures/ProcedureFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { useAppToast } from '../contexts/AppToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Procedure } from '../types';
 
@@ -23,6 +25,7 @@ const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' 
 export function Procedures() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
+  const toast = useAppToast();
   const { has, isAdmin } = usePermissions();
   const canCreate = has('procedures:create');
   const canEdit = has('procedures:edit');
@@ -41,7 +44,13 @@ export function Procedures() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => proceduresApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['procedures'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['procedures'] });
+      toast.success('Procedimento excluído.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o procedimento.'));
+    },
   });
 
   const filteredProcedures = useMemo(

@@ -25,6 +25,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { inventoryApi, InventoryItemPayload } from '../../api/inventory';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { InventoryItem } from '../../types';
 
@@ -123,6 +125,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const { control, handleSubmit, reset } = useForm<FormValues>({ defaultValues: empty });
 
   useEffect(() => {
@@ -158,7 +161,11 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      toast.success(item ? 'Item atualizado.' : 'Item criado.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar o item.'));
     },
   });
 

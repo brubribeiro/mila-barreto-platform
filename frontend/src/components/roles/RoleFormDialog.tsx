@@ -28,6 +28,8 @@ import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { rolesApi, RolePayload } from '../../api/roles';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { ALL_PERMISSIONS, countCatalogPermissions, SYSTEM_ADMIN_ROLE_NAME } from '../../contexts/permissions';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { PermissionsMatrix } from './PermissionsMatrix';
@@ -95,6 +97,7 @@ export function RoleFormDialog({ open, onClose, role }: RoleFormDialogProps) {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const { control, handleSubmit, reset } = useForm<FormValues>({ defaultValues: empty });
   const [permissions, setPermissions] = useState<string[]>([]);
 
@@ -137,7 +140,11 @@ export function RoleFormDialog({ open, onClose, role }: RoleFormDialogProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
+      toast.success(role ? 'Grupo atualizado.' : 'Grupo criado.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar o grupo.'));
     },
   });
 

@@ -35,6 +35,8 @@ import { equipmentApi } from '../api/equipment';
 import { EquipmentFormDialog } from '../components/equipment/EquipmentFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { useAppToast } from '../contexts/AppToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Equipment } from '../types';
 
@@ -46,6 +48,7 @@ function formatCurrency(value?: number | null) {
 export function EquipmentPage() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
+  const toast = useAppToast();
   const { has, isAdmin } = usePermissions();
   const canCreate = has('equipment:create');
   const canEdit = has('equipment:edit');
@@ -65,12 +68,24 @@ export function EquipmentPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => equipmentApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['equipment'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      toast.success('Equipamento excluído.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o equipamento.'));
+    },
   });
 
   const maintenanceMutation = useMutation({
     mutationFn: (id: string) => equipmentApi.registerMaintenance(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['equipment'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      toast.success('Manutenção registrada.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível registrar a manutenção.'));
+    },
   });
 
   const isMaintenanceDue = (e: Equipment) => {

@@ -34,6 +34,8 @@ import { messagesApi } from '../api/messages';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { proceduresApi } from '../api/procedures';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { useAppToast } from '../contexts/AppToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { MessageTemplate } from '../types';
 
@@ -72,6 +74,7 @@ function PreviewDialog({
 export function Messages() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
+  const toast = useAppToast();
   const { has, isAdmin } = usePermissions();
   const canCreate = has('messages:create');
   const canEdit = has('messages:edit');
@@ -96,7 +99,13 @@ export function Messages() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => messagesApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['message-templates'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['message-templates'] });
+      toast.success('Template excluído.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o template.'));
+    },
   });
 
   const filteredTemplates = useMemo(

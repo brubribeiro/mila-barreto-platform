@@ -15,12 +15,15 @@ import { paymentMethodsApi } from '../api/paymentMethods';
 import { PaymentMethodFormDialog } from '../components/payment-methods/PaymentMethodFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { useAppToast } from '../contexts/AppToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { PaymentMethodEntry } from '../types';
 
 export function PaymentMethods() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
+  const toast = useAppToast();
   const { has, isAdmin } = usePermissions();
   const canCreate = has('payment-methods:create');
   const canEdit = has('payment-methods:edit');
@@ -38,7 +41,13 @@ export function PaymentMethods() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => paymentMethodsApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['payment-methods'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
+      toast.success('Forma de pagamento excluída.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir a forma de pagamento.'));
+    },
   });
 
   const filteredMethods = useMemo(

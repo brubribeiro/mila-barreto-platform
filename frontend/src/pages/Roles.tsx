@@ -16,13 +16,16 @@ import { rolesApi } from '../api/roles';
 import { RoleFormDialog } from '../components/roles/RoleFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { useAppToast } from '../contexts/AppToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import { ALL_PERMISSIONS, countCatalogPermissions } from '../contexts/permissions';
 import type { Role } from '../types';
 
 export function Roles() {
   const queryClient = useQueryClient();
-  const { confirm, alert } = useAppDialog();
+  const { confirm } = useAppDialog();
+  const toast = useAppToast();
   const { has, isAdmin } = usePermissions();
   const canCreate = has('roles:create');
   const canEdit = has('roles:edit');
@@ -45,13 +48,12 @@ export function Roles() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => rolesApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['roles'] }),
-    onError: (err: any) => {
-      void alert({
-        title: 'Erro',
-        message: err?.response?.data?.message ?? 'Não foi possível excluir o grupo.',
-        severity: 'error',
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      toast.success('Grupo excluído.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o grupo.'));
     },
   });
 

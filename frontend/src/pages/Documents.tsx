@@ -56,6 +56,8 @@ import { documentsApi } from '../api/documents';
 import { patientsApi } from '../api/patients';
 import { equipmentApi } from '../api/equipment';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { useAppToast } from '../contexts/AppToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import { matchFields } from '../utils/listFilters';
 import type { DocumentFile } from '../types';
@@ -177,6 +179,7 @@ function UploadDialog({
   const isImage = file.type.startsWith('image/');
   const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
   const { Icon, color } = documentFileIcon(file.type);
+  const toast = useAppToast();
 
   const { data: patients = [] } = useQuery({
     queryKey: ['patients', ''],
@@ -214,7 +217,11 @@ function UploadDialog({
       }),
     onSuccess: (created) => {
       onDocumentCreated(created);
+      toast.success('Documento enviado.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível enviar o documento.'));
     },
   });
 
@@ -490,6 +497,7 @@ function StatMiniCard({
 export function Documents() {
   const queryClient = useQueryClient();
   const { confirm, alert } = useAppDialog();
+  const toast = useAppToast();
   const { has, isAdmin } = usePermissions();
   const canCreate = has('documents:create');
   const canDelete = has('documents:delete');
@@ -538,7 +546,13 @@ export function Documents() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => documentsApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['documents'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      toast.success('Documento excluído.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o documento.'));
+    },
   });
 
   const stats = useMemo(() => {

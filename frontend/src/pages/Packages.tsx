@@ -15,6 +15,8 @@ import { packagesApi } from '../api/packages';
 import { PackageFormDialog } from '../components/packages/PackageFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { useAppToast } from '../contexts/AppToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Package } from '../types';
 
@@ -23,6 +25,7 @@ const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' 
 export function Packages() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
+  const toast = useAppToast();
   const { has, isAdmin } = usePermissions();
   const canManage = has('packages:edit');
   const [search, setSearch] = useState('');
@@ -39,7 +42,13 @@ export function Packages() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => packagesApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['packages'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['packages'] });
+      toast.success('Pacote excluído.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o pacote.'));
+    },
   });
 
   const filteredPackages = useMemo(

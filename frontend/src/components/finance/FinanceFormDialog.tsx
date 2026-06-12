@@ -30,6 +30,8 @@ import dayjs from 'dayjs';
 
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { financeApi, FinancialEntryPayload } from '../../api/finance';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { dateInputValueFromApi, dateOnlyToApiIso } from '../../utils/dateOnly';
 import { patientsApi } from '../../api/patients';
 import { paymentMethodsApi } from '../../api/paymentMethods';
@@ -143,6 +145,7 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const { control, handleSubmit, reset, watch } = useForm<FormValues>({ defaultValues: empty });
 
   const { data: patients = [] } = useQuery({
@@ -196,7 +199,11 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['finance'] });
       queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+      toast.success(entry ? 'Lançamento atualizado.' : 'Lançamento criado.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar o lançamento.'));
     },
   });
 

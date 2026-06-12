@@ -42,6 +42,8 @@ import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../component
 import { availabilityApi } from '../api/availability';
 import { usersApi } from '../api/users';
 import { useAuth } from '../contexts/AuthContext';
+import { useAppToast } from '../contexts/AppToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { WorkingHours } from '../types';
 
@@ -171,6 +173,7 @@ function formatUnavailabilityPeriod(startAt: string, endAt: string): string {
 
 export function Availability() {
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const { user: me } = useAuth();
   const { has } = usePermissions();
   const canEditOthers = has('availability:edit');
@@ -204,6 +207,10 @@ export function Availability() {
       queryClient.invalidateQueries({ queryKey: ['unavailability', userId] });
       queryClient.invalidateQueries({ queryKey: ['unavailability-range'] });
       queryClient.invalidateQueries({ queryKey: ['available-professionals'] });
+      toast.success('Indisponibilidade removida.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível remover a indisponibilidade.'));
     },
   });
 
@@ -243,6 +250,10 @@ export function Availability() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['working-hours', userId] });
+      toast.success('Horários salvos.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar os horários.'));
     },
   });
 
@@ -563,6 +574,7 @@ function UnavailabilityDialog({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const [allDay, setAllDay] = useState(false);
   const [startAt, setStartAt] = useState(dayjs().format('YYYY-MM-DDTHH:mm'));
   const [endAt, setEndAt] = useState(dayjs().add(1, 'hour').format('YYYY-MM-DDTHH:mm'));
@@ -662,7 +674,11 @@ function UnavailabilityDialog({
       queryClient.invalidateQueries({ queryKey: ['unavailability', userId] });
       queryClient.invalidateQueries({ queryKey: ['unavailability-range'] });
       queryClient.invalidateQueries({ queryKey: ['available-professionals'] });
+      toast.success('Indisponibilidade registrada.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível registrar a indisponibilidade.'));
     },
   });
 

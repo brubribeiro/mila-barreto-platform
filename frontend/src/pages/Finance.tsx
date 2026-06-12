@@ -39,6 +39,8 @@ import { FinanceFormDialog } from '../components/finance/FinanceFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import type { ExpenseType, FinancialEntry } from '../types';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { useAppToast } from '../contexts/AppToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import { downloadCsv } from '../utils/csv';
 
@@ -128,6 +130,7 @@ type InvoiceFilter = 'ALL' | 'PENDING' | 'ISSUED';
 export function Finance() {
   const queryClient = useQueryClient();
   const { confirm, alert } = useAppDialog();
+  const toast = useAppToast();
   const { isAdmin } = usePermissions();
   const [from, setFrom] = useState(dayjs().startOf('month').format('YYYY-MM-DD'));
   const [to, setTo] = useState(dayjs().endOf('month').format('YYYY-MM-DD'));
@@ -218,13 +221,23 @@ export function Finance() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['finance'] });
       queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+      toast.success('Lançamento excluído.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o lançamento.'));
     },
   });
 
   const invoiceMutation = useMutation({
     mutationFn: ({ id, issued }: { id: string; issued: boolean }) =>
       financeApi.setInvoiceIssued(id, issued),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['finance'] }),
+    onSuccess: (_data, { issued }) => {
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
+      toast.success(issued ? 'Nota fiscal marcada como emitida.' : 'Nota fiscal desmarcada.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível atualizar a nota fiscal.'));
+    },
   });
 
   const columns = useMemo<GridColDef<FinancialEntry>[]>(

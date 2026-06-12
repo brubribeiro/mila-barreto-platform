@@ -8,7 +8,6 @@ import {
   Chip,
   IconButton,
   MenuItem,
-  Snackbar,
   Stack,
   Switch,
   TextField,
@@ -34,6 +33,8 @@ import { recurringExpensesApi, type HourlyCostSettings } from '../api/recurring-
 import { RecurringExpenseFormDialog } from '../components/finance/RecurringExpenseFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { useAppToast } from '../contexts/AppToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { RecurringExpense } from '../types';
 
@@ -42,13 +43,13 @@ const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' 
 export function RecurringExpensesPage() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
+  const toast = useAppToast();
   const { isAdmin } = usePermissions();
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'FIXED' | 'VARIABLE'>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RecurringExpense | null>(null);
-  const [snack, setSnack] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: items = [], isLoading } = useQuery({
@@ -89,6 +90,7 @@ export function RecurringExpensesPage() {
       if (context?.previousSettings) {
         queryClient.setQueryData(['recurring-expenses', 'hourly-cost-settings'], context.previousSettings);
       }
+      toast.error('Não foi possível atualizar a configuração de custo/hora.');
     },
     onSuccess: (_data, value) => {
       void queryClient.prefetchQuery({
@@ -103,6 +105,10 @@ export function RecurringExpensesPage() {
     mutationFn: (id: string) => recurringExpensesApi.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recurring-expenses'] });
+      toast.success('Despesa excluída.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir a despesa.'));
     },
   });
 
@@ -112,12 +118,15 @@ export function RecurringExpensesPage() {
       queryClient.invalidateQueries({ queryKey: ['finance'] });
       queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
       if (result.generated === 0) {
-        setSnack('Todos os lançamentos do mês já foram gerados.');
+        toast.info('Todos os lançamentos do mês já foram gerados.');
       } else {
-        setSnack(
+        toast.success(
           `${result.generated} lançamento${result.generated > 1 ? 's' : ''} gerado${result.generated > 1 ? 's' : ''} para ${result.month}.`,
         );
       }
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível gerar os lançamentos.'));
     },
   });
 
@@ -484,12 +493,6 @@ export function RecurringExpensesPage() {
         title="Despesas recorrentes"
       />
 
-      <Snackbar
-        open={!!snack}
-        autoHideDuration={5000}
-        onClose={() => setSnack(null)}
-        message={snack}
-      />
     </Box>
   );
 }

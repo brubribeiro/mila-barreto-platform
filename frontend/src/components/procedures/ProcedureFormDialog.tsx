@@ -35,6 +35,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { proceduresApi, ProcedurePayload } from '../../api/procedures';
 import { inventoryApi } from '../../api/inventory';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader } from '../DialogCloseButton';
 import type { Procedure } from '../../types';
 
@@ -162,6 +164,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isEditing = !!procedure;
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const { control, handleSubmit, reset, watch } = useForm<FormValues>({ defaultValues: empty });
   const { fields, append, remove } = useFieldArray({ control, name: 'materials' });
 
@@ -218,7 +221,11 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['procedures'] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      toast.success(procedure ? 'Procedimento atualizado.' : 'Procedimento criado.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar o procedimento.'));
     },
   });
 

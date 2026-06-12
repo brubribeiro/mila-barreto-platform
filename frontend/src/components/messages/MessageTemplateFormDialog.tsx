@@ -30,6 +30,8 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { messagesApi, MessageTemplatePayload } from '../../api/messages';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { categoryOptions, TEMPLATE_VARIABLES } from './messageTemplateConstants';
 import { WHATSAPP_EMOJI_GROUPS } from './whatsappTemplateEmojis';
@@ -148,6 +150,7 @@ export function MessageTemplateFormDialog({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const { control, handleSubmit, reset, setValue, getValues, watch } = useForm<FormValues>({
     defaultValues: empty,
   });
@@ -188,7 +191,11 @@ export function MessageTemplateFormDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['message-templates'] });
+      toast.success(template ? 'Template atualizado.' : 'Template criado.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar o template.'));
     },
   });
 

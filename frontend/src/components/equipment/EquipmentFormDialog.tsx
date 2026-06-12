@@ -28,6 +28,8 @@ import ToggleOnOutlinedIcon from '@mui/icons-material/ToggleOnOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { equipmentApi, EquipmentPayload } from '../../api/equipment';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { dateInputValueFromApi, dateOnlyToApiIso } from '../../utils/dateOnly';
 import type { Equipment } from '../../types';
@@ -160,6 +162,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const { control, handleSubmit, reset, watch } = useForm<FormValues>({ defaultValues: empty });
   const isActive = watch('active');
 
@@ -216,7 +219,11 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
       queryClient.invalidateQueries({ queryKey: ['finance'] });
+      toast.success(equipment ? 'Equipamento atualizado.' : 'Equipamento criado.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar o equipamento.'));
     },
   });
 

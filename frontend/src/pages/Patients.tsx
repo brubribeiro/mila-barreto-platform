@@ -33,6 +33,8 @@ import { PatientDetailDrawer } from '../components/patients/PatientDetailDrawer'
 import { SendWhatsAppDialog } from '../components/messages/SendWhatsAppDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { useAppToast } from '../contexts/AppToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import { maskPhone } from '../utils/masks';
 import { formatDateOnlyFromApi } from '../utils/dateOnly';
@@ -44,6 +46,7 @@ import type { Patient } from '../types';
 export function Patients() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
+  const toast = useAppToast();
   const { has, isAdmin } = usePermissions();
   const canCreate = has('patients:create');
   const canEdit = has('patients:edit');
@@ -71,7 +74,13 @@ export function Patients() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => patientsApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['patients'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      toast.success('Paciente excluído.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o paciente.'));
+    },
   });
 
   const columns = useMemo<GridColDef<Patient>[]>(

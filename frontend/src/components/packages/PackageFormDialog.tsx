@@ -35,6 +35,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { packagesApi, PackagePayload } from '../../api/packages';
 import { proceduresApi } from '../../api/procedures';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { Package } from '../../types';
 
@@ -175,6 +177,7 @@ export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const { control, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
     defaultValues: empty,
   });
@@ -243,7 +246,11 @@ export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['packages'] });
+      toast.success(pkg ? 'Pacote atualizado.' : 'Pacote criado.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar o pacote.'));
     },
   });
 

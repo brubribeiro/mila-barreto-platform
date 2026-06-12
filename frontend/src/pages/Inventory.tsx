@@ -35,6 +35,8 @@ import { MovementDialog } from '../components/inventory/MovementDialog';
 import { BulkPurchaseDialog } from '../components/inventory/BulkPurchaseDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { useAppToast } from '../contexts/AppToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { InventoryItem } from '../types';
 
@@ -44,6 +46,7 @@ export function Inventory() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { confirm, alert } = useAppDialog();
+  const toast = useAppToast();
   const { has, isAdmin } = usePermissions();
   const canCreate = has('inventory:create');
   const canEdit = has('inventory:edit');
@@ -77,12 +80,12 @@ export function Inventory() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => inventoryApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['inventory'] }),
-    onError: (err: unknown) => {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        'Não foi possível excluir o item.';
-      void alert({ title: 'Erro', message: msg, severity: 'error' });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      toast.success('Item excluído.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o item.'));
     },
   });
 

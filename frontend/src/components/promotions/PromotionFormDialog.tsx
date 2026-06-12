@@ -32,6 +32,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
 import { promotionsApi, CreatePromotionPayload } from '../../api/promotions';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { dateInputValueFromApi, dateOnlyToApiIso } from '../../utils/dateOnly';
 import { proceduresApi } from '../../api/procedures';
@@ -167,6 +169,7 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
 
   const { data: procedures = [] } = useQuery<Procedure[]>({
     queryKey: ['procedures'],
@@ -239,7 +242,11 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
     mutationFn: (payload: CreatePromotionPayload) => promotionsApi.create(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions'] });
+      toast.success('Promoção criada.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível criar a promoção.'));
     },
   });
 
@@ -248,7 +255,11 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
       promotionsApi.update(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions'] });
+      toast.success('Promoção atualizada.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível atualizar a promoção.'));
     },
   });
 

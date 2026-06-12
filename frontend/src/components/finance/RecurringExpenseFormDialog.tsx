@@ -26,6 +26,8 @@ import { useForm, Controller, type Control } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { recurringExpensesApi, RecurringExpensePayload } from '../../api/recurring-expenses';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { ExpenseType, RecurringExpense } from '../../types';
 
@@ -138,6 +140,7 @@ export function RecurringExpenseFormDialog({ open, onClose, expense }: Props) {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const { control, handleSubmit, reset } = useForm<FormValues>({ defaultValues: empty });
 
   useEffect(() => {
@@ -174,7 +177,11 @@ export function RecurringExpenseFormDialog({ open, onClose, expense }: Props) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recurring-expenses'] });
+      toast.success(expense ? 'Despesa atualizada.' : 'Despesa criada.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar a despesa.'));
     },
   });
 

@@ -25,6 +25,8 @@ import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { patientsApi } from '../../api/patients';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx } from '../DialogCloseButton';
 import {
   ANAMNESIS_MULTILINE_KEYS,
@@ -82,6 +84,7 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
 
   const { data: patient, isLoading } = useQuery({
     queryKey: ['patient', patientId],
@@ -106,7 +109,11 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       queryClient.invalidateQueries({ queryKey: ['patient', patientId] });
+      toast.success('Anamnese salva.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar a anamnese.'));
     },
   });
 

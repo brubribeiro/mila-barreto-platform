@@ -19,6 +19,8 @@ import { ProfessionalFormDialog } from '../components/professionals/Professional
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { useAppToast } from '../contexts/AppToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { UserSummary } from '../types';
 
@@ -26,6 +28,7 @@ export function Professionals() {
   const queryClient = useQueryClient();
   const { user: me, impersonate } = useAuth();
   const { confirm } = useAppDialog();
+  const toast = useAppToast();
   const { has, isAdmin } = usePermissions();
   const canCreate = has('users:create');
   const canEdit = has('users:edit');
@@ -63,7 +66,13 @@ export function Professionals() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => usersApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('Profissional excluído.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o profissional.'));
+    },
   });
 
   const columns = useMemo<GridColDef<UserSummary>[]>(

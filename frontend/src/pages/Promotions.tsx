@@ -23,6 +23,8 @@ import { promotionsApi } from '../api/promotions';
 import { PromotionFormDialog } from '../components/promotions/PromotionFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
+import { useAppToast } from '../contexts/AppToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Promotion } from '../types';
 
@@ -31,6 +33,7 @@ const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' 
 export function Promotions() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
+  const toast = useAppToast();
   const { has, isAdmin } = usePermissions();
   const canCreate = has('promotions:create');
   const canEdit = has('promotions:edit');
@@ -60,7 +63,13 @@ export function Promotions() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => promotionsApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['promotions'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['promotions'] });
+      toast.success('Promoção excluída.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir a promoção.'));
+    },
   });
 
   const filteredPromotions = useMemo(

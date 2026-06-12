@@ -19,6 +19,8 @@ import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { inventoryApi, MovementType } from '../../api/inventory';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { dateOnlyToApiIso } from '../../utils/dateOnly';
 import type { InventoryItem } from '../../types';
@@ -45,6 +47,7 @@ export function MovementDialog({ open, onClose, item }: MovementDialogProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const { control, handleSubmit, reset, watch } = useForm<FormValues>({ defaultValues: empty });
 
   useEffect(() => {
@@ -88,7 +91,11 @@ export function MovementDialog({ open, onClose, item }: MovementDialogProps) {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['finance'] });
       queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+      toast.success('Movimentação registrada.');
       onClose();
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível registrar a movimentação.'));
     },
   });
 

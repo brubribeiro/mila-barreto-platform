@@ -21,6 +21,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { financeApi } from '../../api/finance';
+import { useAppToast } from '../../contexts/AppToastContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { usePermissions } from '../../contexts/usePermissions';
 import type { FinancialEntry } from '../../types';
 import { DashboardDetailItem } from './DashboardDetailItem';
@@ -54,6 +56,7 @@ export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardP
   const from = useMemo(() => today.subtract(30, 'day').toISOString(), [today]);
   const to = useMemo(() => today.add(LOOKAHEAD_DAYS, 'day').endOf('day').toISOString(), [today]);
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const { has } = usePermissions();
   const canEdit = has('finance:edit');
 
@@ -77,10 +80,14 @@ export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardP
       );
       return { previousEntries };
     },
-    onError: (_error, _id, context) => {
+    onError: (err, _id, context) => {
       if (context?.previousEntries) {
         queryClient.setQueryData(['finance-upcoming-expenses', from, to], context.previousEntries);
       }
+      toast.error(getApiErrorMessage(err, 'Não foi possível marcar a despesa como paga.'));
+    },
+    onSuccess: () => {
+      toast.success('Despesa marcada como paga.');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['finance-upcoming-expenses'] });
