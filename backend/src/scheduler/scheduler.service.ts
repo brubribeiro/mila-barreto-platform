@@ -8,6 +8,13 @@ import { EquipmentService } from '../equipment/equipment.service';
 /** Intervalo entre execuções das tarefas automáticas (1× por hora). */
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
+/** Intervalo do keep-alive do banco (4.5 min — Neon suspende após 5 min). */
+const KEEP_ALIVE_INTERVAL_MS = 4.5 * 60 * 1000;
+
+/** Horário comercial para manter o banco ativo (7h–21h, horário do servidor). */
+const KEEP_ALIVE_START_HOUR = 7;
+const KEEP_ALIVE_END_HOUR = 21;
+
 /**
  * Serviço de tarefas agendadas. Executa verificações periódicas
  * e dispara notificações automáticas.
@@ -22,6 +29,7 @@ const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SchedulerService.name);
   private intervalRef: ReturnType<typeof setInterval> | null = null;
+  private keepAliveRef: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -36,11 +44,19 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       () => this.runAll().catch((e) => this.logger.error('Scheduler error', e)),
       CHECK_INTERVAL_MS,
     );
-    this.logger.log('Scheduler iniciado — verificações a cada 1h');
+
+    // Keep-alive do banco a cada 4.5 min (apenas horário comercial)
+    this.keepAliveRef = setInterval(
+      () => this.keepAlive().catch((e) => this.logger.error('Keep-alive error', e)),
+      KEEP_ALIVE_INTERVAL_MS,
+    );
+
+    this.logger.log('Scheduler iniciado — verificações a cada 1h, keep-alive a cada 4.5 min (7h–21h)');
   }
 
   onModuleDestroy() {
     if (this.intervalRef) clearInterval(this.intervalRef);
+    if (this.keepAliveRef) clearInterval(this.keepAliveRef);
   }
 
   private async runAll() {
@@ -50,6 +66,15 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       this.checkPatientReturnDue(),
       this.checkPatientReactivation(),
     ]);
+  }
+
+  // ─── 0. Keep-alive do banco (evita cold start do Neon) ───────────
+
+  private async keepAlive() {
+    const hour = new Date().getHours();
+    if (hour < KEEP_ALIVE_START_HOUR || hour >= KEEP_ALIVE_END_HOUR) return;
+
+    await this.prisma.$queryRaw`SELECT 1`;
   }
 
   // ─── 1. Manutenção de equipamentos ───────────────────────────────
