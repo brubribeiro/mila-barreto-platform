@@ -4,6 +4,18 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-06-08
+
+### Fixed
+
+- Modal de agendamento: botão **Salvar** deixa de ficar desabilitado ao selecionar procedimento enquanto a disponibilidade é atualizada em segundo plano.
+- Modal de agendamento: profissional escolhido manualmente não é mais substituído ao alterar data, horário ou procedimento.
+- Verificação de conflito de horário ignora estado obsoleto durante refetch da lista de profissionais disponíveis.
+
+### Changed
+
+- Remoção de comentários redundantes no código (frontend e backend).
+
 ## [0.1.4] - 2026-06-08
 
 ### Added

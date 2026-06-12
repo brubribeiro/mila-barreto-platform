@@ -5,26 +5,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EquipmentService } from '../equipment/equipment.service';
 
-/** Intervalo entre execuções das tarefas automáticas (1× por hora). */
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
-
-/** Intervalo do keep-alive do banco (4.5 min — Neon suspende após 5 min). */
 const KEEP_ALIVE_INTERVAL_MS = 4.5 * 60 * 1000;
-
-/** Horário comercial para manter o banco ativo (7h–21h, horário do servidor). */
 const KEEP_ALIVE_START_HOUR = 7;
 const KEEP_ALIVE_END_HOUR = 21;
 
-/**
- * Serviço de tarefas agendadas. Executa verificações periódicas
- * e dispara notificações automáticas.
- *
- * Tarefas:
- *  1. Manutenção de equipamentos (EQUIPMENT_MAINTENANCE) — já existia, faltava cron
- *  2. Validade de estoque (INVENTORY_EXPIRING) — novo
- *  3. Retorno de paciente (PATIENT_RETURN_DUE) — novo
- *  4. Reativação de paciente (PATIENT_REACTIVATION) — novo
- */
 @Injectable()
 export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SchedulerService.name);
@@ -38,14 +23,12 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit() {
-    // Executa na inicialização e depois a cada hora
     this.runAll().catch((e) => this.logger.error('Scheduler init error', e));
     this.intervalRef = setInterval(
       () => this.runAll().catch((e) => this.logger.error('Scheduler error', e)),
       CHECK_INTERVAL_MS,
     );
 
-    // Keep-alive do banco a cada 4.5 min (apenas horário comercial)
     this.keepAliveRef = setInterval(
       () => this.keepAlive().catch((e) => this.logger.error('Keep-alive error', e)),
       KEEP_ALIVE_INTERVAL_MS,
@@ -68,16 +51,12 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     ]);
   }
 
-  // ─── 0. Keep-alive do banco (evita cold start do Neon) ───────────
-
   private async keepAlive() {
     const hour = new Date().getHours();
     if (hour < KEEP_ALIVE_START_HOUR || hour >= KEEP_ALIVE_END_HOUR) return;
 
     await this.prisma.$queryRaw`SELECT 1`;
   }
-
-  // ─── 1. Manutenção de equipamentos ───────────────────────────────
 
   private async checkEquipmentMaintenance() {
     try {
@@ -86,8 +65,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       this.logger.error('Erro ao verificar manutenção de equipamentos', e);
     }
   }
-
-  // ─── 2. Validade de produtos no estoque ──────────────────────────
 
   private async checkInventoryExpiring() {
     try {
@@ -110,7 +87,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         const diffMs = expiresAt.getTime() - now.getTime();
         const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
-        // Notifica se está dentro da janela de alerta (incluindo já vencidos)
         if (diffDays <= notifyDays) {
           const isExpired = diffDays <= 0;
           const title = isExpired
@@ -121,7 +97,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
             : `${item.name} vence em ${expiresAt.toLocaleDateString('pt-BR')} (${diffDays} dia${diffDays !== 1 ? 's' : ''}).`;
 
           for (const user of recipients) {
-            // Evita duplicar: verifica se já existe notificação nas últimas 24h
             const existing = await this.prisma.notification.findFirst({
               where: {
                 userId: user.id,
@@ -148,12 +123,8 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  // ─── 3. Retorno de paciente (baseado em recurrenceDays) ──────────
-
   private async checkPatientReturnDue() {
     try {
-      // Busca agendamentos concluídos com procedimento que tem recurrenceDays
-      // e que não possuem agendamento futuro para o mesmo paciente+procedimento
       const completedAppts = await this.prisma.appointment.findMany({
         where: {
           status: 'COMPLETED',
@@ -172,7 +143,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       const recipients = await this.notifications.findUsersWithPermission('patients:view');
       if (recipients.length === 0) return;
 
-      // Agrupa por paciente+procedimento, pega o mais recente
       const latestByPatientProc = new Map<string, typeof completedAppts[0]>();
       for (const appt of completedAppts) {
         if (!appt.procedureId || !appt.patientId) continue;
@@ -182,7 +152,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         }
       }
 
-      // Verifica se já existe agendamento futuro para o mesmo par
       for (const [key, appt] of latestByPatientProc) {
         const recDays = appt.procedure?.recurrenceDays;
         if (!recDays) continue;
@@ -190,10 +159,8 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         const dueDate = new Date(appt.startAt);
         dueDate.setDate(dueDate.getDate() + recDays);
 
-        // Só notifica se o retorno já está vencido (dueDate passou)
         if (dueDate.getTime() > now.getTime()) continue;
 
-        // Verifica se já tem agendamento futuro (não cancelado) para esse par
         const futureAppt = await this.prisma.appointment.findFirst({
           where: {
             patientId: appt.patientId,
@@ -208,7 +175,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         const diffDays = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
 
         for (const user of recipients) {
-          // Evita duplicar: verifica se já existe notificação na última semana
           const existing = await this.prisma.notification.findFirst({
             where: {
               userId: user.id,
@@ -238,16 +204,11 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  // ─── 4. Reativação de paciente (sem atendimento há 3+ meses) ────
-
   private async checkPatientReactivation() {
     try {
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-      // Busca pacientes que:
-      // 1. Têm pelo menos 1 agendamento concluído (não são leads)
-      // 2. Não têm nenhum agendamento (qualquer status exceto CANCELLED) nos últimos 3 meses
       const allPatients = await this.prisma.patient.findMany({
         select: { id: true, name: true },
       });
@@ -257,14 +218,12 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       if (recipients.length === 0) return;
 
       for (const patient of allPatients) {
-        // Verifica se tem histórico (pelo menos 1 atendimento concluído)
         const hasHistory = await this.prisma.appointment.findFirst({
           where: { patientId: patient.id, status: 'COMPLETED' },
           select: { id: true },
         });
         if (!hasHistory) continue;
 
-        // Verifica se tem atendimento recente (últimos 3 meses)
         const recentAppt = await this.prisma.appointment.findFirst({
           where: {
             patientId: patient.id,
@@ -275,7 +234,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         });
         if (recentAppt) continue;
 
-        // Pega o último atendimento para calcular há quanto tempo
         const lastAppt = await this.prisma.appointment.findFirst({
           where: {
             patientId: patient.id,
@@ -292,7 +250,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         const monthsSinceLast = Math.floor(daysSinceLast / 30);
 
         for (const user of recipients) {
-          // Evita duplicar: verifica se já existe notificação no último mês
           const existing = await this.prisma.notification.findFirst({
             where: {
               userId: user.id,

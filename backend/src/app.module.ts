@@ -31,7 +31,6 @@ import { AppController } from './app.controller';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      // .env.local (primeiro) sobrescreve .env no desenvolvimento local
       envFilePath: ['.env.local', '.env'],
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),

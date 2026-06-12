@@ -4,6 +4,21 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ---
 
+## v0.1.5 — 8 jun 2026
+
+### Correções
+
+**Formulário de agendamento**
+- O botão **Salvar** deixa de ficar bloqueado ao escolher um procedimento enquanto o sistema ainda atualiza a lista de profissionais disponíveis.
+- Ao selecionar um profissional manualmente, a escolha **não é mais trocada** sozinha quando você preenche data, horário ou outro campo.
+- Mensagem **“Atualizando disponibilidade...”** aparece durante a verificação em segundo plano, sem impedir o envio quando os dados já estão na tela.
+
+### Onde ver a versão
+
+Menu lateral (rodapé) e tela de login exibem **v0.1.5**.
+
+---
+
 ## v0.1.4 — 8 jun 2026
 
 ### Novidades

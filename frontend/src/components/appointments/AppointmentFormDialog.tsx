@@ -47,7 +47,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
-import { useMutation, useQuery, useQueryClient, type Query, type QueryKey } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient, type Query, type QueryKey } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
 import { appointmentsApi, AppointmentPayload } from '../../api/appointments';
@@ -301,6 +301,7 @@ export function AppointmentFormDialog({
     } else {
       const start = defaultStart ?? new Date();
       const isMidnight = start.getHours() === 0 && start.getMinutes() === 0;
+      professionalManuallySelectedRef.current = false;
       reset({
         ...empty,
         date: dayjs(start).format('YYYY-MM-DD'),
@@ -506,7 +507,11 @@ export function AppointmentFormDialog({
   );
   const slotValid = slotStart.isValid() && slotEnd.isValid() && slotEnd.isAfter(slotStart);
 
-  const { data: availableProfessionals = [], isLoading: loadingProfessionals, isFetching: fetchingProfessionals } = useQuery({
+  const {
+    data: availableProfessionals = [],
+    isLoading: loadingProfessionals,
+    isFetching: fetchingProfessionals,
+  } = useQuery({
     queryKey: [
       'available-professionals',
       selectedDate,
@@ -521,9 +526,11 @@ export function AppointmentFormDialog({
         appointment?.id,
       ),
     enabled: open && slotValid,
+    placeholderData: keepPreviousData,
   });
 
-  const checkingAvailability = loadingProfessionals || fetchingProfessionals;
+  const checkingAvailability = loadingProfessionals;
+  const verifyingAvailability = fetchingProfessionals && !loadingProfessionals;
 
   const professionalOptions = useMemo(() => {
     const byId = new Map<string, { id: string; name: string }>();
@@ -574,7 +581,8 @@ export function AppointmentFormDialog({
         setValue('professionalId', '');
         return;
       }
-      if (!slotValid || checkingAvailability) return;
+      if (!slotValid) return;
+      if (fetchingProfessionals && availableProfessionals.length === 0) return;
       if (availableProfessionals.some((p) => p.id === user.id)) {
         setValue('professionalId', user.id);
       } else {
@@ -583,17 +591,27 @@ export function AppointmentFormDialog({
       return;
     }
 
-    if (!slotValid || checkingAvailability) return;
+    if (!slotValid) return;
+    if (fetchingProfessionals && availableProfessionals.length === 0) return;
+
+    if (selectedProfessionalId && (fetchingProfessionals || professionalManuallySelectedRef.current)) {
+      return;
+    }
 
     if (availableProfessionals.length === 0) {
       setValue('professionalId', '');
       return;
     }
 
+    if (!selectedProfessionalId) {
+      setValue('professionalId', availableProfessionals[0].id);
+      return;
+    }
+
     const currentStillAvailable = availableProfessionals.some(
       (p) => p.id === selectedProfessionalId,
     );
-    if (!selectedProfessionalId || !currentStillAvailable) {
+    if (!currentStillAvailable) {
       setValue('professionalId', availableProfessionals[0].id);
     }
   }, [
@@ -602,7 +620,7 @@ export function AppointmentFormDialog({
     restrictToOwnAppointments,
     user,
     slotValid,
-    checkingAvailability,
+    fetchingProfessionals,
     availableProfessionals,
     selectedProfessionalId,
     loggedUserCannotBeScheduled,
@@ -613,6 +631,7 @@ export function AppointmentFormDialog({
     !appointment &&
     slotValid &&
     !checkingAvailability &&
+    !fetchingProfessionals &&
     !loggedUserCannotBeScheduled &&
     !selectedProfessionalId;
 
@@ -636,15 +655,16 @@ export function AppointmentFormDialog({
 
   const scheduleSlotBlocked =
     slotValid &&
-    !checkingAvailability &&
+    !fetchingProfessionals &&
     !!selectedProfessionalId &&
     !availableProfessionals.some((p) => p.id === selectedProfessionalId);
 
   const requiresValidProvider = !appointment || timeOrProfessionalChanged;
 
   const professionalSlotConflict =
-    (scheduleSlotBlocked && timeOrProfessionalChanged) ||
-    (requiresValidProvider && !!selectedProfessionalId && !selectedPerformsAppointments);
+    !fetchingProfessionals &&
+    ((scheduleSlotBlocked && timeOrProfessionalChanged) ||
+      (requiresValidProvider && !!selectedProfessionalId && !selectedPerformsAppointments));
 
   const willDeductMaterials =
     selectedStatus === 'SCHEDULED' ||
@@ -737,6 +757,7 @@ export function AppointmentFormDialog({
 
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const professionalManuallySelectedRef = useRef(false);
 
   const startTimer = useCallback((startedAt: string) => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -1517,7 +1538,10 @@ export function AppointmentFormDialog({
                               <TextField
                                 {...field}
                                 value={selectValueIfListed(field.value, professionalOptions)}
-                                onChange={field.onChange}
+                                onChange={(event) => {
+                                  professionalManuallySelectedRef.current = true;
+                                  field.onChange(event);
+                                }}
                                 select
                                 label="Profissional"
                                 fullWidth
@@ -1536,9 +1560,11 @@ export function AppointmentFormDialog({
                                       ? 'Este profissional já possui agendamento neste horário'
                                       : noProfessionalAvailable
                                         ? 'Nenhum profissional disponível neste horário'
-                                        : checkingAvailability && slotValid && professionalOptions.length === 0
-                                          ? 'Verificando disponibilidade...'
-                                          : 'Somente profissionais que realizam atendimentos')
+                                        : verifyingAvailability && slotValid
+                                          ? 'Atualizando disponibilidade...'
+                                          : checkingAvailability && slotValid && professionalOptions.length === 0
+                                            ? 'Verificando disponibilidade...'
+                                            : 'Somente profissionais que realizam atendimentos')
                                 }
                               >
                                 {checkingAvailability && slotValid && professionalOptions.length === 0 ? (
@@ -2107,7 +2133,7 @@ export function AppointmentFormDialog({
               fullWidth={isMobile}
               disabled={
                 mutation.isPending ||
-                checkingAvailability ||
+                (checkingAvailability && professionalOptions.length === 0) ||
                 loggedUserCannotBeScheduled ||
                 noProfessionalAvailable ||
                 professionalSlotConflict ||

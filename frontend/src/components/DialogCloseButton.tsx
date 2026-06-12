@@ -35,7 +35,6 @@ export const dialogHeaderTitleSx: SxProps<Theme> = {
   flexShrink: 0,
 };
 
-/** Conteúdo textual simples após DialogHeader (MUI zera padding-top por padrão). */
 export const dialogSimpleContentSx: SxProps<Theme> = {
   px: { xs: 2, sm: 3 },
   pb: { xs: 2.5, sm: 3 },

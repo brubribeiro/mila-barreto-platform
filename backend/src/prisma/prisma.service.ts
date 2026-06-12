@@ -13,7 +13,6 @@ function resolveDatabaseUrl(): string | undefined {
   const pooled = process.env.DATABASE_URL?.trim();
   if (!pooled) return undefined;
 
-  // Neon: ep-xxx-pooler.region.aws.neon.tech → ep-xxx.region.aws.neon.tech
   if (pooled.includes('-pooler.')) {
     return pooled.replace('-pooler.', '.');
   }
