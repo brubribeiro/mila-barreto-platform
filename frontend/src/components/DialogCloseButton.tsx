@@ -28,11 +28,20 @@ export const dialogTitleCloseSx: SxProps<Theme> = {
 
 export const dialogHeaderTitleSx: SxProps<Theme> = {
   px: { xs: 2, sm: 3 },
-  pt: { xs: 1.5, sm: 2 },
-  pb: { xs: 1.5, sm: 2 },
+  pt: { xs: 2, sm: 2.5 },
+  pb: { xs: 1.75, sm: 2 },
   borderBottom: 1,
   borderColor: 'divider',
   flexShrink: 0,
+};
+
+/** Conteúdo textual simples após DialogHeader (MUI zera padding-top por padrão). */
+export const dialogSimpleContentSx: SxProps<Theme> = {
+  px: { xs: 2, sm: 3 },
+  pb: { xs: 2.5, sm: 3 },
+  '&.MuiDialogContent-root': {
+    paddingTop: { xs: 2.5, sm: 3 },
+  },
 };
 
 export const dialogPaperSx = (isMobile: boolean): SxProps<Theme> => ({
@@ -91,7 +100,15 @@ export function DialogCloseButton({
   );
 }
 
-export function DialogHeaderIcon({ children }: { children: ReactNode }) {
+export function DialogHeaderIcon({
+  children,
+  tone = 'primary',
+}: {
+  children: ReactNode;
+  tone?: 'primary' | 'error' | 'warning';
+}) {
+  const paletteKey = tone === 'error' ? 'error' : tone === 'warning' ? 'warning' : 'primary';
+
   return (
     <Box
       sx={{
@@ -101,8 +118,8 @@ export function DialogHeaderIcon({ children }: { children: ReactNode }) {
         width: 40,
         height: 40,
         borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
+        bgcolor: (theme) => alpha(theme.palette[paletteKey].main, 0.1),
+        color: `${paletteKey}.main`,
         flexShrink: 0,
       }}
     >
@@ -151,6 +168,7 @@ export function DialogHeader({
                 color="text.secondary"
                 noWrap
                 title={subtitleTitle ?? subtitle}
+                sx={{ mt: 0.25 }}
               >
                 {subtitle}
               </Typography>

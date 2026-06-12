@@ -47,7 +47,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type Query, type QueryKey } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
 import { appointmentsApi, AppointmentPayload } from '../../api/appointments';
@@ -61,6 +61,7 @@ import { packagesApi } from '../../api/packages';
 import { inventoryApi } from '../../api/inventory';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAppDialog } from '../../contexts/AppDialogContext';
+import { useAppToast } from '../../contexts/AppToastContext';
 import { usePermissions } from '../../contexts/usePermissions';
 import { DialogHeader, dialogPaperSx } from '../DialogCloseButton';
 import { SendWhatsAppDialog } from '../messages/SendWhatsAppDialog';
@@ -79,17 +80,35 @@ function selectValueIfListed(value: string, options: { id: string }[]) {
   return options.some((o) => o.id === value) ? value : '';
 }
 
+function isAppointmentListQuery(query: Query) {
+  const root = query.queryKey[0];
+  return root === 'appointments' || root === 'appointments-range' || root === 'appointments-week';
+}
+
 function invalidateAppointmentListQueries(queryClient: ReturnType<typeof useQueryClient>) {
-  queryClient.invalidateQueries({
-    predicate: (q) => {
-      const root = q.queryKey[0];
-      return (
-        root === 'appointments' ||
-        root === 'appointments-range' ||
-        root === 'appointments-week'
-      );
-    },
-  });
+  queryClient.invalidateQueries({ predicate: isAppointmentListQuery });
+}
+
+function snapshotAppointmentLists(queryClient: ReturnType<typeof useQueryClient>) {
+  return queryClient.getQueriesData<Appointment[]>({ predicate: isAppointmentListQuery });
+}
+
+function removeAppointmentFromCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  appointmentId: string,
+) {
+  queryClient.setQueriesData<Appointment[]>({ predicate: isAppointmentListQuery }, (current) =>
+    current?.filter((item) => item.id !== appointmentId),
+  );
+}
+
+function restoreAppointmentLists(
+  queryClient: ReturnType<typeof useQueryClient>,
+  snapshots: [QueryKey, Appointment[] | undefined][],
+) {
+  for (const [key, data] of snapshots) {
+    queryClient.setQueryData(key, data);
+  }
 }
 
 interface ExtraMaterialRow {
@@ -210,6 +229,7 @@ export function AppointmentFormDialog({
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { confirm, alert } = useAppDialog();
+  const toast = useAppToast();
   const { has, restrictToOwnAppointments } = usePermissions();
   const canDelete = has('appointments:delete');
   const canCreate = has('appointments:create');
@@ -682,9 +702,25 @@ export function AppointmentFormDialog({
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => appointmentsApi.remove(id),
-    onSuccess: () => {
-      invalidateAppointmentListQueries(queryClient);
+    onMutate: async (id) => {
       onClose();
+      await queryClient.cancelQueries({ predicate: isAppointmentListQuery });
+      const previous = snapshotAppointmentLists(queryClient);
+      removeAppointmentFromCache(queryClient, id);
+      return { previous };
+    },
+    onSuccess: () => {
+      toast.success('Agendamento excluído.');
+    },
+    onError: (err, _id, context) => {
+      if (context?.previous) {
+        restoreAppointmentLists(queryClient, context.previous);
+      }
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o agendamento.'));
+    },
+    onSettled: () => {
+      invalidateAppointmentListQueries(queryClient);
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
     },
   });
 
@@ -742,6 +778,10 @@ export function AppointmentFormDialog({
       queryClient.invalidateQueries({ queryKey: ['appointment', saved.id] });
       if (saved.startedAt) startTimer(saved.startedAt);
       setValue('status', 'IN_PROGRESS');
+      toast.success('Atendimento iniciado.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível iniciar o atendimento.'));
     },
   });
 
@@ -751,6 +791,10 @@ export function AppointmentFormDialog({
       if (timerRef.current) clearInterval(timerRef.current);
       invalidateAppointmentListQueries(queryClient);
       queryClient.invalidateQueries({ queryKey: ['appointment', saved.id] });
+      toast.success('Atendimento pausado.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível pausar o atendimento.'));
     },
   });
 
@@ -769,6 +813,10 @@ export function AppointmentFormDialog({
       invalidateAppointmentListQueries(queryClient);
       queryClient.invalidateQueries({ queryKey: ['appointment', saved.id] });
       if (saved.startedAt) startTimer(saved.startedAt);
+      toast.success('Atendimento retomado.');
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível retomar o atendimento.'));
     },
   });
 
@@ -815,6 +863,7 @@ export function AppointmentFormDialog({
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['appointment', saved.id] });
       queryClient.invalidateQueries({ queryKey: ['patient', saved.patientId] });
+      toast.success(appointment ? 'Agendamento atualizado.' : 'Agendamento criado.');
       const wasNotCompleted = appointment?.status !== 'COMPLETED';
       const isNowCompleted = saved.status === 'COMPLETED';
       if (
@@ -835,6 +884,9 @@ export function AppointmentFormDialog({
       } else {
         onClose();
       }
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar o agendamento.'));
     },
   });
 
@@ -1038,10 +1090,12 @@ export function AppointmentFormDialog({
     onSuccess: () => {
       invalidateAppointmentListQueries(queryClient);
       closeReturnDialog();
+      toast.success('Retorno agendado.');
     },
     onError: (err: unknown) => {
       const message = getApiErrorMessage(err, 'Não foi possível agendar o retorno.');
       setReturnCreateError(message);
+      toast.error(message);
     },
   });
 
@@ -2018,9 +2072,12 @@ export function AppointmentFormDialog({
                 disabled={deleteMutation.isPending}
                 size={isMobile ? 'small' : 'medium'}
                 onClick={async () => {
+                  const patientName =
+                    selectedPatient?.name ?? appointment.patient?.name ?? 'este paciente';
+                  const when = dayjs(appointment.startAt).format('DD/MM/YYYY [às] HH:mm');
                   const ok = await confirm({
                     title: 'Excluir agendamento',
-                    message: 'Excluir este agendamento?',
+                    message: `Deseja excluir o agendamento de ${patientName} em ${when}?`,
                     confirmLabel: 'Excluir',
                     confirmColor: 'error',
                   });

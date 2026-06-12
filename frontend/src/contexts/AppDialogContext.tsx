@@ -17,16 +17,19 @@ import {
   ListItem,
   ListItemText,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../components/DialogCloseButton';
+import { DialogHeader, dialogActionsBorderSx, dialogPaperSx, dialogSimpleContentSx } from '../components/DialogCloseButton';
 
 const DIALOG_TRANSITION_MS = 180;
 
 export type ConfirmOptions = {
   title?: string;
   message: string;
+  subtitle?: string;
   detailsTitle?: string;
   details?: string[];
   confirmLabel?: string;
@@ -56,6 +59,9 @@ const AppDialogContext = createContext<AppDialogContextValue | null>(null);
 const dialogTransitionProps = { timeout: DIALOG_TRANSITION_MS };
 
 export function AppDialogProvider({ children }: { children: ReactNode }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   const [confirmSession, setConfirmSession] = useState<DialogSession<ConfirmOptions> | null>(
     null,
   );
@@ -111,6 +117,9 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
     alertResolveRef.current = null;
   }, []);
 
+  const confirmOptions = confirmSession?.options;
+  const confirmColor = confirmOptions?.confirmColor ?? 'primary';
+
   return (
     <AppDialogContext.Provider value={{ confirm, alert }}>
       {children}
@@ -129,30 +138,39 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
         TransitionProps={dialogTransitionProps}
         onTransitionExited={finishCloseConfirm}
         BackdropProps={{ transitionDuration: DIALOG_TRANSITION_MS }}
-        PaperProps={{ sx: dialogPaperSx(false) }}
+        PaperProps={{ sx: dialogPaperSx(isMobile) }}
       >
         <DialogHeader
           onClose={() => beginCloseConfirm(false)}
-          title={confirmSession?.options.title ?? 'Confirmar'}
-          subtitle={confirmSession?.options.disableConfirm ? 'Ação bloqueada' : 'Revise antes de continuar'}
+          title={confirmOptions?.title ?? 'Confirmar'}
+          subtitle={
+            confirmOptions?.disableConfirm
+              ? 'Ação bloqueada'
+              : (confirmOptions?.subtitle ?? 'Revise antes de continuar')
+          }
           icon={<HelpOutlineIcon fontSize="small" />}
+          isMobile={isMobile}
         />
-        <DialogContent>
-          <Typography variant="body2">{confirmSession?.options.message}</Typography>
-          {confirmSession?.options.disableConfirm && (
+        <DialogContent sx={dialogSimpleContentSx}>
+          <Typography variant="body2" lineHeight={1.6}>
+            {confirmOptions?.message}
+          </Typography>
+
+          {confirmOptions?.disableConfirm && (
             <Alert severity="warning" sx={{ mt: 1.5 }}>
               Remova os vínculos antes de excluir.
             </Alert>
           )}
-          {confirmSession?.options.details && confirmSession.options.details.length > 0 && (
+
+          {confirmOptions?.details && confirmOptions.details.length > 0 && (
             <Box sx={{ mt: 1.5 }}>
-              {confirmSession.options.detailsTitle && (
+              {confirmOptions?.detailsTitle && (
                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
-                  {confirmSession.options.detailsTitle}
+                  {confirmOptions.detailsTitle}
                 </Typography>
               )}
               <List dense disablePadding sx={{ listStyleType: 'disc', pl: 2.5, m: 0 }}>
-                {confirmSession.options.details.map((line) => (
+                {confirmOptions?.details?.map((line) => (
                   <ListItem key={line} disablePadding sx={{ display: 'list-item', py: 0.25 }}>
                     <ListItemText
                       primary={line}
@@ -164,20 +182,28 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={dialogActionsBorderSx}>
-          <Button type="button" onClick={() => beginCloseConfirm(false)}>
-            {confirmSession?.options.disableConfirm
+        <DialogActions
+          sx={{
+            ...dialogActionsBorderSx,
+            gap: 1,
+            flexWrap: isMobile ? 'wrap' : 'nowrap',
+            '& > button': isMobile ? { flex: '1 1 auto', minWidth: 0 } : undefined,
+          }}
+        >
+          <Button type="button" onClick={() => beginCloseConfirm(false)} fullWidth={isMobile}>
+            {confirmOptions?.disableConfirm
               ? 'Fechar'
-              : (confirmSession?.options.cancelLabel ?? 'Cancelar')}
+              : (confirmOptions?.cancelLabel ?? 'Cancelar')}
           </Button>
-          {!confirmSession?.options.disableConfirm && (
+          {!confirmOptions?.disableConfirm && (
             <Button
               type="button"
               variant="contained"
-              color={confirmSession?.options.confirmColor ?? 'primary'}
+              color={confirmColor}
               onClick={() => beginCloseConfirm(true)}
+              fullWidth={isMobile}
             >
-              {confirmSession?.options.confirmLabel ?? 'Confirmar'}
+              {confirmOptions?.confirmLabel ?? 'Confirmar'}
             </Button>
           )}
         </DialogActions>
@@ -193,25 +219,26 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
         TransitionProps={dialogTransitionProps}
         onTransitionExited={finishCloseAlert}
         BackdropProps={{ transitionDuration: DIALOG_TRANSITION_MS }}
-        PaperProps={{ sx: dialogPaperSx(false) }}
+        PaperProps={{ sx: dialogPaperSx(isMobile) }}
       >
         <DialogHeader
           onClose={beginCloseAlert}
           title={alertSession?.options.title ?? 'Aviso'}
           subtitle="Informação do sistema"
           icon={<InfoOutlinedIcon fontSize="small" />}
+          isMobile={isMobile}
         />
-        <DialogContent>
+        <DialogContent sx={dialogSimpleContentSx}>
           {alertSession?.options.severity ? (
-            <Alert severity={alertSession.options.severity} sx={{ mt: 0.5 }}>
-              {alertSession.options.message}
-            </Alert>
+            <Alert severity={alertSession.options.severity}>{alertSession.options.message}</Alert>
           ) : (
-            <Typography variant="body2">{alertSession?.options.message}</Typography>
+            <Typography variant="body1" lineHeight={1.6}>
+              {alertSession?.options.message}
+            </Typography>
           )}
         </DialogContent>
         <DialogActions sx={dialogActionsBorderSx}>
-          <Button type="button" variant="contained" onClick={beginCloseAlert}>
+          <Button type="button" variant="contained" onClick={beginCloseAlert} fullWidth={isMobile}>
             OK
           </Button>
         </DialogActions>
