@@ -160,7 +160,7 @@ export class InventoryService {
       itemUpdate.costPrice = new Prisma.Decimal(Math.round(unitPrice * 100) / 100);
     }
 
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transactionWithRetry(async (tx) => {
       const movement = await tx.inventoryMovement.create({ data: movementData });
       const updatedItem = await tx.inventoryItem.update({ where: { id: itemId }, data: itemUpdate });
 
@@ -306,7 +306,7 @@ export class InventoryService {
 
     const grandTotal = Math.round((sumProducts + freight) * 100) / 100;
 
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transactionWithRetry(async (tx) => {
       for (const p of prepared) {
         let itemId = p.itemId;
         if (!itemId && p.newItem) {

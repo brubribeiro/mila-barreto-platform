@@ -64,7 +64,7 @@ export class PromotionsService {
     const existing = await this.prisma.promotion.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Promoção não encontrada');
 
-    const updated = await this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transactionWithRetry(async (tx) => {
       // Atualizar vínculos com procedimentos
       if (dto.procedureIds !== undefined) {
         await tx.promotionProcedure.deleteMany({ where: { promotionId: id } });

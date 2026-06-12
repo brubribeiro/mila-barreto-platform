@@ -83,7 +83,7 @@ export class PackagesService {
     const oldData = await this.findOne(id);
     const { items, ...data } = dto;
 
-    const updated = await this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transactionWithRetry(async (tx) => {
       if (items !== undefined) {
         await tx.packageItem.deleteMany({ where: { packageId: id } });
         if (items.length > 0) {
@@ -174,7 +174,7 @@ export class PackagesService {
       expiresAt.setDate(expiresAt.getDate() + pkg.validityDays);
     }
 
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transactionWithRetry(async (tx) => {
       const pp = await tx.patientPackage.create({
         data: {
           patientId: dto.patientId,

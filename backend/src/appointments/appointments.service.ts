@@ -411,7 +411,7 @@ export class AppointmentsService {
       }
     }
 
-    const appt = await this.prisma.$transaction(async (tx) => {
+    const appt = await this.prisma.$transactionWithRetry(async (tx) => {
       await this.availability.assertNoAppointmentConflict(
         dto.professionalId,
         startAt,
@@ -505,7 +505,7 @@ export class AppointmentsService {
       );
     }
 
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transactionWithRetry(async (tx) => {
       const before = await tx.appointment.findUnique({
         where: { id },
         include: { extraMaterials: true },
@@ -834,7 +834,7 @@ export class AppointmentsService {
 
     if (pending.length === 0) return { created: 0 };
 
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transactionWithRetry(async (tx) => {
       for (const appt of pending) {
         if (!appt.procedure) continue;
 
@@ -971,7 +971,7 @@ export class AppointmentsService {
   async remove(id: string, user?: AuditUser) {
     const oldData = await this.prisma.appointment.findUnique({ where: { id } });
 
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transactionWithRetry(async (tx) => {
       const appt = await tx.appointment.findUnique({ where: { id } });
       if (!appt) throw new NotFoundException('Agendamento não encontrado');
 

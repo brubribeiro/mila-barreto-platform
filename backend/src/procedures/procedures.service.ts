@@ -129,7 +129,7 @@ export class ProceduresService {
     const oldProcedure = await this.findOne(id);
     const { materials, ...data } = dto;
 
-    const updated = await this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transactionWithRetry(async (tx) => {
       if (materials !== undefined) {
         await tx.procedureMaterial.deleteMany({ where: { procedureId: id } });
         if (materials.length > 0) {
