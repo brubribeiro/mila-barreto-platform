@@ -4,6 +4,21 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-06-08
+
+### Added
+
+- Sistema global de **toasts** (sucesso, erro, info) no painel; feedback ao salvar, excluir e em ações rápidas em formulários e listagens.
+- Keep-alive do banco em horário comercial (7h–21h) para reduzir cold start do Neon em produção.
+- Templates `.env.local.example` e `.env.production.example` para separar config local (Docker Postgres) de produção.
+
+### Fixed
+
+- Exclusão de agendamento com atualização otimista: modal fecha na hora e evento some do calendário sem esperar o refetch.
+- Modal de confirmação de exclusão: header original, mensagem contextual (paciente e horário) e espaçamento do corpo.
+- Transações Prisma com retry automático em conexões pooled (Neon), reduzindo falhas intermitentes em procedimentos, estoque e pacotes.
+- Backend carrega `.env.local` com prioridade sobre `.env` no desenvolvimento local.
+
 ## [0.1.3] - 2026-06-11
 
 ### Fixed

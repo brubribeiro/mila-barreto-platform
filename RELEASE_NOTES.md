@@ -4,6 +4,26 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ---
 
+## v0.1.4 — 8 jun 2026
+
+### Novidades
+
+**Feedback ao salvar e excluir**
+- O painel passa a exibir **avisos na parte inferior da tela** (toasts) ao concluir ações com sucesso ou quando algo dá errado — em agendamentos, pacientes, estoque, financeiro, procedimentos e demais telas do sistema.
+- Mensagens de erro da API ficam mais visíveis, sem depender só de modais.
+
+### Correções
+
+**Agenda — excluir agendamento**
+- Ao confirmar a exclusão, a modal fecha na hora e o evento **some do calendário imediatamente**, sem aquele atraso entre fechar a janela e o item desaparecer.
+- Modal de confirmação mostra **quem e quando** será excluído (ex.: paciente e horário), em vez de texto genérico repetido.
+
+### Onde ver a versão
+
+Menu lateral (rodapé) e tela de login exibem **v0.1.4**.
+
+---
+
 ## v0.1.3 — 11 jun 2026
 
 ### Correções
