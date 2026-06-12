@@ -9,6 +9,7 @@ import App from './App';
 import { theme } from './theme';
 import { AuthProvider } from './contexts/AuthContext';
 import { AppDialogProvider } from './contexts/AppDialogContext';
+import { AppToastProvider } from './contexts/AppToastContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,7 +28,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <BrowserRouter basename="/painel" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AuthProvider>
               <AppDialogProvider>
-                <App />
+                <AppToastProvider>
+                  <App />
+                </AppToastProvider>
               </AppDialogProvider>
             </AuthProvider>
           </BrowserRouter>
