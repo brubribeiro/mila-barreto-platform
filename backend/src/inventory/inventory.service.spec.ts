@@ -52,6 +52,7 @@ describe('InventoryService', () => {
         // Array transaction
         return fn;
       }),
+      $transactionWithRetry: jest.fn().mockImplementation(async (fn) => fn(prisma)),
     };
 
     notifications = {

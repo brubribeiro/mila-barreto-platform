@@ -50,19 +50,9 @@ export class NotificationsController {
     return { count };
   }
 
-  @Patch(':id/read')
-  markAsRead(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.notifications.markAsRead(id, user.id);
-  }
-
   @Patch('read-all')
   markAllAsRead(@CurrentUser() user: AuthenticatedUser) {
     return this.notifications.markAllAsRead(user.id);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.notifications.remove(id, user.id);
   }
 
   @Get('preferences')
@@ -76,5 +66,15 @@ export class NotificationsController {
     @Body() dto: UpdatePreferenceDto,
   ) {
     return this.notifications.setPreference(user.id, dto.type, dto.enabled);
+  }
+
+  @Patch(':id/read')
+  markAsRead(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.notifications.markAsRead(id, user.id);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.notifications.remove(id, user.id);
   }
 }

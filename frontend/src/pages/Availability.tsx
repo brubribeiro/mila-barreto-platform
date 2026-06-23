@@ -11,6 +11,7 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  CircularProgress,
   Divider,
   FormControlLabel,
   Grid,
@@ -19,6 +20,7 @@ import {
   ListItem,
   ListItemText,
   Paper,
+  Skeleton,
   Stack,
   TextField,
   ToggleButton,
@@ -189,13 +191,13 @@ export function Availability() {
 
   const userId = selectedUserId || me?.id || '';
 
-  const { data: workingHours = [] } = useQuery({
+  const { data: workingHours = [], isLoading: hoursLoading } = useQuery({
     queryKey: ['working-hours', userId],
     queryFn: () => availabilityApi.listWorkingHours(userId),
     enabled: !!userId,
   });
 
-  const { data: unavailability = [] } = useQuery({
+  const { data: unavailability = [], isLoading: unavailLoading } = useQuery({
     queryKey: ['unavailability', userId],
     queryFn: () => availabilityApi.listUnavailability(userId),
     enabled: !!userId,
@@ -346,7 +348,23 @@ export function Availability() {
 
       <Grid container spacing={3}>
         <Grid item xs={12} md={7}>
-          <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
+          <Card sx={{ p: { xs: 1.5, sm: 2 }, position: 'relative' }}>
+              {hoursLoading && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: 'rgba(255,255,255,0.7)',
+                    zIndex: 5,
+                    borderRadius: 'inherit',
+                  }}
+                >
+                  <CircularProgress size={32} />
+                </Box>
+              )}
               <Stack
                 direction={{ xs: 'column', sm: 'row' }}
                 justifyContent="space-between"
@@ -500,7 +518,11 @@ export function Availability() {
                 Indisponibilidades cadastradas
               </Typography>
 
-              {unavailability.length === 0 ? (
+              {unavailLoading ? (
+                <Stack spacing={1} py={1}>
+                  {[1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={48} />)}
+                </Stack>
+              ) : unavailability.length === 0 ? (
                 <Typography variant="body2" color="text.secondary" textAlign="center" py={3}>
                   Nenhuma indisponibilidade cadastrada
                 </Typography>

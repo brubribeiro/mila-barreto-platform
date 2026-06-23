@@ -100,6 +100,28 @@ export class AppointmentsService {
     });
   }
 
+  /**
+   * Retorna agendamentos "pendentes": já passaram (endAt < agora) mas
+   * não estão com status COMPLETED, CANCELLED ou NO_SHOW.
+   */
+  pending(professionalId?: string) {
+    return this.prisma.appointment.findMany({
+      where: {
+        ...(professionalId ? { professionalId } : {}),
+        endAt: { lt: new Date() },
+        status: {
+          in: [
+            AppointmentStatus.SCHEDULED,
+            AppointmentStatus.CONFIRMED,
+            AppointmentStatus.IN_PROGRESS,
+          ],
+        },
+      },
+      include: appointmentRelationsInclude,
+      orderBy: { startAt: 'desc' },
+    });
+  }
+
   async findOne(id: string, user?: AuthenticatedUser) {
     const appt = await this.prisma.appointment.findUnique({
       where: { id },
@@ -486,7 +508,10 @@ export class AppointmentsService {
       await this.checkAvailability(professionalId, startAt, endAt, id);
     }
 
-    const currentForRecurrence = await this.prisma.appointment.findUnique({ where: { id } });
+    const currentForRecurrence = await this.prisma.appointment.findUnique({
+      where: { id },
+      include: appointmentRelationsInclude,
+    });
     if (!currentForRecurrence) throw new NotFoundException('Agendamento não encontrado');
 
     const recurrencePatientId = dto.patientId ?? currentForRecurrence.patientId;
@@ -969,7 +994,10 @@ export class AppointmentsService {
   }
 
   async remove(id: string, user?: AuditUser) {
-    const oldData = await this.prisma.appointment.findUnique({ where: { id } });
+    const oldData = await this.prisma.appointment.findUnique({
+      where: { id },
+      include: appointmentRelationsInclude,
+    });
 
     const result = await this.prisma.$transactionWithRetry(async (tx) => {
       const appt = await tx.appointment.findUnique({ where: { id } });

@@ -24,6 +24,7 @@ import 'dayjs/locale/pt-br';
 
 import { notificationsApi } from '../../api/notifications';
 import { NotificationPreferencesDialog } from './NotificationPreferencesDialog';
+import { useAppToast } from '../../contexts/AppToastContext';
 import type { Notification } from '../../types';
 
 dayjs.extend(relativeTime);
@@ -38,6 +39,7 @@ interface NotificationsBellProps {
 export function NotificationsBell({ iconColor }: NotificationsBellProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const toast = useAppToast();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [prefsOpen, setPrefsOpen] = useState(false);
 
@@ -66,6 +68,10 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
     mutationFn: () => notificationsApi.markAllAsRead(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast.success('Todas as notificações foram marcadas como lidas');
+    },
+    onError: () => {
+      toast.error('Erro ao marcar notificações como lidas');
     },
   });
 

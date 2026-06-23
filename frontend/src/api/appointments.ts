@@ -56,6 +56,10 @@ export const appointmentsApi = {
     const { data } = await api.patch<Appointment>(`/appointments/${id}`, payload);
     return data;
   },
+  pending: async (): Promise<Appointment[]> => {
+    const { data } = await api.get<Appointment[]>('/appointments/pending');
+    return data;
+  },
   remove: async (id: string): Promise<void> => {
     await api.delete(`/appointments/${id}`);
   },

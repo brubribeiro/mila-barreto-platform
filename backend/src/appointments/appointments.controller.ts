@@ -36,6 +36,13 @@ export class AppointmentsController {
   }
 
   @RequirePermissions('appointments:view')
+  @Get('pending')
+  pending(@CurrentUser() user: AuthenticatedUser) {
+    const professionalId = user.restrictToOwnAppointments ? user.id : undefined;
+    return this.appts.pending(professionalId);
+  }
+
+  @RequirePermissions('appointments:view')
   @Get('recurrence-limit')
   getRecurrenceLimit(
     @Query('patientId') patientId: string,

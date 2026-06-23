@@ -8,6 +8,7 @@ import {
   Chip,
   IconButton,
   MenuItem,
+  Skeleton,
   Stack,
   Switch,
   TextField,
@@ -64,7 +65,7 @@ export function RecurringExpensesPage() {
 
   const includeVariable = hourlyCostSettings?.includeVariable ?? false;
 
-  const { data: hourlyCostSummary } = useQuery({
+  const { data: hourlyCostSummary, isLoading: hourlyCostLoading } = useQuery({
     queryKey: ['recurring-expenses', 'hourly-cost-summary', includeVariable],
     queryFn: () => recurringExpensesApi.getHourlyCostSummary(includeVariable),
     enabled: hourlyCostSettings !== undefined,
@@ -349,6 +350,9 @@ export function RecurringExpensesPage() {
         }
       />
 
+      {hourlyCostLoading && !hourlyCostSummary ? (
+        <Skeleton variant="rounded" height={100} sx={{ mb: 3 }} />
+      ) : null}
       {hourlyCostSummary && (
         <Card sx={{ mb: 3 }}>
           <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>

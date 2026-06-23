@@ -8,6 +8,7 @@ import {
   Chip,
   Grid,
   MenuItem,
+  Skeleton,
   Stack,
   TextField,
   Tooltip,
@@ -184,7 +185,7 @@ export function Finance() {
     queryFn: () => financeApi.list(fromIso, toIso),
   });
 
-  const { data: summary } = useQuery({
+  const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['finance-summary', fromIso, toIso],
     queryFn: () => financeApi.summary(fromIso, toIso),
   });
@@ -530,10 +531,14 @@ export function Finance() {
                 </Typography>
                 <TrendingUpIcon sx={{ color: 'success.main' }} />
               </Stack>
-              <Typography variant="h4" fontWeight={700} color="success.main">
-                {brl.format(summary?.totalIncome ?? 0)}
-              </Typography>
-              {summary?.totalFees != null && summary.totalFees > 0 && (
+              {summaryLoading ? (
+                <Skeleton variant="text" width={120} sx={{ fontSize: '2.125rem' }} />
+              ) : (
+                <Typography variant="h4" fontWeight={700} color="success.main">
+                  {brl.format(summary?.totalIncome ?? 0)}
+                </Typography>
+              )}
+              {!summaryLoading && summary?.totalFees != null && summary.totalFees > 0 && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                   Líquido: {brl.format(summary.totalNetIncome ?? 0)} · Taxas: {brl.format(summary.totalFees)}
                 </Typography>
@@ -550,9 +555,13 @@ export function Finance() {
                 </Typography>
                 <TrendingDownIcon sx={{ color: 'error.main' }} />
               </Stack>
-              <Typography variant="h4" fontWeight={700} color="error.main">
-                {brl.format(summary?.totalExpense ?? 0)}
-              </Typography>
+              {summaryLoading ? (
+                <Skeleton variant="text" width={120} sx={{ fontSize: '2.125rem' }} />
+              ) : (
+                <Typography variant="h4" fontWeight={700} color="error.main">
+                  {brl.format(summary?.totalExpense ?? 0)}
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -565,17 +574,23 @@ export function Finance() {
                 </Typography>
                 <ShowChartOutlinedIcon sx={{ color: profit >= 0 ? 'success.main' : 'error.main' }} />
               </Stack>
-              <Typography
-                variant="h4"
-                fontWeight={700}
-                color={profit >= 0 ? 'success.main' : 'error.main'}
-              >
-                {brl.format(profit)}
-              </Typography>
-              {profitMarginPct != null && (
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                  Margem: {profitMarginPct.toFixed(1)}%
-                </Typography>
+              {summaryLoading ? (
+                <Skeleton variant="text" width={120} sx={{ fontSize: '2.125rem' }} />
+              ) : (
+                <>
+                  <Typography
+                    variant="h4"
+                    fontWeight={700}
+                    color={profit >= 0 ? 'success.main' : 'error.main'}
+                  >
+                    {brl.format(profit)}
+                  </Typography>
+                  {profitMarginPct != null && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                      Margem: {profitMarginPct.toFixed(1)}%
+                    </Typography>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>

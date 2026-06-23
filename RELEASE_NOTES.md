@@ -4,6 +4,39 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ---
 
+## v0.1.6 — 9 jun 2026
+
+### Novidades
+
+**Agenda — pendências**
+- Alerta amarelo no topo da agenda quando existem agendamentos **já passados** que ainda não foram concluídos, cancelados ou marcados como falta.
+- Clique em **Ver detalhes** para expandir a lista; toque em um item para abrir o formulário e atualizar o status.
+
+**Anamnese — medidas corporais**
+- Nova seção com **peso** (kg) e **altura** (cm).
+- O **IMC** é calculado automaticamente ao preencher os dois campos, com classificação e cor indicativa.
+- A visualização da anamnese também exibe o IMC quando disponível.
+
+**Carregamento mais suave**
+- Dashboard, financeiro, agenda, indisponibilidades e despesas recorrentes exibem indicadores de carregamento enquanto os dados são buscados, em vez de mostrar valores vazios ou zerados.
+
+**Histórico de alterações**
+- Registros de auditoria passam a mostrar nomes legíveis (ex.: paciente, procedimento) e status em português, em vez de códigos internos.
+
+### Correções
+
+**Paciente**
+- Campos pessoais sem valor (como CPF em branco) deixam de aparecer na ficha.
+
+**Notificações**
+- Feedback ao marcar todas as notificações como lidas.
+
+### Onde ver a versão
+
+Menu lateral (rodapé) e tela de login exibem **v0.1.6**.
+
+---
+
 ## v0.1.5 — 8 jun 2026
 
 ### Correções

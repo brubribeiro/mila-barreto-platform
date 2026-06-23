@@ -4,6 +4,30 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-06-09
+
+### Added
+
+- Agenda: alerta de **pendências** — agendamentos passados ainda sem conclusão, com lista expansível e acesso rápido ao formulário.
+- Endpoint `GET /api/appointments/pending` com filtro por profissional quando aplicável.
+- Anamnese: seção **Medidas corporais** (peso e altura) com cálculo automático de **IMC** e classificação.
+- Estados de carregamento (skeletons/spinner) no dashboard, financeiro, agenda, indisponibilidades e despesas recorrentes.
+- Histórico de auditoria: rótulos em português para enums (status, tipo, canal, etc.) e nomes legíveis de relações (paciente, procedimento, etc.).
+
+### Fixed
+
+- Notificações: rotas `read-all` e `:id/read` reordenadas para evitar conflito de roteamento no NestJS.
+- Ficha do paciente: campos pessoais vazios (ex.: CPF) deixam de aparecer na visualização.
+- Toast de feedback ao marcar todas as notificações como lidas.
+
+### Changed
+
+- Serviços de auditoria passam a incluir relações Prisma ao registrar alterações, exibindo nomes em vez de IDs.
+
+### Security
+
+- Migration habilitando Row-Level Security (RLS) em todas as tabelas do Postgres.
+
 ## [0.1.5] - 2026-06-08
 
 ### Fixed

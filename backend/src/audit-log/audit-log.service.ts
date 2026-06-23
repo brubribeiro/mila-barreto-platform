@@ -146,7 +146,10 @@ export class AuditLogService {
       const newVal = newData[key];
       if (this.isRelationValue(oldVal) || this.isRelationValue(newVal)) continue;
       if (!this.isEqual(oldVal, newVal)) {
-        changes[key] = { old: this.serializeValue(oldVal), new: this.serializeValue(newVal) };
+        changes[key] = {
+          old: this.resolveDisplayName(key, oldData) ?? this.serializeValue(oldVal),
+          new: this.resolveDisplayName(key, newData) ?? this.serializeValue(newVal),
+        };
       }
     }
 
@@ -158,9 +161,23 @@ export class AuditLogService {
     const out: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(data)) {
       if (this.isInternalField(key)) continue;
-      out[key] = this.serializeValue(val);
+      out[key] = this.resolveDisplayName(key, data) ?? this.serializeValue(val);
     }
     return out;
+  }
+
+  /**
+   * Para campos *Id, tenta extrair o nome legível da relação Prisma correspondente.
+   * Ex: patientId → busca data['patient']?.name
+   */
+  private resolveDisplayName(key: string, data: Record<string, unknown>): string | undefined {
+    if (!key.endsWith('Id')) return undefined;
+    const relationKey = key.slice(0, -2); // patientId → patient
+    const relation = data[relationKey];
+    if (relation && typeof relation === 'object' && relation !== null && 'name' in relation) {
+      return (relation as { name: string }).name;
+    }
+    return undefined;
   }
 
   private isInternalField(key: string): boolean {

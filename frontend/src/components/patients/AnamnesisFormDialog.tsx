@@ -10,6 +10,7 @@ import {
   DialogContent,
   FormControl,
   Grid,
+  InputAdornment,
   InputLabel,
   MenuItem,
   Paper,
@@ -21,6 +22,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -31,7 +33,10 @@ import { DialogHeader, dialogActionsBorderSx } from '../DialogCloseButton';
 import {
   ANAMNESIS_MULTILINE_KEYS,
   ANAMNESIS_SECTIONS,
+  calcIMC,
   createEmptyAnamnesis,
+  imcClassificacao,
+  imcColor,
   mergeAnamnesis,
 } from './anamnesisFields';
 
@@ -41,7 +46,7 @@ interface AnamnesisFormDialogProps {
   patientId: string | null;
 }
 
-type FormValues = Record<string, string | boolean>;
+type FormValues = Record<string, string | boolean | number>;
 
 const DIALOG_WIDTH = 920;
 const DIALOG_HEIGHT_DESKTOP = 820;
@@ -92,7 +97,7 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
     enabled: open && !!patientId,
   });
 
-  const { control, handleSubmit, reset } = useForm<FormValues>({
+  const { control, handleSubmit, reset, watch } = useForm<FormValues>({
     defaultValues: createEmptyAnamnesis(),
   });
 
@@ -116,6 +121,10 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
       toast.error(getApiErrorMessage(err, 'Não foi possível salvar a anamnese.'));
     },
   });
+
+  const pesoVal = watch('peso');
+  const alturaVal = watch('altura');
+  const imcVal = calcIMC(pesoVal, alturaVal);
 
   const submit = handleSubmit((values) => mutation.mutate(values));
 
@@ -205,6 +214,39 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
 
                         const gridSm = fieldDef.fullWidth ? 12 : 6;
 
+                        if (fieldDef.type === 'number') {
+                          return (
+                            <Grid item xs={6} sm={4} key={fieldDef.key}>
+                              <Controller
+                                name={fieldDef.key}
+                                control={control}
+                                render={({ field }) => (
+                                  <TextField
+                                    {...field}
+                                    label={fieldDef.label}
+                                    fullWidth
+                                    size="small"
+                                    type="number"
+                                    inputProps={{ step: fieldDef.step ?? 1, min: 0 }}
+                                    InputProps={fieldDef.suffix ? {
+                                      endAdornment: (
+                                        <InputAdornment position="end">{fieldDef.suffix}</InputAdornment>
+                                      ),
+                                    } : undefined}
+                                    placeholder={fieldDef.placeholder}
+                                    sx={FIELD_SX}
+                                    value={field.value === '' || field.value == null ? '' : field.value}
+                                    onChange={(e) => {
+                                      const raw = e.target.value;
+                                      field.onChange(raw === '' ? '' : parseFloat(raw));
+                                    }}
+                                  />
+                                )}
+                              />
+                            </Grid>
+                          );
+                        }
+
                         if (fieldDef.type === 'select') {
                           return (
                             <Grid item xs={12} sm={gridSm} key={fieldDef.key}>
@@ -262,6 +304,32 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
                         );
                       })}
                     </Grid>
+                    {section.title === 'Medidas corporais' && imcVal != null && (
+                      <Box
+                        sx={{
+                          mt: 1.5,
+                          px: 2,
+                          py: 1.5,
+                          borderRadius: 1.5,
+                          bgcolor: 'background.default',
+                          border: 1,
+                          borderColor: 'divider',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.5,
+                        }}
+                      >
+                        <FitnessCenterOutlinedIcon sx={{ fontSize: 20, color: imcColor(imcVal) }} />
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            IMC calculado
+                          </Typography>
+                          <Typography variant="subtitle2" fontWeight={700} sx={{ color: imcColor(imcVal) }}>
+                            {imcVal} — {imcClassificacao(imcVal)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    )}
                   </FieldGroup>
                 ))}
               </Stack>

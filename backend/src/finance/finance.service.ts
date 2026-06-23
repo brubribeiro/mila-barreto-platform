@@ -246,7 +246,10 @@ export class FinanceService {
   }
 
   async update(id: string, dto: UpdateFinancialEntryDto, user?: AuditUser) {
-    const existing = await this.prisma.financialEntry.findUnique({ where: { id } });
+    const existing = await this.prisma.financialEntry.findUnique({
+      where: { id },
+      include: { paymentMethod: true, patient: true, equipment: true, recurringExpense: true },
+    });
     if (!existing) throw new NotFoundException('Lançamento não encontrado');
 
     const amount = dto.amount ?? Number(existing.amount);
@@ -286,7 +289,10 @@ export class FinanceService {
   }
 
   async markPaid(id: string, paid: boolean, user?: AuditUser) {
-    const existing = await this.prisma.financialEntry.findUnique({ where: { id } });
+    const existing = await this.prisma.financialEntry.findUnique({
+      where: { id },
+      include: { paymentMethod: true, patient: true },
+    });
     if (!existing) throw new NotFoundException('Lançamento não encontrado');
     const updated = await this.prisma.financialEntry.update({
       where: { id },
@@ -298,7 +304,10 @@ export class FinanceService {
   }
 
   async remove(id: string, user?: AuditUser) {
-    const existing = await this.prisma.financialEntry.findUnique({ where: { id } });
+    const existing = await this.prisma.financialEntry.findUnique({
+      where: { id },
+      include: { paymentMethod: true, patient: true, equipment: true, recurringExpense: true },
+    });
     await this.prisma.financialEntry.delete({ where: { id } });
     if (existing) this.auditLog.logDelete('FinancialEntry', id, existing as unknown as Record<string, unknown>, user).catch(() => undefined);
     return { ok: true };

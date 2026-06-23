@@ -6,10 +6,12 @@ import {
   Card,
   CardContent,
   Chip,
+  CircularProgress,
   IconButton,
   Menu,
   MenuItem,
   Paper,
+  Skeleton,
   Stack,
   TextField,
   ToggleButton,
@@ -136,9 +138,10 @@ interface SummaryCardProps {
   icon: React.ReactNode;
   color?: string;
   to?: string;
+  loading?: boolean;
 }
 
-function SummaryCard({ label, value, hint, icon, color = 'primary.main', to }: SummaryCardProps) {
+function SummaryCard({ label, value, hint, icon, color = 'primary.main', to, loading }: SummaryCardProps) {
   const card = (
     <Card
       sx={{
@@ -160,10 +163,14 @@ function SummaryCard({ label, value, hint, icon, color = 'primary.main', to }: S
           </Typography>
           <Box sx={{ color, display: 'flex', flexShrink: 0, '& .MuiSvgIcon-root': { fontSize: { xs: 20, sm: 24 } } }}>{icon}</Box>
         </Stack>
-        <Typography variant="h5" fontWeight={700} sx={{ lineHeight: 1.2, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
-          {value}
-        </Typography>
-        {hint && (
+        {loading ? (
+          <Skeleton variant="text" width={80} sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' } }} />
+        ) : (
+          <Typography variant="h5" fontWeight={700} sx={{ lineHeight: 1.2, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
+            {value}
+          </Typography>
+        )}
+        {hint && !loading && (
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
             {hint}
           </Typography>
@@ -226,7 +233,7 @@ export function Dashboard() {
     };
   }, [mode, selectedYear, selectedMonth, customFrom, customTo]);
 
-  const { data: summary } = useQuery({
+  const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['finance-summary', from, to],
     queryFn: async () => {
       const { data } = await api.get('/finance/summary', { params: { from, to } });
@@ -235,7 +242,7 @@ export function Dashboard() {
     enabled: canSeeFinance,
   });
 
-  const { data: appointments } = useQuery({
+  const { data: appointments, isLoading: appointmentsLoading } = useQuery({
     queryKey: ['appointments-range', from, to],
     queryFn: async () => {
       const { data } = await api.get('/appointments', { params: { from, to } });
@@ -268,7 +275,7 @@ export function Dashboard() {
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [upcomingThisWeek]);
 
-  const { data: patients = [] } = useQuery({
+  const { data: patients = [], isLoading: patientsLoading } = useQuery({
     queryKey: ['patients', 'dashboard'],
     queryFn: () => patientsApi.list(),
   });
@@ -286,7 +293,7 @@ export function Dashboard() {
     });
   }, [patients, from, to]);
 
-  const { data: inventory } = useQuery({
+  const { data: inventory, isLoading: inventoryLoading } = useQuery({
     queryKey: ['inventory-low'],
     queryFn: async () => {
       const { data } = await api.get('/inventory');
@@ -619,6 +626,7 @@ export function Dashboard() {
           hint="No período selecionado"
           icon={<EventIcon />}
           to={canSeeAgenda ? '/agenda' : undefined}
+          loading={appointmentsLoading}
         />
         <SummaryCard
           label="Pacientes cadastrados"
@@ -626,6 +634,7 @@ export function Dashboard() {
           hint="No período selecionado"
           icon={<PeopleIcon />}
           to={canSeePatients ? '/pacientes' : undefined}
+          loading={patientsLoading}
         />
         {canSeeFinance ? (
           <SummaryCard
@@ -641,6 +650,7 @@ export function Dashboard() {
             icon={<AttachMoneyIcon />}
             color="success.main"
             to="/financeiro"
+            loading={summaryLoading}
           />
         ) : (
           <SummaryCard
@@ -650,6 +660,7 @@ export function Dashboard() {
             icon={<WarningAmberIcon />}
             color="warning.main"
             to={canSeeInventory ? '/estoque' : undefined}
+            loading={inventoryLoading}
           />
         )}
         {canSeeFinance ? (
@@ -660,6 +671,7 @@ export function Dashboard() {
             icon={<WarningAmberIcon />}
             color="warning.main"
             to={canSeeInventory ? '/estoque' : undefined}
+            loading={inventoryLoading}
           />
         ) : (
           <SummaryCard
@@ -668,6 +680,7 @@ export function Dashboard() {
             hint="Nesta semana"
             icon={<CalendarMonthOutlinedIcon />}
             to={canSeeAgenda ? '/agenda' : undefined}
+            loading={weekLoading}
           />
         )}
       </AppGrid>
@@ -737,7 +750,11 @@ export function Dashboard() {
                 </Stack>
 
                 <Box sx={detailCardScrollSx}>
-                  {upcomingBirthdays.length === 0 ? (
+                  {patientsLoading ? (
+                    <Stack spacing={1.5}>
+                      {[1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={52} />)}
+                    </Stack>
+                  ) : upcomingBirthdays.length === 0 ? (
                     <DashboardEmptyState message="Nenhum aniversário neste período." />
                   ) : (
                     <Stack spacing={1.5}>

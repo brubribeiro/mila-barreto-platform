@@ -47,7 +47,13 @@ export class DocumentsService {
   }
 
   async findOne(id: string) {
-    const d = await this.prisma.document.findUnique({ where: { id } });
+    const d = await this.prisma.document.findUnique({
+      where: { id },
+      include: {
+        patient: { select: { id: true, name: true } },
+        equipment: { select: { id: true, name: true } },
+      },
+    });
     if (!d) throw new NotFoundException('Documento não encontrado');
     return d;
   }

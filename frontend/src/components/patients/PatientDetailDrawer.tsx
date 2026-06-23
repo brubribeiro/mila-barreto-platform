@@ -659,28 +659,17 @@ export function PatientDetailDrawer({
 
             <SectionCard title="Dados pessoais" icon={<BadgeOutlinedIcon sx={{ fontSize: 18 }} />}>
               <Stack divider={<Box sx={{ borderBottom: 1, borderColor: 'divider' }} />}>
-                <InfoRow
-                  label="Nascimento"
-                  value={
-                    data.birthDate
-                      ? `${formatDateOnlyFromApi(data.birthDate)}${ageLabel ? ` (${ageLabel})` : ''}`
-                      : null
-                  }
-                />
-                <InfoRow label="Sexo" value={data.sex ? patientSexLabel(data.sex) : null} />
-                <InfoRow
-                  label="Como conheceu"
-                  value={
-                    data.referralSource
-                      ? patientReferralSourceLabel(data.referralSource, data.referralSourceOther)
-                      : null
-                  }
-                />
-                <InfoRow label="CPF" value={data.document} />
-                <InfoRow
-                  label="Cadastro"
-                  value={data.createdAt ? dayjs(data.createdAt).format('DD/MM/YYYY') : null}
-                />
+                {([
+                  { label: 'Nascimento', value: data.birthDate ? `${formatDateOnlyFromApi(data.birthDate)}${ageLabel ? ` (${ageLabel})` : ''}` : null },
+                  { label: 'Sexo', value: data.sex ? patientSexLabel(data.sex) : null },
+                  { label: 'Como conheceu', value: data.referralSource ? patientReferralSourceLabel(data.referralSource, data.referralSourceOther) : null },
+                  { label: 'CPF', value: data.document || null },
+                  { label: 'Cadastro', value: data.createdAt ? dayjs(data.createdAt).format('DD/MM/YYYY') : null },
+                ] as { label: string; value: ReactNode }[])
+                  .filter((r) => r.value != null && r.value !== '' && r.value !== '—')
+                  .map((r) => (
+                    <InfoRow key={r.label} label={r.label} value={r.value} />
+                  ))}
               </Stack>
             </SectionCard>
 

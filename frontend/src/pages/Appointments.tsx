@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Box, Button, Card, Checkbox, Chip, FormControl, InputLabel, ListItemText, MenuItem, OutlinedInput, Select, Stack, useMediaQuery, useTheme } from '@mui/material';
+import { Alert, Box, Button, Card, Checkbox, Chip, CircularProgress, Collapse, FormControl, InputLabel, ListItemText, MenuItem, OutlinedInput, Select, Skeleton, Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import HistoryIcon from '@mui/icons-material/History';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -42,6 +43,15 @@ const kindLabel: Record<string, string> = {
   RETURN: 'RET',
 };
 
+const statusLabel: Record<string, string> = {
+  SCHEDULED: 'Agendado',
+  CONFIRMED: 'Confirmado',
+  IN_PROGRESS: 'Em andamento',
+  COMPLETED: 'Concluído',
+  CANCELLED: 'Cancelado',
+  NO_SHOW: 'Faltou',
+};
+
 export function Appointments() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -64,7 +74,7 @@ export function Appointments() {
     return { from: from.toISOString(), to: to.toISOString() };
   });
 
-  const { data: appointments = [] } = useQuery({
+  const { data: appointments = [], isLoading: appointmentsLoading } = useQuery({
     queryKey: ['appointments', 'range', range.from, range.to],
     queryFn: () => appointmentsApi.list(range.from, range.to),
   });
@@ -74,6 +84,14 @@ export function Appointments() {
     queryFn: () => usersApi.listAppointmentProviders(),
     enabled: !restrictToOwnAppointments,
   });
+
+  const { data: pendingAppointments = [] } = useQuery({
+    queryKey: ['appointments', 'pending'],
+    queryFn: () => appointmentsApi.pending(),
+    refetchInterval: 5 * 60_000,
+  });
+
+  const [pendingExpanded, setPendingExpanded] = useState(false);
 
   const unavailabilityUserIds = useMemo(() => {
     if (restrictToOwnAppointments) {
@@ -312,6 +330,68 @@ export function Appointments() {
         }
       />
 
+      {pendingAppointments.length > 0 && (
+        <Alert
+          severity="warning"
+          icon={<WarningAmberIcon />}
+          sx={{ mb: 1.5, cursor: 'pointer', '& .MuiAlert-message': { width: '100%' } }}
+          onClick={() => setPendingExpanded((v) => !v)}
+        >
+          <Stack direction="row" justifyContent="space-between" alignItems="center" width="100%">
+            <Typography variant="body2" fontWeight={600}>
+              {pendingAppointments.length} pendência{pendingAppointments.length > 1 ? 's' : ''} — agendamentos passados sem conclusão
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {pendingExpanded ? 'Recolher' : 'Ver detalhes'}
+            </Typography>
+          </Stack>
+          <Collapse in={pendingExpanded}>
+            <Stack spacing={0.5} mt={1}>
+              {pendingAppointments.map((a) => (
+                <Stack
+                  key={a.id}
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{
+                    p: 1,
+                    borderRadius: 1,
+                    bgcolor: 'rgba(255,255,255,0.7)',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.95)' },
+                    cursor: 'pointer',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditing(a);
+                    setDefaultStart(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  <Typography variant="body2">
+                    {a.patient?.name ?? 'Paciente'} · {a.procedure?.name ?? kindLabel[a.kind] ?? a.kind}
+                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip
+                      label={statusLabel[a.status] ?? a.status}
+                      size="small"
+                      sx={{
+                        bgcolor: statusColors[a.status]?.bg,
+                        color: statusColors[a.status]?.text,
+                        fontWeight: 600,
+                        fontSize: '0.7rem',
+                      }}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      {new Date(a.endAt).toLocaleDateString('pt-BR')}
+                    </Typography>
+                  </Stack>
+                </Stack>
+              ))}
+            </Stack>
+          </Collapse>
+        </Alert>
+      )}
+
       <Card
         tabIndex={0}
         role="region"
@@ -322,6 +402,7 @@ export function Appointments() {
           p: { xs: 0.75, sm: 1.5, md: 2.5 },
           minHeight: 0,
           outline: 'none',
+          position: 'relative',
           '&:focus-visible': {
             boxShadow: `0 0 0 2px ${theme.palette.primary.main}`,
           },
@@ -458,6 +539,22 @@ export function Appointments() {
           },
         }}
       >
+        {appointmentsLoading && (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'rgba(255,255,255,0.7)',
+              zIndex: 10,
+              borderRadius: 'inherit',
+            }}
+          >
+            <CircularProgress size={36} />
+          </Box>
+        )}
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}

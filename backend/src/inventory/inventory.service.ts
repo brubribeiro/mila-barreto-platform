@@ -161,7 +161,10 @@ export class InventoryService {
     }
 
     const result = await this.prisma.$transactionWithRetry(async (tx) => {
-      const movement = await tx.inventoryMovement.create({ data: movementData });
+      const movement = await tx.inventoryMovement.create({
+        data: movementData,
+        include: { item: { select: { id: true, name: true } } },
+      });
       const updatedItem = await tx.inventoryItem.update({ where: { id: itemId }, data: itemUpdate });
 
       // Entrada de estoque gera despesa no financeiro

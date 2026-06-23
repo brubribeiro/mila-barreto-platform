@@ -1,12 +1,15 @@
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import StraightenOutlinedIcon from '@mui/icons-material/StraightenOutlined';
 import { Box, Grid, Paper, Stack, Typography, alpha } from '@mui/material';
 import type { ReactNode } from 'react';
 
-import { ANAMNESIS_SECTIONS, hasAnamnesisData } from './anamnesisFields';
+import { ANAMNESIS_SECTIONS, calcIMC, hasAnamnesisData, imcClassificacao, imcColor } from './anamnesisFields';
 
 const SECTION_ICONS: Record<string, ReactNode> = {
+  'Medidas corporais': <StraightenOutlinedIcon sx={{ fontSize: 18 }} />,
   'Saúde geral': <AssignmentOutlinedIcon sx={{ fontSize: 18 }} />,
   'Pele e estética': <PersonOutlineIcon sx={{ fontSize: 18 }} />,
   'Queixas e expectativas': <DescriptionOutlinedIcon sx={{ fontSize: 18 }} />,
@@ -126,9 +129,12 @@ function hasAnamnesisValue(value: unknown) {
   return value !== '' && value !== false && value != null;
 }
 
-function formatAnamnesisValue(type: string | undefined, value: unknown) {
+function formatAnamnesisValue(type: string | undefined, value: unknown, fieldDef?: { suffix?: string }) {
   if (type === 'boolean') {
     return value ? 'Sim' : 'Não';
+  }
+  if (type === 'number' && fieldDef?.suffix) {
+    return `${value} ${fieldDef.suffix}`;
   }
   return String(value);
 }
@@ -151,6 +157,9 @@ export function AnamnesisView({ anamnesis }: AnamnesisViewProps) {
         const booleanFields = filledFields.filter((field) => field.type === 'boolean');
         const textFields = filledFields.filter((field) => field.type !== 'boolean');
 
+        const isMedidas = section.title === 'Medidas corporais';
+        const imcVal = isMedidas ? calcIMC(anamnesis!.peso, anamnesis!.altura) : null;
+
         return (
           <SectionCard
             key={section.title}
@@ -164,7 +173,7 @@ export function AnamnesisView({ anamnesis }: AnamnesisViewProps) {
                     <Grid item key={field.key} xs={12} sm={field.fullWidth ? 12 : 6}>
                       <InfoRow
                         label={field.label}
-                        value={formatAnamnesisValue(field.type, anamnesis![field.key])}
+                        value={formatAnamnesisValue(field.type, anamnesis![field.key], field)}
                       />
                     </Grid>
                   ))}
@@ -179,6 +188,32 @@ export function AnamnesisView({ anamnesis }: AnamnesisViewProps) {
                     </Grid>
                   ))}
                 </Grid>
+              )}
+
+              {isMedidas && imcVal != null && (
+                <Box
+                  sx={{
+                    px: 2,
+                    py: 1.5,
+                    borderRadius: 1.5,
+                    bgcolor: 'background.default',
+                    border: 1,
+                    borderColor: 'divider',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                  }}
+                >
+                  <FitnessCenterOutlinedIcon sx={{ fontSize: 20, color: imcColor(imcVal) }} />
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      IMC calculado
+                    </Typography>
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ color: imcColor(imcVal) }}>
+                      {imcVal} — {imcClassificacao(imcVal)}
+                    </Typography>
+                  </Box>
+                </Box>
               )}
             </Stack>
           </SectionCard>

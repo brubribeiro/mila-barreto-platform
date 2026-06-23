@@ -43,6 +43,7 @@ describe('ProceduresService', () => {
         findFirst: jest.fn().mockResolvedValue({ feePercent: 5 }),
       },
       $transaction: jest.fn().mockImplementation(async (fn) => fn(prisma)),
+      $transactionWithRetry: jest.fn().mockImplementation(async (fn) => fn(prisma)),
     };
 
     auditLog = {

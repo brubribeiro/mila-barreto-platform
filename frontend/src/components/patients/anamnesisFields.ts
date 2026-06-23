@@ -1,10 +1,12 @@
 export interface AnamnesisFieldDef {
   key: string;
   label: string;
-  type: 'boolean' | 'text' | 'select';
+  type: 'boolean' | 'text' | 'select' | 'number';
   options?: string[];
   placeholder?: string;
   fullWidth?: boolean;
+  suffix?: string;
+  step?: number;
 }
 
 export interface AnamnesisSection {
@@ -13,6 +15,13 @@ export interface AnamnesisSection {
 }
 
 export const ANAMNESIS_SECTIONS: AnamnesisSection[] = [
+  {
+    title: 'Medidas corporais',
+    fields: [
+      { key: 'peso', label: 'Peso', type: 'number', placeholder: 'kg', suffix: 'kg', step: 0.1 },
+      { key: 'altura', label: 'Altura', type: 'number', placeholder: 'cm', suffix: 'cm', step: 1 },
+    ],
+  },
   {
     title: 'Saúde geral',
     fields: [
@@ -60,18 +69,46 @@ export const ANAMNESIS_SECTIONS: AnamnesisSection[] = [
 
 export const ANAMNESIS_MULTILINE_KEYS = new Set(['queixaPrincipal', 'expectativas', 'observacoesAnamnese']);
 
-export function createEmptyAnamnesis(): Record<string, string | boolean> {
-  const values: Record<string, string | boolean> = {};
+export function createEmptyAnamnesis(): Record<string, string | boolean | number> {
+  const values: Record<string, string | boolean | number> = {};
   for (const section of ANAMNESIS_SECTIONS) {
     for (const field of section.fields) {
-      values[field.key] = field.type === 'boolean' ? false : '';
+      if (field.type === 'boolean') values[field.key] = false;
+      else if (field.type === 'number') values[field.key] = '';
+      else values[field.key] = '';
     }
   }
   return values;
 }
 
-export function mergeAnamnesis(existing?: Record<string, unknown> | null): Record<string, string | boolean> {
-  return { ...createEmptyAnamnesis(), ...(existing ?? {}) } as Record<string, string | boolean>;
+export function calcIMC(peso?: unknown, altura?: unknown): number | null {
+  const p = typeof peso === 'number' ? peso : parseFloat(String(peso ?? ''));
+  const a = typeof altura === 'number' ? altura : parseFloat(String(altura ?? ''));
+  if (!p || !a || p <= 0 || a <= 0) return null;
+  const alturaM = a / 100;
+  return Math.round((p / (alturaM * alturaM)) * 10) / 10;
+}
+
+export function imcClassificacao(imc: number): string {
+  if (imc < 18.5) return 'Abaixo do peso';
+  if (imc < 25) return 'Peso normal';
+  if (imc < 30) return 'Sobrepeso';
+  if (imc < 35) return 'Obesidade grau I';
+  if (imc < 40) return 'Obesidade grau II';
+  return 'Obesidade grau III';
+}
+
+export function imcColor(imc: number): string {
+  if (imc < 18.5) return '#1976d2';
+  if (imc < 25) return '#2e7d32';
+  if (imc < 30) return '#ed6c02';
+  if (imc < 35) return '#d32f2f';
+  if (imc < 40) return '#c62828';
+  return '#b71c1c';
+}
+
+export function mergeAnamnesis(existing?: Record<string, unknown> | null): Record<string, string | boolean | number> {
+  return { ...createEmptyAnamnesis(), ...(existing ?? {}) } as Record<string, string | boolean | number>;
 }
 
 export function hasAnamnesisData(anamnesis?: Record<string, unknown> | null): boolean {
