@@ -15,7 +15,6 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import NotificationsIcon from '@mui/icons-material/NotificationsOutlined';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -23,6 +22,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/pt-br';
 
 import { notificationsApi } from '../../api/notifications';
+import { AuroraIcon } from '../AuroraIcon';
 import { NotificationPreferencesDialog } from './NotificationPreferencesDialog';
 import { useAppToast } from '../../contexts/AppToastContext';
 import type { Notification } from '../../types';
@@ -92,9 +92,26 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
   return (
     <>
       <Tooltip title="Notificações">
-        <IconButton onClick={handleOpen} sx={{ color: iconColor }}>
-          <Badge badgeContent={count} color="primary" max={99}>
-            <NotificationsIcon />
+        <IconButton
+          onClick={handleOpen}
+          sx={{
+            width: 42,
+            height: 42,
+            borderRadius: '12px',
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'grey.50',
+            color: iconColor ?? 'text.secondary',
+            '&:hover': { bgcolor: 'grey.100' },
+          }}
+        >
+          <Badge
+            badgeContent={count}
+            color="error"
+            max={99}
+            sx={{ '& .MuiBadge-badge': { fontWeight: 700, fontSize: '0.65rem' } }}
+          >
+            <AuroraIcon name="bell" size={20} strokeWidth={1.8} />
           </Badge>
         </IconButton>
       </Tooltip>

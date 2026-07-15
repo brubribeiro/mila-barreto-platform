@@ -4,6 +4,19 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-15
+
+### Added
+
+- Componente `AuroraIcon` com ícones de traço no estilo do protótipo Aurora (sidebar e notificações).
+- Sidebar reorganizada em grupos (Principal, Catálogo, Financeiro, Equipe, Configurações) com rótulos de seção.
+
+### Changed
+
+- Redesign visual **Aurora**: paleta verde-água, tipografia Plus Jakarta Sans, cards e botões com bordas mais arredondadas.
+- Menu lateral escuro com destaque ativo em verde; barra superior e sino de notificações alinhados ao novo visual.
+- `PageHeader` oculta título/subtítulo por padrão (prop `showTitle` para telas que precisam exibir).
+
 ## [0.1.6] - 2026-06-09
 
 ### Added

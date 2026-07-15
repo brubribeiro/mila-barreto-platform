@@ -5,55 +5,36 @@ import {
   AppBar,
   Avatar,
   Box,
-  Chip,
-  Divider,
+  Button,
   Drawer,
   IconButton,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Menu,
-  MenuItem,
   Stack,
   Toolbar,
   Tooltip,
   Typography,
   useTheme,
 } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import EventIcon from '@mui/icons-material/Event';
-import PeopleIcon from '@mui/icons-material/People';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import SpaIcon from '@mui/icons-material/Spa';
-import Inventory2Icon from '@mui/icons-material/Inventory2';
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-import LogoutIcon from '@mui/icons-material/Logout';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import SwitchAccountIcon from '@mui/icons-material/SwitchAccount';
-
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
-import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
-import PrecisionManufacturingIcon from '@mui/icons-material/PrecisionManufacturing';
-import BadgeIcon from '@mui/icons-material/Badge';
-import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
-import RepeatIcon from '@mui/icons-material/Repeat';
-import ViewInArIcon from '@mui/icons-material/ViewInAr';
-import InsightsIcon from '@mui/icons-material/Insights';
-import LocalOfferIcon from '@mui/icons-material/LocalOffer';
-import CreditCardIcon from '@mui/icons-material/CreditCard';
 
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Permission } from '../contexts/permissions';
 import { NotificationsBell } from './notifications/NotificationsBell';
-import { APP_VERSION } from '../version';
+import { AuroraIcon } from './AuroraIcon';
 
 const DRAWER_WIDTH = 258;
 const DRAWER_COLLAPSED_WIDTH = 68;
+
+// Paleta do sidebar Aurora (verde escuro)
+const SIDEBAR_BG = '#0E2926';
+const SIDEBAR_TEXT = '#8FAAA4';
+const SIDEBAR_ACTIVE = '#15998B';
+const SIDEBAR_HOVER = 'rgba(255,255,255,0.05)';
+const SIDEBAR_BORDER = 'rgba(255,255,255,0.07)';
 
 function isNavPathActive(pathname: string, itemPath: string): boolean {
   return itemPath === '/' ? pathname === '/' : pathname.startsWith(itemPath);
@@ -66,105 +47,96 @@ interface NavRouteItem {
   permission?: Permission;
 }
 
-const navGrouped: NavRouteItem[][] = [
-  [{ label: 'Dashboard', path: '/', icon: <DashboardIcon /> }],
-  [
-    { label: 'Agenda', path: '/agenda', icon: <EventIcon />, permission: 'appointments:view' },
-    { label: 'Pacientes', path: '/pacientes', icon: <PeopleIcon />, permission: 'patients:view' },
-    { label: 'Horários', path: '/horarios', icon: <AccessTimeIcon /> },
-  ],
-  [
-    {
-      label: 'Procedimentos',
-      path: '/procedimentos',
-      icon: <SpaIcon />,
-      permission: 'procedures:view',
-    },
-    {
-      label: 'Pacotes',
-      path: '/pacotes',
-      icon: <ViewInArIcon />,
-      permission: 'packages:view',
-    },
-    {
-      label: 'Estoque',
-      path: '/estoque',
-      icon: <Inventory2Icon />,
-      permission: 'inventory:view',
-    },
-  ],
-  [
-    {
-      label: 'Financeiro',
-      path: '/financeiro',
-      icon: <AccountBalanceWalletIcon />,
-      permission: 'finance:view',
-    },
-    {
-      label: 'Despesas recorrentes',
-      path: '/despesas-recorrentes',
-      icon: <RepeatIcon />,
-      permission: 'finance:view',
-    },
-    {
-      label: 'Formas de pagamento',
-      path: '/formas-pagamento',
-      icon: <CreditCardIcon />,
-      permission: 'payment-methods:view',
-    },
-    {
-      label: 'Promoções',
-      path: '/promocoes',
-      icon: <LocalOfferIcon />,
-      permission: 'promotions:view',
-    },
-    {
-      label: 'Métricas',
-      path: '/metricas',
-      icon: <InsightsIcon />,
-      permission: 'metrics:view',
-    },
-  ],
-  [
-    {
-      label: 'Profissionais',
-      path: '/profissionais',
-      icon: <BadgeIcon />,
-      permission: 'users:view',
-    },
-    {
-      label: 'Grupos',
-      path: '/grupos',
-      icon: <GroupsOutlinedIcon />,
-      permission: 'roles:view',
-    },
-  ],
-  [
-    {
-      label: 'Mensagens',
-      path: '/mensagens',
-      icon: <ChatBubbleOutlineIcon />,
-      permission: 'messages:view',
-    },
-    {
-      label: 'Documentos',
-      path: '/documentos',
-      icon: <FolderOutlinedIcon />,
-      permission: 'documents:view',
-    },
-    {
-      label: 'Equipamentos',
-      path: '/equipamentos',
-      icon: <PrecisionManufacturingIcon />,
-      permission: 'equipment:view',
-    },
-  ],
+interface NavGroup {
+  title?: string;
+  items: NavRouteItem[];
+}
+
+const navGrouped: NavGroup[] = [
+  {
+    title: 'Principal',
+    items: [
+      { label: 'Dashboard', path: '/', icon: <AuroraIcon name="dashboard" /> },
+      { label: 'Agenda', path: '/agenda', icon: <AuroraIcon name="agenda" />, permission: 'appointments:view' },
+      { label: 'Pacientes', path: '/pacientes', icon: <AuroraIcon name="clientes" />, permission: 'patients:view' },
+    ],
+  },
+  {
+    title: 'Catálogo',
+    items: [
+      { label: 'Procedimentos', path: '/procedimentos', icon: <AuroraIcon name="procedimentos" />, permission: 'procedures:view' },
+      { label: 'Pacotes', path: '/pacotes', icon: <AuroraIcon name="pacotes" />, permission: 'packages:view' },
+      { label: 'Promoções', path: '/promocoes', icon: <AuroraIcon name="promocoes" />, permission: 'promotions:view' },
+    ],
+  },
+  {
+    title: 'Equipe & recursos',
+    items: [
+      { label: 'Profissionais', path: '/profissionais', icon: <AuroraIcon name="profissionais" />, permission: 'users:view' },
+      { label: 'Horários', path: '/horarios', icon: <AuroraIcon name="horarios" /> },
+      { label: 'Equipamentos', path: '/equipamentos', icon: <AuroraIcon name="equipamentos" />, permission: 'equipment:view' },
+      { label: 'Estoque', path: '/estoque', icon: <AuroraIcon name="estoque" />, permission: 'inventory:view' },
+    ],
+  },
+  {
+    title: 'Financeiro',
+    items: [
+      { label: 'Financeiro', path: '/financeiro', icon: <AuroraIcon name="financeiro" />, permission: 'finance:view' },
+      { label: 'Despesas recorrentes', path: '/despesas-recorrentes', icon: <AuroraIcon name="despesas" />, permission: 'finance:view' },
+      { label: 'Formas de pagamento', path: '/formas-pagamento', icon: <AuroraIcon name="pagamentos" />, permission: 'payment-methods:view' },
+    ],
+  },
+  {
+    title: 'Análise',
+    items: [
+      { label: 'Métricas', path: '/metricas', icon: <AuroraIcon name="relatorios" />, permission: 'metrics:view' },
+      { label: 'Documentos', path: '/documentos', icon: <AuroraIcon name="documentos" />, permission: 'documents:view' },
+    ],
+  },
+  {
+    title: 'Configurações',
+    items: [
+      { label: 'Mensagens', path: '/mensagens', icon: <AuroraIcon name="mensagens" />, permission: 'messages:view' },
+      { label: 'Grupos', path: '/grupos', icon: <AuroraIcon name="permissoes" />, permission: 'roles:view' },
+    ],
+  },
 ];
+
+interface PageMeta {
+  title: string;
+  subtitle: string;
+}
+
+const PAGE_META: (PageMeta & { path: string; exact?: boolean })[] = [
+  { path: '/', exact: true, title: 'Dashboard', subtitle: 'Visão geral da clínica' },
+  { path: '/agenda', title: 'Agenda', subtitle: 'Agendamentos e horários' },
+  { path: '/pacientes', title: 'Pacientes', subtitle: 'Cadastro e histórico dos pacientes' },
+  { path: '/horarios', title: 'Horários', subtitle: 'Disponibilidade da equipe' },
+  { path: '/procedimentos', title: 'Procedimentos', subtitle: 'Catálogo de procedimentos' },
+  { path: '/pacotes', title: 'Pacotes', subtitle: 'Pacotes de procedimentos' },
+  { path: '/promocoes', title: 'Promoções', subtitle: 'Descontos e campanhas' },
+  { path: '/financeiro', title: 'Financeiro', subtitle: 'Receitas e despesas' },
+  { path: '/despesas-recorrentes', title: 'Despesas recorrentes', subtitle: 'Custos fixos e periódicos' },
+  { path: '/formas-pagamento', title: 'Formas de pagamento', subtitle: 'Métodos de pagamento' },
+  { path: '/estoque', title: 'Estoque', subtitle: 'Produtos e insumos' },
+  { path: '/profissionais', title: 'Profissionais', subtitle: 'Equipe da clínica' },
+  { path: '/grupos', title: 'Grupos', subtitle: 'Papéis e permissões' },
+  { path: '/mensagens', title: 'Mensagens', subtitle: 'Modelos e envios' },
+  { path: '/documentos', title: 'Documentos', subtitle: 'Arquivos e modelos' },
+  { path: '/equipamentos', title: 'Equipamentos', subtitle: 'Aparelhos e manutenção' },
+  { path: '/metricas', title: 'Métricas', subtitle: 'Indicadores e relatórios' },
+];
+
+function getPageMeta(pathname: string): PageMeta {
+  const match = PAGE_META.find((m) =>
+    m.exact ? pathname === m.path : pathname === m.path || pathname.startsWith(`${m.path}/`),
+  );
+  return match ?? { title: 'Mila Barreto', subtitle: '' };
+}
 
 export function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, stopImpersonating } = useAuth();
@@ -173,35 +145,56 @@ export function Layout() {
 
   const visibleGroups = useMemo(() => {
     return navGrouped
-      .map((group) => group.filter((item) => !item.permission || has(item.permission)))
-      .filter((group) => group.length > 0);
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => !item.permission || has(item.permission)),
+      }))
+      .filter((group) => group.items.length > 0);
   }, [has]);
 
   const theme = useTheme();
+
+  const pageMeta = getPageMeta(location.pathname);
+  const pageSubtitle =
+    location.pathname === '/'
+      ? `${pageMeta.subtitle} · Hoje, ${new Intl.DateTimeFormat('pt-BR', {
+          day: 'numeric',
+          month: 'long',
+        }).format(new Date())}`
+      : pageMeta.subtitle;
+
+  const userInitials = (user?.name ?? '?')
+    .trim()
+    .split(/\s+/)
+    .map((w) => w[0] ?? '')
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
 
   const currentDrawerWidth = collapsed ? DRAWER_COLLAPSED_WIDTH : DRAWER_WIDTH;
 
   const navScrollSx = {
     flex: 1,
     minHeight: 0,
-    overflow: 'auto',
+    overflowY: 'auto',
+    overflowX: 'hidden',
     py: 1.25,
     px: collapsed ? 0.5 : 1,
     scrollbarWidth: 'thin' as const,
-    scrollbarColor: `${alpha(theme.palette.text.secondary, 0.32)} ${alpha(theme.palette.divider, 0.12)}`,
+    scrollbarColor: `rgba(255,255,255,0.16) transparent`,
     '&::-webkit-scrollbar': { width: 7 },
     '&::-webkit-scrollbar-track': {
       margin: '6px 0',
-      backgroundColor: alpha(theme.palette.divider, 0.12),
+      backgroundColor: 'transparent',
       borderRadius: 10,
     },
     '&::-webkit-scrollbar-thumb': {
-      backgroundColor: alpha(theme.palette.text.secondary, 0.28),
+      backgroundColor: 'rgba(255,255,255,0.14)',
       borderRadius: 10,
-      border: `2px solid ${alpha(theme.palette.background.paper, 0)}`,
+      border: '2px solid transparent',
       backgroundClip: 'padding-box',
       '&:hover': {
-        backgroundColor: alpha(theme.palette.text.secondary, 0.42),
+        backgroundColor: 'rgba(255,255,255,0.24)',
       },
     },
   };
@@ -213,7 +206,7 @@ export function Layout() {
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        bgcolor: '#FFFFFF',
+        bgcolor: SIDEBAR_BG,
       }}
     >
       <Box
@@ -222,8 +215,8 @@ export function Layout() {
           px: isCollapsed ? 0.75 : 2.25,
           py: isCollapsed ? 1 : 2,
           borderBottom: '1px solid',
-          borderColor: alpha(theme.palette.divider, 0.85),
-          bgcolor: '#FFFFFF',
+          borderColor: SIDEBAR_BORDER,
+          bgcolor: SIDEBAR_BG,
         }}
       >
         <Box
@@ -232,174 +225,266 @@ export function Layout() {
             flexDirection: 'row',
             alignItems: 'center',
             width: '100%',
-            gap: 0.5,
-            justifyContent: isCollapsed ? 'flex-end' : 'space-between',
+            gap: 1.5,
+            justifyContent: isCollapsed ? 'center' : 'flex-start',
           }}
         >
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg,#22BBAA,#0E7C7B)',
+              boxShadow: '0 6px 18px -4px rgba(15,124,123,.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff">
+              <path d="M12 3c4.2 5 6.2 8.2 6.2 11.2A6.2 6.2 0 0 1 5.8 14.2C5.8 11.2 7.8 8 12 3z" />
+            </svg>
+          </Box>
           {!isCollapsed && (
-            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
-              <Avatar
-                variant="rounded"
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                variant="subtitle1"
+                fontWeight={800}
+                sx={{ letterSpacing: '-0.02em', lineHeight: 1.05, color: '#fff' }}
+              >
+                Mila Barreto
+              </Typography>
+              <Typography
+                variant="caption"
                 sx={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 2,
-                  bgcolor: 'primary.main',
-                  fontSize: '0.95rem',
-                  fontWeight: 800,
-                  boxShadow: `0 3px 10px ${alpha(theme.palette.primary.main, 0.35)}`,
-                  flexShrink: 0,
+                  display: 'block',
+                  mt: 0,
+                  lineHeight: 1.1,
+                  color: SIDEBAR_TEXT,
+                  fontWeight: 700,
+                  letterSpacing: '0.12em',
+                  fontSize: '0.6rem',
+                  textTransform: 'uppercase',
                 }}
               >
-                MB
-              </Avatar>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography
-                  variant="subtitle1"
-                  fontWeight={800}
-                  sx={{ letterSpacing: '-0.02em', lineHeight: 1.25 }}
-                >
-                  Mila Barreto
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
-                  Gestão da clínica
-                </Typography>
-              </Box>
-            </Stack>
+                Estética avançada
+              </Typography>
+            </Box>
           )}
-
-          <Tooltip
-            title={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
-            placement="right"
-            sx={{ display: { xs: 'none', md: 'flex' }, flexShrink: 0 }}
-          >
-            <IconButton
-              size="small"
-              onClick={() => setCollapsed((c) => !c)}
-              sx={{
-                color: 'text.secondary',
-                '&:hover': { color: 'primary.main' },
-              }}
-            >
-              {isCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-            </IconButton>
-          </Tooltip>
         </Box>
       </Box>
 
       <Box sx={navScrollSx}>
-        {visibleGroups.map((group, groupIndex) => (
-          <Fragment key={group.map((it) => it.path).join('-')}>
-            <List disablePadding sx={{ px: isCollapsed ? 0.25 : 0.85, py: groupIndex === 0 ? 0.25 : 0 }}>
-              {group.map((item) => {
-                const selected = isNavPathActive(location.pathname, item.path);
-                return isCollapsed ? (
-                  <Tooltip key={item.path} title={item.label} placement="right" arrow>
-                    <ListItemButton
-                      selected={selected}
-                      onClick={() => {
-                        navigate(item.path);
-                        setMobileOpen(false);
-                      }}
-                      sx={{
-                        mb: 0.2,
-                        py: 0.85,
-                        px: 0,
-                        borderRadius: 1.25,
-                        justifyContent: 'center',
-                        minHeight: 42,
-                        borderLeft: '3px solid',
-                        borderLeftColor: selected ? theme.palette.primary.main : 'transparent',
-                        '& .MuiListItemIcon-root': {
-                          minWidth: 0,
-                          color: selected ? 'primary.main' : 'text.secondary',
-                        },
-                        '&.Mui-selected': {
-                          bgcolor: alpha(theme.palette.primary.main, 0.07),
-                        },
-                        '&:hover': {
-                          bgcolor: alpha(theme.palette.primary.main, 0.045),
-                        },
-                        '&.Mui-selected:hover': {
-                          bgcolor: alpha(theme.palette.primary.main, 0.1),
-                        },
-                      }}
+        {visibleGroups.map((group, groupIndex) => {
+          const contentTransition = theme.transitions.create(
+            ['opacity', 'max-height', 'padding', 'margin', 'background-color'],
+            {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.leavingScreen,
+            },
+          );
+          return (
+            <Fragment key={group.items.map((it) => it.path).join('-')}>
+              {group.title && (
+                <Box
+                  component="span"
+                  sx={{
+                    display: 'block',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    color: SIDEBAR_TEXT,
+                    opacity: isCollapsed ? 0 : 0.5,
+                    maxHeight: isCollapsed ? 0 : 40,
+                    px: 1.75,
+                    pt: isCollapsed ? 0 : groupIndex === 0 ? 0.5 : 1.75,
+                    pb: isCollapsed ? 0 : 0.75,
+                    fontSize: '0.625rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    transition: contentTransition,
+                  }}
+                >
+                  {group.title}
+                </Box>
+              )}
+              <List disablePadding sx={{ px: isCollapsed ? 0.5 : 0.85, py: 0 }}>
+                {group.items.map((item) => {
+                  const selected = isNavPathActive(location.pathname, item.path);
+                  return (
+                    <Tooltip
+                      key={item.path}
+                      title={isCollapsed ? item.label : ''}
+                      placement="right"
+                      arrow
+                      disableHoverListener={!isCollapsed}
+                      disableFocusListener={!isCollapsed}
+                      disableTouchListener={!isCollapsed}
                     >
-                      <ListItemIcon sx={{ '& .MuiSvgIcon-root': { fontSize: 22 } }}>{item.icon}</ListItemIcon>
-                    </ListItemButton>
-                  </Tooltip>
-                ) : (
-                  <ListItemButton
-                    key={item.path}
-                    selected={selected}
-                    onClick={() => {
-                      navigate(item.path);
-                      setMobileOpen(false);
-                    }}
-                    sx={{
-                      mx: 0.35,
-                      mb: 0.2,
-                      py: 0.85,
-                      px: 1.15,
-                      pl: theme.spacing(1.15),
-                      borderRadius: 1.25,
-                      borderLeft: '3px solid',
-                      borderLeftColor: selected ? theme.palette.primary.main : 'transparent',
-                      '& .MuiListItemIcon-root': {
-                        minWidth: 40,
-                        color: selected ? 'primary.main' : 'text.secondary',
-                      },
-                      '& .MuiListItemText-primary': {
-                        fontSize: theme.typography.body2.fontSize,
-                        fontWeight: selected ? 600 : 480,
-                      },
-                      '&.Mui-selected': {
-                        bgcolor: alpha(theme.palette.primary.main, 0.07),
-                      },
-                      '&:hover': {
-                        bgcolor: alpha(theme.palette.primary.main, 0.045),
-                      },
-                      '&.Mui-selected:hover': {
-                        bgcolor: alpha(theme.palette.primary.main, 0.1),
-                      },
-                    }}
-                  >
-                    <ListItemIcon sx={{ '& .MuiSvgIcon-root': { fontSize: 22 } }}>{item.icon}</ListItemIcon>
-                    <ListItemText primary={item.label} />
-                  </ListItemButton>
-                );
-              })}
-            </List>
-            {groupIndex < visibleGroups.length - 1 && (
-              <Divider sx={{ mx: isCollapsed ? 0.5 : 1.5, my: 1, opacity: 0.85 }} />
-            )}
-          </Fragment>
-        ))}
+                      <ListItemButton
+                        selected={selected}
+                        onClick={() => {
+                          navigate(item.path);
+                          setMobileOpen(false);
+                        }}
+                        sx={{
+                          minHeight: 44,
+                          mb: 0.35,
+                          py: 0.9,
+                          px: isCollapsed ? 1.25 : 1.15,
+                          borderRadius: '12px',
+                          position: 'relative',
+                          justifyContent: isCollapsed ? 'center' : 'flex-start',
+                          color: selected ? '#fff' : SIDEBAR_TEXT,
+                          transition: contentTransition,
+                          '& .MuiListItemIcon-root': {
+                            minWidth: 0,
+                            justifyContent: 'center',
+                            mr: isCollapsed ? 0 : 1.75,
+                            color: selected ? '#fff' : SIDEBAR_TEXT,
+                            transition: contentTransition,
+                          },
+                          '& .MuiListItemText-root': {
+                            my: 0,
+                            flexGrow: isCollapsed ? 0 : 1,
+                            width: isCollapsed ? 0 : 'auto',
+                            overflow: 'hidden',
+                            opacity: isCollapsed ? 0 : 1,
+                            transition: contentTransition,
+                          },
+                          '& .MuiListItemText-primary': {
+                            whiteSpace: 'nowrap',
+                            fontSize: theme.typography.body2.fontSize,
+                            fontWeight: selected ? 700 : 600,
+                            color: selected ? '#fff' : SIDEBAR_TEXT,
+                          },
+                          '&.Mui-selected': {
+                            bgcolor: SIDEBAR_ACTIVE,
+                            color: '#fff',
+                            boxShadow: '0 6px 16px -6px rgba(21,153,139,.8)',
+                            '& .MuiListItemIcon-root': { color: '#fff' },
+                            '& .MuiListItemText-primary': { color: '#fff' },
+                            '&:hover': { bgcolor: SIDEBAR_ACTIVE },
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              left: 0,
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              width: 3,
+                              height: 18,
+                              borderRadius: '0 4px 4px 0',
+                              bgcolor: '#fff',
+                              opacity: isCollapsed ? 0 : 1,
+                            },
+                          },
+                          '&:hover': {
+                            bgcolor: SIDEBAR_HOVER,
+                          },
+                        }}
+                      >
+                        <ListItemIcon>{item.icon}</ListItemIcon>
+                        <ListItemText primary={item.label} />
+                      </ListItemButton>
+                    </Tooltip>
+                  );
+                })}
+              </List>
+            </Fragment>
+          );
+        })}
       </Box>
 
       <Box
         sx={{
           flexShrink: 0,
-          px: isCollapsed ? 0.5 : 2,
+          px: isCollapsed ? 0.75 : 1.5,
           py: 1.25,
           borderTop: '1px solid',
-          borderColor: alpha(theme.palette.divider, 0.85),
+          borderColor: SIDEBAR_BORDER,
         }}
       >
         {isCollapsed ? (
-          <Tooltip title={`Versão ${APP_VERSION}`} placement="right">
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ display: 'block', textAlign: 'center', fontSize: '0.62rem', lineHeight: 1.3 }}
-            >
-              v{APP_VERSION}
-            </Typography>
-          </Tooltip>
+          <Stack alignItems="center" spacing={1}>
+            <Tooltip title={`${user?.name ?? 'Usuário'}${user?.roleName ? ` · ${user.roleName}` : ''}`} placement="right">
+              <Avatar
+                variant="rounded"
+                sx={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: '11px',
+                  background: 'linear-gradient(135deg,#3A6B64,#1F4A45)',
+                  color: '#CFECE7',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                }}
+              >
+                {userInitials}
+              </Avatar>
+            </Tooltip>
+            <Tooltip title="Sair" placement="right">
+              <IconButton
+                size="small"
+                onClick={logout}
+                sx={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: '10px',
+                  bgcolor: SIDEBAR_HOVER,
+                  color: SIDEBAR_TEXT,
+                  '&:hover': { color: '#F08A8A', bgcolor: 'rgba(214,90,90,.18)' },
+                }}
+              >
+                <AuroraIcon name="logout" size={18} strokeWidth={2} />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         ) : (
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center' }}>
-            Versão {APP_VERSION}
-          </Typography>
+          <Stack direction="row" spacing={1.25} alignItems="center">
+            <Avatar
+              variant="rounded"
+              sx={{
+                width: 38,
+                height: 38,
+                borderRadius: '11px',
+                background: 'linear-gradient(135deg,#3A6B64,#1F4A45)',
+                color: '#CFECE7',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              {userInitials}
+            </Avatar>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography noWrap sx={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
+                {user?.name ?? 'Usuário'}
+              </Typography>
+              {user?.roleName && (
+                <Typography noWrap sx={{ fontSize: '0.7rem', color: SIDEBAR_TEXT, lineHeight: 1.2 }}>
+                  {user.roleName}
+                </Typography>
+              )}
+            </Box>
+            <Tooltip title="Sair">
+              <IconButton
+                size="small"
+                onClick={logout}
+                sx={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: '10px',
+                  bgcolor: SIDEBAR_HOVER,
+                  color: SIDEBAR_TEXT,
+                  flexShrink: 0,
+                  '&:hover': { color: '#F08A8A', bgcolor: 'rgba(214,90,90,.18)' },
+                }}
+              >
+                <AuroraIcon name="logout" size={18} strokeWidth={2} />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         )}
       </Box>
     </Box>
@@ -463,11 +548,8 @@ export function Layout() {
             duration: theme.transitions.duration.leavingScreen,
           }),
           borderBottom: '1px solid',
-          borderColor: alpha(theme.palette.divider, 0.95),
-          background: `linear-gradient(180deg,
-            ${alpha(theme.palette.background.paper, 0.98)} 0%,
-            ${alpha(theme.palette.primary.main, 0.03)} 100%)`,
-          backdropFilter: 'blur(10px)',
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
         }}
       >
         <Toolbar sx={{ minHeight: { xs: 58, md: 66 }, px: { xs: 1.5, md: 2.5 }, gap: 1.5 }}>
@@ -483,101 +565,83 @@ export function Layout() {
               borderRadius: 2,
             }}
           >
-            <MenuIcon />
+            <AuroraIcon name="menu" size={22} strokeWidth={1.9} />
           </IconButton>
+
+          <IconButton
+            onClick={() => setCollapsed((c) => !c)}
+            title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+            sx={{
+              display: { xs: 'none', md: 'inline-flex' },
+              width: 40,
+              height: 40,
+              mr: 1.5,
+              color: 'text.secondary',
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: '11px',
+              '&:hover': { color: 'primary.main', borderColor: 'primary.main' },
+            }}
+          >
+            <AuroraIcon name="menu" size={20} strokeWidth={1.9} />
+          </IconButton>
+
+          <Box sx={{ minWidth: 0, mr: 1.5 }}>
+            <Typography
+              noWrap
+              component="h1"
+              sx={{
+                fontSize: { xs: '1.05rem', md: '1.25rem' },
+                fontWeight: 800,
+                letterSpacing: '-0.5px',
+                lineHeight: 1.15,
+                color: 'text.primary',
+              }}
+            >
+              {pageMeta.title}
+            </Typography>
+            {pageSubtitle && (
+              <Typography
+                noWrap
+                variant="caption"
+                sx={{
+                  display: { xs: 'none', sm: 'block' },
+                  color: 'text.secondary',
+                  fontWeight: 500,
+                  lineHeight: 1.2,
+                }}
+              >
+                {pageSubtitle}
+              </Typography>
+            )}
+          </Box>
 
           <Box sx={{ flex: 1 }} />
 
-          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ flexShrink: 0 }}>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+            {has('appointments:view') && (
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AuroraIcon name="plus" size={18} strokeWidth={2.2} />}
+                onClick={() => navigate('/agenda')}
+                sx={{
+                  height: 42,
+                  px: { xs: 1.25, md: 2.25 },
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  whiteSpace: 'nowrap',
+                  boxShadow: `0 6px 16px -6px ${theme.palette.primary.main}`,
+                  '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+                }}
+              >
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  Novo agendamento
+                </Box>
+              </Button>
+            )}
             <NotificationsBell />
-            <Box
-              component="button"
-              type="button"
-              onClick={(e) => setAnchorEl(e.currentTarget as HTMLElement)}
-              aria-label="Menu da conta"
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                ml: 0.5,
-                py: 0.5,
-                pl: 0.5,
-                pr: { xs: 0.5, sm: 1.25 },
-                border: '1px solid',
-                borderColor: alpha(theme.palette.divider, 0.95),
-                borderRadius: 999,
-                bgcolor: alpha(theme.palette.background.paper, 0.85),
-                cursor: 'pointer',
-                transition: 'box-shadow 120ms ease, border-color 120ms ease',
-                '&:hover': {
-                  borderColor: alpha(theme.palette.primary.main, 0.35),
-                  boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.12)}`,
-                },
-              }}
-            >
-              <Avatar sx={{ bgcolor: 'primary.main', width: 34, height: 34, fontSize: '0.9rem' }}>
-                {user?.name?.charAt(0).toUpperCase() ?? '?'}
-              </Avatar>
-              <Box sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'left', minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={600} noWrap sx={{ maxWidth: 140, lineHeight: 1.2 }}>
-                  {user?.name ?? 'Usuário'}
-                </Typography>
-                {user?.roleName && (
-                  <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 140, display: 'block' }}>
-                    {user.roleName}
-                  </Typography>
-                )}
-              </Box>
-              <KeyboardArrowDownIcon
-                sx={{ display: { xs: 'none', md: 'block' }, fontSize: 20, color: 'text.secondary' }}
-              />
-            </Box>
           </Stack>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={() => setAnchorEl(null)}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            PaperProps={{
-              sx: {
-                mt: 1,
-                minWidth: 220,
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: alpha(theme.palette.divider, 0.9),
-                boxShadow: `0 8px 24px ${alpha(theme.palette.common.black, 0.08)}`,
-              },
-            }}
-          >
-            <MenuItem disabled>
-              <Box>
-                <Typography variant="body2" fontWeight={600}>
-                  {user?.name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {user?.email}
-                </Typography>
-                {user?.roleName && (
-                  <Box sx={{ mt: 0.5 }}>
-                    <Chip
-                      size="small"
-                      label={user.roleName}
-                      color="primary"
-                      variant="outlined"
-                    />
-                  </Box>
-                )}
-              </Box>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={logout}>
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
-              Sair
-            </MenuItem>
-          </Menu>
         </Toolbar>
       </AppBar>
 
@@ -604,7 +668,8 @@ export function Layout() {
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              bgcolor: '#FFFFFF',
+              bgcolor: SIDEBAR_BG,
+              borderRight: 'none',
               ...(isImpersonating ? { top: 40, height: 'calc(100% - 40px)' } : {}),
             },
           }}
@@ -617,11 +682,11 @@ export function Layout() {
             display: { xs: 'none', md: 'block' },
             '& .MuiDrawer-paper': {
               width: currentDrawerWidth,
-              borderRight: '1px solid #E8E6E2',
+              borderRight: 'none',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              bgcolor: '#FFFFFF',
+              bgcolor: SIDEBAR_BG,
               transition: theme.transitions.create('width', {
                 easing: theme.transitions.easing.sharp,
                 duration: theme.transitions.duration.leavingScreen,

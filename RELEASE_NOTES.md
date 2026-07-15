@@ -4,6 +4,24 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ---
 
+## v0.2.0 — 15 jul 2026
+
+### Novidades
+
+**Visual Aurora**
+- O painel ganhou um novo visual com cores verde-água, fonte **Plus Jakarta Sans** e ícones de traço mais leves.
+- O **menu lateral** ficou escuro, com seções organizadas (Principal, Catálogo, Financeiro, Equipe, Configurações) e destaque verde no item ativo.
+- Cards, botões e tabelas foram refinados para um layout mais limpo e moderno.
+
+**Notificações**
+- O sino de notificações na barra superior foi redesenhado para combinar com o novo estilo.
+
+### Onde ver a versão
+
+Menu lateral (rodapé) e tela de login exibem **v0.2.0**.
+
+---
+
 ## v0.1.6 — 9 jun 2026
 
 ### Novidades

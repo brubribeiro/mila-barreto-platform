@@ -138,6 +138,7 @@ export function InventoryDetail() {
   return (
     <Box>
       <PageHeader
+        showTitle
         title={item.name}
         subtitle={item.description || 'Detalhes do item de estoque'}
         action={
