@@ -16,6 +16,12 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 **Notificações**
 - O sino de notificações na barra superior foi redesenhado para combinar com o novo estilo.
 
+**Dashboard**
+- A tela inicial foi reorganizada no estilo Aurora, com cards de resumo mais claros: **faturamento do mês**, **itens em baixa**, **agendamentos hoje**, **novos pacientes** e **taxa de ocupação**.
+- Nova seção **Agenda da semana** com horários, paciente, procedimento e status em destaque; clique em um item para abrir o agendamento.
+- Cards de **aniversariantes**, **contas a pagar** e **datas comemorativas** redesenhados, com visual mais compacto e botão rápido para criar promoção.
+- Seção **Metas do mês** adicionada como prévia (em breve).
+
 ### Onde ver a versão
 
 Menu lateral (rodapé) e tela de login exibem **v0.2.0**.

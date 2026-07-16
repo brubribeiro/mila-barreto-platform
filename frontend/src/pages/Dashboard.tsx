@@ -51,10 +51,13 @@ import { UpcomingExpensesCard } from '../components/dashboard/UpcomingExpensesCa
 import { DashboardDetailItem } from '../components/dashboard/DashboardDetailItem';
 import { DashboardEmptyState } from '../components/dashboard/DashboardEmptyState';
 import { AppGrid } from '../components/AppGrid';
+import { AuroraIcon } from '../components/AuroraIcon';
 
 const UPCOMING_BIRTHDAY_WINDOW_DAYS = 30;
 
 const BIRTHDAY_ACCENT = '#C2185B';
+
+const BDAY_COLORS = ['#15998B', '#C98A12', '#C25A4C', '#5A9A7D', '#7E57C2', '#3A6B64'];
 
 function getNextBirthdayDate(birthDateStr: string): dayjs.Dayjs | null {
   const birth = dayjsFromDateOnlyApi(birthDateStr);
@@ -101,6 +104,15 @@ const statusLabelDashboard: Partial<Record<AppointmentStatus, string>> = {
   NO_SHOW: 'Faltou',
 };
 
+// Pills de status no estilo Aurora (fundo tint suave + texto colorido).
+const AGENDA_PILL_SX: Record<string, { bgcolor: string; color: string }> = {
+  SCHEDULED: { bgcolor: 'rgba(201,138,18,.16)', color: '#C98A12' },
+  CONFIRMED: { bgcolor: 'rgba(17,168,147,.15)', color: '#11A893' },
+  COMPLETED: { bgcolor: 'rgba(46,125,214,.15)', color: '#3787DE' },
+  NO_SHOW: { bgcolor: 'rgba(214,90,90,.14)', color: '#D65A5A' },
+  CANCELLED: { bgcolor: 'rgba(120,134,130,.16)', color: '#7C8B87' },
+};
+
 const weekdayNamesPt = [
   'Domingo',
   'Segunda',
@@ -139,41 +151,127 @@ interface SummaryCardProps {
   color?: string;
   to?: string;
   loading?: boolean;
+  delta?: string;
+  deltaTone?: 'up' | 'down' | 'neutral';
 }
 
-function SummaryCard({ label, value, hint, icon, color = 'primary.main', to, loading }: SummaryCardProps) {
+const DELTA_TONES = {
+  up: { color: '#11A893', bg: 'rgba(17,168,147,.13)' },
+  down: { color: '#D65A5A', bg: 'rgba(214,90,90,.13)' },
+  neutral: { color: '#6E7B78', bg: 'rgba(110,123,120,.12)' },
+} as const;
+
+function SummaryCard({
+  label,
+  value,
+  hint,
+  icon,
+  color = 'primary.main',
+  to,
+  loading,
+  delta,
+  deltaTone = 'neutral',
+}: SummaryCardProps) {
+  const theme = useTheme();
+  const [group, shade] = color.split('.') as [string, string | undefined];
+  const paletteGroup = (theme.palette as unknown as Record<string, Record<string, string>>)[group];
+  const resolvedColor = (shade && paletteGroup?.[shade]) || theme.palette.primary.main;
+
   const card = (
     <Card
       sx={{
         height: '100%',
         ...(to && {
           cursor: 'pointer',
-          transition: 'box-shadow 120ms ease, border-color 120ms ease',
+          transition: 'box-shadow 120ms ease, border-color 120ms ease, transform 120ms ease',
           '&:hover': {
-            boxShadow: 2,
-            borderColor: 'primary.light',
+            boxShadow: theme.shadows[2],
+            borderColor: alpha(resolvedColor, 0.4),
+            transform: 'translateY(-2px)',
           },
         }),
       }}
     >
-      <CardContent sx={{ p: { xs: 1.25, sm: 2 }, '&:last-child': { pb: { xs: 1.25, sm: 2 } } }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: { xs: 0.5, sm: 1 } }}>
-          <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ lineHeight: 1.3, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+      <CardContent
+        sx={{
+          p: { xs: 2, sm: 2.5 },
+          '&:last-child': { pb: { xs: 2, sm: 2.5 } },
+          display: 'flex',
+          flexDirection: 'column',
+          gap: { xs: 1.25, sm: 2 },
+        }}
+      >
+        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
+          <Typography
+            sx={{
+              fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+              fontWeight: 600,
+              color: 'text.secondary',
+              lineHeight: 1.35,
+            }}
+          >
             {label}
           </Typography>
-          <Box sx={{ color, display: 'flex', flexShrink: 0, '& .MuiSvgIcon-root': { fontSize: { xs: 20, sm: 24 } } }}>{icon}</Box>
+          <Box
+            sx={{
+              width: 38,
+              height: 38,
+              borderRadius: '11px',
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: alpha(resolvedColor, 0.12),
+              color: resolvedColor,
+              '& .MuiSvgIcon-root': { fontSize: 20 },
+            }}
+          >
+            {icon}
+          </Box>
         </Stack>
         {loading ? (
-          <Skeleton variant="text" width={80} sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' } }} />
+          <Skeleton variant="text" width={90} sx={{ fontSize: { xs: '1.5rem', sm: '1.85rem' } }} />
         ) : (
-          <Typography variant="h5" fontWeight={700} sx={{ lineHeight: 1.2, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
+          <Typography
+            sx={{
+              fontSize: { xs: '1.5rem', sm: '1.85rem' },
+              fontWeight: 800,
+              letterSpacing: '-1px',
+              lineHeight: 1.05,
+              color: 'text.primary',
+            }}
+          >
             {value}
           </Typography>
         )}
-        {hint && !loading && (
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-            {hint}
-          </Typography>
+        {!loading && (delta || hint) && (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            {delta && (
+              <Box
+                component="span"
+                sx={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  color: DELTA_TONES[deltaTone].color,
+                  bgcolor: DELTA_TONES[deltaTone].bg,
+                  px: 1,
+                  py: 0.25,
+                  borderRadius: '7px',
+                  lineHeight: 1.4,
+                }}
+              >
+                {delta}
+              </Box>
+            )}
+            {hint && (
+              <Typography
+                component="span"
+                sx={{ fontSize: '0.72rem', color: 'text.secondary', fontWeight: 500 }}
+              >
+                {hint}
+              </Typography>
+            )}
+          </Stack>
         )}
       </CardContent>
     </Card>
@@ -274,6 +372,14 @@ export function Dashboard() {
     }
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [upcomingThisWeek]);
+
+  const todayAppointments = useMemo(() => {
+    const today = dayjs();
+    return (appointments ?? [])
+      .filter((a) => a.status !== 'CANCELLED')
+      .filter((a) => dayjs(a.startAt).isSame(today, 'day'))
+      .sort((a, b) => dayjs(a.startAt).valueOf() - dayjs(b.startAt).valueOf());
+  }, [appointments]);
 
   const { data: patients = [], isLoading: patientsLoading } = useQuery({
     queryKey: ['patients', 'dashboard'],
@@ -432,11 +538,12 @@ export function Dashboard() {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        height: { xs: 'auto', md: `calc(100dvh - ${dashboardViewportOffset}px)` },
-        minHeight: 0,
+        gap: { xs: 2, sm: 2.5 },
+        width: '100%',
       }}
     >
-      <Card sx={{ mb: { xs: 2, sm: 3 }, flexShrink: 0 }}>
+      {false && (
+      <Card sx={{ flexShrink: 0 }}>
         <CardContent
           sx={{
             p: { xs: 1.5, sm: 2.5 },
@@ -614,31 +721,16 @@ export function Dashboard() {
           </Stack>
         </CardContent>
       </Card>
+      )}
 
       <AppGrid
         columns={{ xs: 2, md: 4 }}
         gap={{ xs: 1.5, sm: 3 }}
-        sx={{ mb: { xs: 2, sm: 3 }, flexShrink: 0 }}
+        sx={{ flexShrink: 0 }}
       >
-        <SummaryCard
-          label={restrictToOwnAppointments ? 'Meus agendamentos' : 'Agendamentos'}
-          value={String(appointments?.length ?? 0)}
-          hint="No período selecionado"
-          icon={<EventIcon />}
-          to={canSeeAgenda ? '/agenda' : undefined}
-          loading={appointmentsLoading}
-        />
-        <SummaryCard
-          label="Pacientes cadastrados"
-          value={String(patientsInPeriod.length)}
-          hint="No período selecionado"
-          icon={<PeopleIcon />}
-          to={canSeePatients ? '/pacientes' : undefined}
-          loading={patientsLoading}
-        />
         {canSeeFinance ? (
           <SummaryCard
-            label="Faturamento"
+            label="Faturamento do mês"
             value={new Intl.NumberFormat('pt-BR', {
               style: 'currency',
               currency: 'BRL',
@@ -647,7 +739,7 @@ export function Dashboard() {
               style: 'currency',
               currency: 'BRL',
             }).format(summary?.balance ?? 0)}`}
-            icon={<AttachMoneyIcon />}
+            icon={<AuroraIcon name="money" size={19} />}
             color="success.main"
             to="/financeiro"
             loading={summaryLoading}
@@ -657,258 +749,302 @@ export function Dashboard() {
             label="Itens em baixa"
             value={String(lowStock)}
             hint="Abaixo do estoque mínimo"
-            icon={<WarningAmberIcon />}
+            icon={<AuroraIcon name="estoque" size={19} />}
             color="warning.main"
             to={canSeeInventory ? '/estoque' : undefined}
             loading={inventoryLoading}
           />
         )}
-        {canSeeFinance ? (
-          <SummaryCard
-            label="Itens em baixa"
-            value={String(lowStock)}
-            hint="Abaixo do estoque mínimo"
-            icon={<WarningAmberIcon />}
-            color="warning.main"
-            to={canSeeInventory ? '/estoque' : undefined}
-            loading={inventoryLoading}
-          />
-        ) : (
-          <SummaryCard
-            label="Agendamentos futuros"
-            value={String(upcomingThisWeek.length)}
-            hint="Nesta semana"
-            icon={<CalendarMonthOutlinedIcon />}
-            to={canSeeAgenda ? '/agenda' : undefined}
-            loading={weekLoading}
-          />
-        )}
+        <SummaryCard
+          label={restrictToOwnAppointments ? 'Meus agendamentos hoje' : 'Agendamentos hoje'}
+          value={String(todayAppointments.length)}
+          hint="Hoje"
+          delta="—"
+          icon={<AuroraIcon name="agenda" size={19} />}
+          to={canSeeAgenda ? '/agenda' : undefined}
+          loading={appointmentsLoading}
+        />
+        <SummaryCard
+          label="Novos pacientes"
+          value={String(patientsInPeriod.length)}
+          hint="no mês"
+          delta="—"
+          icon={<AuroraIcon name="clientes" size={19} />}
+          to={canSeePatients ? '/pacientes' : undefined}
+          loading={patientsLoading}
+        />
+        <SummaryCard
+          label="Taxa de ocupação"
+          value="0%"
+          hint="sem dados ainda"
+          delta="—"
+          icon={<AuroraIcon name="clock" size={19} />}
+        />
       </AppGrid>
 
-      <AppGrid
-        columns={{ xs: 1, lg: detailGridCols }}
-        gap={{ xs: 2, sm: 3 }}
+      <Box
         sx={{
-          flex: { xs: 'none', md: 1 },
-          minHeight: { md: 0 },
-          gridTemplateRows: { md: '1fr' },
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: '1.6fr 1fr' },
+          gap: { xs: 2, sm: 2.5 },
         }}
       >
-        <UpcomingDatesCard embedded />
-
-        {canSeeFinance && <UpcomingExpensesCard embedded />}
-
-        {canSeePatients && (
-            <Card
-              sx={{
-                flex: 1,
-                width: '100%',
-                height: { md: '100%' },
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: { md: 0 },
-              }}
-            >
-              <CardContent sx={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', p: 2.5, minHeight: 0 }}>
-                <Stack
-                  direction="row"
-                  spacing={2}
-                  alignItems="flex-start"
-                  justifyContent="space-between"
-                  sx={{ mb: 2, flexShrink: 0, minHeight: 48 }}
-                >
-                  <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ minWidth: 0 }}>
-                    <Avatar
-                      variant="rounded"
-                      sx={{
-                        bgcolor: alpha(BIRTHDAY_ACCENT, 0.14),
-                        width: 48,
-                        height: 48,
-                        flexShrink: 0,
-                      }}
-                    >
-                      <CakeOutlinedIcon sx={{ color: 'text.secondary' }} />
-                    </Avatar>
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography variant="subtitle1" fontWeight={700}>
-                        Próximos aniversários
+        {/* Agenda da semana */}
+        <Card sx={{ display: 'flex', flexDirection: 'column' }}>
+          <CardContent sx={{ p: { xs: 2, sm: 2.75 } }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+              <Typography sx={{ fontSize: '1rem', fontWeight: 700 }}>Agenda da semana</Typography>
+              {canSeeAgenda && (
+                <Button size="small" component={RouterLink} to="/agenda" sx={{ fontWeight: 700 }}>
+                  Ver tudo
+                </Button>
+              )}
+            </Stack>
+            {weekLoading ? (
+              <Stack spacing={1.5}>
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} variant="rounded" height={44} />
+                ))}
+              </Stack>
+            ) : upcomingThisWeek.length === 0 ? (
+              <DashboardEmptyState message="Sem agendamentos nesta semana." />
+            ) : (
+              <Stack spacing={0.5}>
+                {upcomingThisWeek.map((a) => (
+                  <Stack
+                    key={a.id}
+                    direction="row"
+                    alignItems="center"
+                    spacing={1.5}
+                    onClick={() => {
+                      if (!canSeeAgenda) return;
+                      setEditingWeekAppt(a);
+                      setWeekApptDialogOpen(true);
+                    }}
+                    sx={{
+                      px: 1,
+                      py: 1.25,
+                      borderRadius: 2,
+                      cursor: canSeeAgenda ? 'pointer' : 'default',
+                      '&:hover': canSeeAgenda ? { bgcolor: 'grey.50' } : undefined,
+                    }}
+                  >
+                    <Box sx={{ width: 46, flexShrink: 0, textAlign: 'center', lineHeight: 1.15 }}>
+                      <Typography
+                        sx={{
+                          fontSize: '0.6rem',
+                          fontWeight: 700,
+                          color: 'text.secondary',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.4px',
+                        }}
+                      >
+                        {dayjs(a.startAt).format('ddd')}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        Próximos {UPCOMING_BIRTHDAY_WINDOW_DAYS} dias
+                      <Typography
+                        sx={{
+                          fontSize: '0.8rem',
+                          fontWeight: 800,
+                          color: 'text.primary',
+                          fontVariantNumeric: 'tabular-nums',
+                        }}
+                      >
+                        {dayjs(a.startAt).format('HH:mm')}
                       </Typography>
                     </Box>
+                    <Box sx={{ width: 3, height: 34, borderRadius: 3, bgcolor: 'primary.main', flexShrink: 0 }} />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography noWrap sx={{ fontSize: '0.85rem', fontWeight: 700 }}>
+                        {a.patient?.name ?? 'Paciente'}
+                      </Typography>
+                      <Typography noWrap sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                        {[a.procedure?.name ?? 'Procedimento', a.professional?.name]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Typography>
+                    </Box>
+                    <Box
+                      component="span"
+                      sx={{
+                        flexShrink: 0,
+                        fontSize: '0.6875rem',
+                        fontWeight: 700,
+                        px: 1.25,
+                        py: 0.5,
+                        borderRadius: '8px',
+                        whiteSpace: 'nowrap',
+                        ...(AGENDA_PILL_SX[a.status] ?? AGENDA_PILL_SX.CANCELLED),
+                      }}
+                    >
+                      {statusLabelDashboard[a.status as AppointmentStatus] ?? a.status}
+                    </Box>
                   </Stack>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    component={RouterLink}
-                    to="/pacientes"
-                    sx={{ flexShrink: 0 }}
-                  >
-                    Pacientes
-                  </Button>
-                </Stack>
+                ))}
+              </Stack>
+            )}
+          </CardContent>
+        </Card>
 
-                <Box sx={detailCardScrollSx}>
-                  {patientsLoading ? (
-                    <Stack spacing={1.5}>
-                      {[1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={52} />)}
-                    </Stack>
-                  ) : upcomingBirthdays.length === 0 ? (
-                    <DashboardEmptyState message="Nenhum aniversário neste período." />
-                  ) : (
-                    <Stack spacing={1.5}>
-                      {upcomingBirthdays.map(({ patient, when, turnsAge, daysUntil }) => (
-                        <DashboardDetailItem
-                          key={patient.id}
-                          accentColor={BIRTHDAY_ACCENT}
-                          title={patient.name}
-                          chip={
-                            daysUntil <= 7
-                              ? {
-                                  label: countdownBirthdayLabel(daysUntil),
-                                  color: daysUntil === 0 ? 'secondary' : 'default',
-                                  variant: daysUntil === 0 ? 'filled' : 'outlined',
-                                }
-                              : undefined
-                          }
-                          subtitle={`Completa ${turnsAge} anos · ${when.format('dddd')}`}
-                          primaryRight={when.format('DD/MM')}
-                          secondaryRight={when.format('dddd')}
-                          trailing={
-                            patient.phone?.trim() ? (
-                              <Tooltip title="Enviar mensagem no WhatsApp">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => setWhatsappPatient(patient)}
-                                  aria-label={`Enviar WhatsApp para ${patient.name}`}
-                                  sx={{ color: '#25D366' }}
-                                >
-                                  <WhatsAppIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            ) : undefined
-                          }
-                        />
-                      ))}
-                    </Stack>
-                  )}
-                </Box>
-              </CardContent>
-            </Card>
-        )}
-
-        {canSeeAgenda && (
-            <Card
-              sx={{
-                width: '100%',
-                flex: 1,
-                height: { md: '100%' },
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: { md: 0 },
-              }}
-            >
-              <CardContent sx={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', p: 2.5, minHeight: 0 }}>
-                <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ mb: 2, flexShrink: 0, minHeight: 48 }}>
-                  <Avatar variant="rounded" sx={{ bgcolor: 'primary.light', width: 48, height: 48 }}>
-                    <CalendarMonthOutlinedIcon sx={{ color: 'primary.dark' }} />
-                  </Avatar>
-                  <Box sx={{ flex: '1 1 auto', minWidth: 0 }}>
-                    <Typography variant="subtitle1" fontWeight={700}>
-                      Esta semana
+        {/* Metas do mês (novo — sem dados ainda) */}
+        <Card sx={{ display: 'flex', flexDirection: 'column' }}>
+          <CardContent sx={{ p: { xs: 2, sm: 2.75 } }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2.25 }}>
+              <Typography sx={{ fontSize: '1rem', fontWeight: 700 }}>Metas do mês</Typography>
+              <Chip
+                label="Em breve"
+                size="small"
+                variant="outlined"
+                sx={{ height: 22, fontSize: '0.68rem', fontWeight: 700 }}
+              />
+            </Stack>
+            <Stack spacing={2}>
+              {[
+                { label: 'Faturamento', detail: 'Meta não definida' },
+                { label: 'Novos pacientes', detail: 'Meta não definida' },
+                { label: 'Taxa de ocupação', detail: 'Meta não definida' },
+              ].map((m) => (
+                <Box key={m.label}>
+                  <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.75 }}>
+                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>{m.label}</Typography>
+                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: 'text.secondary' }}>
+                      0%
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      {weekBounds.label}
-                    </Typography>
+                  </Stack>
+                  <Box sx={{ height: 8, borderRadius: 8, bgcolor: 'grey.100', overflow: 'hidden' }}>
+                    <Box sx={{ height: '100%', width: '0%', borderRadius: 8, bgcolor: 'primary.main' }} />
                   </Box>
-                </Stack>
-
-                <Box sx={detailCardScrollSx}>
-                  {weekLoading ? (
-                    <Typography variant="body2" color="text.secondary">
-                      Carregando…
-                    </Typography>
-                  ) : upcomingThisWeek.length === 0 ? (
-                    <DashboardEmptyState message="Sem horários nesta semana." />
-                  ) : (
-                    <Stack spacing={2.75}>
-                      {upcomingByDay.map(([dayKey, dayApps]) => {
-                        const { title, isToday } = labelForDayKey(dayKey);
-                        return (
-                          <Box key={dayKey}>
-                            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                              <Typography
-                                variant="overline"
-                                sx={{ letterSpacing: 0.08, fontWeight: 700, fontSize: 11 }}
-                              >
-                                {title}
-                              </Typography>
-                              {isToday && (
-                                <Chip label="hoje" size="small" color="primary" variant="filled" />
-                              )}
-                            </Stack>
-                            <Stack spacing={1.5}>
-                              {dayApps.map((a) => {
-                                const subtitle = [
-                                  a.procedure?.name ?? 'Procedimento',
-                                  a.professional?.name,
-                                ]
-                                  .filter(Boolean)
-                                  .join(' · ');
-
-                                return (
-                                  <DashboardDetailItem
-                                    key={a.id}
-                                    accentColor="primary.main"
-                                    title={a.patient?.name ?? 'Paciente'}
-                                    chip={{
-                                      label: statusLabelDashboard[a.status] ?? a.status,
-                                      sx: {
-                                        borderRadius: 1,
-                                        height: 22,
-                                        fontSize: '0.7rem',
-                                        ...weekAppointmentChipSx(a.status),
-                                      },
-                                    }}
-                                    subtitle={subtitle}
-                                    primaryRight={
-                                      <Typography
-                                        component="span"
-                                        variant="subtitle2"
-                                        fontWeight={700}
-                                        sx={{ fontVariantNumeric: 'tabular-nums', color: 'primary.main' }}
-                                      >
-                                        {dayjs(a.startAt).format('HH:mm')}
-                                      </Typography>
-                                    }
-                                    secondaryRight={dayjs(a.startAt).format('dddd')}
-                                    onClick={() => {
-                                      setEditingWeekAppt(a);
-                                      setWeekApptDialogOpen(true);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault();
-                                        setEditingWeekAppt(a);
-                                        setWeekApptDialogOpen(true);
-                                      }
-                                    }}
-                                    aria-label={`Editar agendamento ${dayjs(a.startAt).format('dddd DD/MM')} às ${dayjs(a.startAt).format('HH:mm')}`}
-                                  />
-                                );
-                              })}
-                            </Stack>
-                          </Box>
-                        );
-                      })}
-                    </Stack>
-                  )}
+                  <Typography sx={{ display: 'block', fontSize: '0.72rem', color: 'text.secondary', mt: 0.75 }}>
+                    {m.detail}
+                  </Typography>
                 </Box>
-              </CardContent>
-            </Card>
+              ))}
+            </Stack>
+          </CardContent>
+        </Card>
+      </Box>
+
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr' },
+          gap: { xs: 2, sm: 2.5 },
+        }}
+      >
+        {/* Aniversariantes */}
+        {canSeePatients && (
+          <Card>
+            <CardContent sx={{ p: { xs: 2, sm: 2.75 } }}>
+              <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1.75 }}>
+                <Box
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: '10px',
+                    bgcolor: alpha(BIRTHDAY_ACCENT, 0.14),
+                    color: BIRTHDAY_ACCENT,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <AuroraIcon name="gift" size={19} strokeWidth={1.7} />
+                </Box>
+                <Box sx={{ lineHeight: 1.2 }}>
+                  <Typography sx={{ fontSize: '0.9375rem', fontWeight: 700 }}>Aniversariantes</Typography>
+                  <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', fontWeight: 500 }}>
+                    próximos {UPCOMING_BIRTHDAY_WINDOW_DAYS} dias
+                  </Typography>
+                </Box>
+              </Stack>
+              {patientsLoading ? (
+                <Stack spacing={1}>
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} variant="rounded" height={44} />
+                  ))}
+                </Stack>
+              ) : upcomingBirthdays.length === 0 ? (
+                <DashboardEmptyState message="Nenhum aniversário neste período." />
+              ) : (
+                <Stack spacing={0.25}>
+                  {upcomingBirthdays.map(({ patient, when, turnsAge, daysUntil }, idx) => {
+                    const initials = patient.name
+                      .trim()
+                      .split(/\s+/)
+                      .map((w) => w[0] ?? '')
+                      .slice(0, 2)
+                      .join('')
+                      .toUpperCase();
+                    const bdColor = BDAY_COLORS[idx % BDAY_COLORS.length];
+                    return (
+                      <Stack key={patient.id} direction="row" alignItems="center" spacing={1.5} sx={{ px: 0.5, py: 1 }}>
+                        <Avatar
+                          variant="rounded"
+                          sx={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: '10px',
+                            bgcolor: bdColor,
+                            color: '#fff',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {initials}
+                        </Avatar>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography noWrap sx={{ fontSize: '0.8125rem', fontWeight: 700 }}>
+                            {patient.name}
+                          </Typography>
+                          <Typography noWrap sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                            {turnsAge} anos · {when.format('DD/MM')}
+                          </Typography>
+                        </Box>
+                        <Box
+                          component="span"
+                          sx={{
+                            flexShrink: 0,
+                            fontSize: '0.6875rem',
+                            fontWeight: 700,
+                            px: 1.1,
+                            py: '3px',
+                            borderRadius: '7px',
+                            whiteSpace: 'nowrap',
+                            ...(daysUntil <= 3
+                              ? { bgcolor: 'rgba(21,153,139,.14)', color: '#11A893' }
+                              : { bgcolor: 'grey.100', color: 'text.secondary' }),
+                          }}
+                        >
+                          {countdownBirthdayLabel(daysUntil)}
+                        </Box>
+                        {patient.phone?.trim() && (
+                          <Tooltip title="Enviar mensagem no WhatsApp">
+                            <IconButton
+                              size="small"
+                              onClick={() => setWhatsappPatient(patient)}
+                              aria-label={`Enviar WhatsApp para ${patient.name}`}
+                              sx={{ color: '#1DAE53', flexShrink: 0 }}
+                            >
+                              <WhatsAppIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Stack>
+                    );
+                  })}
+                </Stack>
+              )}
+            </CardContent>
+          </Card>
         )}
-      </AppGrid>
+
+        {/* Contas a pagar */}
+        {canSeeFinance && <UpcomingExpensesCard embedded />}
+
+        {/* Datas comemorativas */}
+        <UpcomingDatesCard embedded />
+      </Box>
 
       {canSeeAgenda && (
         <AppointmentFormDialog

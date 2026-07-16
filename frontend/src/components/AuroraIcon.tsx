@@ -131,8 +131,43 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M9 11.8l2 2 3.6-3.8" />
     </>
   ),
+  // KPIs / cabeçalhos de card
+  money: (
+    <>
+      <path d="M12 2v20" />
+      <path d="M17 6.5c0-2-2.2-3-5-3s-5 1-5 3 2.2 2.5 5 3 5 1.4 5 3.5-2.2 3-5 3-5-1.2-5-3" />
+    </>
+  ),
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3.2 2" />
+    </>
+  ),
+  gift: (
+    <>
+      <path d="M4 21h16v-7H4z" />
+      <path d="M5.5 14v-1.5a2.5 2.5 0 0 1 2.5-2.5h8a2.5 2.5 0 0 1 2.5 2.5V14" />
+      <path d="M12 7.5V4M9.5 5.2h5" />
+    </>
+  ),
+  receipt: (
+    <>
+      <path d="M6 2.5h12v19l-2.5-1.6-2.5 1.6-2.5-1.6-2.5 1.6z" />
+      <path d="M9 8h6M9 11.5h6" />
+    </>
+  ),
+  calendarStar: (
+    <>
+      <path d="M3.5 5.5h17v15h-17z" />
+      <path d="M3.5 10h17M8 3v4M16 3v4" />
+      <path d="M12 12.6l.9 1.8 2 .3-1.45 1.4.35 2L12 17.1l-1.8.95.35-2L9.1 14.7l2-.3z" />
+    </>
+  ),
   // Header / ações
   plus: <path d="M12 5v14M5 12h14" />,
+  check: <path d="M20 6L9 17l-5-5" />,
+  close: <path d="M6 6l12 12M18 6L6 18" />,
   menu: <path d="M3.5 6h17M3.5 12h17M3.5 18h17" />,
   bell: (
     <>

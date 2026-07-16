@@ -25,8 +25,8 @@ import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { usePermissions } from '../../contexts/usePermissions';
 import type { FinancialEntry } from '../../types';
-import { DashboardDetailItem } from './DashboardDetailItem';
 import { DashboardEmptyState } from './DashboardEmptyState';
+import { AuroraIcon } from '../AuroraIcon';
 
 const LOOKAHEAD_DAYS = 7;
 
@@ -146,44 +146,36 @@ export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardP
           minHeight: 0,
         }}
       >
-        <Stack
-          direction="row"
-          spacing={2}
-          alignItems="flex-start"
-          justifyContent="space-between"
-          sx={{ mb: 2, flexShrink: 0, minHeight: 48 }}
-        >
-          <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ minWidth: 0 }}>
-            <Avatar
-              variant="rounded"
-              sx={{
-                bgcolor: alpha(EXPENSE_ACCENT, 0.14),
-                width: 48,
-                height: 48,
-                flexShrink: 0,
-              }}
-            >
-              <ReceiptLongIcon sx={{ color: EXPENSE_ACCENT }} />
-            </Avatar>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="subtitle1" fontWeight={700} noWrap>
-                Despesas a pagar
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block" noWrap>
-                Proximos {LOOKAHEAD_DAYS} dias
-                {upcoming.length > 0 && ` · ${upcoming.length} pendente${upcoming.length > 1 ? 's' : ''} · ${fmt(totalAmount)}`}
+        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1.75, flexShrink: 0 }}>
+          <Box
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: '10px',
+              bgcolor: 'rgba(201,138,18,.13)',
+              color: '#C98A12',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <AuroraIcon name="receipt" size={19} strokeWidth={1.7} />
+          </Box>
+          <Box sx={{ lineHeight: 1.2, flex: 1, minWidth: 0 }}>
+            <Typography sx={{ fontSize: '0.9375rem', fontWeight: 700 }}>Contas a pagar</Typography>
+            <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', fontWeight: 500 }} noWrap>
+              próximos {LOOKAHEAD_DAYS} dias
+            </Typography>
+          </Box>
+          {upcoming.length > 0 && (
+            <Box sx={{ textAlign: 'right', lineHeight: 1.1, flexShrink: 0 }}>
+              <Typography sx={{ fontSize: '1rem', fontWeight: 800 }}>{fmt(totalAmount)}</Typography>
+              <Typography sx={{ fontSize: '0.62rem', color: 'text.secondary', fontWeight: 600 }}>
+                total
               </Typography>
             </Box>
-          </Stack>
-          <Button
-            size="small"
-            variant="outlined"
-            component={RouterLink}
-            to="/financeiro"
-            sx={{ flexShrink: 0 }}
-          >
-            Financeiro
-          </Button>
+          )}
         </Stack>
 
         <Box
@@ -221,65 +213,62 @@ export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardP
               message={`Nenhuma despesa pendente nos proximos ${LOOKAHEAD_DAYS} dias.`}
             />
           ) : (
-            <Stack spacing={1.5}>
+            <Stack spacing={0.25}>
               {upcoming.map((e) => {
                 const isMutating =
                   markPaidMutation.isPending && markPaidMutation.variables === e.id;
-                const categoryLine = [
-                  e.category ?? 'Sem categoria',
-                  e.expenseType === 'FIXED'
-                    ? 'Fixa'
-                    : e.expenseType === 'VARIABLE'
-                      ? 'Variavel'
-                      : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ');
-
+                const dotColor =
+                  e.daysUntil < 0 ? '#C25A4C' : e.daysUntil <= 2 ? '#C98A12' : '#5A9A7D';
                 return (
-                  <DashboardDetailItem
-                    key={e.id}
-                    accentColor={e.daysUntil < 0 ? 'error.main' : EXPENSE_ACCENT}
-                    title={e.description}
-                    chip={{
-                      label: dueDateLabel(e.daysUntil),
-                      color: dueDateChipColor(e.daysUntil),
-                      variant: e.daysUntil <= 0 ? 'filled' : 'outlined',
-                    }}
-                    subtitle={categoryLine}
-                    primaryRight={
-                      <Typography component="span" variant="subtitle2" fontWeight={700} color={EXPENSE_ACCENT}>
-                        {fmt(Number(e.amount))}
+                  <Stack key={e.id} direction="row" alignItems="center" spacing={1.5} sx={{ px: 0.5, py: 1 }}>
+                    <Box sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: dotColor, flexShrink: 0 }} />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography noWrap sx={{ fontSize: '0.8125rem', fontWeight: 700 }}>
+                        {e.description}
                       </Typography>
-                    }
-                    secondaryRight={`${e.due.format('DD/MM')} · ${e.due.format('dddd')}`}
-                    trailing={
-                      canEdit ? (
-                        <Tooltip title="Marcar como pago">
-                          <span>
-                            <IconButton
-                              size="small"
-                              disabled={isMutating}
-                              onClick={(ev) => {
-                                ev.stopPropagation();
-                                markPaidMutation.mutate(e.id);
-                              }}
-                              sx={{
-                                color: PAID_COLOR,
-                                '&:hover': { bgcolor: alpha(PAID_COLOR, 0.1) },
-                              }}
-                            >
-                              {isMutating ? (
-                                <CircularProgress size={20} />
-                              ) : (
-                                <CheckCircleOutlineIcon fontSize="small" />
-                              )}
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      ) : undefined
-                    }
-                  />
+                      <Typography noWrap sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                        {dueDateLabel(e.daysUntil)}
+                      </Typography>
+                    </Box>
+                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, whiteSpace: 'nowrap' }}>
+                      {fmt(Number(e.amount))}
+                    </Typography>
+                    {canEdit && (
+                      <Tooltip title="Marcar como pago">
+                        <span>
+                          <IconButton
+                            size="small"
+                            disabled={isMutating}
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              markPaidMutation.mutate(e.id);
+                            }}
+                            sx={{
+                              width: 30,
+                              height: 30,
+                              borderRadius: '9px',
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              bgcolor: 'grey.50',
+                              color: 'text.secondary',
+                              flexShrink: 0,
+                              '&:hover': {
+                                borderColor: '#11A893',
+                                bgcolor: 'rgba(17,168,147,.12)',
+                                color: '#11A893',
+                              },
+                            }}
+                          >
+                            {isMutating ? (
+                              <CircularProgress size={16} />
+                            ) : (
+                              <AuroraIcon name="check" size={15} strokeWidth={2.4} />
+                            )}
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    )}
+                  </Stack>
                 );
               })}
             </Stack>

@@ -1,22 +1,10 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Avatar,
-  Box,
-  Card,
-  CardContent,
-  IconButton,
-  Stack,
-  Tooltip,
-  Typography,
-} from '@mui/material';
-import { alpha } from '@mui/material/styles';
-import CelebrationIcon from '@mui/icons-material/Celebration';
-import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
 import dayjs from 'dayjs';
 import { usePermissions } from '../../contexts/usePermissions';
-import { DashboardDetailItem } from './DashboardDetailItem';
 import { DashboardEmptyState } from './DashboardEmptyState';
+import { AuroraIcon } from '../AuroraIcon';
 
 interface CommemorativeDate {
   name: string;
@@ -195,24 +183,26 @@ export function UpcomingDatesCard({ embedded = false }: UpcomingDatesCardProps) 
           minHeight: 0,
         }}
       >
-        <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ mb: 2, flexShrink: 0, minHeight: 48 }}>
-          <Avatar
-            variant="rounded"
+        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1.75, flexShrink: 0 }}>
+          <Box
             sx={{
-              bgcolor: alpha('#F59E0B', 0.14),
-              width: 48,
-              height: 48,
+              width: 36,
+              height: 36,
+              borderRadius: '10px',
+              bgcolor: '#EAF6F4',
+              color: 'primary.main',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <CelebrationIcon sx={{ color: '#F59E0B' }} />
-          </Avatar>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="subtitle1" fontWeight={700}>
-              Datas comemorativas
-            </Typography>
-            <Typography variant="caption" color="text.secondary" display="block" noWrap>
-              Próximos {LOOKAHEAD_DAYS} dias — prepare suas promoções
+            <AuroraIcon name="calendarStar" size={19} strokeWidth={1.7} />
+          </Box>
+          <Box sx={{ lineHeight: 1.2, minWidth: 0 }}>
+            <Typography sx={{ fontSize: '0.9375rem', fontWeight: 700 }}>Datas comemorativas</Typography>
+            <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', fontWeight: 500 }} noWrap>
+              próximos {LOOKAHEAD_DAYS} dias · oportunidades
             </Typography>
           </Box>
         </Stack>
@@ -230,47 +220,71 @@ export function UpcomingDatesCard({ embedded = false }: UpcomingDatesCardProps) 
               message={`Nenhuma data comemorativa nos próximos ${LOOKAHEAD_DAYS} dias.`}
             />
           ) : (
-            <Stack spacing={1.5}>
+            <Stack spacing={0.25}>
               {upcoming.map((d) => (
-                <DashboardDetailItem
-                  key={d.name}
-                  accentColor={d.color}
-                  title={`${d.emoji} ${d.name}`}
-                  chip={
-                    d.daysUntil <= 7
-                      ? {
-                          label:
-                            d.daysUntil === 0
-                              ? 'Hoje!'
-                              : d.daysUntil === 1
-                                ? 'Amanhã!'
-                                : `em ${d.daysUntil} dias`,
-                          color: d.daysUntil <= 3 ? 'warning' : 'default',
-                          variant: d.daysUntil <= 3 ? 'filled' : 'outlined',
-                        }
-                      : undefined
-                  }
-                  subtitle={d.tip}
-                  primaryRight={
-                    <Typography component="span" variant="subtitle2" fontWeight={700} sx={{ color: d.color }}>
-                      {d.when.format('DD/MM')}
+                <Stack key={d.name} direction="row" alignItems="center" spacing={1.75} sx={{ px: 0.5, py: 1.1 }}>
+                  <Box
+                    sx={{
+                      width: 42,
+                      textAlign: 'center',
+                      flexShrink: 0,
+                      borderRight: '1px solid',
+                      borderColor: 'divider',
+                      pr: 1.25,
+                    }}
+                  >
+                    <Typography sx={{ fontSize: '1.05rem', fontWeight: 800, color: 'primary.main', lineHeight: 1 }}>
+                      {d.when.format('DD')}
                     </Typography>
-                  }
-                  secondaryRight={d.when.format('dddd')}
-                  trailing={
-                    canCreatePromotion ? (
-                      <Tooltip title="Criar promoção">
-                        <IconButton
-                          size="small"
-                          onClick={() => navigate(`/promocoes?data=${encodeURIComponent(d.name)}`)}
-                          sx={{ color: d.color }}
-                        >
-                          <LocalOfferIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    ) : undefined
-                  }
-                />
+                    <Typography
+                      sx={{
+                        fontSize: '0.58rem',
+                        fontWeight: 700,
+                        color: 'text.secondary',
+                        letterSpacing: '0.6px',
+                        mt: 0.25,
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {d.when.format('MMM')}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography noWrap sx={{ fontSize: '0.8125rem', fontWeight: 700 }}>
+                      {d.name}
+                    </Typography>
+                    <Typography noWrap sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                      {d.daysUntil === 0
+                        ? 'hoje'
+                        : d.daysUntil === 1
+                          ? 'amanhã'
+                          : `em ${d.daysUntil} dias`}
+                    </Typography>
+                  </Box>
+                  {canCreatePromotion && (
+                    <Button
+                      size="small"
+                      onClick={() => navigate(`/promocoes?data=${encodeURIComponent(d.name)}`)}
+                      startIcon={<AuroraIcon name="plus" size={12} strokeWidth={2.4} />}
+                      sx={{
+                        flexShrink: 0,
+                        fontSize: '0.66rem',
+                        fontWeight: 700,
+                        px: 1.25,
+                        py: 0.4,
+                        borderRadius: '8px',
+                        border: '1px solid',
+                        borderColor: '#D8EFEB',
+                        bgcolor: '#EAF6F4',
+                        color: 'primary.main',
+                        '& .MuiButton-startIcon': { mr: 0.5 },
+                        '&:hover': { bgcolor: 'primary.main', color: '#fff' },
+                      }}
+                    >
+                      Promoção
+                    </Button>
+                  )}
+                </Stack>
               ))}
             </Stack>
           )}
