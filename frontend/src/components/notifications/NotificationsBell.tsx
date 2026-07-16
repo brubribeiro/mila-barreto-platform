@@ -122,100 +122,154 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
         onClose={handleClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        slotProps={{ paper: { sx: { width: 380, maxHeight: 500 } } }}
+        slotProps={{
+          paper: {
+            sx: {
+              width: 380,
+              maxHeight: 520,
+              mt: 1,
+              borderRadius: '16px',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 12px 48px -12px rgba(16,40,37,.28)',
+            },
+          },
+        }}
       >
         <Stack
           direction="row"
           alignItems="center"
           justifyContent="space-between"
-          sx={{ px: 2, py: 1.5 }}
+          spacing={1}
+          sx={{ px: 2.1, py: 1.75, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}
         >
-          <Typography variant="subtitle1" fontWeight={600}>
-            Notificações
-          </Typography>
-          <Stack direction="row" spacing={0.5}>
-            <Tooltip title="Preferências">
-              <IconButton
-                size="small"
-                onClick={() => {
-                  void queryClient.prefetchQuery({
-                    queryKey: ['notification-preferences'],
-                    queryFn: () => notificationsApi.getPreferences(),
-                  });
-                  setPrefsOpen(true);
-                  handleClose();
+          <Stack direction="row" alignItems="center" spacing={1.25}>
+            <Typography sx={{ fontSize: '0.9375rem', fontWeight: 800 }}>Notificações</Typography>
+            {count > 0 && (
+              <Box
+                component="span"
+                sx={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 800,
+                  color: 'primary.main',
+                  bgcolor: '#EAF6F4',
+                  px: 1,
+                  py: '2px',
+                  borderRadius: '7px',
                 }}
               >
-                <SettingsIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+                {count} nova{count > 1 ? 's' : ''}
+              </Box>
+            )}
           </Stack>
+          <Button
+            size="small"
+            disabled={count === 0 || markAllAsReadMutation.isPending}
+            onClick={() => markAllAsReadMutation.mutate()}
+            sx={{ fontSize: '0.75rem', fontWeight: 700, minWidth: 0, px: 0.75 }}
+          >
+            Marcar lidas
+          </Button>
         </Stack>
-        <Divider />
 
-        {isLoading ? (
-          <Box display="flex" justifyContent="center" py={3}>
-            <CircularProgress size={24} />
-          </Box>
-        ) : notifications.length === 0 ? (
-          <Box sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}>
-            <Typography variant="body2">Você não tem notificações</Typography>
-          </Box>
-        ) : (
-          <>
-            <List sx={{ p: 0, maxHeight: 360, overflow: 'auto' }}>
-              {notifications.map((n) => (
-                <ListItemButton
-                  key={n.id}
-                  onClick={() => handleClickNotification(n)}
+        <Box sx={{ overflowY: 'auto', flex: 1 }}>
+          {isLoading ? (
+            <Box display="flex" justifyContent="center" py={3}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : notifications.length === 0 ? (
+            <Box sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}>
+              <Typography variant="body2">Você não tem notificações</Typography>
+            </Box>
+          ) : (
+            notifications.map((n) => (
+              <Box
+                key={n.id}
+                onClick={() => handleClickNotification(n)}
+                sx={{
+                  display: 'flex',
+                  gap: 1.25,
+                  px: 2.1,
+                  py: 1.5,
+                  cursor: 'pointer',
+                  borderBottom: '1px solid',
+                  borderColor: 'grey.50',
+                  bgcolor: n.read ? 'transparent' : 'rgba(21,153,139,.05)',
+                  '&:hover': { bgcolor: 'grey.50' },
+                }}
+              >
+                <Box
                   sx={{
-                    alignItems: 'flex-start',
-                    bgcolor: n.read ? 'transparent' : 'rgba(10, 186, 181, 0.04)',
-                    borderLeft: '3px solid',
-                    borderColor: n.read ? 'transparent' : 'primary.main',
+                    width: 36,
+                    height: 36,
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: 'rgba(21,153,139,.12)',
+                    color: 'primary.main',
                   }}
                 >
-                  <ListItemText
-                    primary={
-                      <Typography
-                        variant="body2"
-                        fontWeight={n.read ? 400 : 600}
-                        sx={{ pr: 1 }}
-                      >
-                        {n.title}
-                      </Typography>
-                    }
-                    secondary={
-                      <>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          component="div"
-                          sx={{ display: 'block', mb: 0.25 }}
-                        >
-                          {n.message}
-                        </Typography>
-                        <Typography variant="caption" color="text.disabled" component="div">
-                          {dayjs(n.createdAt).fromNow()}
-                        </Typography>
-                      </>
-                    }
-                  />
-                </ListItemButton>
-              ))}
-            </List>
-            <Divider />
-            <Stack direction="row" justifyContent="flex-end" sx={{ px: 2, py: 1 }}>
-              <Button
-                size="small"
-                disabled={count === 0 || markAllAsReadMutation.isPending}
-                onClick={() => markAllAsReadMutation.mutate()}
-              >
-                Marcar todas como lidas
-              </Button>
-            </Stack>
-          </>
-        )}
+                  <AuroraIcon name="bell" size={18} strokeWidth={1.9} />
+                </Box>
+                <Box sx={{ flex: 1, minWidth: 0, lineHeight: 1.4 }}>
+                  <Stack direction="row" alignItems="center" spacing={0.9}>
+                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800 }} noWrap>
+                      {n.title}
+                    </Typography>
+                    {!n.read && (
+                      <Box
+                        sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: 'primary.main', flexShrink: 0 }}
+                      />
+                    )}
+                  </Stack>
+                  <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 500, mt: 0.25 }}>
+                    {n.message}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.6875rem', color: 'text.disabled', fontWeight: 600, mt: 0.5 }}>
+                    {dayjs(n.createdAt).fromNow()}
+                  </Typography>
+                </Box>
+              </Box>
+            ))
+          )}
+        </Box>
+
+        <Box
+          component="button"
+          type="button"
+          onClick={() => {
+            void queryClient.prefetchQuery({
+              queryKey: ['notification-preferences'],
+              queryFn: () => notificationsApi.getPreferences(),
+            });
+            setPrefsOpen(true);
+            handleClose();
+          }}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 1,
+            height: 46,
+            flexShrink: 0,
+            border: 'none',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'grey.50',
+            color: 'text.secondary',
+            fontFamily: 'inherit',
+            fontSize: '0.8125rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            '&:hover': { bgcolor: 'grey.100' },
+          }}
+        >
+          <SettingsIcon sx={{ fontSize: 16 }} />
+          Preferências de notificação
+        </Box>
       </Popover>
 
       <NotificationPreferencesDialog

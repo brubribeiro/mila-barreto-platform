@@ -15,6 +15,8 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 **Notificações**
 - O sino de notificações na barra superior foi redesenhado para combinar com o novo estilo.
+- O painel de notificações exibe contador de novas, botão **Marcar lidas** no topo e lista com destaque para itens não lidos.
+- Acesso às **preferências de notificação** ficou no rodapé do painel, com modal redesenhado e toggles mais claros por tipo de alerta.
 
 **Dashboard**
 - A tela inicial foi reorganizada no estilo Aurora, com cards de resumo mais claros: **faturamento do mês**, **itens em baixa**, **agendamentos hoje**, **novos pacientes** e **taxa de ocupação**.
