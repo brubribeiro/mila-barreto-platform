@@ -624,7 +624,7 @@ export function Layout() {
                 variant="contained"
                 color="primary"
                 startIcon={<AuroraIcon name="plus" size={18} strokeWidth={2.2} />}
-                onClick={() => navigate('/agenda')}
+                onClick={() => navigate('/agenda?novo=1')}
                 sx={{
                   height: 42,
                   px: { xs: 1.25, md: 2.25 },

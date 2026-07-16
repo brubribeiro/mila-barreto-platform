@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { Alert, Box, Button, Card, Checkbox, Chip, CircularProgress, Collapse, FormControl, InputLabel, ListItemText, MenuItem, OutlinedInput, Select, Skeleton, Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Box, Button, Card, Checkbox, CircularProgress, Collapse, FormControl, IconButton, InputLabel, ListItemText, MenuItem, OutlinedInput, Select, Skeleton, Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
 import HistoryIcon from '@mui/icons-material/History';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import { AuroraIcon } from '../components/AuroraIcon';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -52,6 +52,28 @@ const statusLabel: Record<string, string> = {
   NO_SHOW: 'Faltou',
 };
 
+const AGENDA_CATEGORIES = [
+  { label: 'Injetáveis', color: '#15998B' },
+  { label: 'Laser', color: '#9B7BD4' },
+  { label: 'Facial', color: '#5BA8DE' },
+  { label: 'Corporal', color: '#E0915B' },
+  { label: 'Peeling', color: '#D46B8A' },
+];
+
+const AGENDA_VIEWS = [
+  { view: 'timeGridDay', label: 'Dia' },
+  { view: 'timeGridWeek', label: 'Semana' },
+  { view: 'dayGridMonth', label: 'Mês' },
+];
+
+// Cor "de categoria" derivada de forma determinística do nome do procedimento
+// (o backend ainda não tem cor por categoria).
+function categoryColorFor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return AGENDA_CATEGORIES[h % AGENDA_CATEGORIES.length].color;
+}
+
 export function Appointments() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -61,6 +83,9 @@ export function Appointments() {
   const canCreate = has('appointments:create');
   const [historyOpen, setHistoryOpen] = useState(false);
   const calendarRef = useRef<FullCalendar | null>(null);
+  const [currentView, setCurrentView] = useState<string>(isMobile ? 'timeGridDay' : 'timeGridWeek');
+  const [periodLabel, setPeriodLabel] = useState('');
+  const [pendingDismissed, setPendingDismissed] = useState(false);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
@@ -142,20 +167,21 @@ export function Appointments() {
   const appointmentEvents = useMemo<EventInput[]>(
     () =>
       filteredAppointments.map((a) => {
-        const colors = statusColors[a.status];
         const tag = kindLabel[a.kind] ? `[${kindLabel[a.kind]}] ` : '';
+        const catColor = categoryColorFor(a.procedure?.name ?? a.kind ?? '');
+        const statusColor = statusColors[a.status]?.border ?? theme.palette.primary.main;
         return {
           id: a.id,
           title: `${tag}${a.patient?.name ?? 'Paciente'} · ${a.procedure?.name ?? ''}`,
           start: a.startAt,
           end: a.endAt,
-          backgroundColor: colors.bg,
-          borderColor: colors.border,
-          textColor: colors.text,
-          extendedProps: { appointment: a },
+          backgroundColor: `${catColor}1A`,
+          borderColor: catColor,
+          textColor: theme.palette.text.primary,
+          extendedProps: { appointment: a, catColor, statusColor },
         };
       }),
-    [filteredAppointments],
+    [filteredAppointments, theme.palette.text.primary, theme.palette.primary.main],
   );
 
   const holidayEvents = useMemo(
@@ -179,8 +205,22 @@ export function Appointments() {
     setFormOpen(true);
   };
 
+  // Abre a modal automaticamente quando chega via "Novo agendamento" do header (?novo=1)
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('novo') === '1' && canCreate) {
+      openNew();
+      const next = new URLSearchParams(searchParams);
+      next.delete('novo');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, canCreate]);
+
   const handleDatesSet = (info: DatesSetArg) => {
     setRange({ from: info.start.toISOString(), to: info.end.toISOString() });
+    setPeriodLabel(info.view.title);
+    setCurrentView(info.view.type);
   };
 
   const handleSelect = (info: DateSelectArg) => {
@@ -272,125 +312,269 @@ export function Appointments() {
             ? 'Sua agenda · feriados · indisponibilidades'
             : 'Agendamentos, feriados e bloqueios de indisponibilidade dos profissionais'
         }
-        action={
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-            {!restrictToOwnAppointments && activeUsers.length > 1 && (
-              <FormControl size="small" sx={{ minWidth: { xs: 140, sm: 200 } }}>
-                <InputLabel id="filter-prof-label">Profissional</InputLabel>
-                <Select
-                  labelId="filter-prof-label"
-                  multiple
-                  value={filterProfessionalIds}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFilterProfessionalIds(typeof val === 'string' ? val.split(',') : val);
-                  }}
-                  input={<OutlinedInput label="Profissional" />}
-                  renderValue={(selected) => {
-                    if (selected.length === 0) return 'Todos';
-                    if (selected.length <= 2) {
-                      return selected
-                        .map((id) => activeUsers.find((u) => u.id === id)?.name ?? id)
-                        .join(', ');
-                    }
-                    return `${selected.length} selecionados`;
-                  }}
-                  MenuProps={{ PaperProps: { sx: { maxHeight: 300 } } }}
-                >
-                  {activeUsers.map((u) => (
-                    <MenuItem key={u.id} value={u.id}>
-                      <Checkbox size="small" checked={filterProfessionalIds.includes(u.id)} />
-                      <ListItemText primary={u.name} />
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
-            {isAdmin && (
-              <Button
-                variant="outlined"
-                startIcon={<HistoryIcon />}
-                onClick={() => setHistoryOpen(true)}
-                size={isMobile ? 'small' : 'medium'}
-              >
-                Histórico
-              </Button>
-            )}
-            {canCreate && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => openNew()}
-                size={isMobile ? 'small' : 'medium'}
-              >
-                {isMobile ? 'Novo' : 'Novo agendamento'}
-              </Button>
-            )}
-          </Stack>
-        }
       />
 
-      {pendingAppointments.length > 0 && (
-        <Alert
-          severity="warning"
-          icon={<WarningAmberIcon />}
-          sx={{ mb: 1.5, cursor: 'pointer', '& .MuiAlert-message': { width: '100%' } }}
-          onClick={() => setPendingExpanded((v) => !v)}
+      {pendingAppointments.length > 0 && !pendingDismissed && (
+        <Box
+          sx={{
+            mb: 1.5,
+            borderRadius: '13px',
+            border: '1px solid',
+            borderColor: 'rgba(194,90,76,.32)',
+            bgcolor: 'rgba(194,90,76,.07)',
+            overflow: 'hidden',
+          }}
         >
-          <Stack direction="row" justifyContent="space-between" alignItems="center" width="100%">
-            <Typography variant="body2" fontWeight={600}>
-              {pendingAppointments.length} pendência{pendingAppointments.length > 1 ? 's' : ''} — agendamentos passados sem conclusão
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1.25}
+            sx={{ px: 2, py: 1.35, cursor: 'pointer' }}
+            onClick={() => setPendingExpanded((v) => !v)}
+          >
+            <Box sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: '#C25A4C', flexShrink: 0 }} />
+            <Typography sx={{ flex: 1, fontSize: '0.85rem', fontWeight: 700 }}>
+              {pendingAppointments.length} agendamento{pendingAppointments.length > 1 ? 's' : ''} com pendência
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {pendingExpanded ? 'Recolher' : 'Ver detalhes'}
-            </Typography>
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPendingExpanded((v) => !v);
+              }}
+              aria-label={pendingExpanded ? 'Recolher' : 'Expandir'}
+              sx={{
+                color: 'text.secondary',
+                transform: pendingExpanded ? 'rotate(180deg)' : 'none',
+                transition: 'transform 150ms ease',
+              }}
+            >
+              <AuroraIcon name="chevronDown" size={16} strokeWidth={2} />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPendingDismissed(true);
+              }}
+              aria-label="Dispensar"
+              sx={{ color: 'text.secondary' }}
+            >
+              <AuroraIcon name="close" size={16} strokeWidth={2} />
+            </IconButton>
           </Stack>
           <Collapse in={pendingExpanded}>
-            <Stack spacing={0.5} mt={1}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, px: 2, pb: 1.75, pt: 0.25 }}>
               {pendingAppointments.map((a) => (
-                <Stack
+                <Box
                   key={a.id}
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{
-                    p: 1,
-                    borderRadius: 1,
-                    bgcolor: 'rgba(255,255,255,0.7)',
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.95)' },
-                    cursor: 'pointer',
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  onClick={() => {
                     setEditing(a);
                     setDefaultStart(null);
                     setFormOpen(true);
                   }}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.75,
+                    px: 1.25,
+                    py: 0.85,
+                    borderRadius: '10px',
+                    bgcolor: 'background.paper',
+                    border: '1px solid',
+                    borderColor: 'rgba(194,90,76,.25)',
+                    cursor: 'pointer',
+                    '&:hover': { borderColor: '#C25A4C' },
+                  }}
                 >
-                  <Typography variant="body2">
-                    {a.patient?.name ?? 'Paciente'} · {a.procedure?.name ?? kindLabel[a.kind] ?? a.kind}
-                  </Typography>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Chip
-                      label={statusLabel[a.status] ?? a.status}
-                      size="small"
-                      sx={{
-                        bgcolor: statusColors[a.status]?.bg,
-                        color: statusColors[a.status]?.text,
-                        fontWeight: 600,
-                        fontSize: '0.7rem',
-                      }}
-                    />
-                    <Typography variant="caption" color="text.secondary">
-                      {new Date(a.endAt).toLocaleDateString('pt-BR')}
-                    </Typography>
-                  </Stack>
-                </Stack>
+                  <Box
+                    component="span"
+                    sx={{
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      color: '#C25A4C',
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {new Date(a.startAt).toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}{' '}
+                    {new Date(a.startAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  </Box>
+                  <Box component="span" sx={{ fontSize: '0.78rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    {a.patient?.name ?? 'Paciente'}
+                  </Box>
+                  <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>
+                    · {a.procedure?.name ?? kindLabel[a.kind] ?? a.kind}
+                  </Box>
+                </Box>
               ))}
-            </Stack>
+            </Box>
           </Collapse>
-        </Alert>
+        </Box>
       )}
+
+      {/* Toolbar custom (fora do calendário) */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 1.5,
+          mb: 1.5,
+        }}
+      >
+        <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap" useFlexGap>
+          <Stack direction="row" alignItems="center" spacing={0.25}>
+            <IconButton
+              onClick={() => calendarRef.current?.getApi().prev()}
+              aria-label="Anterior"
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '9px',
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+                color: 'text.secondary',
+                '&:hover': { bgcolor: 'grey.50', borderColor: 'primary.light' },
+              }}
+            >
+              <AuroraIcon name="chevronLeft" size={17} strokeWidth={2} />
+            </IconButton>
+            <Typography
+              sx={{
+                fontSize: '1rem',
+                fontWeight: 700,
+                px: 1,
+                textTransform: 'capitalize',
+                textAlign: 'center',
+                minWidth: { xs: 90, sm: 150 },
+              }}
+            >
+              {periodLabel}
+            </Typography>
+            <IconButton
+              onClick={() => calendarRef.current?.getApi().next()}
+              aria-label="Próximo"
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '9px',
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+                color: 'text.secondary',
+                '&:hover': { bgcolor: 'grey.50', borderColor: 'primary.light' },
+              }}
+            >
+              <AuroraIcon name="chevronRight" size={17} strokeWidth={2} />
+            </IconButton>
+          </Stack>
+          <Button
+            onClick={() => calendarRef.current?.getApi().today()}
+            sx={{
+              bgcolor: `${theme.palette.primary.main}1F`,
+              color: 'primary.main',
+              fontWeight: 700,
+              fontSize: '0.8125rem',
+              borderRadius: '10px',
+              px: 2,
+              '&:hover': { bgcolor: `${theme.palette.primary.main}2E` },
+            }}
+          >
+            Hoje
+          </Button>
+          <Box sx={{ display: 'flex', gap: '3px', bgcolor: 'grey.100', p: '3px', borderRadius: '10px' }}>
+            {AGENDA_VIEWS.map((opt) => {
+              const active = currentView === opt.view;
+              return (
+                <Box
+                  key={opt.view}
+                  component="button"
+                  type="button"
+                  onClick={() => calendarRef.current?.getApi().changeView(opt.view)}
+                  sx={{
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: '0.8125rem',
+                    fontWeight: 700,
+                    px: 1.75,
+                    py: 0.75,
+                    borderRadius: '8px',
+                    ...(active
+                      ? {
+                          bgcolor: 'background.paper',
+                          color: 'primary.main',
+                          boxShadow: '0 1px 3px rgba(16,40,37,.14)',
+                        }
+                      : { bgcolor: 'transparent', color: 'text.secondary' }),
+                  }}
+                >
+                  {opt.label}
+                </Box>
+              );
+            })}
+          </Box>
+        </Stack>
+        <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap" useFlexGap>
+          {AGENDA_CATEGORIES.map((c) => (
+            <Stack key={c.label} direction="row" alignItems="center" spacing={0.9}>
+              <Box sx={{ width: 10, height: 10, borderRadius: '3px', bgcolor: c.color, flexShrink: 0 }} />
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: 'text.secondary' }}>
+                {c.label}
+              </Typography>
+            </Stack>
+          ))}
+        </Stack>
+      </Box>
+
+      {/* Legenda de status */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: { xs: 1.5, sm: 2 },
+          flexWrap: 'wrap',
+          px: 2,
+          py: 1.15,
+          mb: 1.5,
+          bgcolor: 'background.paper',
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: '13px',
+          boxShadow: '0 1px 2px rgba(16,40,37,.04),0 8px 24px -12px rgba(16,40,37,.10)',
+        }}
+      >
+        <Typography
+          sx={{
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            color: 'text.secondary',
+            textTransform: 'uppercase',
+            letterSpacing: '0.4px',
+          }}
+        >
+          Status
+        </Typography>
+        {Object.entries(statusLabel).map(([key, label]) => (
+          <Stack key={key} direction="row" alignItems="center" spacing={0.9}>
+            <Box
+              sx={{
+                width: 10,
+                height: 10,
+                borderRadius: '3px',
+                bgcolor: statusColors[key as AppointmentStatus]?.border,
+                flexShrink: 0,
+              }}
+            />
+            <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'text.secondary' }}>
+              {label}
+            </Typography>
+          </Stack>
+        ))}
+      </Box>
 
       <Card
         tabIndex={0}
@@ -416,33 +600,72 @@ export function Appointments() {
             ...(isMobile && { marginBottom: '0.5em' }),
           },
           '& .fc .fc-toolbar-title': {
-            fontSize: isMobile ? '0.95rem' : '1.15rem',
-            fontWeight: 600,
+            fontSize: isMobile ? '0.95rem' : '1.05rem',
+            fontWeight: 700,
             color: theme.palette.text.primary,
             textTransform: 'capitalize',
           },
           '& .fc .fc-button': {
-            backgroundColor: 'transparent',
+            backgroundColor: theme.palette.background.paper,
             color: theme.palette.text.secondary,
             border: `1px solid ${theme.palette.divider}`,
             boxShadow: 'none',
             textTransform: 'none',
-            fontWeight: 500,
-            padding: isMobile ? '4px 8px' : '6px 14px',
-            fontSize: isMobile ? '0.75rem' : undefined,
+            fontWeight: 700,
+            borderRadius: '10px',
+            padding: isMobile ? '5px 10px' : '7px 14px',
+            fontSize: isMobile ? '0.75rem' : '0.8125rem',
           },
           '& .fc .fc-button:hover': {
-            backgroundColor: '#E5F4F3',
+            backgroundColor: theme.palette.grey[50],
             color: theme.palette.primary.dark,
             borderColor: theme.palette.primary.light,
           },
-          '& .fc .fc-button-primary:not(:disabled).fc-button-active, & .fc .fc-button-primary:not(:disabled):active':
-            {
-              backgroundColor: theme.palette.primary.main,
-              color: '#FFFFFF',
-              borderColor: theme.palette.primary.dark,
-              boxShadow: 'none',
-            },
+          // prev/next como quadradinhos
+          '& .fc .fc-prev-button, & .fc .fc-next-button': {
+            width: 36,
+            height: 36,
+            padding: 0,
+            borderRadius: '9px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+          // "Hoje" em tint
+          '& .fc .fc-today-button': {
+            backgroundColor: `${theme.palette.primary.main}1F`,
+            color: theme.palette.primary.main,
+            border: 'none',
+            opacity: '1 !important',
+          },
+          '& .fc .fc-today-button:disabled': {
+            backgroundColor: theme.palette.grey[100],
+            color: theme.palette.text.disabled,
+            opacity: '1 !important',
+          },
+          // seletor de visão segmentado
+          '& .fc .fc-button-group': {
+            backgroundColor: theme.palette.grey[100],
+            padding: '3px',
+            borderRadius: '10px',
+            gap: '3px',
+          },
+          '& .fc .fc-button-group .fc-button': {
+            border: 'none',
+            backgroundColor: 'transparent',
+            color: theme.palette.text.secondary,
+            borderRadius: '8px !important',
+            padding: isMobile ? '5px 9px' : '6px 14px',
+          },
+          '& .fc .fc-button-group .fc-button:hover': {
+            backgroundColor: 'transparent',
+            color: theme.palette.primary.main,
+          },
+          '& .fc .fc-button-primary:not(:disabled).fc-button-active': {
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.primary.main,
+            boxShadow: '0 1px 3px rgba(16,40,37,.14)',
+          },
           '& .fc .fc-button-primary:focus, & .fc .fc-button-primary:not(:disabled):active:focus': {
             boxShadow: 'none',
           },
@@ -451,8 +674,8 @@ export function Appointments() {
               borderColor: theme.palette.divider,
             },
           '& .fc .fc-col-header-cell': {
-            backgroundColor: '#F4F4F2',
-            padding: '8px 0',
+            backgroundColor: theme.palette.background.paper,
+            padding: '10px 0',
           },
           '& .fc .fc-col-header-cell-cushion': {
             color: theme.palette.text.secondary,
@@ -469,6 +692,14 @@ export function Appointments() {
           '& .fc .fc-day-today': {
             backgroundColor: '#EDF8F7 !important',
           },
+          '& .fc .fc-timegrid-slot': {
+            height: '2.7em',
+          },
+          '& .fc .fc-timegrid-slot-label-cushion, & .fc .fc-timegrid-axis-cushion': {
+            fontSize: '0.72rem',
+            fontWeight: 600,
+            color: theme.palette.text.secondary,
+          },
           '& .fc .fc-timegrid-now-indicator-line': {
             borderColor: theme.palette.primary.main,
           },
@@ -476,17 +707,31 @@ export function Appointments() {
             borderColor: theme.palette.primary.main,
           },
           '& .fc-event': {
-            padding: '2px 4px',
+            padding: 0,
             cursor: 'pointer',
-            fontSize: '0.8rem',
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            borderRadius: '12px',
+            border: 'none',
+            overflow: 'hidden',
+            boxShadow: '0 1px 2px rgba(16,40,37,.06)',
+          },
+          '& .fc .fc-event-main': {
+            padding: 0,
           },
           '& .fc-dayGridMonth-view .fc-event, & .fc-dayGridMonth-view .fc-daygrid-event': {
             borderRadius: 8,
+            boxShadow: 'none',
+          },
+          '& .fc-dayGridMonth-view .fc-event .fc-event-main': {
+            padding: '1px 4px',
           },
           '& .fc-timeGridWeek-view, & .fc-timeGridDay-view': {
             '& .fc-event, & .fc-timegrid-event, & .fc-v-event, & .fc-daygrid-event, & .fc-daygrid-block-event':
               {
-                borderRadius: '8px !important',
+                borderRadius: '12px !important',
+                border: 'none !important',
+                overflow: 'hidden',
               },
           },
           '& .fc-event:hover': {
@@ -562,15 +807,7 @@ export function Appointments() {
           locale={ptBrLocale}
           height="100%"
           scrollTime="08:00:00"
-          headerToolbar={isMobile ? {
-            left: 'prev,next',
-            center: 'title',
-            right: 'timeGridDay,timeGridWeek',
-          } : {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay',
-          }}
+          headerToolbar={false}
           buttonText={{
             today: 'Hoje',
             month: 'Mês',
@@ -605,6 +842,171 @@ export function Appointments() {
           eventClick={handleEventClick}
           eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
           slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+          dayHeaderContent={(arg) => {
+            const weekday = arg.date
+              .toLocaleDateString('pt-BR', { weekday: 'short' })
+              .replace('.', '');
+            if (arg.view.type === 'dayGridMonth') {
+              return (
+                <Box
+                  sx={{
+                    fontSize: '0.66rem',
+                    fontWeight: 700,
+                    color: 'text.secondary',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.4px',
+                    py: 0.75,
+                  }}
+                >
+                  {weekday}
+                </Box>
+              );
+            }
+            return (
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 0.4,
+                  py: 0.6,
+                }}
+              >
+                <Box
+                  sx={{
+                    fontSize: '0.62rem',
+                    fontWeight: 700,
+                    color: 'text.secondary',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.4px',
+                  }}
+                >
+                  {weekday}
+                </Box>
+                <Box
+                  sx={{
+                    minWidth: 30,
+                    height: 30,
+                    px: 0.75,
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.9rem',
+                    fontWeight: 800,
+                    ...(arg.isToday
+                      ? { bgcolor: 'primary.main', color: '#fff' }
+                      : { color: 'text.primary' }),
+                  }}
+                >
+                  {arg.date.getDate()}
+                </Box>
+              </Box>
+            );
+          }}
+          eventContent={(arg) => {
+            const appt = arg.event.extendedProps.appointment as Appointment | undefined;
+            const isMonth = arg.view.type === 'dayGridMonth';
+            const barColor = arg.event.borderColor || theme.palette.primary.main;
+            const statusColor = (arg.event.extendedProps.statusColor as string) || barColor;
+            if (appt) {
+              if (isMonth) {
+                return (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, minWidth: 0, px: 0.25 }}>
+                    <Box
+                      sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: barColor, flexShrink: 0 }}
+                    />
+                    <Box component="span" sx={{ fontWeight: 700, fontSize: '0.7rem', flexShrink: 0 }}>
+                      {arg.timeText}
+                    </Box>
+                    <Box
+                      component="span"
+                      sx={{
+                        fontWeight: 700,
+                        fontSize: '0.7rem',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {appt.patient?.name ?? 'Paciente'}
+                    </Box>
+                  </Box>
+                );
+              }
+              return (
+                <Box
+                  sx={{
+                    position: 'relative',
+                    height: '100%',
+                    overflow: 'hidden',
+                    borderRadius: '12px',
+                    boxShadow: `inset 4px 0 0 ${barColor}`,
+                    pl: '11px',
+                    pr: '14px',
+                    pt: '7px',
+                    pb: '4px',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 6,
+                      right: 6,
+                      width: 13,
+                      height: 13,
+                      borderRadius: '50%',
+                      bgcolor: statusColor,
+                      border: '2px solid #fff',
+                    }}
+                  />
+                  <Box sx={{ minWidth: 0, lineHeight: 1.25 }}>
+                    <Box sx={{ fontSize: '0.64rem', fontWeight: 700, opacity: 0.9 }}>
+                      {arg.timeText}
+                    </Box>
+                    <Box
+                      sx={{
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {appt.patient?.name ?? 'Paciente'}
+                    </Box>
+                    {appt.procedure?.name && (
+                      <Box
+                        sx={{
+                          fontSize: '0.64rem',
+                          opacity: 0.82,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {appt.procedure.name}
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              );
+            }
+            return (
+              <Box
+                sx={{
+                  px: 0.5,
+                  fontSize: '0.66rem',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {arg.event.title}
+              </Box>
+            );
+          }}
         />
       </Card>
 

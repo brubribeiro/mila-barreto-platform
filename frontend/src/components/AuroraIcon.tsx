@@ -168,6 +168,9 @@ const ICONS: Record<string, ReactNode> = {
   plus: <path d="M12 5v14M5 12h14" />,
   check: <path d="M20 6L9 17l-5-5" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
+  chevronLeft: <path d="M15 6l-6 6 6 6" />,
+  chevronRight: <path d="M9 6l6 6-6 6" />,
+  chevronDown: <path d="M6 9l6 6 6-6" />,
   menu: <path d="M3.5 6h17M3.5 12h17M3.5 18h17" />,
   bell: (
     <>

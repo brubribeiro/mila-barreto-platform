@@ -24,6 +24,12 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Cards de **aniversariantes**, **contas a pagar** e **datas comemorativas** redesenhados, com visual mais compacto e botão rápido para criar promoção.
 - Seção **Metas do mês** adicionada como prévia (em breve).
 
+**Agenda**
+- Calendário redesenhado no estilo Aurora, com barra de navegação própria (anterior/próximo, **Hoje**, visões **Dia**, **Semana** e **Mês**).
+- Eventos exibem cor por tipo de procedimento e indicador de **status**; legenda de categorias e status visível acima do calendário.
+- Alerta de **pendências** reformulado, com chips clicáveis e opção de dispensar.
+- Botão **Novo agendamento** no topo do painel abre a modal diretamente na agenda.
+
 ### Onde ver a versão
 
 Menu lateral (rodapé) e tela de login exibem **v0.2.0**.
