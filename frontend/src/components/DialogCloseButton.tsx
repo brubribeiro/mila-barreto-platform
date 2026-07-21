@@ -44,7 +44,7 @@ export const dialogSimpleContentSx: SxProps<Theme> = {
 };
 
 export const dialogPaperSx = (isMobile: boolean): SxProps<Theme> => ({
-  borderRadius: isMobile ? 0 : 3,
+  borderRadius: isMobile ? 0 : '20px',
   overflow: 'hidden',
 });
 
@@ -70,6 +70,7 @@ export const dialogActionsBorderSx: SxProps<Theme> = {
   py: { xs: 1.5, sm: 2 },
   borderTop: 1,
   borderColor: 'divider',
+  bgcolor: 'grey.50',
 };
 
 export function DialogCloseButton({
@@ -86,10 +87,14 @@ export function DialogCloseButton({
       size={size}
       sx={{
         flexShrink: 0,
+        width: 36,
+        height: 36,
+        borderRadius: '10px',
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'grey.50',
         color: 'text.secondary',
-        mt: -0.25,
-        mr: -0.5,
-        '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
+        '&:hover': { color: 'text.primary', bgcolor: 'grey.100' },
         ...sx,
       }}
       {...props}
@@ -116,8 +121,8 @@ export function DialogHeaderIcon({
         justifyContent: 'center',
         width: 40,
         height: 40,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette[paletteKey].main, 0.1),
+        borderRadius: '11px',
+        bgcolor: (theme) => alpha(theme.palette[paletteKey].main, 0.12),
         color: `${paletteKey}.main`,
         flexShrink: 0,
       }}
@@ -136,6 +141,7 @@ export type DialogHeaderProps = {
   bottom?: ReactNode;
   isMobile?: boolean;
   subtitleTitle?: string;
+  subtitleWrap?: boolean;
   sx?: SxProps<Theme>;
 };
 
@@ -148,6 +154,7 @@ export function DialogHeader({
   bottom,
   isMobile = false,
   subtitleTitle,
+  subtitleWrap = false,
   sx,
 }: DialogHeaderProps) {
   const titleSx = (sx ? [dialogHeaderTitleSx, sx] : dialogHeaderTitleSx) as SxProps<Theme>;
@@ -158,14 +165,23 @@ export function DialogHeader({
         <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
           {icon && !isMobile && <DialogHeaderIcon>{icon}</DialogHeaderIcon>}
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600} noWrap>
+            <Typography
+              component="h2"
+              fontWeight={800}
+              noWrap
+              sx={{
+                fontSize: { xs: '0.9375rem', sm: '1.0625rem' },
+                letterSpacing: '-0.3px',
+                lineHeight: 1.2,
+              }}
+            >
               {title}
             </Typography>
             {subtitle && (
               <Typography
                 variant="body2"
                 color="text.secondary"
-                noWrap
+                noWrap={!subtitleWrap}
                 title={subtitleTitle ?? subtitle}
                 sx={{ mt: 0.25 }}
               >

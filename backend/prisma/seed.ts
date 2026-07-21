@@ -1,5 +1,6 @@
 ﻿import { AppointmentStatus, Prisma, PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { demoAppointmentNotes } from './demo-appointment-notes';
 
 const prisma = new PrismaClient();
 
@@ -243,16 +244,48 @@ const demoProcedureAppointments = [
   { procedureName: 'Drenagem linfática', count: 8, notePrefix: 'seedDemo:drenagem-futuro', weekdayStart: 4 },
 ] as const;
 
-/** Avança N dias úteis a partir de hoje (negativo = passado). */
-function addWeekdays(from: Date, weekdays: number): Date {
+/** Sexta (5) e sábado (6) — agendamentos demo extras (idempotentes via notes). */
+const demoWeekendAppointments = [
+  { procedureName: 'Limpeza de pele', count: 6, notePrefix: 'seedDemo:limpeza-sexta', dayOfWeek: 5 },
+  { procedureName: 'Limpeza de pele', count: 4, notePrefix: 'seedDemo:limpeza-sabado', dayOfWeek: 6 },
+  { procedureName: 'Drenagem linfática', count: 5, notePrefix: 'seedDemo:drenagem-sexta', dayOfWeek: 5 },
+  { procedureName: 'Drenagem linfática', count: 4, notePrefix: 'seedDemo:drenagem-sabado', dayOfWeek: 6 },
+  { procedureName: 'Peeling químico', count: 4, notePrefix: 'seedDemo:peeling-sexta', dayOfWeek: 5 },
+  { procedureName: 'Peeling químico', count: 3, notePrefix: 'seedDemo:peeling-sabado', dayOfWeek: 6 },
+  { procedureName: 'Microagulhamento', count: 4, notePrefix: 'seedDemo:micro-sexta', dayOfWeek: 5 },
+  { procedureName: 'Microagulhamento', count: 3, notePrefix: 'seedDemo:micro-sabado', dayOfWeek: 6 },
+] as const;
+
+/** Avança N dias de atendimento a partir de hoje (seg–sáb; domingo não conta). */
+function addClinicDays(from: Date, days: number): Date {
   const d = new Date(from);
-  const dir = weekdays >= 0 ? 1 : -1;
-  let left = Math.abs(weekdays);
+  const dir = days >= 0 ? 1 : -1;
+  let left = Math.abs(days);
   while (left > 0) {
     d.setDate(d.getDate() + dir);
-    const dow = d.getDay();
-    if (dow !== 0 && dow !== 6) left--;
+    if (d.getDay() !== 0) left--;
   }
+  return d;
+}
+
+/** Data de um dia da semana (0=dom … 6=sáb), deslocada por semanas a partir da semana atual. */
+function dateOnWeekday(weekOffset: number, dayOfWeek: number): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  const currentDow = d.getDay();
+  let delta = dayOfWeek - currentDow;
+  if (delta < 0) delta += 7;
+  delta += weekOffset * 7;
+  d.setDate(d.getDate() + delta);
+  return d;
+}
+
+function demoWeekdayStartAt(slotIndex: number, dayOfWeek: number): Date {
+  const weekOffset = Math.floor(slotIndex / 4) - 3;
+  const slotInDay = slotIndex % 4;
+  const hours = [8, 9, 14, 16];
+  const d = dateOnWeekday(weekOffset, dayOfWeek);
+  d.setHours(hours[slotInDay], (slotIndex % 3) * 15, 0, 0);
   return d;
 }
 
@@ -263,7 +296,7 @@ function demoDrenagemStartAt(slotIndex: number): Date {
 function demoProcedureStartAt(weekdayStart: number, slotIndex: number): Date {
   const weekdayOffset = weekdayStart + slotIndex * 2;
   const hours = [8, 9, 10, 11, 14, 15, 16, 17];
-  const d = addWeekdays(new Date(), weekdayOffset);
+  const d = addClinicDays(new Date(), weekdayOffset);
   d.setHours(hours[slotIndex % hours.length], (slotIndex % 3) * 20, 0, 0);
   return d;
 }
@@ -444,14 +477,22 @@ async function main() {
     let created = 0;
 
     for (let i = 0; i < DEMO_DRENIAGEM_COUNT; i++) {
-      const note = `${DEMO_DRENIAGEM_NOTE_PREFIX}:${String(i + 1).padStart(2, '0')}`;
-      const exists = await prisma.appointment.findFirst({ where: { notes: note } });
-      if (exists) continue;
-
+      const seedKey = `${DEMO_DRENIAGEM_NOTE_PREFIX}:${String(i + 1).padStart(2, '0')}`;
       const patient = drenagemPatients[i % drenagemPatients.length];
       const startAt = demoDrenagemStartAt(i);
       const endAt = new Date(startAt.getTime() + durationMs);
       const status = demoDrenagemStatus(startAt, i);
+
+      const exists = await prisma.appointment.findFirst({
+        where: {
+          professionalId: drenagemProfessional.id,
+          procedureId: drenagemProcedure.id,
+          startAt,
+        },
+      });
+      if (exists) continue;
+
+      const { notes, clinicalNotes } = demoAppointmentNotes(seedKey, drenagemProcedure.name, status);
 
       await prisma.appointment.create({
         data: {
@@ -462,7 +503,8 @@ async function main() {
           endAt,
           status,
           kind: 'PROCEDURE',
-          notes: note,
+          notes,
+          clinicalNotes,
         },
       });
       created++;
@@ -500,14 +542,22 @@ async function main() {
       let createdForProcedure = 0;
 
       for (let i = 0; i < cfg.count; i++) {
-        const note = `${cfg.notePrefix}:${String(i + 1).padStart(2, '0')}`;
-        const exists = await prisma.appointment.findFirst({ where: { notes: note } });
-        if (exists) continue;
-
+        const seedKey = `${cfg.notePrefix}:${String(i + 1).padStart(2, '0')}`;
         const patient = demoPatients[i % demoPatients.length];
         const startAt = demoProcedureStartAt(cfg.weekdayStart, i);
         const endAt = new Date(startAt.getTime() + durationMs);
         const status = demoProcedureStatus(startAt, i);
+
+        const exists = await prisma.appointment.findFirst({
+          where: {
+            professionalId: demoProfessional.id,
+            procedureId: procedure.id,
+            startAt,
+          },
+        });
+        if (exists) continue;
+
+        const { notes, clinicalNotes } = demoAppointmentNotes(seedKey, procedure.name, status);
 
         await prisma.appointment.create({
           data: {
@@ -518,7 +568,8 @@ async function main() {
             endAt,
             status,
             kind: 'PROCEDURE',
-            notes: note,
+            notes,
+            clinicalNotes,
           },
         });
         createdForProcedure++;
@@ -528,6 +579,65 @@ async function main() {
         console.log(`  • ${cfg.procedureName}: ${cfg.count} agendamentos já existem, pulando.`);
       } else {
         console.log(`  ✓ ${cfg.procedureName}: ${createdForProcedure} agendamento(s) criado(s).`);
+      }
+    }
+  }
+
+  console.log('\n→ Agendamentos demo — sexta e sábado...');
+  if (!demoProfessional) {
+    console.log('  • Profissional não encontrado, pulando agendamentos de fim de semana.');
+  } else if (demoPatients.length === 0) {
+    console.log('  • Nenhum paciente cadastrado — rode `npm run prisma:seed-patients` antes.');
+  } else {
+    for (const cfg of demoWeekendAppointments) {
+      const procedure = await prisma.procedure.findFirst({ where: { name: cfg.procedureName } });
+      if (!procedure) {
+        console.log(`  • Procedimento não encontrado: ${cfg.procedureName}`);
+        continue;
+      }
+
+      const durationMs = procedure.durationMinutes * 60 * 1000;
+      let createdForProcedure = 0;
+      const dayLabel = cfg.dayOfWeek === 5 ? 'sexta' : 'sábado';
+
+      for (let i = 0; i < cfg.count; i++) {
+        const seedKey = `${cfg.notePrefix}:${String(i + 1).padStart(2, '0')}`;
+        const patient = demoPatients[i % demoPatients.length];
+        const startAt = demoWeekdayStartAt(i, cfg.dayOfWeek);
+        const endAt = new Date(startAt.getTime() + durationMs);
+        const status = demoProcedureStatus(startAt, i);
+
+        const exists = await prisma.appointment.findFirst({
+          where: {
+            professionalId: demoProfessional.id,
+            procedureId: procedure.id,
+            startAt,
+          },
+        });
+        if (exists) continue;
+
+        const { notes, clinicalNotes } = demoAppointmentNotes(seedKey, procedure.name, status);
+
+        await prisma.appointment.create({
+          data: {
+            patientId: patient.id,
+            procedureId: procedure.id,
+            professionalId: demoProfessional.id,
+            startAt,
+            endAt,
+            status,
+            kind: 'PROCEDURE',
+            notes,
+            clinicalNotes,
+          },
+        });
+        createdForProcedure++;
+      }
+
+      if (createdForProcedure === 0) {
+        console.log(`  • ${cfg.procedureName} (${dayLabel}): ${cfg.count} agendamentos já existem, pulando.`);
+      } else {
+        console.log(`  ✓ ${cfg.procedureName} (${dayLabel}): ${createdForProcedure} agendamento(s) criado(s).`);
       }
     }
   }

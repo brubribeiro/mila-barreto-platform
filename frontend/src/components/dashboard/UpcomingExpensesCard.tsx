@@ -8,11 +8,11 @@ import {
   CircularProgress,
   IconButton,
   Paper,
+  Skeleton,
   Stack,
   Tooltip,
   Typography,
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import dayjs from 'dayjs';
@@ -184,30 +184,21 @@ export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardP
             overflow: 'auto',
             ...(embedded ? { minHeight: 0 } : { maxHeight: 350 }),
             pr: 0.5,
-            scrollbarWidth: 'thin',
-            scrollbarColor: (theme) =>
-              `${alpha(theme.palette.text.secondary, 0.28)} ${alpha(theme.palette.divider, 0.12)}`,
-            '&::-webkit-scrollbar': { width: 7 },
-            '&::-webkit-scrollbar-track': {
-              margin: '6px 0',
-              backgroundColor: (theme) => alpha(theme.palette.divider, 0.12),
-              borderRadius: 10,
-            },
-            '&::-webkit-scrollbar-thumb': {
-              backgroundColor: (theme) => alpha(theme.palette.text.secondary, 0.28),
-              borderRadius: 10,
-              border: '2px solid transparent',
-              backgroundClip: 'padding-box',
-              '&:hover': {
-                backgroundColor: (theme) => alpha(theme.palette.text.secondary, 0.42),
-              },
-            },
           }}
         >
           {isLoading ? (
-            <Typography variant="body2" color="text.secondary">
-              Carregando...
-            </Typography>
+            <Stack spacing={0.25}>
+              {[0, 1, 2, 3].map((i) => (
+                <Stack key={i} direction="row" alignItems="center" spacing={1.5} sx={{ px: 0.5, py: 1 }}>
+                  <Skeleton variant="circular" width={9} height={9} sx={{ flexShrink: 0 }} />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Skeleton variant="text" width={`${70 - i * 8}%`} sx={{ fontSize: '0.8125rem' }} />
+                    <Skeleton variant="text" width={`${45 - i * 4}%`} sx={{ fontSize: '0.72rem' }} />
+                  </Box>
+                  <Skeleton variant="rounded" width={30} height={30} sx={{ flexShrink: 0 }} />
+                </Stack>
+              ))}
+            </Stack>
           ) : upcoming.length === 0 ? (
             <DashboardEmptyState
               message={`Nenhuma despesa pendente nos proximos ${LOOKAHEAD_DAYS} dias.`}

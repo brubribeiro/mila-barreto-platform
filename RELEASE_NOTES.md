@@ -27,8 +27,25 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 **Agenda**
 - Calendário redesenhado no estilo Aurora, com barra de navegação própria (anterior/próximo, **Hoje**, visões **Dia**, **Semana** e **Mês**).
 - Eventos exibem cor por tipo de procedimento e indicador de **status**; legenda de categorias e status visível acima do calendário.
+- Agendamentos vinculados a **pacote** mostram badge **Sessão X/Y** no calendário (em vez do nome do procedimento).
 - Alerta de **pendências** reformulado, com chips clicáveis e opção de dispensar.
 - Botão **Novo agendamento** no topo do painel abre a modal diretamente na agenda.
+- Carregamento do calendário com skeleton animado (layout mais estável enquanto os dados chegam).
+
+**Formulário de agendamento**
+- Modal redesenhada no estilo Aurora: seções mais claras, campos com rótulos fixos e visual alinhado ao restante do painel.
+- Resumo rápido do paciente (visitas concluídas e último atendimento) ao passar o mouse no nome.
+- Seção **Pacote** com sessões restantes, botão para ver todas as sessões do pacote e opção de **agendar sessões faltantes** em lote.
+- Ao concluir um agendamento antigo, escolha o **mês de referência** para lançar a receita no financeiro correto.
+- Modal **Registrar pagamento** com espaçamento revisado e campos mais legíveis.
+
+**Dashboard**
+- **Agenda da semana** passa a considerar 7 dias a partir da data selecionada (antes fixava segunda a domingo).
+- Card **Contas a pagar** com skeleton de carregamento mais suave.
+
+**Visual geral**
+- Barras de rolagem finas e discretas em todo o painel (tema global).
+- Campos de formulário (`OutlinedInput`) com fundo levemente cinza e bordas arredondadas.
 
 ### Onde ver a versão
 

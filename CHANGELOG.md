@@ -4,6 +4,23 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+### Added
+
+- Agenda: badge **Sessão X/Y** em eventos vinculados a pacote; API retorna `sessionIndex` por agendamento.
+- Formulário de agendamento: resumo do paciente (popover), modal de sessões do pacote, agendamento em lote das sessões faltantes.
+- Conclusão de agendamento: campo **mês de referência** (`referenceMonth`) para competência financeira de atendimentos passados.
+- Backend: `resolveRevenuePaidAt` projeta `paidAt` da receita conforme mês de referência.
+- Seed: notas clínicas demo (`demo-appointment-notes.ts`), agendamentos de sexta/sábado, script `prisma:seed-package-appointments`.
+- Tema: scrollbar global via `MuiCssBaseline`; estilos refinados em `MuiOutlinedInput` e `MuiSelect`.
+
+### Changed
+
+- `AppointmentFormDialog`: redesign Aurora (seções, `LabeledField`, modais de pagamento e confirmação).
+- Agenda: skeleton de carregamento no calendário; remoção de scrollbar customizada local (usa tema global).
+- Dashboard: semana da agenda = 7 dias a partir do anchor (não mais segunda–domingo fixos).
+- `UpcomingExpensesCard`: skeleton no lugar de texto "Carregando...".
+- `DialogCloseButton`: bordas arredondadas, rodapé cinza claro, botão fechar estilizado.
+
 ## [0.2.0] - 2026-07-15
 
 ### Added

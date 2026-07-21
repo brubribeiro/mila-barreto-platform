@@ -134,6 +134,8 @@ export interface Appointment {
   procedure?: Procedure;
   professional?: UserSummary;
   patientPackage?: PatientPackage;
+  /** Número da sessão (1-based) deste agendamento dentro do pacote. */
+  sessionIndex?: number | null;
   extraMaterials?: AppointmentMaterial[];
   startedAt?: string | null;
   finishedAt?: string | null;

@@ -98,6 +98,30 @@ export const theme = createTheme(
     },
     shape: { borderRadius: 12 },
     components: {
+      MuiCssBaseline: {
+        styleOverrides: {
+          '*': {
+            scrollbarWidth: 'thin',
+            scrollbarColor: `${aurora.border} transparent`,
+          },
+          '*::-webkit-scrollbar': {
+            width: 8,
+            height: 8,
+          },
+          '*::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '*::-webkit-scrollbar-thumb': {
+            backgroundColor: aurora.border,
+            borderRadius: 8,
+            border: '2px solid transparent',
+            backgroundClip: 'content-box',
+          },
+          '*::-webkit-scrollbar-thumb:hover': {
+            backgroundColor: '#C8CFCC',
+          },
+        },
+      },
       MuiButton: {
         styleOverrides: {
           root: { boxShadow: 'none', borderRadius: 12 },
@@ -146,23 +170,45 @@ export const theme = createTheme(
       },
       MuiOutlinedInput: {
         styleOverrides: {
+          root: {
+            borderRadius: 11,
+            backgroundColor: aurora.surface2,
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: aurora.border },
+            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: aurora.primaryStrong },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: aurora.primary,
+              borderWidth: 1,
+            },
+          },
           input: {
+            fontSize: '0.875rem',
             '&:-webkit-autofill': {
-              WebkitBoxShadow: '0 0 0 1000px #FFFFFF inset',
+              WebkitBoxShadow: `0 0 0 1000px ${aurora.surface2} inset`,
               WebkitTextFillColor: aurora.text,
               caretColor: aurora.text,
             },
             '&:-webkit-autofill:hover': {
-              WebkitBoxShadow: '0 0 0 1000px #FFFFFF inset',
+              WebkitBoxShadow: `0 0 0 1000px ${aurora.surface2} inset`,
             },
             '&:-webkit-autofill:focus': {
-              WebkitBoxShadow: '0 0 0 1000px #FFFFFF inset',
+              WebkitBoxShadow: `0 0 0 1000px ${aurora.surface2} inset`,
             },
             '&:autofill': {
-              boxShadow: '0 0 0 1000px #FFFFFF inset',
+              boxShadow: `0 0 0 1000px ${aurora.surface2} inset`,
               WebkitTextFillColor: aurora.text,
             },
           },
+        },
+      },
+      MuiMenuItem: {
+        styleOverrides: {
+          root: { fontSize: '0.875rem' },
+        },
+      },
+      MuiAutocomplete: {
+        styleOverrides: {
+          option: { fontSize: '0.875rem' },
+          input: { fontSize: '0.875rem' },
         },
       },
       MuiChip: {

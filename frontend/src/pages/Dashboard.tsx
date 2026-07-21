@@ -84,15 +84,12 @@ function countdownBirthdayLabel(daysUntil: number): string {
 }
 
 function mondayToSundayWeekBounds(anchorDateStr: string) {
-  const startOfDay = dayjs(anchorDateStr).startOf('day');
-  const dow = startOfDay.day();
-  const mondayOffset = dow === 0 ? -6 : 1 - dow;
-  const monday = startOfDay.add(mondayOffset, 'day');
-  const sundayEnd = monday.add(6, 'day').endOf('day');
+  const start = dayjs(anchorDateStr).startOf('day');
+  const end = start.add(6, 'day').endOf('day');
   return {
-    from: monday.toISOString(),
-    to: sundayEnd.toISOString(),
-    label: `${monday.format('DD/MM')} – ${sundayEnd.format('DD/MM/YYYY')}`,
+    from: start.toISOString(),
+    to: end.toISOString(),
+    label: `${start.format('DD/MM')} – ${end.format('DD/MM/YYYY')}`,
   };
 }
 
@@ -793,7 +790,7 @@ export function Dashboard() {
         <Card sx={{ display: 'flex', flexDirection: 'column' }}>
           <CardContent sx={{ p: { xs: 2, sm: 2.75 } }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-              <Typography sx={{ fontSize: '1rem', fontWeight: 700 }}>Agenda da semana</Typography>
+              <Typography sx={{ fontSize: '1rem', fontWeight: 700 }}>Agenda para os próximos dias</Typography>
               {canSeeAgenda && (
                 <Button size="small" component={RouterLink} to="/agenda" sx={{ fontWeight: 700 }}>
                   Ver tudo
@@ -809,7 +806,7 @@ export function Dashboard() {
             ) : upcomingThisWeek.length === 0 ? (
               <DashboardEmptyState message="Sem agendamentos nesta semana." />
             ) : (
-              <Stack spacing={0.5}>
+              <Stack spacing={0.5} sx={{ maxHeight: 260, overflowY: 'auto', pr: 0.5, mr: -0.5 }}>
                 {upcomingThisWeek.map((a) => (
                   <Stack
                     key={a.id}

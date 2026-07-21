@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Box, Button, Card, Checkbox, CircularProgress, Collapse, FormControl, IconButton, InputLabel, ListItemText, MenuItem, OutlinedInput, Select, Skeleton, Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, Card, Checkbox, Collapse, FormControl, IconButton, InputLabel, ListItemText, MenuItem, OutlinedInput, Select, Skeleton, Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
 import HistoryIcon from '@mui/icons-material/History';
 import { AuroraIcon } from '../components/AuroraIcon';
 import FullCalendar from '@fullcalendar/react';
@@ -178,7 +178,15 @@ export function Appointments() {
           backgroundColor: `${catColor}1A`,
           borderColor: catColor,
           textColor: theme.palette.text.primary,
-          extendedProps: { appointment: a, catColor, statusColor },
+          extendedProps: {
+            appointment: a,
+            catColor,
+            statusColor,
+            sessionLabel:
+              a.patientPackageId && a.patientPackage?.sessionsTotal && a.sessionIndex
+                ? `Sessão ${a.sessionIndex}/${a.patientPackage.sessionsTotal}`
+                : null,
+          },
         };
       }),
     [filteredAppointments, theme.palette.text.primary, theme.palette.primary.main],
@@ -763,24 +771,6 @@ export function Appointments() {
           '& .fc-view-harness-active .fc-scroller': {
             overflowY: 'auto !important',
             overflowX: 'auto !important',
-            scrollbarWidth: 'thin',
-            scrollbarColor: `${theme.palette.primary.main} ${theme.palette.grey[200]}`,
-            '&::-webkit-scrollbar': {
-              width: 10,
-              height: 10,
-            },
-            '&::-webkit-scrollbar-track': {
-              backgroundColor: theme.palette.grey[100],
-              borderRadius: 8,
-            },
-            '&::-webkit-scrollbar-thumb': {
-              backgroundColor: theme.palette.primary.main,
-              borderRadius: 8,
-              border: `2px solid ${theme.palette.grey[100]}`,
-            },
-            '&::-webkit-scrollbar-thumb:hover': {
-              backgroundColor: theme.palette.primary.dark,
-            },
           },
         }}
       >
@@ -789,15 +779,45 @@ export function Appointments() {
             sx={{
               position: 'absolute',
               inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: 'rgba(255,255,255,0.7)',
               zIndex: 10,
               borderRadius: 'inherit',
+              bgcolor: 'background.paper',
+              p: 1.5,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
             }}
           >
-            <CircularProgress size={36} />
+            <Stack direction="row" spacing={1}>
+              <Skeleton variant="rounded" width={54} height={30} sx={{ flexShrink: 0 }} />
+              {Array.from({ length: 7 }).map((_, i) => (
+                <Skeleton key={i} variant="rounded" height={30} sx={{ flex: 1 }} />
+              ))}
+            </Stack>
+            <Box
+              sx={{
+                flex: 1,
+                display: 'grid',
+                gridTemplateColumns: '54px repeat(7, 1fr)',
+                gridAutoRows: '1fr',
+                gap: 1,
+                minHeight: 0,
+              }}
+            >
+              {Array.from({ length: 8 * 8 }).map((_, i) => {
+                const isTimeCol = i % 8 === 0;
+                const showEvent = !isTimeCol && (i * 7) % 5 < 2;
+                return (
+                  <Box key={i} sx={{ display: 'flex', alignItems: 'stretch' }}>
+                    {isTimeCol ? (
+                      <Skeleton variant="text" width={34} sx={{ my: 'auto' }} />
+                    ) : showEvent ? (
+                      <Skeleton variant="rounded" sx={{ flex: 1, borderRadius: '10px' }} />
+                    ) : null}
+                  </Box>
+                );
+              })}
+            </Box>
           </Box>
         )}
         <FullCalendar
@@ -975,18 +995,52 @@ export function Appointments() {
                     >
                       {appt.patient?.name ?? 'Paciente'}
                     </Box>
-                    {appt.procedure?.name && (
+                    {arg.event.extendedProps.sessionLabel ? (
                       <Box
                         sx={{
-                          fontSize: '0.64rem',
-                          opacity: 0.82,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          mt: '2px',
+                          maxWidth: '100%',
+                          px: '5px',
+                          py: '1px',
+                          borderRadius: '6px',
+                          bgcolor: `${barColor}26`,
+                          color: barColor,
+                          fontSize: '0.58rem',
+                          fontWeight: 800,
+                          letterSpacing: '0.03em',
+                          textTransform: 'uppercase',
+                          lineHeight: 1.4,
                         }}
                       >
-                        {appt.procedure.name}
+                        <AuroraIcon name="pacotes" size={10} />
+                        <Box
+                          component="span"
+                          sx={{
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {arg.event.extendedProps.sessionLabel as string}
+                        </Box>
                       </Box>
+                    ) : (
+                      appt.procedure?.name && (
+                        <Box
+                          sx={{
+                            fontSize: '0.64rem',
+                            opacity: 0.82,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {appt.procedure.name}
+                        </Box>
+                      )
                     )}
                   </Box>
                 </Box>

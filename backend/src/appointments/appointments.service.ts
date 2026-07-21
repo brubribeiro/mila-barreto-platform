@@ -49,6 +49,23 @@ const APPOINTMENT_KIND_LABEL: Record<AppointmentKind, string> = {
   [AppointmentKind.RETURN]: 'Retorno',
 };
 
+/**
+ * Resolve a data (paidAt) do lançamento financeiro. Quando um mês de referência
+ * ("YYYY-MM") é informado (agendamentos antigos), projeta o dia do agendamento
+ * naquele mês; caso contrário usa a data atual.
+ */
+function resolveRevenuePaidAt(referenceMonth: string | undefined, appointmentStart: Date): Date {
+  if (!referenceMonth) return new Date();
+  const match = /^(\d{4})-(\d{2})$/.exec(referenceMonth);
+  if (!match) return new Date();
+  const year = Number(match[1]);
+  const month = Number(match[2]); // 1-12
+  if (month < 1 || month > 12) return new Date();
+  const lastDay = new Date(year, month, 0).getDate();
+  const day = Math.min(appointmentStart.getDate(), lastDay);
+  return new Date(year, month - 1, day, 12, 0, 0);
+}
+
 function formatAppointmentDateTime(date: Date): string {
   return date.toLocaleString('pt-BR', {
     day: '2-digit',
@@ -73,6 +90,14 @@ const appointmentRelationsInclude = {
   procedure: true,
   professional: { select: { id: true, name: true } },
   extraMaterials: { include: { item: true } },
+  patientPackage: {
+    select: {
+      id: true,
+      sessionsTotal: true,
+      sessionsUsed: true,
+      package: { select: { name: true } },
+    },
+  },
 } as const;
 
 @Injectable()
@@ -86,8 +111,8 @@ export class AppointmentsService {
     private readonly auditLog: AuditLogService,
   ) {}
 
-  list(from?: string, to?: string, professionalId?: string) {
-    return this.prisma.appointment.findMany({
+  async list(from?: string, to?: string, professionalId?: string) {
+    const appointments = await this.prisma.appointment.findMany({
       where: {
         ...(professionalId ? { professionalId } : {}),
         startAt: {
@@ -98,6 +123,33 @@ export class AppointmentsService {
       include: appointmentRelationsInclude,
       orderBy: { startAt: 'asc' },
     });
+
+    // Calcula o número da sessão (1-based) de cada agendamento dentro do seu pacote,
+    // considerando TODOS os agendamentos do pacote (não só os do intervalo visível).
+    const packageIds = Array.from(
+      new Set(appointments.map((a) => a.patientPackageId).filter((id): id is string => !!id)),
+    );
+
+    const sessionIndexById = new Map<string, number>();
+    if (packageIds.length > 0) {
+      const packageAppointments = await this.prisma.appointment.findMany({
+        where: { patientPackageId: { in: packageIds } },
+        select: { id: true, patientPackageId: true, startAt: true },
+        orderBy: { startAt: 'asc' },
+      });
+      const counters = new Map<string, number>();
+      for (const appt of packageAppointments) {
+        if (!appt.patientPackageId) continue;
+        const next = (counters.get(appt.patientPackageId) ?? 0) + 1;
+        counters.set(appt.patientPackageId, next);
+        sessionIndexById.set(appt.id, next);
+      }
+    }
+
+    return appointments.map((a) => ({
+      ...a,
+      sessionIndex: a.patientPackageId ? sessionIndexById.get(a.id) ?? null : null,
+    }));
   }
 
   /**
@@ -686,6 +738,9 @@ export class AppointmentsService {
             promotionId = activePromo.id;
           }
 
+          // Data de competência da receita (mês de referência p/ agendamentos antigos)
+          const revenuePaidAt = resolveRevenuePaidAt(dto.referenceMonth, before.startAt);
+
           // Calcular valor líquido se forma de pagamento informada
           let netAmount: number | undefined;
           let feePercent: number | undefined;
@@ -721,7 +776,7 @@ export class AppointmentsService {
                 feePercent,
                 paymentMethodId: pmId,
                 category: packageId ? 'Pacotes' : 'Atendimentos',
-                paidAt: new Date(),
+                paidAt: revenuePaidAt,
                 patientId: before.patientId,
                 appointmentId: id,
                 invoiceIssued: false,
@@ -778,7 +833,7 @@ export class AppointmentsService {
                 amount: new Prisma.Decimal(Math.round(totalMaterialCost * 100) / 100),
                 category: 'Materiais de procedimento',
                 expenseType: ExpenseType.VARIABLE,
-                paidAt: new Date(),
+                paidAt: revenuePaidAt,
                 patientId: before.patientId,
                 appointmentId: id,
                 invoiceIssued: false,

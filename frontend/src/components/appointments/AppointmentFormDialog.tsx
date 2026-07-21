@@ -17,6 +17,7 @@ import {
   ListItemText,
   MenuItem,
   Paper,
+  Popover,
   Stack,
   Tab,
   Tabs,
@@ -30,6 +31,8 @@ import {
   useTheme,
 } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import StarRateRoundedIcon from '@mui/icons-material/StarRateRounded';
 import AddIcon from '@mui/icons-material/Add';
 import InventoryIcon from '@mui/icons-material/Inventory2Outlined';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
@@ -63,7 +66,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useAppDialog } from '../../contexts/AppDialogContext';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { usePermissions } from '../../contexts/usePermissions';
-import { DialogHeader, dialogPaperSx } from '../DialogCloseButton';
+import { DialogHeader, dialogPaperSx, dialogActionsBorderSx, dialogSimpleContentSx } from '../DialogCloseButton';
 import { SendWhatsAppDialog } from '../messages/SendWhatsAppDialog';
 import { PatientDetailDrawer } from '../patients/PatientDetailDrawer';
 import { varsFromAppointment } from '../../utils/whatsapp';
@@ -163,6 +166,61 @@ const kindOptions: { value: AppointmentKind; label: string }[] = [
 ];
 
 
+function LabeledField({
+  label,
+  required,
+  action,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Box>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1,
+          mb: 0.5,
+          minHeight: 20,
+        }}
+      >
+        <Typography
+          component="label"
+          sx={{ fontSize: '0.75rem', fontWeight: 700, color: 'text.secondary' }}
+        >
+          {label}
+          {required ? ' *' : ''}
+        </Typography>
+        {action}
+      </Box>
+      {children}
+    </Box>
+  );
+}
+
+const STATUS_DOT: Record<string, string> = {
+  SCHEDULED: '#8B8680',
+  CONFIRMED: '#3787DE',
+  IN_PROGRESS: '#C98A12',
+  COMPLETED: '#15998B',
+  CANCELLED: '#C25A4C',
+  NO_SHOW: '#D46B8A',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  SCHEDULED: 'Agendado',
+  CONFIRMED: 'Confirmado',
+  IN_PROGRESS: 'Em andamento',
+  COMPLETED: 'Concluído',
+  CANCELLED: 'Cancelado',
+  NO_SHOW: 'Faltou',
+};
+
 function SectionIcon({ children }: { children: ReactNode }) {
   return (
     <Box
@@ -172,8 +230,8 @@ function SectionIcon({ children }: { children: ReactNode }) {
         justifyContent: 'center',
         width: 36,
         height: 36,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+        borderRadius: '11px',
+        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
         color: 'primary.main',
         flexShrink: 0,
       }}
@@ -186,11 +244,13 @@ function SectionIcon({ children }: { children: ReactNode }) {
 function AppointmentFormSection({
   title,
   icon,
+  action,
   children,
   sx,
 }: {
   title: string;
   icon: React.ReactNode;
+  action?: ReactNode;
   children: ReactNode;
   sx?: object;
 }) {
@@ -199,17 +259,19 @@ function AppointmentFormSection({
       variant="outlined"
       sx={{
         p: 1.75,
+        borderRadius: '14px',
         borderColor: 'divider',
         bgcolor: 'background.paper',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+        boxShadow: '0 1px 2px rgba(16,40,37,0.03)',
         ...sx,
       }}
     >
-      <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 1.5 }}>
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.25 }}>
         <SectionIcon>{icon}</SectionIcon>
-        <Typography variant="subtitle1" fontWeight={600} letterSpacing="-0.01em">
+        <Typography sx={{ fontSize: '0.9rem', fontWeight: 800, letterSpacing: '-0.01em' }}>
           {title}
         </Typography>
+        {action && <Box sx={{ ml: 'auto' }}>{action}</Box>}
       </Stack>
       {children}
     </Paper>
@@ -244,8 +306,11 @@ export function AppointmentFormDialog({
   const [returnCreateError, setReturnCreateError] = useState<string | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
+  const [summaryAnchor, setSummaryAnchor] = useState<HTMLElement | null>(null);
   const [pendingFormValues, setPendingFormValues] = useState<FormValues | null>(null);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState('');
+  const [selectedReferenceMonth, setSelectedReferenceMonth] = useState('');
+  const [sessionsDialogOpen, setSessionsDialogOpen] = useState(false);
   const [extraMaterials, setExtraMaterials] = useState<ExtraMaterialRow[]>([]);
   const [sideTab, setSideTab] = useState<'materials' | 'notes'>('materials');
   const [chartPatientId, setChartPatientId] = useState<string | null>(null);
@@ -333,8 +398,9 @@ export function AppointmentFormDialog({
     setSideTab(selectedKind === 'PROCEDURE' ? 'materials' : 'notes');
   }, [open, selectedKind]);
 
-  const showMaterialsTab = selectedKind === 'PROCEDURE' && !!selectedProcedureId;
-  const activeSideTab = showMaterialsTab ? sideTab : 'notes';
+  const materialsEnabled = selectedKind === 'PROCEDURE' && !!selectedProcedureId;
+  const showMaterialsTab = true;
+  const activeSideTab = materialsEnabled ? sideTab : 'notes';
 
   const selectedStatus = watch('status');
   const selectedPatientId = watch('patientId');
@@ -377,6 +443,21 @@ export function AppointmentFormDialog({
     enabled: open && !!selectedPatientId,
   });
 
+  const { data: patientDetail } = useQuery({
+    queryKey: ['patient-detail-summary', selectedPatientId],
+    queryFn: () => patientsApi.findOne(selectedPatientId),
+    enabled: Boolean(summaryAnchor) && !!selectedPatientId,
+  });
+
+  const patientSummary = useMemo(() => {
+    const appts = patientDetail?.appointments ?? [];
+    const completed = appts.filter((a) => a.status === 'COMPLETED');
+    const last = [...completed].sort(
+      (a, b) => dayjs(b.startAt).valueOf() - dayjs(a.startAt).valueOf(),
+    )[0];
+    return { visits: completed.length, last };
+  }, [patientDetail]);
+
   const reliabilityColor = useMemo(() => {
     if (!reliability) return undefined;
     if (reliability.reliabilityPercent >= 80) return 'success' as const;
@@ -393,12 +474,28 @@ export function AppointmentFormDialog({
   const [batchPatientPkg, setBatchPatientPkg] = useState<PatientPackage | null>(null);
   const [batchCreating, setBatchCreating] = useState(false);
   const [batchSessions, setBatchSessions] = useState<{ date: string; startTime: string }[]>([]);
+  /** Quando definido, o agendamento em lote preenche exatamente N sessões faltantes. */
+  const [batchFillCount, setBatchFillCount] = useState<number | null>(null);
 
   const { data: activePatientPackages = [] } = useQuery({
     queryKey: ['patient-packages-active', selectedPatientId],
     queryFn: () => packagesApi.listActiveForPatient(selectedPatientId),
     enabled: open && !!selectedPatientId,
   });
+
+  const { data: selectedPackageDetail } = useQuery({
+    queryKey: ['patient-package-detail', selectedPackageId],
+    queryFn: () => packagesApi.findPatientPackage(selectedPackageId),
+    enabled: open && !!selectedPackageId,
+  });
+
+  const packageSessions = useMemo(
+    () =>
+      [...(selectedPackageDetail?.appointments ?? [])].sort((a, b) =>
+        dayjs(a.startAt).valueOf() - dayjs(b.startAt).valueOf(),
+      ),
+    [selectedPackageDetail],
+  );
 
   const { data: recurrenceLimit } = useQuery({
     queryKey: ['appointment-recurrence-limit', selectedPatientId, selectedProcedureId, appointment?.id],
@@ -421,8 +518,20 @@ export function AppointmentFormDialog({
     if (!batchDialogOpen || !batchPatientPkg || !selectedProcedure?.recurrenceDays) {
       return;
     }
-    const remaining = batchPatientPkg.sessionsTotal - batchPatientPkg.sessionsUsed;
-    const baseDate = dayjs(`${selectedDate}T${selectedStartTime}`);
+    const remaining =
+      batchFillCount ?? batchPatientPkg.sessionsTotal - batchPatientPkg.sessionsUsed;
+    if (remaining <= 0) {
+      setBatchSessions([]);
+      return;
+    }
+    // Ao preencher faltantes, começa após a última sessão já agendada
+    const lastScheduled =
+      batchFillCount != null && packageSessions.length > 0
+        ? packageSessions[packageSessions.length - 1]
+        : null;
+    const baseDate = lastScheduled
+      ? dayjs(lastScheduled.startAt).add(selectedProcedure.recurrenceDays!, 'day')
+      : dayjs(`${selectedDate}T${selectedStartTime}`);
     const sessions = Array.from({ length: remaining }, (_, i) => {
       const sessionDate = baseDate.add(i * selectedProcedure.recurrenceDays!, 'day');
       return {
@@ -431,7 +540,15 @@ export function AppointmentFormDialog({
       };
     });
     setBatchSessions(sessions);
-  }, [batchDialogOpen, batchPatientPkg, selectedProcedure?.recurrenceDays, selectedDate, selectedStartTime]);
+  }, [
+    batchDialogOpen,
+    batchPatientPkg,
+    batchFillCount,
+    packageSessions,
+    selectedProcedure?.recurrenceDays,
+    selectedDate,
+    selectedStartTime,
+  ]);
 
   const { data: allCatalogPackages = [] } = useQuery({
     queryKey: ['packages'],
@@ -470,6 +587,16 @@ export function AppointmentFormDialog({
     [filteredPatientPackages, selectedPackageId],
   );
 
+  // Sessões ativas já agendadas (ignora canceladas) e quantas faltam agendar
+  const scheduledActiveCount = useMemo(
+    () => packageSessions.filter((s) => s.status !== 'CANCELLED').length,
+    [packageSessions],
+  );
+  const missingSessions = Math.max(
+    (selectedPatientPkg?.sessionsTotal ?? 0) - scheduledActiveCount,
+    0,
+  );
+
   const paymentAmountOnComplete = useMemo(() => {
     if (selectedPatientPkg && selectedPackageId && !selectedPatientPkg.financeGenerated) {
       return Number(selectedPatientPkg.totalPaid);
@@ -477,6 +604,28 @@ export function AppointmentFormDialog({
     if (selectedProcedure?.price) return Number(selectedProcedure.price);
     return 0;
   }, [selectedPatientPkg, selectedPackageId, selectedProcedure]);
+
+  // Mês de referência (competência) — relevante para agendamentos de meses passados
+  const appointmentMonthKey = appointment ? dayjs(appointment.startAt).format('YYYY-MM') : '';
+  const currentMonthKey = dayjs().format('YYYY-MM');
+  const isOldAppointment = !!appointment && appointmentMonthKey < currentMonthKey;
+
+  const referenceMonthOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [];
+    if (!appointmentMonthKey) return opts;
+    const end = dayjs().startOf('month');
+    let m = dayjs(`${appointmentMonthKey}-01`).startOf('month');
+    // Do mês do agendamento até o mês atual (inclusive)
+    while (m.isBefore(end) || m.isSame(end, 'month')) {
+      const label = m.format('MMMM [de] YYYY').replace(/^./, (c) => c.toUpperCase());
+      opts.push({
+        value: m.format('YYYY-MM'),
+        label: m.isSame(end, 'month') ? `${label} (atual)` : label,
+      });
+      m = m.add(1, 'month');
+    }
+    return opts;
+  }, [appointmentMonthKey]);
 
   const needsPaymentOnComplete = useCallback(
     (values: FormValues) => {
@@ -842,7 +991,15 @@ export function AppointmentFormDialog({
   });
 
   const mutation = useMutation({
-    mutationFn: ({ values, paymentMethodId }: { values: FormValues; paymentMethodId?: string }) => {
+    mutationFn: ({
+      values,
+      paymentMethodId,
+      referenceMonth,
+    }: {
+      values: FormValues;
+      paymentMethodId?: string;
+      referenceMonth?: string;
+    }) => {
       const start = dayjs(`${values.date}T${values.startTime}`);
       if (!start.isValid()) {
         throw new Error('Data ou horário inválidos.');
@@ -868,6 +1025,7 @@ export function AppointmentFormDialog({
         ...(values.notes.trim() ? { notes: values.notes.trim() } : {}),
         ...(values.clinicalNotes.trim() ? { clinicalNotes: values.clinicalNotes.trim() } : {}),
         ...(paymentMethodId ? { paymentMethodId } : {}),
+        ...(referenceMonth ? { referenceMonth } : {}),
         ...(procedureId ? { procedureId } : {}),
         ...(selectedPackageId ? { patientPackageId: selectedPackageId } : {}),
         ...(normalizedExtraMaterials.length > 0 ? { extraMaterials: normalizedExtraMaterials } : {}),
@@ -925,6 +1083,7 @@ export function AppointmentFormDialog({
     if (needsPayment) {
       setPendingFormValues(values);
       setSelectedPaymentMethodId('');
+      setSelectedReferenceMonth('');
       setPaymentDialogOpen(true);
       return;
     }
@@ -958,6 +1117,7 @@ export function AppointmentFormDialog({
     if (isCompleting) {
       setPendingFormValues(values);
       setSelectedPaymentMethodId('');
+      setSelectedReferenceMonth('');
       setPaymentDialogOpen(true);
     } else {
       mutation.mutate({ values });
@@ -970,6 +1130,10 @@ export function AppointmentFormDialog({
     mutation.mutate({
       values: pendingFormValues,
       paymentMethodId: selectedPaymentMethodId || undefined,
+      referenceMonth: (() => {
+        const ref = selectedReferenceMonth || appointmentMonthKey;
+        return ref && ref !== currentMonthKey ? ref : undefined;
+      })(),
     });
     setPaymentDialogOpen(false);
     setPendingFormValues(null);
@@ -1132,8 +1296,9 @@ export function AppointmentFormDialog({
           sx: {
             maxWidth: isMobile ? '100%' : 1280,
             width: '100%',
+            height: isMobile ? '100%' : 'min(94dvh, 840px)',
             maxHeight: isMobile ? '100%' : '94dvh',
-            borderRadius: isMobile ? 0 : 3,
+            borderRadius: isMobile ? 0 : '20px',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
@@ -1153,7 +1318,7 @@ export function AppointmentFormDialog({
               !isMobile
                 ? selectedPatient
                   ? `${selectedPatient.name}${slotValid ? ` · ${dayjs(selectedDate).format('DD/MM/YYYY')} às ${selectedStartTime}` : ''}`
-                  : 'Preencha os dados para reservar o horário'
+                  : 'Preencha os dados do atendimento'
                 : undefined
             }
             icon={<EventAvailableOutlinedIcon fontSize="small" />}
@@ -1161,121 +1326,67 @@ export function AppointmentFormDialog({
             trailing={
               appointment && !isMobile ? (
                 <Stack direction="row" spacing={1.5} alignItems="center" flexShrink={0}>
-                  {(isInProgress || hasStartedAt) && (
-                    <Box
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ flexShrink: 0 }}>
+                    <Typography
                       sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 0.75,
-                        px: 1.5,
-                        py: 0.5,
-                        borderRadius: 2,
-                        bgcolor: isInProgress && !hasFinishedAt
-                          ? (theme) => alpha(theme.palette.success.main, 0.1)
-                          : (theme) => alpha(theme.palette.grey[500], 0.1),
-                        border: '1px solid',
-                        borderColor: isInProgress && !hasFinishedAt
-                          ? (theme) => alpha(theme.palette.success.main, 0.3)
-                          : 'divider',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        color: 'text.secondary',
+                        letterSpacing: '0.5px',
+                        textTransform: 'uppercase',
                       }}
                     >
-                      <TimerOutlinedIcon
-                        fontSize="small"
-                        sx={{ color: isInProgress && !hasFinishedAt ? 'success.main' : 'text.secondary' }}
-                      />
-                      <Typography
-                        variant="h6"
-                        fontWeight={700}
-                        sx={{
-                          fontVariantNumeric: 'tabular-nums',
-                          color: isInProgress && !hasFinishedAt ? 'success.main' : 'text.primary',
-                        }}
-                      >
-                        {formatElapsed(elapsed)}
-                      </Typography>
-                    </Box>
-                  )}
-
-                  {showSessionControls && (
-                    <>
-                      <Box sx={{ width: 116, flexShrink: 0 }}>
-                        {canStartSession && !isInProgress && !hasFinishedAt ? (
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            size="small"
-                            fullWidth
-                            startIcon={<PlayArrowIcon />}
-                            disabled={startMutation.isPending}
-                            onClick={() => startMutation.mutate()}
-                            sx={{ whiteSpace: 'nowrap' }}
-                          >
-                            {startMutation.isPending ? 'Iniciando...' : 'Iniciar'}
-                          </Button>
-                        ) : isInProgress && !hasFinishedAt ? (
-                          <Button
-                            variant="outlined"
-                            color="inherit"
-                            size="small"
-                            fullWidth
-                            startIcon={<PauseIcon />}
-                            disabled={pauseMutation.isPending}
-                            onClick={() => pauseMutation.mutate()}
-                            sx={{ whiteSpace: 'nowrap' }}
-                          >
-                            {pauseMutation.isPending ? 'Pausando...' : 'Pausar'}
-                          </Button>
-                        ) : hasFinishedAt && isInProgress ? (
-                          <Button
-                            variant="outlined"
-                            color="primary"
-                            size="small"
-                            fullWidth
-                            startIcon={<PlayArrowIcon />}
-                            disabled={resumeMutation.isPending}
-                            onClick={() => resumeMutation.mutate()}
-                            sx={{ whiteSpace: 'nowrap' }}
-                          >
-                            {resumeMutation.isPending ? 'Retomando...' : 'Retomar'}
-                          </Button>
-                        ) : null}
-                      </Box>
-                      <Box sx={{ width: 116, flexShrink: 0 }}>
-                        <Button
-                          variant="contained"
-                          color="success"
+                      Status
+                    </Typography>
+                    <Controller
+                      name="status"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          select
                           size="small"
-                          fullWidth
-                          startIcon={<CheckCircleOutlineIcon />}
-                          disabled={!canFinishSession || mutation.isPending}
-                          onClick={() => setConfirmFinishOpen(true)}
-                          sx={{ whiteSpace: 'nowrap' }}
+                          sx={{ minWidth: 180, flexShrink: 0 }}
+                          SelectProps={{
+                            renderValue: (value) => {
+                              const opt = statusOptions.find((o) => o.value === value);
+                              return (
+                                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                                  <Box
+                                    component="span"
+                                    sx={{
+                                      width: 9,
+                                      height: 9,
+                                      borderRadius: '50%',
+                                      bgcolor: STATUS_DOT[value as string] ?? 'grey.400',
+                                    }}
+                                  />
+                                  {opt?.label ?? (value as string)}
+                                </Box>
+                              );
+                            },
+                          }}
                         >
-                          Finalizar
-                        </Button>
-                      </Box>
-                    </>
-                  )}
-
-                  <Controller
-                    name="status"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        select
-                        label="Status"
-                        size="small"
-                        sx={{ minWidth: 180, flexShrink: 0 }}
-                      >
-                        {statusOptions.map((opt) => (
-                          <MenuItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    )}
-                  />
+                          {statusOptions.map((opt) => (
+                            <MenuItem key={opt.value} value={opt.value}>
+                              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                                <Box
+                                  component="span"
+                                  sx={{
+                                    width: 9,
+                                    height: 9,
+                                    borderRadius: '50%',
+                                    bgcolor: STATUS_DOT[opt.value] ?? 'grey.400',
+                                  }}
+                                />
+                                {opt.label}
+                              </Box>
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                      )}
+                    />
+                  </Stack>
                 </Stack>
               ) : undefined
             }
@@ -1348,8 +1459,8 @@ export function AppointmentFormDialog({
 
           <DialogContent
             sx={{
-              px: { xs: 1.5, sm: 3 },
-              pb: 2,
+              px: { xs: 1.5, sm: 2.5 },
+              pb: 1.75,
               bgcolor: 'grey.50',
               flex: 1,
               minHeight: 0,
@@ -1357,7 +1468,7 @@ export function AppointmentFormDialog({
               display: 'flex',
               flexDirection: 'column',
               '&&': {
-                pt: { xs: 1.5, sm: 2.5 },
+                pt: { xs: 1.5, sm: 2 },
               },
             }}
           >
@@ -1366,14 +1477,14 @@ export function AppointmentFormDialog({
                 {getApiErrorMessage(mutation.error, 'Erro ao salvar agendamento')}
               </Alert>
             )}
-            <Grid container spacing={{ xs: 1.5, sm: 2.5 }} sx={{ flex: 1, minHeight: 0, alignItems: 'stretch' }}>
+            <Grid container spacing={{ xs: 1.5, sm: 1.75 }} sx={{ flex: 1, minHeight: 0, alignItems: 'stretch' }}>
               <Grid
                 item
                 xs={12}
                 lg={6}
                 sx={{ display: 'flex', flexDirection: 'column', flex: { xs: '0 0 auto', lg: 1 }, minHeight: 0 }}
               >
-                <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
+                <Stack spacing={1.5} sx={{ flex: 1, minHeight: 0 }}>
                   <AppointmentFormSection title="Paciente e atendimento" icon={<PersonOutlineIcon fontSize="small" />}>
                     <Stack spacing={2}>
                       <Controller
@@ -1381,9 +1492,22 @@ export function AppointmentFormDialog({
                         control={control}
                         rules={{ required: 'Selecione um paciente' }}
                         render={({ field, fieldState }) => (
-                          <Stack direction="row" spacing={1} alignItems="flex-start">
+                          <LabeledField
+                            label="Paciente"
+                            required
+                            action={
+                              <Button
+                                size="small"
+                                disabled={!selectedPatient}
+                                onClick={(e) => setSummaryAnchor(e.currentTarget)}
+                                startIcon={<InfoOutlinedIcon sx={{ fontSize: 15 }} />}
+                                sx={{ fontSize: '0.72rem', fontWeight: 700, py: 0.15, px: 0.75, minWidth: 0 }}
+                              >
+                                Resumo
+                              </Button>
+                            }
+                          >
                             <Autocomplete
-                              sx={{ flex: 1 }}
                               options={patients}
                               getOptionLabel={(p) => p.name}
                               value={patients.find((p) => p.id === field.value) ?? null}
@@ -1391,42 +1515,143 @@ export function AppointmentFormDialog({
                               renderInput={(params) => (
                                 <TextField
                                   {...params}
-                                  label="Paciente"
-                                  required
+                                  placeholder="Buscar paciente pelo nome..."
                                   error={!!fieldState.error}
                                   helperText={fieldState.error?.message}
                                 />
                               )}
                             />
-                            {canViewPatient && field.value && (
-                              <Tooltip title="Ver ficha da paciente">
-                                <IconButton
-                                  onClick={() => setChartPatientId(field.value)}
-                                  sx={{ mt: 0.75 }}
-                                  color="primary"
-                                  aria-label="Ver ficha da paciente"
-                                >
-                                  <DescriptionOutlinedIcon />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                          </Stack>
+                          </LabeledField>
                         )}
                       />
 
-                      {reliability && reliability.total >= 3 && (
-                        <Tooltip
-                          title={`${reliability.completed} concluído(s), ${reliability.cancelled} cancelamento(s), ${reliability.noShow} falta(s) em ${reliability.total} agendamentos`}
-                        >
-                          <Chip
-                            size="small"
-                            variant="outlined"
-                            color={reliabilityColor}
-                            label={`Confiabilidade: ${reliability.reliabilityPercent}%`}
-                            sx={{ alignSelf: 'flex-start' }}
-                          />
-                        </Tooltip>
-                      )}
+
+                      <Popover
+                        open={Boolean(summaryAnchor)}
+                        anchorEl={summaryAnchor}
+                        onClose={() => setSummaryAnchor(null)}
+                        disableScrollLock
+                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                        slotProps={{
+                          paper: {
+                            sx: {
+                              width: 300,
+                              p: 2,
+                              mt: 0.5,
+                              borderRadius: '14px',
+                              boxShadow: '0 12px 48px -16px rgba(16,40,37,.28)',
+                            },
+                          },
+                        }}
+                      >
+                        {selectedPatient && (
+                          <Stack spacing={1.5}>
+                            <Stack direction="row" alignItems="center" spacing={1.25}>
+                              <Box
+                                sx={{
+                                  width: 38,
+                                  height: 38,
+                                  borderRadius: '11px',
+                                  bgcolor: 'primary.main',
+                                  color: '#fff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 800,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {selectedPatient.name
+                                  .trim()
+                                  .split(/\s+/)
+                                  .map((w) => w[0] ?? '')
+                                  .slice(0, 2)
+                                  .join('')
+                                  .toUpperCase()}
+                              </Box>
+                              <Box sx={{ minWidth: 0, flex: 1 }}>
+                                <Typography noWrap sx={{ fontSize: '0.85rem', fontWeight: 800 }}>
+                                  {selectedPatient.name}
+                                </Typography>
+                                <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                                  {patientSummary.visits} visita{patientSummary.visits !== 1 ? 's' : ''}
+                                  {patientSummary.last
+                                    ? ` · última ${dayjs(patientSummary.last.startAt).format('DD MMM YYYY')}`
+                                    : ''}
+                                </Typography>
+                              </Box>
+                              {reliability && (
+                                <Box
+                                  component="span"
+                                  sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 0.25,
+                                    px: 1,
+                                    py: 0.4,
+                                    borderRadius: '8px',
+                                    bgcolor: 'rgba(201,138,18,.14)',
+                                    color: '#C98A12',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 800,
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <StarRateRoundedIcon sx={{ fontSize: 15 }} /> {reliability.reliabilityPercent}
+                                </Box>
+                              )}
+                            </Stack>
+                            {reliability && reliability.total >= 4 && (
+                              <Stack direction="row" alignItems="center" spacing={0.75}>
+                                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main', flexShrink: 0 }} />
+                                <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, color: 'success.main' }}>
+                                  Paciente recorrente · {reliability.total} atendimentos
+                                </Typography>
+                              </Stack>
+                            )}
+                            {patientSummary.last && (
+                              <Box sx={{ pt: 1.25, borderTop: '1px solid', borderColor: 'divider' }}>
+                                <Typography
+                                  sx={{
+                                    fontSize: '0.62rem',
+                                    fontWeight: 700,
+                                    color: 'text.secondary',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.4px',
+                                    mb: 0.5,
+                                  }}
+                                >
+                                  Último atendimento
+                                </Typography>
+                                <Typography sx={{ fontSize: '0.78rem', fontWeight: 600 }}>
+                                  {patientSummary.last.procedure?.name ?? 'Atendimento'}
+                                  {patientSummary.last.professional?.name
+                                    ? ` · ${patientSummary.last.professional.name}`
+                                    : ''}
+                                </Typography>
+                                <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', mt: 0.25 }}>
+                                  {dayjs(patientSummary.last.startAt).format('DD MMM YYYY')}
+                                </Typography>
+                              </Box>
+                            )}
+                            <Stack
+                              direction="row"
+                              alignItems="flex-start"
+                              spacing={0.75}
+                              sx={{ pt: 1.25, borderTop: '1px solid', borderColor: 'divider' }}
+                            >
+                              <InfoOutlinedIcon sx={{ fontSize: 15, color: '#C98A12', mt: '1px', flexShrink: 0 }} />
+                              <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', fontWeight: 500, lineHeight: 1.4 }}>
+                                {selectedPatient.notes?.trim()
+                                  ? selectedPatient.notes
+                                  : 'Sem observações clínicas relevantes'}
+                              </Typography>
+                            </Stack>
+                          </Stack>
+                        )}
+                      </Popover>
 
                       <Controller
                         name="kind"
@@ -1438,9 +1663,31 @@ export function AppointmentFormDialog({
                             value={field.value}
                             onChange={(_, val) => val && field.onChange(val)}
                             size="small"
+                            sx={{
+                              bgcolor: 'grey.100',
+                              p: '4px',
+                              borderRadius: '11px',
+                              gap: '4px',
+                              '& .MuiToggleButton-root': {
+                                flex: 1,
+                                py: 0.75,
+                                border: 'none',
+                                borderRadius: '8px !important',
+                                fontWeight: 700,
+                                fontSize: '0.8125rem',
+                                textTransform: 'none',
+                                color: 'text.secondary',
+                                '&.Mui-selected': {
+                                  bgcolor: 'background.paper',
+                                  color: 'primary.main',
+                                  boxShadow: '0 1px 3px rgba(16,40,37,.14)',
+                                  '&:hover': { bgcolor: 'background.paper' },
+                                },
+                              },
+                            }}
                           >
                             {kindOptions.map((opt) => (
-                              <ToggleButton key={opt.value} value={opt.value} sx={{ flex: 1, py: 0.85 }}>
+                              <ToggleButton key={opt.value} value={opt.value}>
                                 {opt.label}
                               </ToggleButton>
                             ))}
@@ -1448,65 +1695,78 @@ export function AppointmentFormDialog({
                         )}
                       />
 
-                      {watch('kind') === 'PROCEDURE' && (
-                        <>
+                      <>
                           <Controller
                             name="procedureId"
                             control={control}
-                            rules={{ required: 'Selecione um procedimento' }}
+                            rules={{
+                              required:
+                                selectedKind === 'PROCEDURE' ? 'Selecione um procedimento' : false,
+                            }}
                             render={({ field, fieldState }) => (
-                              <TextField
-                                {...field}
-                                value={selectValueIfListed(field.value, procedureOptions)}
-                                onChange={field.onChange}
-                                select
-                                label="Procedimento"
-                                fullWidth
-                                required
-                                error={!!fieldState.error}
-                                helperText={fieldState.error?.message}
-                              >
-                                {procedureOptions.map((p) => (
-                                  <MenuItem key={p.id} value={p.id}>
-                                    {p.name}
+                              <LabeledField label="Procedimento" required={selectedKind === 'PROCEDURE'}>
+                                <TextField
+                                  {...field}
+                                  value={selectValueIfListed(field.value, procedureOptions)}
+                                  onChange={field.onChange}
+                                  select
+                                  fullWidth
+                                  disabled={selectedKind !== 'PROCEDURE'}
+                                  error={!!fieldState.error}
+                                  helperText={fieldState.error?.message}
+                                  SelectProps={{ displayEmpty: true }}
+                                >
+                                  <MenuItem value="" disabled>
+                                    Selecione um procedimento
                                   </MenuItem>
-                                ))}
-                              </TextField>
+                                  {procedureOptions.map((p) => (
+                                    <MenuItem key={p.id} value={p.id}>
+                                      {p.name}
+                                    </MenuItem>
+                                  ))}
+                                </TextField>
+                              </LabeledField>
                             )}
                           />
-                          {selectedProcedure && (
-                            <Stack direction="row" flexWrap="wrap" gap={0.75}>
-                              <Chip
-                                size="small"
-                                variant="outlined"
-                                label={`${selectedProcedure.durationMinutes} min`}
-                              />
-                              <Chip
-                                size="small"
-                                variant="outlined"
-                                label={`Retorno: ${selectedProcedure.recurrenceDays ?? '—'} dias`}
-                              />
-                              {selectedProcedure.price != null && (
-                                <Chip
-                                  size="small"
-                                  color="primary"
-                                  variant="outlined"
-                                  label={brl.format(Number(selectedProcedure.price))}
-                                />
-                              )}
+                          {selectedKind === 'PROCEDURE' && (
+                            <Stack direction="row" flexWrap="wrap" gap={1}>
+                              {[
+                                selectedProcedure ? `${selectedProcedure.durationMinutes} min` : '— min',
+                                `Retorno: ${selectedProcedure?.recurrenceDays ?? '—'} dias`,
+                                selectedProcedure?.price != null
+                                  ? brl.format(Number(selectedProcedure.price))
+                                  : 'R$ —',
+                              ].map((label) => (
+                                <Box
+                                  key={label}
+                                  component="span"
+                                  sx={{
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    color: 'text.secondary',
+                                    px: 1.25,
+                                    py: 0.6,
+                                    borderRadius: '8px',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    bgcolor: 'grey.50',
+                                  }}
+                                >
+                                  {label}
+                                </Box>
+                              ))}
                             </Stack>
                           )}
                         </>
-                      )}
                     </Stack>
                   </AppointmentFormSection>
 
                   <AppointmentFormSection title="Data e profissional" icon={<ScheduleOutlinedIcon fontSize="small" />}>
-                    <Grid container spacing={2}>
+                    <Grid container spacing={1.5}>
                       <Grid item xs={12}>
                         {restrictToOwnAppointments ? (
+                          <LabeledField label="Profissional">
                           <TextField
-                            label="Profissional"
                             value={
                               checkingAvailability && slotValid
                                 ? 'Verificando disponibilidade...'
@@ -1529,12 +1789,14 @@ export function AppointmentFormDialog({
                               professionalSlotConflict
                             }
                           />
+                          </LabeledField>
                         ) : (
                           <Controller
                             name="professionalId"
                             control={control}
                             rules={{ required: 'Selecione um profissional' }}
                             render={({ field, fieldState }) => (
+                              <LabeledField label="Profissional" required>
                               <TextField
                                 {...field}
                                 value={selectValueIfListed(field.value, professionalOptions)}
@@ -1543,9 +1805,7 @@ export function AppointmentFormDialog({
                                   field.onChange(event);
                                 }}
                                 select
-                                label="Profissional"
                                 fullWidth
-                                required
                                 disabled={!slotValid || (checkingAvailability && professionalOptions.length === 0)}
                                 error={
                                   !!fieldState.error ||
@@ -1564,7 +1824,7 @@ export function AppointmentFormDialog({
                                           ? 'Atualizando disponibilidade...'
                                           : checkingAvailability && slotValid && professionalOptions.length === 0
                                             ? 'Verificando disponibilidade...'
-                                            : 'Somente profissionais que realizam atendimentos')
+                                            : undefined)
                                 }
                               >
                                 {checkingAvailability && slotValid && professionalOptions.length === 0 ? (
@@ -1583,6 +1843,7 @@ export function AppointmentFormDialog({
                                   ))
                                 )}
                               </TextField>
+                              </LabeledField>
                             )}
                           />
                         )}
@@ -1602,13 +1863,11 @@ export function AppointmentFormDialog({
                             },
                           }}
                           render={({ field, fieldState }) => (
+                            <LabeledField label="Data" required>
                             <TextField
                               {...field}
                               type="date"
-                              label="Data"
                               fullWidth
-                              required
-                              InputLabelProps={{ shrink: true }}
                               inputProps={{
                                 min: recurrenceEarliestDate ?? undefined,
                               }}
@@ -1620,6 +1879,7 @@ export function AppointmentFormDialog({
                                   : undefined)
                               }
                             />
+                            </LabeledField>
                           )}
                         />
                       </Grid>
@@ -1629,45 +1889,14 @@ export function AppointmentFormDialog({
                           control={control}
                           rules={{ required: true }}
                           render={({ field }) => (
-                            <TextField
-                              {...field}
-                              type="time"
-                              label="Horário"
-                              fullWidth
-                              required
-                              InputLabelProps={{ shrink: true }}
-                            />
+                            <LabeledField label="Horário" required>
+                            <TextField {...field} type="time" fullWidth />
+                            </LabeledField>
                           )}
                         />
                       </Grid>
                     </Grid>
 
-                    {slotValid && (
-                      <Box
-                        sx={{
-                          mt: 2,
-                          px: 1.5,
-                          py: 1,
-                          borderRadius: 2,
-                          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06),
-                          border: '1px solid',
-                          borderColor: (theme) => alpha(theme.palette.primary.main, 0.18),
-                        }}
-                      >
-                        <Typography variant="body2" color="text.secondary">
-                          Término previsto:{' '}
-                          <Typography component="span" variant="body2" fontWeight={600} color="text.primary">
-                            {slotEnd.format('HH:mm')}
-                          </Typography>
-                          {selectedProcedure && (
-                            <>
-                              {' '}
-                              · duração de {selectedProcedure.durationMinutes} min
-                            </>
-                          )}
-                        </Typography>
-                      </Box>
-                    )}
                   </AppointmentFormSection>
 
                 </Stack>
@@ -1679,25 +1908,150 @@ export function AppointmentFormDialog({
                 lg={6}
                 sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
               >
-                <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
-                  {selectedKind === 'PROCEDURE' && selectedPatientId && selectedProcedureId && (
-                    <AppointmentFormSection title="Pacote" icon={<ViewInArIcon fontSize="small" />}>
-                      {filteredPatientPackages.length > 0 && (
+                <Stack spacing={1.5} sx={{ flex: 1, minHeight: 0 }}>
+                  {appointment && !isMobile && (showSessionControls || isInProgress || hasStartedAt) && (
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 1.75,
+                        borderRadius: '14px',
+                        borderColor: 'divider',
+                        bgcolor: 'background.paper',
+                        boxShadow: '0 1px 2px rgba(16,40,37,0.03)',
+                      }}
+                    >
+                      <Stack direction="row" alignItems="center" spacing={1.5}>
+                        <SectionIcon>
+                          <TimerOutlinedIcon fontSize="small" />
+                        </SectionIcon>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'text.secondary' }}>
+                            Timer da sessão (opcional)
+                          </Typography>
+                          <Typography
+                            sx={{
+                              fontSize: '1.25rem',
+                              fontWeight: 800,
+                              fontVariantNumeric: 'tabular-nums',
+                              lineHeight: 1.1,
+                              color: isInProgress && !hasFinishedAt ? 'success.main' : 'text.primary',
+                            }}
+                          >
+                            {formatElapsed(elapsed)}
+                          </Typography>
+                        </Box>
+                        {showSessionControls && (
+                          <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+                            {canStartSession && !isInProgress && !hasFinishedAt ? (
+                              <Button
+                                variant="contained"
+                                color="primary"
+                                size="small"
+                                startIcon={<PlayArrowIcon />}
+                                disabled={startMutation.isPending}
+                                onClick={() => startMutation.mutate()}
+                              >
+                                {startMutation.isPending ? 'Iniciando...' : 'Iniciar'}
+                              </Button>
+                            ) : isInProgress && !hasFinishedAt ? (
+                              <Button
+                                variant="outlined"
+                                color="inherit"
+                                size="small"
+                                startIcon={<PauseIcon />}
+                                disabled={pauseMutation.isPending}
+                                onClick={() => pauseMutation.mutate()}
+                              >
+                                {pauseMutation.isPending ? 'Pausando...' : 'Pausar'}
+                              </Button>
+                            ) : hasFinishedAt && isInProgress ? (
+                              <Button
+                                variant="outlined"
+                                color="primary"
+                                size="small"
+                                startIcon={<PlayArrowIcon />}
+                                disabled={resumeMutation.isPending}
+                                onClick={() => resumeMutation.mutate()}
+                              >
+                                {resumeMutation.isPending ? 'Retomando...' : 'Retomar'}
+                              </Button>
+                            ) : null}
+                            <Button
+                              variant="contained"
+                              color="success"
+                              size="small"
+                              startIcon={<CheckCircleOutlineIcon />}
+                              disabled={!canFinishSession || mutation.isPending}
+                              onClick={() => setConfirmFinishOpen(true)}
+                            >
+                              Finalizar
+                            </Button>
+                          </Stack>
+                        )}
+                      </Stack>
+                    </Paper>
+                  )}
+                  {true && (
+                    <AppointmentFormSection
+                      title="Pacote"
+                      icon={<ViewInArIcon fontSize="small" />}
+                      action={
+                        selectedPackageId ? (
+                          <Button
+                            size="small"
+                            startIcon={<CalendarMonthIcon sx={{ fontSize: '1rem !important' }} />}
+                            onClick={() => setSessionsDialogOpen(true)}
+                            sx={{
+                              minWidth: 0,
+                              px: 0.75,
+                              py: 0.25,
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              color: 'primary.main',
+                            }}
+                          >
+                            Ver sessões
+                            {packageSessions.length > 0 ? ` (${packageSessions.length})` : ''}
+                          </Button>
+                        ) : undefined
+                      }
+                    >
+                      <Box sx={{ mb: 1.5 }}>
+                      <LabeledField label="Pacote ativo do paciente">
                         <TextField
                           select
-                          label="Pacote ativo do paciente"
                           value={selectedPackageId}
                           onChange={(e) => setSelectedPackageId(e.target.value)}
                           fullWidth
-                          sx={{ mb: 1.5 }}
+                          disabled={filteredPatientPackages.length === 0}
+                          SelectProps={{
+                            displayEmpty: true,
+                            renderValue: (val) => {
+                              if (!val) {
+                                return (
+                                  <Typography component="span" variant="body2" sx={{ color: 'text.disabled' }}>
+                                    {filteredPatientPackages.length === 0
+                                      ? 'Nenhum pacote ativo'
+                                      : 'Nenhum (avulso)'}
+                                  </Typography>
+                                );
+                              }
+                              const pp = filteredPatientPackages.find((p) => p.id === val);
+                              return pp
+                                ? `${pp.package?.name ?? 'Pacote'} — ${pp.sessionsUsed}/${pp.sessionsTotal} sessões`
+                                : '';
+                            },
+                          }}
                           helperText={
-                            selectedPatientPkg
-                              ? `${selectedPatientPkg.sessionsUsed}/${selectedPatientPkg.sessionsTotal} sessões usadas${
-                                  selectedPatientPkg.expiresAt
-                                    ? ` · expira em ${formatDateOnlyFromApi(selectedPatientPkg.expiresAt)}`
-                                    : ''
-                                }`
-                              : 'Vincular este agendamento a um pacote ativo'
+                            filteredPatientPackages.length === 0
+                              ? 'Este paciente não possui pacotes ativos'
+                              : selectedPatientPkg
+                                ? `${selectedPatientPkg.sessionsUsed}/${selectedPatientPkg.sessionsTotal} sessões usadas${
+                                    selectedPatientPkg.expiresAt
+                                      ? ` · expira em ${formatDateOnlyFromApi(selectedPatientPkg.expiresAt)}`
+                                      : ''
+                                  }`
+                                : 'Vincular este agendamento a um pacote ativo'
                           }
                         >
                           <MenuItem value="">
@@ -1709,7 +2063,8 @@ export function AppointmentFormDialog({
                             </MenuItem>
                           ))}
                         </TextField>
-                      )}
+                      </LabeledField>
+                      </Box>
 
                       {selectedPatientPkg &&
                         !appointment &&
@@ -1719,6 +2074,7 @@ export function AppointmentFormDialog({
                             variant="outlined"
                             startIcon={<CalendarMonthIcon />}
                             onClick={() => {
+                              setBatchFillCount(null);
                               setBatchPatientPkg(selectedPatientPkg);
                               setBatchDialogOpen(true);
                             }}
@@ -1819,6 +2175,8 @@ export function AppointmentFormDialog({
                       flexDirection: 'column',
                       minHeight: activeSideTab === 'materials' ? { xs: 200, lg: 0 } : 0,
                       overflow: 'hidden',
+                      borderRadius: '16px',
+                      borderColor: 'divider',
                       bgcolor: 'background.paper',
                     }}
                   >
@@ -1837,6 +2195,7 @@ export function AppointmentFormDialog({
                       {showMaterialsTab && (
                         <Tab
                           value="materials"
+                          disabled={!materialsEnabled}
                           label={
                             <Stack direction="row" spacing={0.75} alignItems="center">
                               <span>Materiais</span>
@@ -1867,7 +2226,7 @@ export function AppointmentFormDialog({
                       }}
                     >
                       {activeSideTab === 'materials' && showMaterialsTab && (
-                        <Stack spacing={2}>
+                        <Stack spacing={1.5}>
                           {materials.length > 0 && (
                             <Box>
                               <Typography
@@ -1882,19 +2241,87 @@ export function AppointmentFormDialog({
                               <Stack direction="row" flexWrap="wrap" gap={0.75}>
                                 {materials.map((m) => {
                                   const needed = totalMaterialNeed.get(m.itemId) ?? Number(m.quantity);
-                                  const available = effectiveAvailable.get(m.itemId);
-                                  const insufficient =
-                                    available !== undefined && available < needed;
+                                  const available =
+                                    effectiveAvailable.get(m.itemId) ??
+                                    (m.item?.quantity !== undefined ? Number(m.item.quantity) : undefined);
+                                  const minQty =
+                                    m.item?.minQuantity !== undefined ? Number(m.item.minQuantity) : undefined;
+                                  const noStock = available !== undefined && available < needed;
+                                  const low =
+                                    !noStock &&
+                                    available !== undefined &&
+                                    minQty !== undefined &&
+                                    available - needed <= minQty;
+                                  const tone = noStock ? 'error' : low ? 'warning' : null;
                                   return (
-                                    <Chip
+                                    <Box
                                       key={m.id}
-                                      size="small"
-                                      label={`${m.item?.name ?? 'Item'} — ${m.quantity}${m.item?.unit ? ` ${m.item.unit}` : ''}`}
-                                      color={insufficient ? 'warning' : 'default'}
-                                      variant={insufficient ? 'outlined' : 'filled'}
-                                    />
+                                      component="span"
+                                      sx={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 0.6,
+                                        fontSize: '0.72rem',
+                                        fontWeight: 700,
+                                        px: 1.15,
+                                        py: 0.55,
+                                        borderRadius: '8px',
+                                        border: '1px solid',
+                                        borderColor: tone ? `${tone}.main` : 'divider',
+                                        bgcolor: tone
+                                          ? (t) => alpha(t.palette[tone].main, 0.1)
+                                          : 'grey.50',
+                                        color: tone ? `${tone}.dark` : 'text.secondary',
+                                      }}
+                                    >
+                                      {tone && (
+                                        <Box
+                                          sx={{
+                                            width: 6,
+                                            height: 6,
+                                            borderRadius: '50%',
+                                            bgcolor: `${tone}.main`,
+                                            flexShrink: 0,
+                                          }}
+                                        />
+                                      )}
+                                      {m.item?.name ?? 'Item'} — {m.quantity}
+                                      {m.item?.unit ? ` ${m.item.unit}` : ''}
+                                    </Box>
                                   );
                                 })}
+                              </Stack>
+                              <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                                <Stack direction="row" alignItems="center" spacing={0.6}>
+                                  <Box
+                                    sx={{
+                                      width: 10,
+                                      height: 10,
+                                      borderRadius: '3px',
+                                      border: '1px solid',
+                                      borderColor: 'warning.main',
+                                      bgcolor: (t) => alpha(t.palette.warning.main, 0.14),
+                                    }}
+                                  />
+                                  <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary' }}>
+                                    Estoque baixo
+                                  </Typography>
+                                </Stack>
+                                <Stack direction="row" alignItems="center" spacing={0.6}>
+                                  <Box
+                                    sx={{
+                                      width: 10,
+                                      height: 10,
+                                      borderRadius: '3px',
+                                      border: '1px solid',
+                                      borderColor: 'error.main',
+                                      bgcolor: (t) => alpha(t.palette.error.main, 0.14),
+                                    }}
+                                  />
+                                  <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary' }}>
+                                    Sem estoque
+                                  </Typography>
+                                </Stack>
                               </Stack>
                             </Box>
                           )}
@@ -1925,6 +2352,7 @@ export function AppointmentFormDialog({
                                 Nenhum material extra além do previsto no procedimento.
                               </Typography>
                             ) : (
+                              <Box sx={{ maxHeight: 240, overflowY: 'auto', pr: 0.5, mr: -0.5 }}>
                               <Stack spacing={1.25}>
                                 {extraMaterials.map((row, index) => {
                                   const otherUsedIds = new Set(
@@ -2016,45 +2444,43 @@ export function AppointmentFormDialog({
                                   );
                                 })}
                               </Stack>
+                              </Box>
                             )}
                           </Box>
 
-                          {willDeductMaterials && hasInsufficient && (
-                            <Alert severity="error">
-                              Estoque insuficiente para os materiais previstos e extras.
-                            </Alert>
-                          )}
                         </Stack>
                       )}
 
                       {activeSideTab === 'notes' && (
-                        <Stack spacing={2}>
+                        <Stack spacing={1.5}>
                           <Controller
                             name="notes"
                             control={control}
                             render={({ field }) => (
-                              <TextField
-                                {...field}
-                                label="Observações administrativas"
-                                fullWidth
-                                multiline
-                                minRows={4}
-                                placeholder="Lembretes internos, preferências do paciente..."
-                              />
+                              <LabeledField label="Observações administrativas">
+                                <TextField
+                                  {...field}
+                                  fullWidth
+                                  multiline
+                                  minRows={4}
+                                  placeholder="Lembretes internos, preferências do paciente..."
+                                />
+                              </LabeledField>
                             )}
                           />
                           <Controller
                             name="clinicalNotes"
                             control={control}
                             render={({ field }) => (
-                              <TextField
-                                {...field}
-                                label="Anotações clínicas"
-                                placeholder="Avaliação da pele, produtos usados, reações..."
-                                fullWidth
-                                multiline
-                                minRows={5}
-                              />
+                              <LabeledField label="Anotações clínicas">
+                                <TextField
+                                  {...field}
+                                  placeholder="Avaliação da pele, produtos usados, reações..."
+                                  fullWidth
+                                  multiline
+                                  minRows={5}
+                                />
+                              </LabeledField>
                             )}
                           />
                         </Stack>
@@ -2086,17 +2512,82 @@ export function AppointmentFormDialog({
               flexShrink: 0,
               borderTop: 1,
               borderColor: 'divider',
-              bgcolor: 'background.paper',
+              bgcolor: 'grey.50',
               flexWrap: isMobile ? 'wrap' : 'nowrap',
               gap: isMobile ? 1 : 0,
             }}
           >
+            {!appointment && slotValid && (
+              <Stack
+                direction="row"
+                alignItems="center"
+                spacing={0.75}
+                sx={{ color: 'text.secondary', mr: 1.5, display: { xs: 'none', sm: 'flex' } }}
+              >
+                <ScheduleOutlinedIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  Término:{' '}
+                  <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                    {slotEnd.format('HH:mm')}
+                  </Box>
+                  {selectedProcedure ? ` · duração de ${selectedProcedure.durationMinutes} min` : ''}
+                </Typography>
+              </Stack>
+            )}
+            {appointment && canViewPatient && selectedPatient && (
+              <Button
+                variant="outlined"
+                startIcon={<DescriptionOutlinedIcon />}
+                onClick={() => setChartPatientId(selectedPatient.id)}
+                size={isMobile ? 'small' : 'medium'}
+                sx={{
+                  mr: 1,
+                  minWidth: 132,
+                  color: 'text.primary',
+                  bgcolor: 'background.paper',
+                  borderColor: 'divider',
+                  '&:hover': { borderColor: 'grey.400', bgcolor: 'grey.50' },
+                }}
+              >
+                Ver ficha
+              </Button>
+            )}
+            {appointment && selectedPatient?.phone && (
+              <Tooltip title="Enviar mensagem de confirmação via WhatsApp">
+                <Button
+                  startIcon={<WhatsAppIcon />}
+                  onClick={() => setWhatsappOpen(true)}
+                  size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    color: '#1DAE53',
+                    bgcolor: 'rgba(29,174,83,.10)',
+                    border: '1px solid',
+                    borderColor: 'rgba(29,174,83,.30)',
+                    mr: 1,
+                    minWidth: 132,
+                    '&:hover': { bgcolor: 'rgba(29,174,83,.18)', borderColor: 'rgba(29,174,83,.45)' },
+                  }}
+                >
+                  WhatsApp
+                </Button>
+              </Tooltip>
+            )}
             {appointment && canDelete && (
               <Button
                 color="error"
                 startIcon={<DeleteOutlineIcon />}
                 disabled={deleteMutation.isPending}
                 size={isMobile ? 'small' : 'medium'}
+                sx={{
+                  minWidth: 132,
+                  bgcolor: (t) => alpha(t.palette.error.main, 0.1),
+                  border: '1px solid',
+                  borderColor: (t) => alpha(t.palette.error.main, 0.3),
+                  '&:hover': {
+                    bgcolor: (t) => alpha(t.palette.error.main, 0.18),
+                    borderColor: (t) => alpha(t.palette.error.main, 0.45),
+                  },
+                }}
                 onClick={async () => {
                   const patientName =
                     selectedPatient?.name ?? appointment.patient?.name ?? 'este paciente';
@@ -2113,24 +2604,27 @@ export function AppointmentFormDialog({
                 Excluir
               </Button>
             )}
-            {appointment && selectedPatient?.phone && (
-              <Tooltip title="Enviar mensagem de confirmação via WhatsApp">
-                <Button
-                  startIcon={<WhatsAppIcon />}
-                  onClick={() => setWhatsappOpen(true)}
-                  size={isMobile ? 'small' : 'medium'}
-                  sx={{ color: '#25D366' }}
-                >
-                  WhatsApp
-                </Button>
-              </Tooltip>
-            )}
             <Box sx={{ flex: 1 }} />
-            {!isMobile && <Button onClick={onClose}>Cancelar</Button>}
+            {!isMobile && (
+              <Button
+                variant="outlined"
+                onClick={onClose}
+                sx={{
+                  mr: 1,
+                  color: 'text.primary',
+                  bgcolor: 'background.paper',
+                  borderColor: 'divider',
+                  '&:hover': { borderColor: 'grey.400', bgcolor: 'grey.50' },
+                }}
+              >
+                Cancelar
+              </Button>
+            )}
             <Button
               type="submit"
               variant="contained"
               fullWidth={isMobile}
+              sx={{ boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
               disabled={
                 mutation.isPending ||
                 (checkingAvailability && professionalOptions.length === 0) ||
@@ -2141,7 +2635,11 @@ export function AppointmentFormDialog({
                 (willDeductMaterials && hasInsufficient && watch('kind') === 'PROCEDURE')
               }
             >
-              {mutation.isPending ? 'Salvando...' : 'Salvar'}
+              {mutation.isPending
+                ? 'Salvando...'
+                : appointment
+                  ? 'Salvar alterações'
+                  : 'Confirmar agendamento'}
             </Button>
           </DialogActions>
         </Box>
@@ -2164,55 +2662,290 @@ export function AppointmentFormDialog({
       )}
 
       <Dialog
+        open={sessionsDialogOpen}
+        onClose={() => setSessionsDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { ...dialogPaperSx(isMobile), ...(isMobile ? {} : { maxWidth: 520 }) } }}
+      >
+        <DialogHeader
+          onClose={() => setSessionsDialogOpen(false)}
+          title="Sessões do pacote"
+          subtitle={
+            selectedPackageDetail?.package?.name
+              ? `${selectedPackageDetail.package.name} · ${selectedPatientPkg?.sessionsUsed ?? 0}/${
+                  selectedPatientPkg?.sessionsTotal ?? packageSessions.length
+                } sessões usadas`
+              : 'Agendamentos vinculados a este pacote'
+          }
+          subtitleWrap
+          icon={<ViewInArIcon fontSize="small" />}
+        />
+        <DialogContent sx={dialogSimpleContentSx}>
+          {packageSessions.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+              Nenhuma sessão agendada ainda para este pacote.
+            </Typography>
+          ) : (
+            <Stack spacing={1} sx={{ mt: 0.5 }}>
+              {packageSessions.map((sess, idx) => {
+                const isCurrent = appointment?.id === sess.id;
+                const color = STATUS_DOT[sess.status] ?? '#8B8680';
+                return (
+                  <Stack
+                    key={sess.id}
+                    direction="row"
+                    alignItems="center"
+                    spacing={1.25}
+                    sx={{
+                      px: 1.25,
+                      py: 1,
+                      borderRadius: '12px',
+                      border: '1px solid',
+                      borderColor: isCurrent ? 'primary.main' : 'divider',
+                      bgcolor: isCurrent ? (t) => alpha(t.palette.primary.main, 0.06) : 'grey.50',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: '50%',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
+                        color: 'primary.dark',
+                      }}
+                    >
+                      {idx + 1}
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography sx={{ fontSize: '0.85rem', fontWeight: 700 }} noWrap>
+                        {dayjs(sess.startAt).format('DD/MM/YYYY [às] HH:mm')}
+                      </Typography>
+                      {sess.procedure?.name && (
+                        <Typography
+                          sx={{ fontSize: '0.75rem', color: 'text.secondary' }}
+                          noWrap
+                        >
+                          {sess.procedure.name}
+                        </Typography>
+                      )}
+                    </Box>
+                    <Box
+                      component="span"
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 0.6,
+                        flexShrink: 0,
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        color: 'text.secondary',
+                      }}
+                    >
+                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color }} />
+                      {STATUS_LABEL[sess.status] ?? sess.status}
+                    </Box>
+                  </Stack>
+                );
+              })}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions
+          sx={{
+            ...dialogActionsBorderSx,
+            justifyContent: missingSessions > 0 ? 'space-between' : 'flex-end',
+          }}
+        >
+          {missingSessions > 0 && (
+            <Button
+              variant="outlined"
+              startIcon={<CalendarMonthIcon />}
+              onClick={() => {
+                setSessionsDialogOpen(false);
+                setBatchPatientPkg(selectedPatientPkg ?? null);
+                setBatchFillCount(missingSessions);
+                setBatchDialogOpen(true);
+              }}
+              sx={{
+                bgcolor: 'background.paper',
+                borderColor: 'divider',
+                color: 'primary.main',
+                fontWeight: 700,
+                '&:hover': { bgcolor: 'grey.50', borderColor: 'primary.main' },
+              }}
+            >
+              Agendar faltantes ({missingSessions})
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            onClick={() => setSessionsDialogOpen(false)}
+            sx={{ boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+          >
+            Fechar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
         open={paymentDialogOpen}
         onClose={() => {
           setPaymentDialogOpen(false);
           setPendingFormValues(null);
         }}
-        maxWidth="xs"
+        maxWidth="sm"
         fullWidth
+        PaperProps={{ sx: { ...dialogPaperSx(isMobile), ...(isMobile ? {} : { maxWidth: 480 }) } }}
       >
         <DialogHeader
           onClose={() => {
             setPaymentDialogOpen(false);
             setPendingFormValues(null);
           }}
-          title="Registrar pagamento"
-          subtitle="Forma de pagamento ao concluir o atendimento"
-          icon={<PaymentIcon fontSize="small" />}
+          title="Registrar no financeiro"
+          subtitle="Este agendamento será lançado como receita do dia"
+          subtitleWrap
         />
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            Ao concluir este agendamento, uma receita de{' '}
-            <strong>
-              {paymentAmountOnComplete > 0
-                ? brl.format(paymentAmountOnComplete)
-                : '—'}
-            </strong>{' '}
-            será registrada no financeiro
-            {selectedPackageId && selectedPatientPkg ? ' (valor do pacote)' : ''}. Como foi o
-            pagamento?
-          </Typography>
-          <TextField
-            select
-            label="Método de pagamento"
-            value={selectedPaymentMethodId}
-            onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
-            fullWidth
-            required
+        <DialogContent sx={dialogSimpleContentSx}>
+          <Box
+            sx={{
+              p: 2,
+              mb: 2.75,
+              borderRadius: '14px',
+              border: '1px solid',
+              borderColor: (t) => alpha(t.palette.primary.main, 0.22),
+              bgcolor: (t) => alpha(t.palette.primary.main, 0.07),
+            }}
           >
-            {paymentMethods.filter((m) => m.active).map((m) => (
-              <MenuItem key={m.id} value={m.id}>
-                {m.name}{Number(m.feePercent) > 0 ? ` (${Number(m.feePercent)}%)` : ''}
-              </MenuItem>
-            ))}
-          </TextField>
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 40,
+                  height: 40,
+                  borderRadius: '11px',
+                  flexShrink: 0,
+                  bgcolor: 'background.paper',
+                  color: 'primary.main',
+                  border: '1px solid',
+                  borderColor: (t) => alpha(t.palette.primary.main, 0.22),
+                }}
+              >
+                <PaymentIcon fontSize="small" />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography noWrap sx={{ fontSize: '0.875rem', fontWeight: 800, lineHeight: 1.35 }}>
+                  {selectedPatient?.name ?? 'Paciente'}
+                </Typography>
+                <Typography noWrap sx={{ fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.35 }}>
+                  {selectedProcedure?.name ?? 'Atendimento'}
+                </Typography>
+              </Box>
+            </Stack>
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              sx={{
+                mt: 1.5,
+                pt: 1.5,
+                borderTop: '1px dashed',
+                borderColor: (t) => alpha(t.palette.primary.main, 0.22),
+              }}
+            >
+              <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                {selectedPackageId && selectedPatientPkg
+                  ? 'Receita do pacote ao confirmar'
+                  : 'Receita ao confirmar'}
+              </Typography>
+              <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: 'primary.dark' }}>
+                {paymentAmountOnComplete > 0 ? brl.format(paymentAmountOnComplete) : '—'}
+              </Typography>
+            </Stack>
+          </Box>
+          <LabeledField label="Forma de pagamento" required>
+            <TextField
+              select
+              value={selectedPaymentMethodId}
+              onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
+              fullWidth
+              SelectProps={{
+                displayEmpty: true,
+                renderValue: (val) => {
+                  const m = paymentMethods.find((pm) => pm.id === val);
+                  return m ? (
+                    `${m.name}${Number(m.feePercent) > 0 ? ` (${Number(m.feePercent)}%)` : ''}`
+                  ) : (
+                    <Typography component="span" variant="body2" sx={{ color: 'text.disabled' }}>
+                      Selecione uma forma de pagamento
+                    </Typography>
+                  );
+                },
+              }}
+            >
+              {paymentMethods.filter((m) => m.active).map((m) => (
+                <MenuItem key={m.id} value={m.id}>
+                  {m.name}{Number(m.feePercent) > 0 ? ` (${Number(m.feePercent)}%)` : ''}
+                </MenuItem>
+              ))}
+            </TextField>
+          </LabeledField>
+          {isOldAppointment && (
+            <Box sx={{ mt: 2.25 }}>
+              <LabeledField label="Mês de referência">
+                <TextField
+                  select
+                  value={selectedReferenceMonth}
+                  onChange={(e) => setSelectedReferenceMonth(e.target.value)}
+                  fullWidth
+                  SelectProps={{
+                    displayEmpty: true,
+                    renderValue: (val) => {
+                      const opt = referenceMonthOptions.find((o) => o.value === val);
+                      return opt ? (
+                        opt.label
+                      ) : (
+                        <Typography component="span" variant="body2" sx={{ color: 'text.disabled' }}>
+                          Selecione o mês de competência
+                        </Typography>
+                      );
+                    },
+                  }}
+                >
+                  {referenceMonthOptions.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </LabeledField>
+              <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.75, lineHeight: 1.4 }}>
+                Use um mês passado para registrar agendamentos atrasados no financeiro correto.
+              </Typography>
+            </Box>
+          )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
+        <DialogActions sx={dialogActionsBorderSx}>
           <Button
+            variant="outlined"
             onClick={() => {
               setPaymentDialogOpen(false);
               setPendingFormValues(null);
+            }}
+            sx={{
+              bgcolor: 'background.paper',
+              borderColor: 'divider',
+              color: 'text.secondary',
+              '&:hover': { bgcolor: 'grey.50', borderColor: 'divider' },
             }}
           >
             Cancelar
@@ -2221,8 +2954,9 @@ export function AppointmentFormDialog({
             variant="contained"
             disabled={!selectedPaymentMethodId || mutation.isPending}
             onClick={confirmPaymentAndSave}
+            sx={{ boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
           >
-            {mutation.isPending ? 'Salvando...' : 'Concluir e registrar'}
+            {mutation.isPending ? 'Salvando...' : 'Confirmar e registrar'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -2457,6 +3191,7 @@ export function AppointmentFormDialog({
         onClose={() => {
           setBatchDialogOpen(false);
           setBatchPatientPkg(null);
+          setBatchFillCount(null);
         }}
         maxWidth="sm"
         fullWidth
@@ -2471,9 +3206,19 @@ export function AppointmentFormDialog({
           {batchPatientPkg && selectedProcedure && (
             <Stack spacing={2} sx={{ mt: 1 }}>
               <Typography variant="body2">
-                O pacote <strong>{batchPatientPkg.package?.name}</strong> possui{' '}
-                <strong>{batchPatientPkg.sessionsTotal - batchPatientPkg.sessionsUsed}</strong> sessões
-                restantes de <strong>{selectedProcedure.name}</strong>.
+                {batchFillCount != null ? (
+                  <>
+                    Faltam <strong>{batchFillCount}</strong> sessão(ões) a agendar no pacote{' '}
+                    <strong>{batchPatientPkg.package?.name}</strong> de{' '}
+                    <strong>{selectedProcedure.name}</strong>.
+                  </>
+                ) : (
+                  <>
+                    O pacote <strong>{batchPatientPkg.package?.name}</strong> possui{' '}
+                    <strong>{batchPatientPkg.sessionsTotal - batchPatientPkg.sessionsUsed}</strong> sessões
+                    restantes de <strong>{selectedProcedure.name}</strong>.
+                  </>
+                )}
               </Typography>
 
               {selectedProcedure.recurrenceDays ? (
@@ -2481,8 +3226,14 @@ export function AppointmentFormDialog({
                   <Typography variant="body2" color="text.secondary">
                     Serão agendadas com intervalo de <strong>{selectedProcedure.recurrenceDays} dias</strong>{' '}
                     entre cada sessão, a partir de{' '}
-                    <strong>{dayjs(`${selectedDate}T${selectedStartTime}`).format('DD/MM/YYYY [às] HH:mm')}</strong>,
-                    com o mesmo profissional.
+                    <strong>
+                      {dayjs(
+                        batchSessions[0]
+                          ? `${batchSessions[0].date}T${batchSessions[0].startTime}`
+                          : `${selectedDate}T${selectedStartTime}`,
+                      ).format('DD/MM/YYYY [às] HH:mm')}
+                    </strong>
+                    , com o mesmo profissional.
                   </Typography>
 
                   <Typography variant="overline" color="text.secondary">
