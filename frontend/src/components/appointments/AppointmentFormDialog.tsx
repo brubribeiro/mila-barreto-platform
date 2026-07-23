@@ -249,6 +249,9 @@ export function AppointmentFormDialog({
   const [extraMaterials, setExtraMaterials] = useState<ExtraMaterialRow[]>([]);
   const [sideTab, setSideTab] = useState<'materials' | 'notes'>('materials');
   const [chartPatientId, setChartPatientId] = useState<string | null>(null);
+  // Só habilita a busca de profissionais depois que o formulário foi inicializado
+  // com os valores reais (reset), evitando uma requisição extra com o horário padrão.
+  const [formInitialized, setFormInitialized] = useState(false);
 
   const { data: appointmentDetail } = useQuery({
     queryKey: ['appointment', appointment?.id],
@@ -285,7 +288,10 @@ export function AppointmentFormDialog({
   });
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setFormInitialized(false);
+      return;
+    }
     if (appointment) {
       reset({
         patientId: appointment.patientId,
@@ -308,6 +314,7 @@ export function AppointmentFormDialog({
         startTime: isMidnight ? '09:00' : dayjs(start).format('HH:mm'),
       });
     }
+    setFormInitialized(true);
   }, [open, appointment, defaultStart, reset]);
 
   useEffect(() => {
@@ -525,7 +532,7 @@ export function AppointmentFormDialog({
         slotEnd.toISOString(),
         appointment?.id,
       ),
-    enabled: open && slotValid,
+    enabled: open && slotValid && formInitialized,
     placeholderData: keepPreviousData,
   });
 

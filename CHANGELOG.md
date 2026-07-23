@@ -4,6 +4,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-07-23
+
+### Fixed
+
+- Disponibilidade: validação de expediente do profissional usa horário de parede do Brasil (`America/Sao_Paulo`), evitando rejeição indevida quando o servidor roda em UTC.
+- Formulário de agendamento: busca de profissionais disponíveis só inicia após o formulário ser inicializado, eliminando requisição extra com horário padrão ao abrir a modal.
+
 ## [0.1.6] - 2026-06-09
 
 ### Added

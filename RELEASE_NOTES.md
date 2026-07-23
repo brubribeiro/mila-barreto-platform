@@ -4,6 +4,20 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ---
 
+## v0.1.7 — 23 jul 2026
+
+### Correções
+
+**Agenda e disponibilidade**
+- A validação do **expediente do profissional** passa a considerar o horário de **Brasília**, corrigindo casos em que um horário válido era rejeitado como “fora do expediente”.
+- Ao abrir o formulário de agendamento, o sistema deixa de fazer uma consulta extra de profissionais disponíveis com o horário padrão antes de carregar os dados reais do agendamento.
+
+### Onde ver a versão
+
+Menu lateral (rodapé) e tela de login exibem **v0.1.7**.
+
+---
+
 ## v0.1.6 — 9 jun 2026
 
 ### Novidades
