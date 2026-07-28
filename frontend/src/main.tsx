@@ -10,6 +10,7 @@ import { theme } from './theme';
 import { AuthProvider } from './contexts/AuthContext';
 import { AppDialogProvider } from './contexts/AppDialogContext';
 import { AppToastProvider } from './contexts/AppToastContext';
+import { AppointmentDialogProvider } from './contexts/AppointmentDialogContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,7 +30,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <AuthProvider>
               <AppDialogProvider>
                 <AppToastProvider>
-                  <App />
+                  <AppointmentDialogProvider>
+                    <App />
+                  </AppointmentDialogProvider>
                 </AppToastProvider>
               </AppDialogProvider>
             </AuthProvider>

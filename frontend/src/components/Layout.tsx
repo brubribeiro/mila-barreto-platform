@@ -22,6 +22,7 @@ import SwitchAccountIcon from '@mui/icons-material/SwitchAccount';
 
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/usePermissions';
+import { useAppointmentDialog } from '../contexts/AppointmentDialogContext';
 import type { Permission } from '../contexts/permissions';
 import { NotificationsBell } from './notifications/NotificationsBell';
 import { AuroraIcon } from './AuroraIcon';
@@ -142,6 +143,7 @@ export function Layout() {
   const { user, logout, stopImpersonating } = useAuth();
   const isImpersonating = user?.impersonating === true;
   const { has } = usePermissions();
+  const { openAppointmentDialog } = useAppointmentDialog();
 
   const visibleGroups = useMemo(() => {
     return navGrouped
@@ -624,7 +626,7 @@ export function Layout() {
                 variant="contained"
                 color="primary"
                 startIcon={<AuroraIcon name="plus" size={18} strokeWidth={2.2} />}
-                onClick={() => navigate('/agenda?novo=1')}
+                onClick={() => openAppointmentDialog()}
                 sx={{
                   height: 42,
                   px: { xs: 1.25, md: 2.25 },

@@ -40,6 +40,7 @@ import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
 import WcOutlinedIcon from '@mui/icons-material/WcOutlined';
 import CakeOutlinedIcon from '@mui/icons-material/CakeOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -97,7 +98,20 @@ const empty: FormValues = {
 };
 
 const DIALOG_MAX_WIDTH = 900;
-const DIALOG_HEIGHT_DESKTOP = 880;
+
+/** Campo desabilitado (auto-preenchido pelo CEP): visual claramente inativo, sem hover. */
+const ADDRESS_INPUT_SX = { '& .MuiOutlinedInput-root': { bgcolor: 'background.paper' } } as const;
+const ADDRESS_DISABLED_SX = {
+  '& .MuiOutlinedInput-root.Mui-disabled': {
+    bgcolor: 'grey.100',
+    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+  },
+  '& .MuiInputBase-input.Mui-disabled': {
+    WebkitTextFillColor: (t: import('@mui/material').Theme) => t.palette.text.disabled,
+    cursor: 'not-allowed',
+  },
+} as const;
 
 const FORM_CARD_SX = {
   p: { xs: 1.5, sm: 1.75 },
@@ -144,6 +158,52 @@ function SectionTitle({ icon, title }: { icon: ReactNode; title: string }) {
         {title}
       </Typography>
     </Stack>
+  );
+}
+
+function FormSection({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 1.75,
+        borderRadius: '14px',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        boxShadow: '0 1px 2px rgba(16,40,37,0.03)',
+      }}
+    >
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.75 }}>
+        <SectionIcon>{icon}</SectionIcon>
+        <Typography sx={{ fontSize: '0.9rem', fontWeight: 800, letterSpacing: '-0.01em' }}>
+          {title}
+        </Typography>
+      </Stack>
+      {children}
+    </Paper>
+  );
+}
+
+function LabeledField({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, minWidth: 0 }}>
+      <Typography
+        component="span"
+        sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'text.primary' }}
+      >
+        {label}
+        {required && <Box component="span" sx={{ color: 'error.main', ml: 0.25 }}>*</Box>}
+      </Typography>
+      {children}
+    </Box>
   );
 }
 
@@ -331,13 +391,16 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
     const d = onlyDigits(cepWatched ?? '');
     if (d.length !== 8 || !open) {
       setCepStatus({});
-      suppressNextFullCepLookup.current = false;
-      clearViaCepAddressFields({
-        setStreet: (v) => setValue('addressStreet', v, { shouldValidate: false }),
-        setNeighborhood: (v) => setValue('addressNeighborhood', v, { shouldValidate: false }),
-        setCity: (v) => setValue('addressCity', v, { shouldValidate: false }),
-        setState: (v) => setValue('addressState', v, { shouldValidate: false }),
-      });
+      // Durante o carregamento inicial (edição) o CEP ainda não chegou ao form —
+      // não limpa o endereço salvo nem reseta o "suppress", senão a busca refaz depois.
+      if (!suppressNextFullCepLookup.current) {
+        clearViaCepAddressFields({
+          setStreet: (v) => setValue('addressStreet', v, { shouldValidate: false }),
+          setNeighborhood: (v) => setValue('addressNeighborhood', v, { shouldValidate: false }),
+          setCity: (v) => setValue('addressCity', v, { shouldValidate: false }),
+          setState: (v) => setValue('addressState', v, { shouldValidate: false }),
+        });
+      }
       return;
     }
 
@@ -465,7 +528,6 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
   );
 
   const isEditing = !!patient;
-  const tabIndex = TABS.findIndex((t) => t.id === tab);
 
   return (
     <Dialog
@@ -483,8 +545,9 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
             : {
+                width: DIALOG_MAX_WIDTH,
                 maxWidth: DIALOG_MAX_WIDTH,
-                height: DIALOG_HEIGHT_DESKTOP,
+                height: 'min(94dvh, 800px)',
                 maxHeight: '94dvh',
                 overflow: 'hidden',
               }),
@@ -506,7 +569,8 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
           onClose={onClose}
           isMobile={isMobile}
           title={isEditing ? 'Editar paciente' : 'Novo paciente'}
-          subtitle={isEditing ? patient.name : 'Dados do cadastro e observações'}
+          subtitle={isEditing ? patient.name : 'Adicione um paciente à base'}
+          subtitleWrap
           icon={
             isEditing ? (
               <EditOutlinedIcon fontSize="small" />
@@ -516,21 +580,14 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
           }
         />
 
-        <Box
-          sx={{
-            borderBottom: 1,
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            flexShrink: 0,
-          }}
-        >
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
           <Tabs
-            value={tabIndex}
+            value={TABS.findIndex((t) => t.id === tab)}
             onChange={(_, idx) => setTab(TABS[idx].id)}
             variant="fullWidth"
             sx={{
-              minHeight: 48,
-              '& .MuiTab-root': { minHeight: 48, py: 1, textTransform: 'none', fontWeight: 500 },
+              minHeight: 46,
+              '& .MuiTab-root': { minHeight: 46, py: 1, textTransform: 'none', fontWeight: 600, fontSize: '0.85rem' },
             }}
           >
             {TABS.map((t) => (
@@ -546,598 +603,456 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
             py: { xs: 2, sm: 2.5 },
             flex: 1,
             minHeight: 0,
-            bgcolor: (t) => t.palette.background.default,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
+            overflow: 'auto',
           }}
         >
-          <Box sx={{ position: 'relative', flex: 1, minHeight: 0 }}>
-          <TabPanel active={tab === 'basic'}>
-            <Stack spacing={2.5}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<LabelOutlinedIcon fontSize="small" />} title="Identificação" />
+          {tab === 'basic' && (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gap: 2,
+              alignItems: 'start',
+            }}
+          >
+            <FormSection icon={<BadgeOutlinedIcon fontSize="small" />} title="Dados do paciente">
+              <Stack spacing={1.75}>
+            {/* Foto centralizada acima dos campos */}
+            <Stack alignItems="center" spacing={0.75}>
+              <input
+                ref={photoInputRef}
+                type="file"
+                hidden
+                accept={PATIENT_PHOTO_ACCEPT}
+                onChange={handlePhotoSelect}
+              />
+              <Box sx={{ position: 'relative', lineHeight: 0 }}>
+                <Tooltip
+                  title={
+                    <Typography variant="caption" display="block" sx={{ maxWidth: 200 }}>
+                      {avatarDisplaySrc ? 'Alterar foto' : 'Adicionar foto'}
+                      <br />
+                      JPEG, PNG ou WebP — máx. 5 MB
+                    </Typography>
+                  }
+                  arrow
+                  placement="top"
+                >
                   <Box
+                    component="button"
+                    type="button"
+                    disabled={mutation.isPending}
+                    aria-label={avatarDisplaySrc ? 'Alterar foto do paciente' : 'Adicionar foto do paciente'}
+                    onClick={() => photoInputRef.current?.click()}
                     sx={{
-                      display: 'grid',
-                      gridTemplateColumns: { xs: 'auto 1fr', sm: '80px 1fr' },
-                      columnGap: 2,
-                      rowGap: 1.25,
-                      alignItems: 'start',
+                      position: 'relative',
+                      p: 0,
+                      border: 0,
+                      bgcolor: 'transparent',
+                      borderRadius: '50%',
+                      cursor: mutation.isPending ? 'default' : 'pointer',
+                      lineHeight: 0,
+                      '&:hover .patient-photo-overlay': { opacity: 1 },
+                      '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 2 },
                     }}
                   >
-                    <Stack
-                      alignItems="center"
-                      spacing={0.5}
-                      sx={{ gridColumn: 1, gridRow: { xs: 1, sm: '1 / 4' } }}
-                    >
-                      <input
-                        ref={photoInputRef}
-                        type="file"
-                        hidden
-                        accept={PATIENT_PHOTO_ACCEPT}
-                        onChange={handlePhotoSelect}
-                      />
-                      <Box sx={{ position: 'relative', lineHeight: 0 }}>
-                        <Tooltip
-                          title={
-                            <Typography variant="caption" display="block" sx={{ maxWidth: 200 }}>
-                              {avatarDisplaySrc ? 'Alterar foto' : 'Adicionar foto'}
-                              <br />
-                              JPEG, PNG ou WebP — máx. 5 MB
-                            </Typography>
-                          }
-                          arrow
-                          placement="top"
-                        >
-                          <Box
-                            component="button"
-                            type="button"
-                            disabled={mutation.isPending}
-                            aria-label={
-                              avatarDisplaySrc
-                                ? 'Alterar foto do paciente'
-                                : 'Adicionar foto do paciente'
-                            }
-                            onClick={() => photoInputRef.current?.click()}
-                            sx={{
-                              position: 'relative',
-                              p: 0,
-                              border: 0,
-                              bgcolor: 'transparent',
-                              borderRadius: '50%',
-                              cursor: mutation.isPending ? 'default' : 'pointer',
-                              lineHeight: 0,
-                              '&:hover .patient-photo-overlay': { opacity: 1 },
-                              '&:focus-visible': {
-                                outline: 2,
-                                outlineColor: 'primary.main',
-                                outlineOffset: 2,
-                              },
-                            }}
-                          >
-                            <Avatar
-                              src={avatarDisplaySrc}
-                              alt={nameWatched || 'Paciente'}
-                              sx={{
-                                width: { xs: 64, sm: 72 },
-                                height: { xs: 64, sm: 72 },
-                                fontSize: '1.25rem',
-                                fontWeight: 700,
-                                bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
-                                color: 'primary.dark',
-                                border: 1,
-                                borderColor: 'divider',
-                              }}
-                            >
-                              {patientInitials(nameWatched || '?')}
-                            </Avatar>
-                            <Box
-                              className="patient-photo-overlay"
-                              sx={{
-                                position: 'absolute',
-                                inset: 0,
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                bgcolor: (t) => alpha(t.palette.common.black, 0.45),
-                                color: 'common.white',
-                                opacity: avatarDisplaySrc ? 0 : 0.85,
-                                transition: 'opacity 0.2s ease',
-                              }}
-                            >
-                              <PhotoCameraOutlinedIcon sx={{ fontSize: { xs: 22, sm: 26 } }} />
-                            </Box>
-                          </Box>
-                        </Tooltip>
-                        {avatarDisplaySrc && (
-                          <IconButton
-                            size="small"
-                            aria-label="Remover foto do paciente"
-                            disabled={mutation.isPending}
-                            onClick={handlePhotoRemove}
-                            sx={{
-                              position: 'absolute',
-                              top: -4,
-                              right: -4,
-                              width: 22,
-                              height: 22,
-                              bgcolor: 'background.paper',
-                              border: 1,
-                              borderColor: 'divider',
-                              boxShadow: 1,
-                              '&:hover': { bgcolor: 'error.light', color: 'error.contrastText' },
-                            }}
-                          >
-                            <CloseIcon sx={{ fontSize: 14 }} />
-                          </IconButton>
-                        )}
-                      </Box>
-                      {photoError && (
-                        <Typography variant="caption" color="error" textAlign="center">
-                          {photoError}
-                        </Typography>
-                      )}
-                    </Stack>
-
-                    <Box sx={{ gridColumn: 2, gridRow: 1, minWidth: 0 }}>
-                      <Controller
-                        name="name"
-                        control={control}
-                        rules={{ required: 'Nome é obrigatório' }}
-                        render={({ field, fieldState }) => (
-                          <TextField
-                            {...field}
-                            label="Nome completo"
-                            fullWidth
-                            required
-                            size="small"
-                            sx={FIELD_SX}
-                            error={!!fieldState.error}
-                            helperText={fieldState.error?.message}
-                            InputProps={{
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <PersonOutlineIcon fontSize="small" color="action" />
-                                </InputAdornment>
-                              ),
-                            }}
-                          />
-                        )}
-                      />
-                    </Box>
-
-                    <Box
+                    <Avatar
+                      src={avatarDisplaySrc}
+                      alt={nameWatched || 'Paciente'}
                       sx={{
-                        gridColumn: { xs: '1 / -1', sm: 2 },
-                        gridRow: 2,
-                        minWidth: 0,
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-                        gap: 1.25,
-                        alignItems: 'start',
+                        width: 72,
+                        height: 72,
+                        fontSize: '1.25rem',
+                        fontWeight: 700,
+                        bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
+                        color: 'primary.dark',
+                        border: 1,
+                        borderColor: 'divider',
                       }}
                     >
-                      <Controller
-                        name="birthDate"
-                        control={control}
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            type="date"
-                            label="Nascimento"
-                            fullWidth
-                            size="small"
-                            sx={FIELD_SX}
-                            InputLabelProps={{ shrink: true }}
-                            InputProps={{
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <CakeOutlinedIcon fontSize="small" color="action" />
-                                </InputAdornment>
-                              ),
-                            }}
-                          />
-                        )}
-                      />
-                      <Controller
-                        name="sex"
-                        control={control}
-                        render={({ field }) => (
-                          <FormControl fullWidth size="small" sx={FIELD_SX}>
-                            <InputLabel id="patient-sex-label" shrink>
-                              Sexo
-                            </InputLabel>
-                            <Select
-                              {...field}
-                              labelId="patient-sex-label"
-                              label="Sexo"
-                              displayEmpty
-                              value={field.value ?? ''}
-                              input={
-                                <OutlinedInput
-                                  label="Sexo"
-                                  notched
-                                  startAdornment={
-                                    <InputAdornment position="start">
-                                      <WcOutlinedIcon fontSize="small" color="action" />
-                                    </InputAdornment>
-                                  }
-                                />
-                              }
-                            >
-                              <MenuItem value="">
-                                <em>Não informado</em>
-                              </MenuItem>
-                              {PATIENT_SEX_OPTIONS.map((opt) => (
-                                <MenuItem key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        )}
-                      />
-                      <Controller
-                        name="document"
-                        control={control}
-                        rules={{
-                          validate: (v) => !v || isValidCPF(v) || 'CPF inválido',
-                        }}
-                        render={({ field, fieldState }) => (
-                          <TextField
-                            {...field}
-                            label="CPF"
-                            fullWidth
-                            size="small"
-                            sx={FIELD_SX}
-                            placeholder="000.000.000-00"
-                            onChange={(e) => field.onChange(maskCPF(e.target.value))}
-                            error={!!fieldState.error}
-                            helperText={fieldState.error?.message}
-                            inputProps={{ inputMode: 'numeric', maxLength: 14 }}
-                            InputProps={{
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <BadgeOutlinedIcon fontSize="small" color="action" />
-                                </InputAdornment>
-                              ),
-                            }}
-                          />
-                        )}
-                      />
-                    </Box>
-
+                      {patientInitials(nameWatched || '?')}
+                    </Avatar>
                     <Box
+                      className="patient-photo-overlay"
                       sx={{
-                        gridColumn: { xs: '1 / -1', sm: 2 },
-                        gridRow: 3,
-                        minWidth: 0,
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-                        gap: 1.25,
-                        alignItems: 'start',
+                        position: 'absolute',
+                        inset: 0,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: (t) => alpha(t.palette.common.black, 0.45),
+                        color: 'common.white',
+                        opacity: avatarDisplaySrc ? 0 : 0.85,
+                        transition: 'opacity 0.2s ease',
                       }}
                     >
-                      <Controller
-                        name="phone"
-                        control={control}
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            label="Telefone"
-                            fullWidth
-                            size="small"
-                            sx={FIELD_SX}
-                            placeholder="(11) 99999-0000"
-                            onChange={(e) => field.onChange(maskPhone(e.target.value))}
-                            inputProps={{ inputMode: 'numeric', maxLength: 16 }}
-                            InputProps={{
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <PhoneOutlinedIcon fontSize="small" color="action" />
-                                </InputAdornment>
-                              ),
-                            }}
-                          />
-                        )}
-                      />
-                      <Controller
-                        name="email"
-                        control={control}
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            label="E-mail"
-                            type="email"
-                            fullWidth
-                            size="small"
-                            sx={FIELD_SX}
-                            InputProps={{
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <EmailOutlinedIcon fontSize="small" color="action" />
-                                </InputAdornment>
-                              ),
-                            }}
-                          />
-                        )}
-                      />
+                      <PhotoCameraOutlinedIcon sx={{ fontSize: 26 }} />
                     </Box>
                   </Box>
-              </Paper>
-
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<BadgeOutlinedIcon fontSize="small" />} title="Como conheceu a clínica" />
-                  <Grid container spacing={1.25}>
-                    <Grid item xs={12} sm={referralSourceWatched === 'OTHER' ? 6 : 12}>
-                      <Controller
-                        name="referralSource"
-                        control={control}
-                        render={({ field }) => (
-                          <FormControl fullWidth size="small" sx={FIELD_SX}>
-                            <InputLabel id="patient-referral-label" shrink>
-                              Origem
-                            </InputLabel>
-                            <Select
-                              {...field}
-                              labelId="patient-referral-label"
-                              label="Origem"
-                              displayEmpty
-                              value={field.value ?? ''}
-                            >
-                              <MenuItem value="">
-                                <em>Não informado</em>
-                              </MenuItem>
-                              {PATIENT_REFERRAL_SOURCE_OPTIONS.map((opt) => (
-                                <MenuItem key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        )}
-                      />
-                    </Grid>
-                    {referralSourceWatched === 'OTHER' && (
-                      <Grid item xs={12} sm={6}>
-                        <Controller
-                          name="referralSourceOther"
-                          control={control}
-                          rules={{
-                            validate: (v) =>
-                              referralSourceWatched !== 'OTHER' ||
-                              !!v?.trim() ||
-                              'Informe qual é a origem',
-                          }}
-                          render={({ field, fieldState }) => (
-                            <TextField
-                              {...field}
-                              label="Especifique"
-                              fullWidth
-                              size="small"
-                              sx={FIELD_SX}
-                              error={!!fieldState.error}
-                              helperText={fieldState.error?.message}
-                              placeholder="Ex.: panfleto, evento..."
-                            />
-                          )}
-                        />
-                      </Grid>
-                    )}
-                  </Grid>
-              </Paper>
-
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<LocationOnOutlinedIcon fontSize="small" />} title="Endereço" />
-                  <Grid container spacing={1.25}>
-                    <Grid item xs={12} sm={4}>
-                      <Controller
-                        name="cep"
-                        control={control}
-                        rules={{
-                          validate: (v) =>
-                            !v ||
-                            onlyDigits(v).length === 0 ||
-                            onlyDigits(v).length === 8 ||
-                            'CEP deve ter 8 dígitos',
-                        }}
-                        render={({ field, fieldState }) => (
-                          <TextField
-                            {...field}
-                            label="CEP"
-                            fullWidth
-                            size="small"
-                            sx={FIELD_SX}
-                            placeholder="00000-000"
-                            onChange={(e) => field.onChange(maskCEP(e.target.value))}
-                            error={!!fieldState.error || cepStatus.error}
-                            helperText={fieldState.error?.message}
-                            FormHelperTextProps={{ sx: { whiteSpace: 'nowrap', m: 0 } }}
-                            disabled={mutation.isPending}
-                            inputProps={{ inputMode: 'numeric', maxLength: 9 }}
-                            InputProps={{
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <LocationOnOutlinedIcon fontSize="small" color="action" />
-                                </InputAdornment>
-                              ),
-                              endAdornment: cepStatus.loading ? (
-                                <InputAdornment position="end">
-                                  <CircularProgress color="inherit" size={18} />
-                                </InputAdornment>
-                              ) : undefined,
-                            }}
-                          />
-                        )}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={8}>
-                      <Controller
-                        name="addressStreet"
-                        control={control}
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            label="Rua"
-                            fullWidth
-                            size="small"
-                            disabled
-                            sx={AUTO_FIELD_SX}
-                            placeholder="Preenchido pelo CEP"
-                          />
-                        )}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={5}>
-                      <Controller
-                        name="addressNeighborhood"
-                        control={control}
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            label="Bairro"
-                            fullWidth
-                            size="small"
-                            disabled
-                            sx={AUTO_FIELD_SX}
-                            placeholder="Preenchido pelo CEP"
-                          />
-                        )}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={5}>
-                      <Controller
-                        name="addressCity"
-                        control={control}
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            label="Cidade"
-                            fullWidth
-                            size="small"
-                            disabled
-                            sx={AUTO_FIELD_SX}
-                            placeholder="Preenchido pelo CEP"
-                          />
-                        )}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={2}>
-                      <Controller
-                        name="addressState"
-                        control={control}
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            label="UF"
-                            fullWidth
-                            size="small"
-                            disabled
-                            sx={AUTO_FIELD_SX}
-                            placeholder="—"
-                            inputProps={{ maxLength: 2 }}
-                          />
-                        )}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={3}>
-                      <Controller
-                        name="addressNumber"
-                        control={control}
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            label="Número"
-                            fullWidth
-                            size="small"
-                            sx={FIELD_SX}
-                            placeholder="Ex.: 123"
-                            inputProps={{ inputMode: 'numeric' }}
-                          />
-                        )}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={9}>
-                      <Controller
-                        name="addressComplement"
-                        control={control}
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            label="Complemento"
-                            fullWidth
-                            size="small"
-                            sx={FIELD_SX}
-                            placeholder="Apto, bloco, casa…"
-                          />
-                        )}
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Typography
-                        variant="caption"
-                        component="p"
-                        color={cepStatus.error ? 'error.main' : 'text.secondary'}
-                        sx={{
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          lineHeight: 1.4,
-                          m: 0,
-                        }}
-                      >
-                        {cepStatus.loading
-                          ? 'Consultando CEP…'
-                          : cepStatus.text ?? 'Busca automática ao completar 8 dígitos'}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-              </Paper>
+                </Tooltip>
+                {avatarDisplaySrc && (
+                  <IconButton
+                    size="small"
+                    aria-label="Remover foto do paciente"
+                    disabled={mutation.isPending}
+                    onClick={handlePhotoRemove}
+                    sx={{
+                      position: 'absolute',
+                      top: -4,
+                      right: -4,
+                      width: 22,
+                      height: 22,
+                      bgcolor: 'background.paper',
+                      border: 1,
+                      borderColor: 'divider',
+                      boxShadow: 1,
+                      '&:hover': { bgcolor: 'error.light', color: 'error.contrastText' },
+                    }}
+                  >
+                    <CloseIcon sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {photoError && (
+                <Typography variant="caption" color="error" textAlign="center">
+                  {photoError}
+                </Typography>
+              )}
             </Stack>
-          </TabPanel>
 
-          <TabPanel active={tab === 'notes'}>
-            <Paper variant="outlined" sx={FORM_CARD_FILL_SX}>
-              <SectionTitle icon={<StickyNote2OutlinedIcon fontSize="small" />} title="Observações" />
-              <Stack sx={{ flex: 1, minHeight: 0, height: '100%' }}>
+            {/* Nome + CPF (empilhados) */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 1.75 }}>
+              <Controller
+                name="name"
+                control={control}
+                rules={{ required: 'Nome é obrigatório' }}
+                render={({ field, fieldState }) => (
+                  <LabeledField label="Nome completo" required>
+                    <TextField
+                      {...field}
+                      fullWidth
+                      size="small"
+                      placeholder="Ex.: Marina Costa"
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                    />
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="document"
+                control={control}
+                rules={{ validate: (v) => !v || isValidCPF(v) || 'CPF inválido' }}
+                render={({ field, fieldState }) => (
+                  <LabeledField label="CPF">
+                    <TextField
+                      {...field}
+                      fullWidth
+                      size="small"
+                      placeholder="000.000.000-00"
+                      onChange={(e) => field.onChange(maskCPF(e.target.value))}
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      inputProps={{ inputMode: 'numeric', maxLength: 14 }}
+                    />
+                  </LabeledField>
+                )}
+              />
+            </Box>
+
+            {/* Telefone + Nascimento */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.75 }}>
+              <Controller
+                name="phone"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Telefone">
+                    <TextField
+                      {...field}
+                      fullWidth
+                      size="small"
+                      placeholder="(11) 90000-0000"
+                      onChange={(e) => field.onChange(maskPhone(e.target.value))}
+                      inputProps={{ inputMode: 'numeric', maxLength: 16 }}
+                    />
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="birthDate"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Nascimento">
+                    <TextField {...field} type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} />
+                  </LabeledField>
+                )}
+              />
+            </Box>
+
+            {/* E-mail */}
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <LabeledField label="E-mail">
+                  <TextField {...field} type="email" fullWidth size="small" placeholder="email@exemplo.com" />
+                </LabeledField>
+              )}
+            />
+
+            {/* Sexo + Como conheceu */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.75 }}>
+              <Controller
+                name="sex"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Sexo">
+                    <TextField
+                      {...field}
+                      select
+                      fullWidth
+                      size="small"
+                      value={field.value ?? ''}
+                      SelectProps={{ displayEmpty: true }}
+                    >
+                      <MenuItem value="">
+                        <em>Não informado</em>
+                      </MenuItem>
+                      {PATIENT_SEX_OPTIONS.map((opt) => (
+                        <MenuItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="referralSource"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Como conheceu">
+                    <TextField
+                      {...field}
+                      select
+                      fullWidth
+                      size="small"
+                      value={field.value ?? ''}
+                      SelectProps={{ displayEmpty: true }}
+                    >
+                      <MenuItem value="">
+                        <em>Não informado</em>
+                      </MenuItem>
+                      {PATIENT_REFERRAL_SOURCE_OPTIONS.map((opt) => (
+                        <MenuItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </LabeledField>
+                )}
+              />
+            </Box>
+
+            {referralSourceWatched === 'OTHER' && (
+              <Controller
+                name="referralSourceOther"
+                control={control}
+                rules={{
+                  validate: (v) =>
+                    referralSourceWatched !== 'OTHER' || !!v?.trim() || 'Informe qual é a origem',
+                }}
+                render={({ field, fieldState }) => (
+                  <LabeledField label="Especifique a origem" required>
+                    <TextField
+                      {...field}
+                      fullWidth
+                      size="small"
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      placeholder="Ex.: panfleto, evento..."
+                    />
+                  </LabeledField>
+                )}
+              />
+            )}
+
+              </Stack>
+            </FormSection>
+
+            {/* Endereço */}
+            <FormSection icon={<LocationOnOutlinedIcon fontSize="small" />} title="Endereço">
+              <Stack spacing={1.25}>
+                <Box>
+                  <Controller
+                    name="cep"
+                    control={control}
+                    rules={{
+                      validate: (v) =>
+                        !v || onlyDigits(v).length === 0 || onlyDigits(v).length === 8 || 'CEP deve ter 8 dígitos',
+                    }}
+                    render={({ field, fieldState }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        size="small"
+                        placeholder="CEP"
+                        onChange={(e) => field.onChange(maskCEP(e.target.value))}
+                        error={!!fieldState.error || cepStatus.error}
+                        disabled={mutation.isPending}
+                        inputProps={{ inputMode: 'numeric', maxLength: 9 }}
+                        sx={ADDRESS_INPUT_SX}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <LocationOnOutlinedIcon fontSize="small" color="action" />
+                            </InputAdornment>
+                          ),
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              {cepStatus.loading ? (
+                                <CircularProgress color="inherit" size={16} />
+                              ) : (
+                                <Tooltip
+                                  title="Busca automática ao completar 8 dígitos — preenche rua, bairro, cidade e UF."
+                                  arrow
+                                >
+                                  <InfoOutlinedIcon fontSize="small" sx={{ color: 'text.disabled', cursor: 'help' }} />
+                                </Tooltip>
+                              )}
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                  {(cepStatus.loading || cepStatus.text) && (
+                    <Typography
+                      variant="caption"
+                      color={cepStatus.error ? 'error.main' : 'text.secondary'}
+                      sx={{ display: 'block', mt: 0.5, lineHeight: 1.35 }}
+                    >
+                      {cepStatus.loading ? 'Consultando CEP…' : cepStatus.text}
+                    </Typography>
+                  )}
+                </Box>
                 <Controller
-                  name="notes"
+                  name="addressStreet"
                   control={control}
                   render={({ field }) => (
                     <TextField
                       {...field}
-                      label="Observações"
                       fullWidth
-                      multiline
-                      placeholder="Preferências, alergias, histórico relevante, orientações de atendimento…"
-                      sx={{
-                        flex: 1,
-                        ...FIELD_SX,
-                        '& .MuiOutlinedInput-root': {
-                          height: '100%',
-                          alignItems: 'flex-start',
-                        },
-                        '& textarea': {
-                          height: '100% !important',
-                          minHeight: '100% !important',
-                          boxSizing: 'border-box',
-                        },
-                      }}
+                      size="small"
+                      disabled
+                      placeholder="Logradouro (preenchido pelo CEP)"
+                      sx={ADDRESS_DISABLED_SX}
                     />
                   )}
                 />
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, flexShrink: 0 }}>
-                  Visível na ficha do paciente e na aba de anotações.
-                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1.4fr' }, gap: 1.25 }}>
+                  <Controller
+                    name="addressNumber"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        size="small"
+                        placeholder="Número"
+                        inputProps={{ inputMode: 'numeric' }}
+                        sx={ADDRESS_INPUT_SX}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name="addressComplement"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        size="small"
+                        placeholder="Complemento (opcional)"
+                        sx={ADDRESS_INPUT_SX}
+                      />
+                    )}
+                  />
+                </Box>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1.3fr 1.3fr 0.6fr' }, gap: 1.25 }}>
+                  <Controller
+                    name="addressNeighborhood"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        size="small"
+                        disabled
+                        placeholder="Bairro"
+                        sx={ADDRESS_DISABLED_SX}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name="addressCity"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        size="small"
+                        disabled
+                        placeholder="Cidade"
+                        sx={ADDRESS_DISABLED_SX}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name="addressState"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        size="small"
+                        disabled
+                        placeholder="UF"
+                        inputProps={{ maxLength: 2, style: { textAlign: 'center', textTransform: 'uppercase' } }}
+                        sx={ADDRESS_DISABLED_SX}
+                      />
+                    )}
+                  />
+                </Box>
               </Stack>
-            </Paper>
-          </TabPanel>
+            </FormSection>
           </Box>
+          )}
+
+          {tab === 'notes' && (
+            <Controller
+              name="notes"
+              control={control}
+              render={({ field }) => (
+                <LabeledField label="Observações">
+                  <TextField
+                    {...field}
+                    fullWidth
+                    multiline
+                    minRows={10}
+                    placeholder="Histórico, alergias, preferências, orientações de atendimento..."
+                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                    Visível na ficha do paciente e na aba de anotações.
+                  </Typography>
+                </LabeledField>
+              )}
+            />
+          )}
 
           {mutation.isError && (
-            <Alert severity="error" variant="outlined" sx={{ mt: 2, flexShrink: 0 }}>
+            <Alert severity="error" variant="outlined" sx={{ mt: 2 }}>
               {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
                 ?.message ?? 'Erro ao salvar paciente'}
             </Alert>
@@ -1145,15 +1060,27 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
         </DialogContent>
 
         <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
-          <Button onClick={onClose} type="button" disabled={mutation.isPending}>
+          <Button
+            onClick={onClose}
+            type="button"
+            variant="outlined"
+            disabled={mutation.isPending}
+            sx={{
+              bgcolor: 'background.paper',
+              borderColor: 'divider',
+              color: 'text.secondary',
+              '&:hover': { bgcolor: 'grey.50', borderColor: 'divider' },
+            }}
+          >
             Cancelar
           </Button>
           <Button
             type="submit"
             variant="contained"
             disabled={mutation.isPending || formState.isSubmitting}
+            sx={{ boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
           >
-            {mutation.isPending ? 'Salvando…' : isEditing ? 'Salvar' : 'Criar paciente'}
+            {mutation.isPending ? 'Salvando…' : isEditing ? 'Salvar paciente' : 'Salvar paciente'}
           </Button>
         </DialogActions>
       </Box>

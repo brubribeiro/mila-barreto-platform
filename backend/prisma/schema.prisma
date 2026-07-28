@@ -258,8 +258,36 @@ model Patient {
   financialEntries FinancialEntry[]
   documents        Document[]
   packages         PatientPackage[]
+  photos           PatientPhoto[]
 
   @@map("patients")
+}
+
+// Fotos "antes e depois" do paciente (armazenadas comprimidas no R2).
+enum PatientPhotoPhase {
+  BEFORE
+  AFTER
+}
+
+model PatientPhoto {
+  id            String            @id @default(uuid())
+  patientId     String
+  appointmentId String // sempre vinculada a um atendimento
+  phase         PatientPhotoPhase
+  label         String? // descrição opcional do conjunto
+  pairId        String? // agrupa o "antes" e o "depois" do mesmo registro
+  takenAt       DateTime          @default(now())
+  storageKey    String // chave no Cloudflare R2
+  mimeType      String?
+  size          Int? // bytes
+  createdAt     DateTime          @default(now())
+
+  patient     Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([appointmentId])
+  @@map("patient_photos")
 }
 
 // =========================
@@ -503,6 +531,7 @@ model Appointment {
 
   financialEntries FinancialEntry[]
   extraMaterials   AppointmentMaterial[]
+  photos           PatientPhoto[]
 
   @@index([startAt])
   @@index([patientId])

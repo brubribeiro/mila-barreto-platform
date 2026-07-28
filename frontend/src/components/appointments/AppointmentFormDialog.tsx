@@ -124,6 +124,7 @@ interface AppointmentFormDialogProps {
   onClose: () => void;
   appointment?: Appointment | null;
   defaultStart?: Date | null;
+  defaultPatientId?: string | null;
 }
 
 interface FormValues {
@@ -283,6 +284,7 @@ export function AppointmentFormDialog({
   onClose,
   appointment,
   defaultStart,
+  defaultPatientId,
 }: AppointmentFormDialogProps) {
   const muiTheme = useTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
@@ -314,6 +316,9 @@ export function AppointmentFormDialog({
   const [extraMaterials, setExtraMaterials] = useState<ExtraMaterialRow[]>([]);
   const [sideTab, setSideTab] = useState<'materials' | 'notes'>('materials');
   const [chartPatientId, setChartPatientId] = useState<string | null>(null);
+  // Só habilita a busca de profissionais depois que o formulário foi inicializado
+  // com os valores reais (reset), evitando uma requisição extra com o horário padrão.
+  const [formInitialized, setFormInitialized] = useState(false);
 
   const { data: appointmentDetail } = useQuery({
     queryKey: ['appointment', appointment?.id],
@@ -350,7 +355,10 @@ export function AppointmentFormDialog({
   });
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setFormInitialized(false);
+      return;
+    }
     if (appointment) {
       reset({
         patientId: appointment.patientId,
@@ -369,11 +377,13 @@ export function AppointmentFormDialog({
       professionalManuallySelectedRef.current = false;
       reset({
         ...empty,
+        patientId: defaultPatientId ?? '',
         date: dayjs(start).format('YYYY-MM-DD'),
         startTime: isMidnight ? '09:00' : dayjs(start).format('HH:mm'),
       });
     }
-  }, [open, appointment, defaultStart, reset]);
+    setFormInitialized(true);
+  }, [open, appointment, defaultStart, defaultPatientId, reset]);
 
   useEffect(() => {
     if (!open) return;
@@ -674,7 +684,7 @@ export function AppointmentFormDialog({
         slotEnd.toISOString(),
         appointment?.id,
       ),
-    enabled: open && slotValid,
+    enabled: open && slotValid && formInitialized,
     placeholderData: keepPreviousData,
   });
 

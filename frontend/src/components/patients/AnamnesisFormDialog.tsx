@@ -30,6 +30,7 @@ import { patientsApi } from '../../api/patients';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx } from '../DialogCloseButton';
+import { LabeledField } from '../LabeledField';
 import {
   ANAMNESIS_MULTILINE_KEYS,
   ANAMNESIS_SECTIONS,
@@ -38,6 +39,7 @@ import {
   imcClassificacao,
   imcColor,
   mergeAnamnesis,
+  type AnamnesisFieldDef,
 } from './anamnesisFields';
 
 interface AnamnesisFormDialogProps {
@@ -51,11 +53,7 @@ type FormValues = Record<string, string | boolean | number>;
 const DIALOG_WIDTH = 920;
 const DIALOG_HEIGHT_DESKTOP = 820;
 
-const FIELD_SX = {
-  '& .MuiOutlinedInput-root': {
-    bgcolor: '#fff',
-  },
-} as const;
+const FIELD_SX = {} as const;
 
 const ANAMNESIS_SWITCH_ROW_SX = {
   display: 'flex',
@@ -63,25 +61,40 @@ const ANAMNESIS_SWITCH_ROW_SX = {
   justifyContent: 'space-between',
   gap: 1.5,
   px: 1.5,
-  minHeight: 40,
+  minHeight: 44,
   border: '1px solid',
   borderColor: 'divider',
-  borderRadius: 1,
-  bgcolor: '#fff',
+  borderRadius: '11px',
+  bgcolor: 'grey.50',
 } as const;
 
 function FieldGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <Box>
+    <Paper
+      variant="outlined"
+      sx={{
+        p: { xs: 1.75, sm: 2.25 },
+        borderRadius: '16px',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        boxShadow: '0 1px 2px rgba(16,40,37,0.03)',
+      }}
+    >
       <Typography
-        variant="overline"
-        color="text.secondary"
-        sx={{ display: 'block', mb: 0.75, letterSpacing: '0.06em' }}
+        sx={{
+          display: 'block',
+          mb: 1.75,
+          fontSize: '0.75rem',
+          fontWeight: 800,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          color: 'text.secondary',
+        }}
       >
         {title}
       </Typography>
       {children}
-    </Box>
+    </Paper>
   );
 }
 
@@ -128,6 +141,138 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
 
   const submit = handleSubmit((values) => mutation.mutate(values));
 
+  const renderField = (fieldDef: AnamnesisFieldDef) => {
+    if (fieldDef.type === 'boolean') {
+      return (
+        <Grid item xs={12} sm={6} key={fieldDef.key}>
+          <Controller
+            name={fieldDef.key}
+            control={control}
+            render={({ field }) => (
+              <Box sx={ANAMNESIS_SWITCH_ROW_SX}>
+                <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, lineHeight: 1.35 }}>
+                  {fieldDef.label}
+                </Typography>
+                <Switch
+                  checked={!!field.value}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                  size="small"
+                />
+              </Box>
+            )}
+          />
+        </Grid>
+      );
+    }
+
+    const gridSm = fieldDef.fullWidth ? 12 : 6;
+
+    if (fieldDef.type === 'number') {
+      return (
+        <Grid item xs={6} sm={6} key={fieldDef.key}>
+          <Controller
+            name={fieldDef.key}
+            control={control}
+            render={({ field }) => (
+              <LabeledField label={fieldDef.label}>
+                <TextField
+                  {...field}
+                  fullWidth
+                  size="small"
+                  placeholder="0"
+                  inputProps={{ inputMode: 'decimal' }}
+                  InputProps={
+                    fieldDef.suffix
+                      ? {
+                          endAdornment: (
+                            <InputAdornment position="end">{fieldDef.suffix}</InputAdornment>
+                          ),
+                        }
+                      : undefined
+                  }
+                  value={field.value === '' || field.value == null ? '' : field.value}
+                  onChange={(e) =>
+                    field.onChange(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.'))
+                  }
+                  sx={FIELD_SX}
+                />
+              </LabeledField>
+            )}
+          />
+        </Grid>
+      );
+    }
+
+    if (fieldDef.type === 'select') {
+      return (
+        <Grid item xs={12} sm={gridSm} key={fieldDef.key}>
+          <Controller
+            name={fieldDef.key}
+            control={control}
+            render={({ field }) => (
+              <LabeledField label={fieldDef.label}>
+                <TextField
+                  {...field}
+                  select
+                  fullWidth
+                  size="small"
+                  value={(field.value as string) ?? ''}
+                  SelectProps={{
+                    displayEmpty: true,
+                    MenuProps: { sx: { zIndex: (t) => t.zIndex.modal + 3 } },
+                    renderValue: (val) =>
+                      val ? (
+                        String(val)
+                      ) : (
+                        <Typography component="span" variant="body2" sx={{ color: 'text.disabled' }}>
+                          Não informado
+                        </Typography>
+                      ),
+                  }}
+                  sx={FIELD_SX}
+                >
+                  <MenuItem value="">
+                    <em>Não informado</em>
+                  </MenuItem>
+                  {fieldDef.options!.map((opt) => (
+                    <MenuItem key={opt} value={opt}>
+                      {opt}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </LabeledField>
+            )}
+          />
+        </Grid>
+      );
+    }
+
+    const multiline = fieldDef.fullWidth || ANAMNESIS_MULTILINE_KEYS.has(fieldDef.key);
+
+    return (
+      <Grid item xs={12} sm={gridSm} key={fieldDef.key}>
+        <Controller
+          name={fieldDef.key}
+          control={control}
+          render={({ field }) => (
+            <LabeledField label={fieldDef.label}>
+              <TextField
+                {...field}
+                fullWidth
+                size="small"
+                multiline={multiline}
+                minRows={multiline ? 2 : undefined}
+                placeholder={fieldDef.placeholder}
+                value={(field.value as string) ?? ''}
+                sx={FIELD_SX}
+              />
+            </LabeledField>
+          )}
+        />
+      </Grid>
+    );
+  };
+
   return (
     <Dialog
       open={open}
@@ -135,11 +280,12 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
       maxWidth={false}
       fullWidth
       fullScreen={isMobile}
+      sx={{ zIndex: (t) => t.zIndex.modal + 2 }}
       PaperProps={{
         sx: {
           width: isMobile ? '100%' : DIALOG_WIDTH,
           maxWidth: '100%',
-          borderRadius: isMobile ? 0 : 3,
+          borderRadius: isMobile ? 0 : '20px',
           overflow: 'hidden',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
@@ -157,17 +303,20 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
           isMobile={isMobile}
           title="Anamnese"
           subtitle={patient?.name ?? 'Carregando paciente…'}
+          subtitleWrap
           icon={<AssignmentOutlinedIcon fontSize="small" />}
         />
 
         <DialogContent
           dividers={false}
           sx={{
-            p: { xs: 2, sm: 3 },
+            px: { xs: 2, sm: 3 },
+            pt: { xs: 2.5, sm: 3 },
+            pb: { xs: 2, sm: 3 },
             flex: 1,
             minHeight: 0,
             overflow: 'auto',
-            bgcolor: (t) => t.palette.background.default,
+            bgcolor: 'background.paper',
           }}
         >
           {isLoading && !patient ? (
@@ -175,165 +324,40 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
               <CircularProgress />
             </Box>
           ) : (
-            <Paper
-              variant="outlined"
-              sx={{
-                p: { xs: 1.5, sm: 2 },
-                bgcolor: '#fff',
-                borderColor: 'divider',
-                borderRadius: 2,
-              }}
-            >
-              <Stack spacing={3}>
-                {ANAMNESIS_SECTIONS.map((section) => (
-                  <FieldGroup key={section.title} title={section.title}>
-                    <Grid container spacing={2} alignItems="flex-start">
-                      {section.fields.map((fieldDef) => {
-                        if (fieldDef.type === 'boolean') {
-                          return (
-                            <Grid item xs={12} sm={6} key={fieldDef.key}>
-                              <Controller
-                                name={fieldDef.key}
-                                control={control}
-                                render={({ field }) => (
-                                  <Box sx={ANAMNESIS_SWITCH_ROW_SX}>
-                                    <Typography variant="body2" sx={{ lineHeight: 1.35 }}>
-                                      {fieldDef.label}
-                                    </Typography>
-                                    <Switch
-                                      checked={!!field.value}
-                                      onChange={(e) => field.onChange(e.target.checked)}
-                                      size="small"
-                                    />
-                                  </Box>
-                                )}
-                              />
-                            </Grid>
-                          );
-                        }
-
-                        const gridSm = fieldDef.fullWidth ? 12 : 6;
-
-                        if (fieldDef.type === 'number') {
-                          return (
-                            <Grid item xs={6} sm={4} key={fieldDef.key}>
-                              <Controller
-                                name={fieldDef.key}
-                                control={control}
-                                render={({ field }) => (
-                                  <TextField
-                                    {...field}
-                                    label={fieldDef.label}
-                                    fullWidth
-                                    size="small"
-                                    type="number"
-                                    inputProps={{ step: fieldDef.step ?? 1, min: 0 }}
-                                    InputProps={fieldDef.suffix ? {
-                                      endAdornment: (
-                                        <InputAdornment position="end">{fieldDef.suffix}</InputAdornment>
-                                      ),
-                                    } : undefined}
-                                    placeholder={fieldDef.placeholder}
-                                    sx={FIELD_SX}
-                                    value={field.value === '' || field.value == null ? '' : field.value}
-                                    onChange={(e) => {
-                                      const raw = e.target.value;
-                                      field.onChange(raw === '' ? '' : parseFloat(raw));
-                                    }}
-                                  />
-                                )}
-                              />
-                            </Grid>
-                          );
-                        }
-
-                        if (fieldDef.type === 'select') {
-                          return (
-                            <Grid item xs={12} sm={gridSm} key={fieldDef.key}>
-                              <Controller
-                                name={fieldDef.key}
-                                control={control}
-                                render={({ field }) => (
-                                  <FormControl fullWidth size="small" sx={FIELD_SX}>
-                                    <InputLabel shrink>{fieldDef.label}</InputLabel>
-                                    <Select
-                                      {...field}
-                                      label={fieldDef.label}
-                                      displayEmpty
-                                      value={(field.value as string) ?? ''}
-                                    >
-                                      <MenuItem value="">
-                                        <em>Não informado</em>
-                                      </MenuItem>
-                                      {fieldDef.options!.map((opt) => (
-                                        <MenuItem key={opt} value={opt}>
-                                          {opt}
-                                        </MenuItem>
-                                      ))}
-                                    </Select>
-                                  </FormControl>
-                                )}
-                              />
-                            </Grid>
-                          );
-                        }
-
-                        const multiline =
-                          fieldDef.fullWidth || ANAMNESIS_MULTILINE_KEYS.has(fieldDef.key);
-
-                        return (
-                          <Grid item xs={12} sm={gridSm} key={fieldDef.key}>
-                            <Controller
-                              name={fieldDef.key}
-                              control={control}
-                              render={({ field }) => (
-                                <TextField
-                                  {...field}
-                                  label={fieldDef.label}
-                                  fullWidth
-                                  size="small"
-                                  multiline={multiline}
-                                  minRows={multiline ? 2 : undefined}
-                                  placeholder={fieldDef.placeholder}
-                                  sx={FIELD_SX}
-                                  value={(field.value as string) ?? ''}
-                                />
-                              )}
-                            />
-                          </Grid>
-                        );
-                      })}
-                    </Grid>
-                    {section.title === 'Medidas corporais' && imcVal != null && (
-                      <Box
-                        sx={{
-                          mt: 1.5,
-                          px: 2,
-                          py: 1.5,
-                          borderRadius: 1.5,
-                          bgcolor: 'background.default',
-                          border: 1,
-                          borderColor: 'divider',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1.5,
-                        }}
-                      >
-                        <FitnessCenterOutlinedIcon sx={{ fontSize: 20, color: imcColor(imcVal) }} />
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            IMC calculado
-                          </Typography>
-                          <Typography variant="subtitle2" fontWeight={700} sx={{ color: imcColor(imcVal) }}>
-                            {imcVal} — {imcClassificacao(imcVal)}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    )}
-                  </FieldGroup>
-                ))}
+              <Stack spacing={2} sx={{ mt: { xs: 1, sm: 1.5 } }}>
+                {ANAMNESIS_SECTIONS.map((section) => {
+                  const inputs = section.fields.filter((f) => f.type !== 'boolean');
+                  const toggles = section.fields.filter((f) => f.type === 'boolean');
+                  return (
+                    <FieldGroup key={section.title} title={section.title}>
+                      {inputs.length > 0 && (
+                        <Grid container spacing={1.75} alignItems="flex-start">
+                          {inputs.map(renderField)}
+                        </Grid>
+                      )}
+                      {section.title === 'Medidas corporais' && (
+                        <Typography sx={{ mt: 1.25, fontSize: '0.78rem', color: 'text.secondary' }}>
+                          IMC:{' '}
+                          {imcVal != null ? (
+                            <Box component="span" sx={{ fontWeight: 800, color: imcColor(imcVal) }}>
+                              {imcVal} · {imcClassificacao(imcVal)}
+                            </Box>
+                          ) : (
+                            <Box component="span" sx={{ color: 'text.disabled' }}>
+                              informe peso e altura
+                            </Box>
+                          )}
+                        </Typography>
+                      )}
+                      {toggles.length > 0 && (
+                        <Grid container spacing={1.75} sx={{ mt: inputs.length > 0 ? 1.75 : 0 }}>
+                          {toggles.map(renderField)}
+                        </Grid>
+                      )}
+                    </FieldGroup>
+                  );
+                })}
               </Stack>
-            </Paper>
           )}
 
           {mutation.isError && (
@@ -345,13 +369,25 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
         </DialogContent>
 
         <DialogActions sx={dialogActionsBorderSx}>
-          <Button onClick={onClose} disabled={mutation.isPending}>
+          <Button
+            onClick={onClose}
+            type="button"
+            variant="outlined"
+            disabled={mutation.isPending}
+            sx={{
+              bgcolor: 'background.paper',
+              borderColor: 'divider',
+              color: 'text.secondary',
+              '&:hover': { bgcolor: 'grey.50', borderColor: 'divider' },
+            }}
+          >
             Cancelar
           </Button>
           <Button
             type="submit"
             variant="contained"
             disabled={mutation.isPending || isLoading || !patient}
+            sx={{ boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
           >
             {mutation.isPending ? 'Salvando…' : 'Salvar anamnese'}
           </Button>

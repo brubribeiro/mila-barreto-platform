@@ -35,6 +35,12 @@ export class PatientsController {
   }
 
   @RequirePermissions('patients:view')
+  @Get('stats')
+  stats() {
+    return this.patients.stats();
+  }
+
+  @RequirePermissions('patients:view')
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.patients.findOne(id);
@@ -92,6 +98,56 @@ export class PatientsController {
   @Delete(':id/photo')
   removePhoto(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.patients.removePhoto(id, user);
+  }
+
+  // ─── Fotos antes/depois ───
+
+  @RequirePermissions('patients:view')
+  @Get(':id/photos')
+  listPhotos(@Param('id', ParseUUIDPipe) id: string) {
+    return this.patients.listPhotos(id);
+  }
+
+  @RequirePermissions('patients:edit')
+  @Post(':id/photos')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 10 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+        if (allowed.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new BadRequestException('Use uma imagem JPEG, PNG ou WebP.'), false);
+        }
+      },
+    }),
+  )
+  addPhoto(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body()
+    dto: { appointmentId: string; phase: 'BEFORE' | 'AFTER'; label?: string; pairId?: string; takenAt?: string },
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (!file) throw new BadRequestException('Arquivo de imagem é obrigatório.');
+    if (!dto.appointmentId) {
+      throw new BadRequestException('Informe o agendamento vinculado à foto.');
+    }
+    if (dto.phase !== 'BEFORE' && dto.phase !== 'AFTER') {
+      throw new BadRequestException('Fase inválida (use BEFORE ou AFTER).');
+    }
+    return this.patients.addPhoto(id, file, dto, user);
+  }
+
+  @RequirePermissions('patients:edit')
+  @Delete(':id/photos/:photoId')
+  removePhotoEntry(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('photoId', ParseUUIDPipe) photoId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.patients.removePhotoEntry(id, photoId, user);
   }
 
   @RequirePermissions('patients:delete')

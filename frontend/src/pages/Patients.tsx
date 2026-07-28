@@ -1,31 +1,33 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Avatar,
   Box,
   Button,
   Card,
   IconButton,
-  MenuItem,
+  InputBase,
+  Skeleton,
   Stack,
-  TextField,
   Tooltip,
   Typography,
   alpha,
 } from '@mui/material';
-import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import HistoryIcon from '@mui/icons-material/History';
-import VisibilityIcon from '@mui/icons-material/Visibility';
+import SearchIcon from '@mui/icons-material/Search';
+import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import dayjs from 'dayjs';
+import 'dayjs/locale/pt-br';
 
-import { PageHeader } from '../components/PageHeader';
-import { ListFiltersBar } from '../components/ListFiltersBar';
-import { AppDataGrid } from '../components/AppDataGrid';
-import { FILTER_FIELD_SX } from '../utils/listFilters';
 import { patientsApi } from '../api/patients';
 import { PatientFormDialog } from '../components/patients/PatientFormDialog';
 import { AnamnesisFormDialog } from '../components/patients/AnamnesisFormDialog';
@@ -37,11 +39,49 @@ import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import { maskPhone } from '../utils/masks';
-import { formatDateOnlyFromApi } from '../utils/dateOnly';
-import { patientSexLabel } from '../utils/patientSex';
-import { patientReferralSourceLabel } from '../utils/patientReferralSource';
 import { patientInitials } from '../utils/patientPhoto';
 import type { Patient } from '../types';
+
+const PAGE_SIZE = 8;
+const AVATAR_COLORS = ['#15998B', '#5BA8DE', '#D46B8A', '#E0915B', '#9B7BD4', '#4FB3A8'];
+const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+
+function avatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i += 1) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function formatCpf(doc?: string) {
+  const raw = doc?.replace(/\D/g, '');
+  if (!raw || raw.length !== 11) return '—';
+  return `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6, 9)}-${raw.slice(9)}`;
+}
+
+function scoreTone(v: number) {
+  if (v >= 90) return { main: '#15998B', label: 'Excelente' };
+  if (v >= 75) return { main: '#C98A12', label: 'Bom' };
+  return { main: '#D65A5A', label: 'Atenção' };
+}
+
+const GRID_COLS = '1.8fr 1.1fr 1.2fr 1fr 1fr 0.75fr 0.8fr 120px';
+
+function StatCard({ label, value, loading }: { label: string; value: string; loading?: boolean }) {
+  return (
+    <Card sx={{ p: { xs: 2, sm: 2.25 } }}>
+      {loading ? (
+        <Skeleton variant="text" width={80} sx={{ fontSize: '1.65rem' }} />
+      ) : (
+        <Typography sx={{ fontSize: { xs: '1.4rem', sm: '1.65rem' }, fontWeight: 800, letterSpacing: '-0.5px' }}>
+          {value}
+        </Typography>
+      )}
+      <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 600, mt: 0.25 }}>
+        {label}
+      </Typography>
+    </Card>
+  );
+}
 
 export function Patients() {
   const queryClient = useQueryClient();
@@ -52,8 +92,34 @@ export function Patients() {
   const canEdit = has('patients:edit');
   const canDelete = has('patients:delete');
 
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-  const [sexFilter, setSexFilter] = useState<'ALL' | 'M' | 'F'>('ALL');
+  const [page, setPage] = useState(0);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(0);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // Reabre o drawer da ficha ao voltar da página estendida (?ficha=<id>)
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const ficha = searchParams.get('ficha');
+    if (ficha) {
+      setDetailId(ficha);
+      const next = new URLSearchParams(searchParams);
+      next.delete('ficha');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+  const [sort, setSort] = useState<{
+    key: 'lastVisit' | 'totalSpent' | 'appointments';
+    dir: 'asc' | 'desc';
+  } | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -64,18 +130,19 @@ export function Patients() {
   const { data: patients = [], isLoading } = useQuery({
     queryKey: ['patients', search],
     queryFn: () => patientsApi.list(search || undefined),
+    placeholderData: keepPreviousData,
   });
 
-  const filteredPatients = useMemo(
-    () =>
-      patients.filter((p) => sexFilter === 'ALL' || p.sex === sexFilter),
-    [patients, sexFilter],
-  );
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['patients-stats'],
+    queryFn: () => patientsApi.stats(),
+  });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => patientsApi.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['patients-stats'] });
       toast.success('Paciente excluído.');
     },
     onError: (err) => {
@@ -83,180 +150,138 @@ export function Patients() {
     },
   });
 
-  const columns = useMemo<GridColDef<Patient>[]>(
-    () => [
-      {
-        field: 'name',
-        headerName: 'Nome',
-        flex: 1.2,
-        minWidth: 220,
-        renderCell: (params) => (
-          <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 0, py: 0.25 }}>
-            <Avatar
-              src={params.row.photoUrl ?? undefined}
-              alt={params.row.name}
-              sx={{
-                width: 32,
-                height: 32,
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
-                color: 'primary.dark',
-                flexShrink: 0,
-              }}
-            >
-              {patientInitials(params.row.name)}
-            </Avatar>
-            <Typography variant="body2" noWrap title={params.row.name}>
-              {params.row.name}
-            </Typography>
-          </Stack>
-        ),
-      },
-      {
-        field: 'phone',
-        headerName: 'Telefone',
-        flex: 0.8,
-        minWidth: 150,
-        valueGetter: (params) => (params.row.phone ? maskPhone(params.row.phone) : '—'),
-      },
-      {
-        field: 'birthDate',
-        headerName: 'Nascimento',
-        flex: 0.55,
-        minWidth: 100,
-        valueGetter: (params) => {
-          const s = formatDateOnlyFromApi(params.row.birthDate);
-          return s || '—';
-        },
-      },
-      {
-        field: 'sex',
-        headerName: 'Sexo',
-        flex: 0.45,
-        minWidth: 110,
-        valueGetter: (params) => patientSexLabel(params.row.sex),
-      },
-      {
-        field: 'referralSource',
-        headerName: 'Como conheceu',
-        flex: 0.7,
-        minWidth: 140,
-        valueGetter: (params) =>
-          patientReferralSourceLabel(params.row.referralSource, params.row.referralSourceOther),
-      },
-      {
-        field: 'cep',
-        headerName: 'CEP',
-        flex: 0.35,
-        minWidth: 100,
-        valueGetter: (params) => {
-          const raw = params.row.cep?.replace(/\D/g, '');
-          return raw && raw.length === 8 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : '—';
-        },
-      },
-      {
-        field: 'actions',
-        type: 'actions',
-        headerName: 'Ações',
-        width: 250,
-        getActions: (params) => {
-          const actions = [
-            <GridActionsCellItem
-              key="view"
-              icon={
-                <Tooltip title="Ver ficha">
-                  <VisibilityIcon fontSize="small" />
-                </Tooltip>
-              }
-              label="Ver"
-              onClick={() => setDetailId(params.row.id)}
-            />,
-            <GridActionsCellItem
-              key="whatsapp"
-              disabled={!params.row.phone}
-              icon={
-                <Tooltip
-                  title={params.row.phone ? 'Enviar WhatsApp' : 'Sem telefone cadastrado'}
-                >
-                  <WhatsAppIcon fontSize="small" sx={{ color: '#25D366' }} />
-                </Tooltip>
-              }
-              label="WhatsApp"
-              onClick={() => setWhatsappPatient(params.row)}
-            />,
-          ];
-          if (canEdit) {
-            actions.push(
-              <GridActionsCellItem
-                key="anamnesis"
-                icon={
-                  <Tooltip title="Anamnese">
-                    <AssignmentOutlinedIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Anamnese"
-                onClick={() => setAnamnesisPatientId(params.row.id)}
-              />,
-              <GridActionsCellItem
-                key="edit"
-                icon={
-                  <Tooltip title="Editar">
-                    <EditIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Editar"
-                onClick={() => {
-                  setEditing(params.row);
-                  setFormOpen(true);
-                }}
-              />,
-            );
-          }
-          if (canDelete) {
-            actions.push(
-              <GridActionsCellItem
-                key="delete"
-                icon={
-                  <Tooltip title="Excluir">
-                    <DeleteIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Excluir"
-                onClick={async () => {
-                  const ok = await confirm({
-                    title: 'Excluir paciente',
-                    message: `Excluir paciente ${params.row.name}?`,
-                    confirmLabel: 'Excluir',
-                    confirmColor: 'error',
-                  });
-                  if (ok) deleteMutation.mutate(params.row.id);
-                }}
-              />,
-            );
-          }
-          return actions;
-        },
-      },
-    ],
-    [confirm, deleteMutation, canEdit, canDelete],
+  const sortedPatients = useMemo(() => {
+    if (!sort) return patients;
+    const dir = sort.dir === 'asc' ? 1 : -1;
+    return [...patients].sort((a, b) => {
+      if (sort.key === 'lastVisit') {
+        const av = a.lastVisit ? new Date(a.lastVisit).getTime() : 0;
+        const bv = b.lastVisit ? new Date(b.lastVisit).getTime() : 0;
+        return (av - bv) * dir;
+      }
+      if (sort.key === 'appointments') {
+        return ((a.appointmentsCount ?? 0) - (b.appointmentsCount ?? 0)) * dir;
+      }
+      return ((a.totalSpent ?? 0) - (b.totalSpent ?? 0)) * dir;
+    });
+  }, [patients, sort]);
+
+  const toggleSort = (key: 'lastVisit' | 'totalSpent' | 'appointments') => {
+    setPage(0);
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: 'desc' };
+      if (prev.dir === 'desc') return { key, dir: 'asc' };
+      return null;
+    });
+  };
+
+  const pageCount = Math.max(1, Math.ceil(sortedPatients.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const pageRows = useMemo(
+    () => sortedPatients.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE),
+    [sortedPatients, currentPage],
   );
+
+  const rangeStart = sortedPatients.length === 0 ? 0 : currentPage * PAGE_SIZE + 1;
+  const rangeEnd = Math.min((currentPage + 1) * PAGE_SIZE, sortedPatients.length);
+
+  // Páginas visíveis com reticências: primeira, última, atual e vizinhas
+  const pageItems = useMemo<(number | 'dots')[]>(() => {
+    if (pageCount <= 7) return Array.from({ length: pageCount }, (_, i) => i);
+    const items = new Set<number>([0, pageCount - 1, currentPage]);
+    for (let d = 1; d <= 1; d += 1) {
+      items.add(Math.max(0, currentPage - d));
+      items.add(Math.min(pageCount - 1, currentPage + d));
+    }
+    const sorted = Array.from(items).sort((a, b) => a - b);
+    const result: (number | 'dots')[] = [];
+    let prev = -1;
+    for (const n of sorted) {
+      if (prev !== -1 && n - prev > 1) result.push('dots');
+      result.push(n);
+      prev = n;
+    }
+    return result;
+  }, [pageCount, currentPage]);
+
+  const handleDelete = async (patient: Patient) => {
+    const ok = await confirm({
+      title: 'Excluir paciente',
+      message: `Excluir paciente ${patient.name}?`,
+      confirmLabel: 'Excluir',
+      confirmColor: 'error',
+    });
+    if (ok) deleteMutation.mutate(patient.id);
+  };
 
   return (
     <Box>
-      <PageHeader
-        title="Pacientes"
-        subtitle="Cadastro, histórico e contato"
-        action={
-          <Stack direction="row" spacing={1}>
+      {/* Cards de estatística */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+          gap: { xs: 1.5, sm: 2 },
+          mb: { xs: 2, sm: 2.5 },
+        }}
+      >
+        <StatCard label="Total de pacientes" value={String(stats?.total ?? 0)} loading={statsLoading} />
+        <StatCard label="Ativos (90 dias)" value={String(stats?.active90 ?? 0)} loading={statsLoading} />
+        <StatCard label="Novos no mês" value={String(stats?.newThisMonth ?? 0)} loading={statsLoading} />
+        <StatCard label="Ticket médio" value={brl.format(stats?.averageTicket ?? 0)} loading={statsLoading} />
+      </Box>
+
+      {/* Tabela */}
+      <Card sx={{ p: 0, overflow: 'hidden' }}>
+        {/* Cabeçalho da tabela */}
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'stretch', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={1.5}
+          sx={{ px: { xs: 2, sm: 2.75 }, py: 2, borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Typography sx={{ fontSize: '1rem', fontWeight: 700 }}>Todos os pacientes</Typography>
+          <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1}
+              sx={{
+                height: 38,
+                px: 1.5,
+                borderRadius: '11px',
+                border: 1,
+                borderColor: 'divider',
+                bgcolor: 'grey.50',
+                width: { xs: '100%', sm: 240 },
+              }}
+            >
+              <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+              <InputBase
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Buscar paciente, CPF..."
+                sx={{ fontSize: '0.8125rem', flex: 1 }}
+              />
+            </Stack>
             {isAdmin && (
-              <Button
-                variant="outlined"
-                startIcon={<HistoryIcon />}
-                onClick={() => setHistoryOpen(true)}
-              >
-                Histórico
-              </Button>
+              <Tooltip title="Histórico de alterações">
+                <IconButton
+                  onClick={() => setHistoryOpen(true)}
+                  sx={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: '11px',
+                    border: 1,
+                    borderColor: 'divider',
+                    bgcolor: 'grey.50',
+                    color: 'text.secondary',
+                  }}
+                >
+                  <HistoryIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             )}
             {canCreate && (
               <Button
@@ -266,55 +291,372 @@ export function Patients() {
                   setEditing(null);
                   setFormOpen(true);
                 }}
+                sx={{ height: 38, borderRadius: '11px' }}
               >
-                Novo paciente
+                Adicionar paciente
               </Button>
             )}
           </Stack>
-        }
-      />
+        </Stack>
 
-      <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
-        <ListFiltersBar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Buscar por nome, e-mail ou telefone"
-          filteredCount={filteredPatients.length}
-          countLabel={filteredPatients.length === 1 ? 'paciente' : 'pacientes'}
-        >
-          <TextField
-            select
-            size="small"
-            label="Sexo"
-            value={sexFilter}
-            onChange={(e) => setSexFilter(e.target.value as typeof sexFilter)}
-            sx={FILTER_FIELD_SX}
-          >
-            <MenuItem value="ALL">Todos</MenuItem>
-            <MenuItem value="F">Feminino</MenuItem>
-            <MenuItem value="M">Masculino</MenuItem>
-          </TextField>
-        </ListFiltersBar>
-
-        <AppDataGrid
-          rows={filteredPatients}
-          columns={columns}
-          loading={isLoading}
-          localeText={{
-            noRowsLabel:
-              patients.length === 0
-                ? 'Nenhum paciente cadastrado'
-                : 'Nenhum paciente encontrado com os filtros',
-            footerRowSelected: (count) => `${count} selecionado(s)`,
+        {/* Cabeçalho de colunas */}
+        <Box
+          sx={{
+            display: { xs: 'none', md: 'grid' },
+            gridTemplateColumns: GRID_COLS,
+            gap: 1.5,
+            px: 2.75,
+            py: 1.5,
+            borderBottom: 1,
+            borderColor: 'divider',
+            bgcolor: 'grey.50',
+            fontSize: '0.7rem',
+            fontWeight: 700,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            color: 'text.disabled',
           }}
-        />
+        >
+          <span>Paciente</span>
+          <span>CPF</span>
+          <span>Telefone</span>
+          {(['lastVisit', 'totalSpent', 'appointments'] as const).map((key) => {
+            const active = sort?.key === key;
+            const label =
+              key === 'lastVisit' ? 'Última visita' : key === 'totalSpent' ? 'Total gasto' : 'Agend.';
+            return (
+              <Box
+                key={key}
+                component="button"
+                type="button"
+                onClick={() => toggleSort(key)}
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.4,
+                  p: 0,
+                  border: 0,
+                  bgcolor: 'transparent',
+                  cursor: 'pointer',
+                  font: 'inherit',
+                  letterSpacing: 'inherit',
+                  textTransform: 'inherit',
+                  color: active ? 'text.primary' : 'inherit',
+                  fontWeight: 700,
+                  '&:hover': { color: 'text.primary' },
+                }}
+              >
+                {label}
+                <ArrowUpwardRoundedIcon
+                  sx={{
+                    fontSize: 13,
+                    opacity: active ? 1 : 0.35,
+                    transform: active && sort?.dir === 'desc' ? 'rotate(180deg)' : 'none',
+                    transition: 'transform 0.12s',
+                  }}
+                />
+              </Box>
+            );
+          })}
+          <span style={{ textAlign: 'right' }}>Score</span>
+          <span />
+        </Box>
+
+        {/* Linhas */}
+        {isLoading ? (
+          <Box sx={{ px: 2.75, py: 2 }}>
+            <Stack spacing={1.25}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} variant="rounded" height={52} />
+              ))}
+            </Stack>
+          </Box>
+        ) : patients.length === 0 ? (
+          <Stack alignItems="center" spacing={1.5} sx={{ px: 3, py: 7, textAlign: 'center' }}>
+            <Box
+              sx={{
+                width: 56,
+                height: 56,
+                borderRadius: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
+                color: 'primary.main',
+              }}
+            >
+              <SearchIcon />
+            </Box>
+            <Typography sx={{ fontSize: '1rem', fontWeight: 800 }}>
+              {search ? 'Nenhum paciente encontrado' : 'Nenhum paciente cadastrado'}
+            </Typography>
+            <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary', maxWidth: 380 }}>
+              {search
+                ? 'Não encontramos ninguém com esse nome, CPF ou telefone. Confira a grafia ou cadastre um novo paciente.'
+                : 'Comece adicionando o primeiro paciente à sua base.'}
+            </Typography>
+            {canCreate && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setEditing(null);
+                  setFormOpen(true);
+                }}
+                sx={{ mt: 0.5, borderRadius: '11px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+              >
+                Adicionar paciente
+              </Button>
+            )}
+          </Stack>
+        ) : (
+          pageRows.map((p) => {
+            const score = p.reliabilityPercent ?? 100;
+            const tone = scoreTone(score);
+            const color = avatarColor(p.name);
+            return (
+              <Box
+                key={p.id}
+                onClick={() => setDetailId(p.id)}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr auto', md: GRID_COLS },
+                  gap: 1.5,
+                  px: { xs: 2, md: 2.75 },
+                  py: 1.5,
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.12s',
+                  '&:hover': { bgcolor: 'grey.50' },
+                  '&:last-of-type': { borderBottom: 0 },
+                }}
+              >
+                {/* Paciente */}
+                <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
+                  <Avatar
+                    src={p.photoUrl ?? undefined}
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '11px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      color: '#fff',
+                      bgcolor: color,
+                      flexShrink: 0,
+                    }}
+                    variant="rounded"
+                  >
+                    {patientInitials(p.name)}
+                  </Avatar>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 700 }} noWrap title={p.name}>
+                      {p.name}
+                    </Typography>
+                    <Typography
+                      sx={{ display: { md: 'none' }, fontSize: '0.72rem', color: 'text.secondary' }}
+                      noWrap
+                    >
+                      {p.phone ? maskPhone(p.phone) : formatCpf(p.document)}
+                    </Typography>
+                  </Box>
+                </Stack>
+
+                {/* CPF */}
+                <Typography
+                  sx={{
+                    display: { xs: 'none', md: 'block' },
+                    fontSize: '0.8rem',
+                    color: 'text.secondary',
+                    fontWeight: 600,
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {formatCpf(p.document)}
+                </Typography>
+
+                {/* Telefone */}
+                <Typography
+                  sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.82rem', color: 'text.secondary', fontWeight: 600 }}
+                >
+                  {p.phone ? maskPhone(p.phone) : '—'}
+                </Typography>
+
+                {/* Última visita */}
+                <Typography
+                  sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.82rem', color: 'text.secondary', fontWeight: 600 }}
+                >
+                  {p.lastVisit ? dayjs(p.lastVisit).format('DD MMM YYYY') : '—'}
+                </Typography>
+
+                {/* Total gasto */}
+                <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.85rem', fontWeight: 800 }}>
+                  {p.totalSpent ? brl.format(p.totalSpent) : '—'}
+                </Typography>
+
+                {/* Agendamentos */}
+                <Typography
+                  sx={{
+                    display: { xs: 'none', md: 'block' },
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    color: 'text.secondary',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {p.appointmentsCount ?? 0}
+                </Typography>
+
+                {/* Score */}
+                <Box sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'flex-end' }}>
+                  <Box
+                    component="span"
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      px: 1.1,
+                      py: 0.5,
+                      borderRadius: '9px',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      color: tone.main,
+                      bgcolor: alpha(tone.main, 0.12),
+                    }}
+                  >
+                    <StarRoundedIcon sx={{ fontSize: 14 }} />
+                    {score}
+                  </Box>
+                </Box>
+
+                {/* Ações */}
+                <Stack
+                  direction="row"
+                  spacing={0.25}
+                  justifyContent="flex-end"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Tooltip title={p.phone ? 'WhatsApp' : 'Sem telefone'}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        disabled={!p.phone}
+                        onClick={() => setWhatsappPatient(p)}
+                        sx={{ color: '#25D366' }}
+                      >
+                        <WhatsAppIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  {canEdit && (
+                    <Tooltip title="Anamnese">
+                      <IconButton size="small" onClick={() => setAnamnesisPatientId(p.id)}>
+                        <AssignmentOutlinedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {canEdit && (
+                    <Tooltip title="Editar">
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setEditing(p);
+                          setFormOpen(true);
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {canDelete && (
+                    <Tooltip title="Excluir">
+                      <IconButton size="small" onClick={() => handleDelete(p)} sx={{ color: 'error.main' }}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Stack>
+              </Box>
+            );
+          })
+        )}
+
+        {/* Paginação */}
+        {!isLoading && patients.length > 0 && (
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            flexWrap="wrap"
+            spacing={1.5}
+            sx={{ px: 2.75, py: 1.75, borderTop: 1, borderColor: 'divider' }}
+          >
+            <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 600 }}>
+              {rangeStart}–{rangeEnd} de {patients.length}
+            </Typography>
+            <Stack direction="row" alignItems="center" spacing={0.75}>
+              <IconButton
+                size="small"
+                disabled={currentPage === 0}
+                onClick={() => setPage((v) => Math.max(0, v - 1))}
+                sx={{ border: 1, borderColor: 'divider', borderRadius: '9px' }}
+              >
+                <ChevronLeftIcon fontSize="small" />
+              </IconButton>
+              {pageItems.map((item, idx) =>
+                item === 'dots' ? (
+                  <Box
+                    key={`dots-${idx}`}
+                    sx={{
+                      minWidth: 24,
+                      textAlign: 'center',
+                      color: 'text.disabled',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    …
+                  </Box>
+                ) : (
+                  <Box
+                    key={item}
+                    component="button"
+                    onClick={() => setPage(item)}
+                    sx={{
+                      minWidth: 30,
+                      height: 30,
+                      px: 0.5,
+                      borderRadius: '9px',
+                      border: 1,
+                      borderColor: item === currentPage ? 'primary.main' : 'divider',
+                      bgcolor: item === currentPage ? 'primary.main' : 'background.paper',
+                      color: item === currentPage ? '#fff' : 'text.secondary',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      fontFamily: 'inherit',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {item + 1}
+                  </Box>
+                ),
+              )}
+              <IconButton
+                size="small"
+                disabled={currentPage >= pageCount - 1}
+                onClick={() => setPage((v) => Math.min(pageCount - 1, v + 1))}
+                sx={{ border: 1, borderColor: 'divider', borderRadius: '9px' }}
+              >
+                <ChevronRightIcon fontSize="small" />
+              </IconButton>
+            </Stack>
+          </Stack>
+        )}
       </Card>
 
-      <PatientFormDialog
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        patient={editing}
-      />
+      <PatientFormDialog open={formOpen} onClose={() => setFormOpen(false)} patient={editing} />
       <PatientDetailDrawer
         patientId={detailId}
         onClose={() => setDetailId(null)}

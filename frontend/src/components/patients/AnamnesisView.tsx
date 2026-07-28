@@ -148,75 +148,126 @@ export function AnamnesisView({ anamnesis }: AnamnesisViewProps) {
     return <EmptyBlock message="Nenhuma anamnese registrada." />;
   }
 
+  const imcVal = calcIMC(anamnesis!.peso, anamnesis!.altura);
+
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2.5}>
       {ANAMNESIS_SECTIONS.map((section) => {
-        const filledFields = section.fields.filter((field) => hasAnamnesisValue(anamnesis![field.key]));
-        if (filledFields.length === 0) return null;
-
-        const booleanFields = filledFields.filter((field) => field.type === 'boolean');
-        const textFields = filledFields.filter((field) => field.type !== 'boolean');
-
+        const infoFields = section.fields.filter((f) => f.type !== 'boolean');
+        const boolFields = section.fields.filter((f) => f.type === 'boolean');
         const isMedidas = section.title === 'Medidas corporais';
-        const imcVal = isMedidas ? calcIMC(anamnesis!.peso, anamnesis!.altura) : null;
-
         return (
-          <SectionCard
+          <Paper
             key={section.title}
-            title={section.title}
-            icon={SECTION_ICONS[section.title]}
+            variant="outlined"
+            sx={{
+              p: { xs: 1.75, sm: 2.25 },
+              borderRadius: '16px',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              boxShadow: '0 1px 2px rgba(16,40,37,0.03)',
+            }}
           >
-            <Stack spacing={2}>
-              {textFields.length > 0 && (
-                <Grid container spacing={2}>
-                  {textFields.map((field) => (
+            <Typography
+              sx={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: 'text.disabled',
+                mb: 1.75,
+              }}
+            >
+              {section.title}
+            </Typography>
+
+            {infoFields.length > 0 && (
+              <Grid container spacing={2}>
+                {infoFields.map((field) => {
+                  const filled = hasAnamnesisValue(anamnesis![field.key]);
+                  return (
                     <Grid item key={field.key} xs={12} sm={field.fullWidth ? 12 : 6}>
-                      <InfoRow
-                        label={field.label}
-                        value={formatAnamnesisValue(field.type, anamnesis![field.key], field)}
-                      />
+                      <Typography
+                        sx={{
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.04em',
+                          textTransform: 'uppercase',
+                          color: 'text.disabled',
+                          mb: 0.25,
+                        }}
+                      >
+                        {field.label}
+                      </Typography>
+                      <Typography
+                        sx={{
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          lineHeight: 1.45,
+                          whiteSpace: 'pre-wrap',
+                          color: filled ? 'text.primary' : 'text.disabled',
+                        }}
+                      >
+                        {filled ? formatAnamnesisValue(field.type, anamnesis![field.key], field) : '—'}
+                      </Typography>
                     </Grid>
-                  ))}
-                </Grid>
-              )}
+                  );
+                })}
+              </Grid>
+            )}
 
-              {booleanFields.length > 0 && (
-                <Grid container spacing={1.5}>
-                  {booleanFields.map((field) => (
-                    <Grid item key={field.key} xs={12} sm={6}>
-                      <BooleanRow label={field.label} value={!!anamnesis![field.key]} />
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
-
-              {isMedidas && imcVal != null && (
-                <Box
-                  sx={{
-                    px: 2,
-                    py: 1.5,
-                    borderRadius: 1.5,
-                    bgcolor: 'background.default',
-                    border: 1,
-                    borderColor: 'divider',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.5,
-                  }}
-                >
-                  <FitnessCenterOutlinedIcon sx={{ fontSize: 20, color: imcColor(imcVal) }} />
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      IMC calculado
-                    </Typography>
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ color: imcColor(imcVal) }}>
-                      {imcVal} — {imcClassificacao(imcVal)}
-                    </Typography>
-                  </Box>
+            {isMedidas && imcVal != null && (
+              <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: infoFields.length > 0 ? 1.5 : 0 }}>
+                IMC:{' '}
+                <Box component="span" sx={{ fontWeight: 800, color: imcColor(imcVal) }}>
+                  {imcVal} · {imcClassificacao(imcVal)}
                 </Box>
-              )}
-            </Stack>
-          </SectionCard>
+              </Typography>
+            )}
+
+            {boolFields.length > 0 && (
+              <Grid container spacing={1.5} sx={{ mt: infoFields.length > 0 ? 1.75 : 0 }}>
+                {boolFields.map((field) => {
+                  const yes = !!anamnesis![field.key];
+                  return (
+                    <Grid item key={field.key} xs={12} sm={6}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 1,
+                          px: 1.5,
+                          py: 1.1,
+                          borderRadius: '11px',
+                          border: 1,
+                          borderColor: 'divider',
+                          bgcolor: 'grey.50',
+                        }}
+                      >
+                        <Typography sx={{ fontSize: '0.82rem', fontWeight: 700 }}>{field.label}</Typography>
+                        <Box
+                          component="span"
+                          sx={{
+                            flexShrink: 0,
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            px: 1.1,
+                            py: 0.35,
+                            borderRadius: '8px',
+                            color: yes ? 'error.dark' : 'success.dark',
+                            bgcolor: (t) => alpha(yes ? t.palette.error.main : t.palette.success.main, 0.14),
+                          }}
+                        >
+                          {yes ? 'Sim' : 'Não'}
+                        </Box>
+                      </Box>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+            )}
+          </Paper>
         );
       })}
     </Stack>

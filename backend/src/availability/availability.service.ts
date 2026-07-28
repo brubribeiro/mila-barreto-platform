@@ -3,6 +3,7 @@ import { AppointmentStatus, Prisma } from '@prisma/client';
 import { IsDateString, IsInt, IsOptional, IsString, Matches, Max, Min } from 'class-validator';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { getBrazilWallClock } from '../common/utils/brazil-time.util';
 
 const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -138,15 +139,18 @@ export class AvailabilityService {
       where: { userId: professionalId },
     });
     if (wh.length > 0) {
-      const dayOfWeek = startAt.getDay();
+      // O expediente (startTime/endTime) é armazenado como horário de parede do Brasil,
+      // então o dia da semana e o HH:mm precisam ser extraídos no fuso America/Sao_Paulo,
+      // e não no fuso do servidor (que roda em UTC).
+      const startClock = getBrazilWallClock(startAt);
+      const endClock = getBrazilWallClock(endAt);
+      const dayOfWeek = startClock.dayOfWeek;
       const dayHours = wh.find((w) => w.dayOfWeek === dayOfWeek);
       if (!dayHours) {
         throw new BadRequestException('O profissional não atende neste dia da semana.');
       }
-      const hhmm = (d: Date) =>
-        `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-      const startHM = hhmm(startAt);
-      const endHM = hhmm(endAt);
+      const startHM = startClock.hhmm;
+      const endHM = endClock.hhmm;
       if (startHM < dayHours.startTime || endHM > dayHours.endTime) {
         throw new BadRequestException(
           `Horário fora do expediente do profissional (${dayHours.startTime}–${dayHours.endTime}).`,

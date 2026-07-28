@@ -6,6 +6,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Added
 
+- Pacientes: lista Aurora com cards de estatísticas (`GET /patients/stats`), score de confiabilidade, última visita, total gasto e paginação.
+- Ficha do paciente redesenhada (abas Geral, Agendamentos, Pacotes, Anamnese, Fotos).
+- Fotos **antes/depois** por paciente vinculadas a agendamento (`PatientPhoto`, upload R2 comprimido).
+- `AppointmentDialogProvider` para abrir modal de agendamento globalmente (Layout, ficha, drawer).
+- Componente compartilhado `LabeledField` (padrão Aurora).
+- Backend: `getBrazilWallClock` para validação de expediente em `America/Sao_Paulo`.
 - Agenda: badge **Sessão X/Y** em eventos vinculados a pacote; API retorna `sessionIndex` por agendamento.
 - Formulário de agendamento: resumo do paciente (popover), modal de sessões do pacote, agendamento em lote das sessões faltantes.
 - Conclusão de agendamento: campo **mês de referência** (`referenceMonth`) para competência financeira de atendimentos passados.
@@ -15,11 +21,19 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Changed
 
-- `AppointmentFormDialog`: redesign Aurora (seções, `LabeledField`, modais de pagamento e confirmação).
+- `Patients.tsx`: substitui DataGrid por lista customizada Aurora.
+- `PatientDetail.tsx`, `PatientDetailDrawer`, `PatientFormDialog`: alinhados ao visual Aurora.
+- `AnamnesisFormDialog` / `AnamnesisView`: seções em cards, campos com `LabeledField`.
+- `AppointmentFormDialog`: suporte a `defaultPatientId`; busca de profissionais só após init do form; redesign Aurora (seções, modais de pagamento e confirmação).
 - Agenda: skeleton de carregamento no calendário; remoção de scrollbar customizada local (usa tema global).
 - Dashboard: semana da agenda = 7 dias a partir do anchor (não mais segunda–domingo fixos).
 - `UpcomingExpensesCard`: skeleton no lugar de texto "Carregando...".
 - `DialogCloseButton`: bordas arredondadas, rodapé cinza claro, botão fechar estilizado.
+
+### Fixed
+
+- Disponibilidade: dia/hora do expediente extraídos no fuso do Brasil, não UTC do servidor.
+- Formulário de agendamento: elimina requisição extra de profissionais disponíveis ao abrir.
 
 ## [0.2.0] - 2026-07-15
 

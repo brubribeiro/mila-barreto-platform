@@ -47,6 +47,20 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Barras de rolagem finas e discretas em todo o painel (tema global).
 - Campos de formulário (`OutlinedInput`) com fundo levemente cinza e bordas arredondadas.
 
+**Pacientes**
+- Lista redesenhada no estilo Aurora: cards de resumo (**total**, **novos no mês**, **ativos**, **receita**), busca por nome/telefone/e-mail/CPF e paginação.
+- Cada linha exibe **score de confiabilidade**, **última visita**, **total gasto** e **nº de agendamentos**.
+- Ficha do paciente reorganizada com abas **Geral**, **Agendamentos**, **Pacotes**, **Anamnese** e **Fotos**.
+- Nova galeria **Fotos · antes e depois**, vinculada a um atendimento, com upload de par antes/depois (armazenamento comprimido).
+- Botão **Novo agendamento** na ficha abre a modal já com o paciente selecionado.
+- Modal de **anamnese** com visual Aurora alinhado ao restante do painel.
+
+### Correções
+
+**Agenda e disponibilidade**
+- Validação do expediente do profissional passa a usar horário de **Brasília**, evitando rejeição indevida de horários válidos.
+- Formulário de agendamento deixa de fazer consulta extra de profissionais disponíveis ao abrir com horário padrão.
+
 ### Onde ver a versão
 
 Menu lateral (rodapé) e tela de login exibem **v0.2.0**.

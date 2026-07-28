@@ -29,6 +29,10 @@ import CakeOutlinedIcon from '@mui/icons-material/CakeOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import WcOutlinedIcon from '@mui/icons-material/WcOutlined';
+import StarRoundedIcon from '@mui/icons-material/StarRounded';
+import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
+import AddIcon from '@mui/icons-material/Add';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
@@ -37,6 +41,9 @@ import { useNavigate } from 'react-router-dom';
 import { patientsApi } from '../../api/patients';
 import { packagesApi } from '../../api/packages';
 import { AnamnesisView, hasAnamnesisData } from './AnamnesisView';
+import { PatientPhotosGallery } from './PatientPhotosGallery';
+import { usePermissions } from '../../contexts/usePermissions';
+import { useAppointmentDialog } from '../../contexts/AppointmentDialogContext';
 import { dayjsFromDateOnlyApi, formatDateOnlyFromApi } from '../../utils/dateOnly';
 import { formatPatientAddressDisplay } from '../../utils/patientAddress';
 import { patientSexLabel } from '../../utils/patientSex';
@@ -85,7 +92,13 @@ const kindLabel: Record<AppointmentKind, string> = {
   RETURN: 'Retorno',
 };
 
-type ChartTab = 'notes' | 'general' | 'appointments' | 'packages' | 'anamnesis';
+type ChartTab = 'notes' | 'general' | 'appointments' | 'packages' | 'anamnesis' | 'fotos';
+
+function scoreTone(v: number) {
+  if (v >= 90) return { main: '#15998B', label: 'Excelente' };
+  if (v >= 75) return { main: '#C98A12', label: 'Bom' };
+  return { main: '#D65A5A', label: 'Atenção' };
+}
 
 interface PatientDetailDrawerProps {
   patientId: string | null;
@@ -137,8 +150,9 @@ function SectionCard({
       sx={{
         p: 2,
         borderColor: 'divider',
-        bgcolor: 'background.paper',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+        borderRadius: '14px',
+        bgcolor: 'grey.50',
+        boxShadow: 'none',
       }}
     >
       <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
@@ -162,6 +176,37 @@ function InfoRow({ label, value }: { label: string; value: ReactNode }) {
       <Typography variant="body2" fontWeight={500} sx={{ flex: 1, minWidth: 0 }}>
         {value}
       </Typography>
+    </Stack>
+  );
+}
+
+function InfoLine({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
+  if (value == null || value === '' || value === '—') return null;
+  return (
+    <Stack direction="row" spacing={1.25} alignItems="flex-start">
+      <Box
+        sx={{
+          width: 32,
+          height: 32,
+          borderRadius: '9px',
+          bgcolor: 'grey.100',
+          color: 'text.secondary',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </Box>
+      <Box sx={{ minWidth: 0, lineHeight: 1.3 }}>
+        <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', fontWeight: 600 }}>
+          {label}
+        </Typography>
+        <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+          {value}
+        </Typography>
+      </Box>
     </Stack>
   );
 }
@@ -214,10 +259,11 @@ function AppointmentNotesCard({
       variant="outlined"
       sx={{
         p: 2,
+        borderRadius: '14px',
         borderColor: highlighted ? 'primary.main' : 'divider',
         bgcolor: highlighted
           ? (theme) => alpha(theme.palette.primary.main, 0.05)
-          : 'background.paper',
+          : 'grey.50',
         borderLeft: '4px solid',
         borderLeftColor: accent,
       }}
@@ -268,57 +314,52 @@ function AppointmentNotesCard({
 }
 
 function AppointmentRowCard({ appt }: { appt: Appointment }) {
-  const accent = statusAccent[appt.status] ?? 'divider';
-  const hasNotes = !!(appt.notes?.trim() || appt.clinicalNotes?.trim());
+  const accent = statusAccent[appt.status] ?? 'primary.main';
+  const obs = appt.clinicalNotes?.trim() || appt.notes?.trim();
 
   return (
     <Paper
       variant="outlined"
-      sx={{
-        p: 1.75,
-        borderColor: 'divider',
-        borderLeft: '4px solid',
-        borderLeftColor: accent,
-      }}
+      sx={{ p: '16px 18px', borderRadius: '14px', bgcolor: 'grey.50', borderColor: 'divider' }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="body2" fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
-            {dayjs(appt.startAt).format('DD/MM/YYYY')}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" display="block">
-            {dayjs(appt.startAt).format('HH:mm')}
-            {appt.procedure?.name ? ` · ${appt.procedure.name}` : ''}
-          </Typography>
-          {appt.professional?.name && (
-            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
-              {appt.professional.name}
-            </Typography>
-          )}
-          {hasNotes && (
-            <Chip
-              size="small"
-              label={appt.clinicalNotes?.trim() ? 'Com anotações clínicas' : 'Com observações'}
-              sx={{ mt: 1, height: 22, fontSize: '0.7rem' }}
-              variant="outlined"
-            />
+      <Stack direction="row" spacing={1.5} alignItems="stretch">
+        <Box sx={{ width: 3, borderRadius: '3px', bgcolor: accent, flexShrink: 0, alignSelf: 'stretch' }} />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontSize: '0.9rem', fontWeight: 800 }} noWrap>
+                {appt.procedure?.name ?? kindLabel[appt.kind] ?? 'Atendimento'}
+              </Typography>
+              <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                {dayjs(appt.startAt).format('DD/MM/YYYY [às] HH:mm')}
+                {appt.professional?.name ? ` · ${appt.professional.name}` : ''}
+              </Typography>
+            </Box>
+            {appt.procedure?.price != null && (
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, flexShrink: 0 }}>
+                {brl.format(Number(appt.procedure.price))}
+              </Typography>
+            )}
+          </Stack>
+          {obs && (
+            <Box
+              sx={{
+                mt: 1.25,
+                pt: 1.25,
+                borderTop: 1,
+                borderColor: 'divider',
+                fontSize: '0.78rem',
+                color: 'text.secondary',
+                lineHeight: 1.5,
+              }}
+            >
+              <Box component="b" sx={{ color: 'text.disabled', fontSize: '0.66rem', letterSpacing: '0.3px' }}>
+                OBSERVAÇÃO:{' '}
+              </Box>
+              {obs}
+            </Box>
           )}
         </Box>
-        <Stack spacing={0.5} alignItems="flex-end">
-          <Chip size="small" label={kindLabel[appt.kind] ?? appt.kind} variant="outlined" />
-          <Chip
-            size="small"
-            label={statusLabel[appt.status] ?? appt.status}
-            color={
-              appt.status === 'COMPLETED'
-                ? 'success'
-                : appt.status === 'CANCELLED' || appt.status === 'NO_SHOW'
-                  ? 'error'
-                  : 'default'
-            }
-            variant={appt.status === 'COMPLETED' ? 'filled' : 'outlined'}
-          />
-        </Stack>
       </Stack>
     </Paper>
   );
@@ -344,7 +385,7 @@ function PackageCard({
   const progress = sessionsTotal > 0 ? Math.min(100, (sessionsUsed / sessionsTotal) * 100) : 0;
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, borderColor: 'divider' }}>
+    <Paper variant="outlined" sx={{ p: 2, borderRadius: '14px', bgcolor: 'grey.50', borderColor: 'divider' }}>
       <Stack spacing={1.5}>
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
           <Box sx={{ minWidth: 0 }}>
@@ -399,6 +440,9 @@ export function PatientDetailDrawer({
 }: PatientDetailDrawerProps) {
   const [tab, setTab] = useState<ChartTab>(defaultTab);
   const navigate = useNavigate();
+  const { has } = usePermissions();
+  const canEdit = has('patients:edit');
+  const { openAppointmentDialog } = useAppointmentDialog();
 
   const { data, isLoading } = useQuery({
     queryKey: ['patient', patientId],
@@ -465,7 +509,7 @@ export function PatientDetailDrawer({
           width: { xs: '100%', sm: 840 },
           display: 'flex',
           flexDirection: 'column',
-          bgcolor: 'background.default',
+          bgcolor: 'background.paper',
         },
       }}
     >
@@ -474,26 +518,22 @@ export function PatientDetailDrawer({
           flexShrink: 0,
           borderBottom: 1,
           borderColor: 'divider',
-          bgcolor: 'background.paper',
+          position: 'relative',
+          px: 3,
+          pt: 3,
+          pb: 2.5,
+          background: (theme) =>
+            `linear-gradient(150deg, ${alpha(theme.palette.primary.main, 0.12)}, transparent 70%)`,
         }}
       >
-        <Stack direction="row" justifyContent="flex-end" spacing={0.5} sx={{ px: 2, pt: 1.5 }}>
-          <Tooltip title="Expandir ficha">
-            <IconButton
-              onClick={() => {
-                handleClose();
-                navigate(`/pacientes/${patientId}`);
-              }}
-              aria-label="Expandir ficha"
-              size="small"
-            >
-              <OpenInFullIcon sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Tooltip>
-          <IconButton onClick={handleClose} aria-label="Fechar ficha" size="small">
-            <CloseIcon />
-          </IconButton>
-        </Stack>
+        <IconButton
+          onClick={handleClose}
+          aria-label="Fechar ficha"
+          size="small"
+          sx={{ position: 'absolute', top: 18, right: 18, width: 36, height: 36, borderRadius: '10px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
+        >
+          <CloseIcon sx={{ fontSize: 18 }} />
+        </IconButton>
 
         {isLoading && !data && (
           <Box display="flex" justifyContent="center" py={4}>
@@ -502,130 +542,131 @@ export function PatientDetailDrawer({
         )}
 
         {data && (
-          <Box sx={{ px: { xs: 2, sm: 3 }, pb: 2 }}>
-            <Stack direction="row" spacing={2} alignItems="flex-start">
+          <>
+            <Stack direction="row" spacing={2} alignItems="center" sx={{ pr: 6 }}>
               <Avatar
                 src={data.photoUrl ?? undefined}
                 alt={data.name}
+                variant="rounded"
                 sx={{
                   width: 64,
                   height: 64,
-                  fontSize: '1.25rem',
-                  fontWeight: 700,
-                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.14),
-                  color: 'primary.dark',
+                  borderRadius: '18px',
+                  fontSize: '1.35rem',
+                  fontWeight: 800,
+                  bgcolor: 'primary.main',
+                  color: '#fff',
+                  boxShadow: '0 8px 20px -6px rgba(16,40,37,.35)',
+                  flexShrink: 0,
                 }}
               >
                 {patientInitials(data.name)}
               </Avatar>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="h5" fontWeight={700} letterSpacing="-0.02em" noWrap>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  sx={{
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    color: 'primary.main',
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Ficha do paciente
+                </Typography>
+                <Typography sx={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em' }} noWrap>
                   {data.name}
                 </Typography>
-                <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mt: 0.75 }}>
-                  {ageLabel && (
-                    <Chip size="small" icon={<CakeOutlinedIcon />} label={ageLabel} variant="outlined" />
-                  )}
-                  {data.sex && (
-                    <Chip size="small" icon={<WcOutlinedIcon />} label={patientSexLabel(data.sex)} variant="outlined" />
-                  )}
-                  {reliability != null && (
-                    <Chip
-                      size="small"
-                      label={`Confiabilidade ${reliability.reliabilityPercent}%`}
-                      color={
-                        reliability.reliabilityPercent >= 80
-                          ? 'success'
-                          : reliability.reliabilityPercent >= 50
-                            ? 'warning'
-                            : 'error'
-                      }
-                      variant="outlined"
-                    />
-                  )}
-                </Stack>
-                <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap sx={{ mt: 1.25 }}>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
                   {data.phone && (
-                    <Stack direction="row" spacing={0.75} alignItems="center">
-                      <PhoneOutlinedIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                      <Typography variant="body2" color="text.secondary">
-                        {maskPhone(data.phone) || data.phone}
-                      </Typography>
-                    </Stack>
+                    <Typography variant="body2" color="text.secondary" noWrap>
+                      {maskPhone(data.phone) || data.phone}
+                    </Typography>
                   )}
-                  {data.email && (
-                    <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
-                      <EmailOutlinedIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                      <Typography variant="body2" color="text.secondary" noWrap>
-                        {data.email}
-                      </Typography>
-                    </Stack>
-                  )}
+                  {reliability != null &&
+                    (() => {
+                      const tone = scoreTone(reliability.reliabilityPercent);
+                      return (
+                        <Box
+                          component="span"
+                          sx={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            px: 1,
+                            py: 0.35,
+                            borderRadius: '9px',
+                            fontSize: '0.76rem',
+                            fontWeight: 800,
+                            color: tone.main,
+                            bgcolor: alpha(tone.main, 0.14),
+                          }}
+                        >
+                          <StarRoundedIcon sx={{ fontSize: 13 }} />
+                          {reliability.reliabilityPercent}
+                        </Box>
+                      );
+                    })()}
                 </Stack>
               </Box>
             </Stack>
 
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 2 }}>
-              <Paper
-                variant="outlined"
-                sx={{ px: 1.5, py: 1, minWidth: 100, flex: 1, borderColor: 'divider' }}
-              >
-                <Typography variant="h6" fontWeight={700}>
-                  {data.appointments?.length ?? 0}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Agendamentos
-                </Typography>
-              </Paper>
-              <Paper
-                variant="outlined"
-                sx={{ px: 1.5, py: 1, minWidth: 100, flex: 1, borderColor: 'divider' }}
-              >
-                <Typography variant="h6" fontWeight={700}>
-                  {upcomingAppointmentsCount}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Próximos
-                </Typography>
-              </Paper>
-              <Paper
-                variant="outlined"
-                sx={{ px: 1.5, py: 1, minWidth: 100, flex: 1, borderColor: 'divider' }}
-              >
-                <Typography variant="h6" fontWeight={700}>
-                  {activePackagesCount}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Pacotes ativos
-                </Typography>
-              </Paper>
-            </Stack>
-          </Box>
+            {/* Abas em pílulas segmentadas */}
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 0.75,
+                mt: 2.25,
+                p: 0.5,
+                borderRadius: '12px',
+                bgcolor: 'grey.100',
+              }}
+            >
+              {(
+                [
+                  { id: 'general', label: 'Resumo' },
+                  { id: 'anamnesis', label: 'Anamnese' },
+                  { id: 'appointments', label: 'Atendimentos' },
+                  { id: 'fotos', label: 'Fotos' },
+                ] as { id: ChartTab; label: string }[]
+              ).map((t) => {
+                const active = tab === t.id;
+                return (
+                  <Box
+                    key={t.id}
+                    component="button"
+                    type="button"
+                    onClick={() => setTab(t.id)}
+                    sx={{
+                      flex: 1,
+                      minWidth: 0,
+                      height: 38,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: 0,
+                      cursor: 'pointer',
+                      px: 1,
+                      borderRadius: '9px',
+                      fontFamily: 'inherit',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      color: active ? 'primary.main' : 'text.secondary',
+                      bgcolor: active ? 'background.paper' : 'transparent',
+                      boxShadow: active ? '0 1px 3px rgba(16,40,37,0.12)' : 'none',
+                      transition: 'all 0.12s',
+                    }}
+                  >
+                    {t.label}
+                  </Box>
+                );
+              })}
+            </Box>
+          </>
         )}
-
-        <Tabs
-          value={tab}
-          onChange={(_, value: ChartTab) => setTab(value)}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            px: { xs: 1, sm: 2 },
-            minHeight: 48,
-            bgcolor: 'background.paper',
-            '& .MuiTab-root': {
-              minHeight: 48,
-              textTransform: 'none',
-              fontWeight: 500,
-              fontSize: '0.875rem',
-            },
-          }}
-        >
-          <Tab value="general" label="Visão geral" icon={<PersonOutlineIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-          <Tab value="anamnesis" label="Anamnese" icon={<AssignmentOutlinedIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-          <Tab value="notes" label="Anotações" icon={<DescriptionOutlinedIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-          <Tab value="appointments" label="Agendamentos" icon={<EventNoteOutlinedIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-          <Tab value="packages" label="Pacotes" icon={<ViewInArIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-        </Tabs>
       </Box>
 
       <Box
@@ -634,7 +675,7 @@ export function PatientDetailDrawer({
           overflowY: 'auto',
           px: { xs: 2, sm: 3 },
           py: 2.5,
-          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.02),
+          bgcolor: 'background.paper',
         }}
       >
         {isLoading && (
@@ -645,53 +686,103 @@ export function PatientDetailDrawer({
 
         {data && tab === 'general' && (
           <Stack spacing={2}>
-            <SectionCard title="Contato" icon={<PhoneOutlinedIcon sx={{ fontSize: 18 }} />}>
-              <Stack divider={<Box sx={{ borderBottom: 1, borderColor: 'divider' }} />}>
-                <InfoRow label="Telefone" value={data.phone ? maskPhone(data.phone) || data.phone : null} />
-                <InfoRow label="E-mail" value={data.email} />
-              </Stack>
-              {!data.phone && !data.email && (
-                <Typography variant="body2" color="text.secondary">
-                  Nenhum contato cadastrado.
-                </Typography>
-              )}
-            </SectionCard>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
+              {[
+                { value: String(data.visits ?? 0), label: 'visitas', tone: 'text.primary' },
+                { value: brl.format(data.totalSpent ?? 0), label: 'total gasto', tone: 'primary.main' },
+                {
+                  value: data.lastVisit ? dayjs(data.lastVisit).format('DD MMM YYYY') : '—',
+                  label: 'última visita',
+                  tone: 'text.primary',
+                },
+              ].map((stat) => (
+                <Box
+                  key={stat.label}
+                  sx={{
+                    textAlign: 'center',
+                    p: 1.75,
+                    borderRadius: '14px',
+                    border: 1,
+                    borderColor: 'divider',
+                    bgcolor: 'grey.50',
+                  }}
+                >
+                  <Typography sx={{ fontSize: stat.label === 'última visita' ? '0.9rem' : '1.25rem', fontWeight: 800, color: stat.tone }}>
+                    {stat.value}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary', fontWeight: 600, mt: 0.25 }}>
+                    {stat.label}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
 
-            <SectionCard title="Dados pessoais" icon={<BadgeOutlinedIcon sx={{ fontSize: 18 }} />}>
-              <Stack divider={<Box sx={{ borderBottom: 1, borderColor: 'divider' }} />}>
-                {([
-                  { label: 'Nascimento', value: data.birthDate ? `${formatDateOnlyFromApi(data.birthDate)}${ageLabel ? ` (${ageLabel})` : ''}` : null },
-                  { label: 'Sexo', value: data.sex ? patientSexLabel(data.sex) : null },
-                  { label: 'Como conheceu', value: data.referralSource ? patientReferralSourceLabel(data.referralSource, data.referralSourceOther) : null },
-                  { label: 'CPF', value: data.document || null },
-                  { label: 'Cadastro', value: data.createdAt ? dayjs(data.createdAt).format('DD/MM/YYYY') : null },
-                ] as { label: string; value: ReactNode }[])
-                  .filter((r) => r.value != null && r.value !== '' && r.value !== '—')
-                  .map((r) => (
-                    <InfoRow key={r.label} label={r.label} value={r.value} />
-                  ))}
-              </Stack>
-            </SectionCard>
-
-            {(onlyDigits(data.cep ?? '').length === 8 || addressLine) && (
-              <SectionCard title="Endereço" icon={<LocationOnOutlinedIcon sx={{ fontSize: 18 }} />}>
-                <Stack divider={<Box sx={{ borderBottom: 1, borderColor: 'divider' }} />}>
-                  {onlyDigits(data.cep ?? '').length === 8 && (
-                    <InfoRow label="CEP" value={maskCEP(onlyDigits(data.cep ?? ''))} />
-                  )}
-                  <InfoRow label="Endereço" value={addressLine || null} />
-                </Stack>
-              </SectionCard>
-            )}
+            <Stack spacing={1.5}>
+              <InfoLine
+                icon={<BadgeOutlinedIcon sx={{ fontSize: 17 }} />}
+                label="CPF"
+                value={data.document || null}
+              />
+              <InfoLine
+                icon={<PhoneOutlinedIcon sx={{ fontSize: 17 }} />}
+                label="Telefone"
+                value={data.phone ? maskPhone(data.phone) || data.phone : null}
+              />
+              <InfoLine
+                icon={<EmailOutlinedIcon sx={{ fontSize: 17 }} />}
+                label="E-mail"
+                value={data.email || null}
+              />
+              <InfoLine
+                icon={<CakeOutlinedIcon sx={{ fontSize: 17 }} />}
+                label="Nascimento"
+                value={
+                  data.birthDate
+                    ? `${formatDateOnlyFromApi(data.birthDate)}${ageLabel ? ` (${ageLabel})` : ''}`
+                    : null
+                }
+              />
+              <InfoLine
+                icon={<WcOutlinedIcon sx={{ fontSize: 17 }} />}
+                label="Sexo"
+                value={data.sex ? patientSexLabel(data.sex) : null}
+              />
+              <InfoLine
+                icon={<PersonOutlineIcon sx={{ fontSize: 17 }} />}
+                label="Como conheceu"
+                value={
+                  data.referralSource
+                    ? patientReferralSourceLabel(data.referralSource, data.referralSourceOther)
+                    : null
+                }
+              />
+              <InfoLine
+                icon={<LocationOnOutlinedIcon sx={{ fontSize: 17 }} />}
+                label="Endereço"
+                value={addressLine || null}
+              />
+            </Stack>
 
             {data.notes?.trim() && (
-              <SectionCard title="Observações do cadastro" icon={<DescriptionOutlinedIcon sx={{ fontSize: 18 }} />}>
+              <Box
+                sx={{
+                  p: 1.75,
+                  borderRadius: '14px',
+                  border: 1,
+                  borderColor: 'divider',
+                  bgcolor: 'grey.50',
+                }}
+              >
+                <Typography
+                  sx={{ fontSize: '0.7rem', color: 'text.secondary', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', mb: 0.75 }}
+                >
+                  Observações
+                </Typography>
                 <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
                   {data.notes.trim()}
                 </Typography>
-              </SectionCard>
+              </Box>
             )}
-
           </Stack>
         )}
 
@@ -713,35 +804,6 @@ export function PatientDetailDrawer({
           </Stack>
         )}
 
-        {data && tab === 'notes' && (
-          <Stack spacing={2}>
-            {data.notes?.trim() && (
-              <SectionCard title="Cadastro" icon={<DescriptionOutlinedIcon sx={{ fontSize: 18 }} />}>
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                  {data.notes.trim()}
-                </Typography>
-              </SectionCard>
-            )}
-
-            {appointmentsWithNotes.length > 0 ? (
-              <Stack spacing={1.5}>
-                <Typography variant="subtitle2" fontWeight={700}>
-                  Histórico clínico ({appointmentsWithNotes.length})
-                </Typography>
-                {appointmentsWithNotes.map((appt) => (
-                  <AppointmentNotesCard
-                    key={appt.id}
-                    appt={appt}
-                    highlighted={highlightAppointmentId === appt.id}
-                  />
-                ))}
-              </Stack>
-            ) : (
-              !data.notes?.trim() && <EmptyBlock message="Nenhuma anotação registrada para esta paciente." />
-            )}
-          </Stack>
-        )}
-
         {data && tab === 'appointments' && (
           <Stack spacing={1.5}>
             {data.appointments && data.appointments.length > 0 ? (
@@ -752,27 +814,87 @@ export function PatientDetailDrawer({
           </Stack>
         )}
 
-        {data && tab === 'packages' && (
-          <Stack spacing={1.5}>
-            {patientPackages.length > 0 ? (
-              patientPackages.map((pp) => (
-                <PackageCard
-                  key={pp.id}
-                  name={pp.package?.name ?? 'Pacote'}
-                  status={pp.status}
-                  sessionsUsed={pp.sessionsUsed}
-                  sessionsTotal={pp.sessionsTotal}
-                  totalPaid={Number(pp.totalPaid)}
-                  expiresAt={pp.expiresAt}
-                  notes={pp.notes}
-                />
-              ))
-            ) : (
-              <EmptyBlock message="Nenhum pacote vinculado." />
-            )}
-          </Stack>
+        {data && tab === 'fotos' && (
+          <PatientPhotosGallery
+            patientId={data.id}
+            canEdit={canEdit}
+            readOnly
+            showTitle={false}
+            onAddClick={() => {
+              handleClose();
+              navigate(`/pacientes/${data.id}?tab=fotos`);
+            }}
+          />
         )}
+
       </Box>
+
+      {data && (
+        <Stack
+          direction="row"
+          spacing={1.25}
+          sx={{
+            flexShrink: 0,
+            px: 3,
+            py: 2,
+            borderTop: 1,
+            borderColor: 'divider',
+            bgcolor: 'grey.50',
+          }}
+        >
+          <Button
+            variant="outlined"
+            startIcon={<OpenInFullIcon sx={{ fontSize: 17 }} />}
+            onClick={() => {
+              handleClose();
+              navigate(`/pacientes/${patientId}`);
+            }}
+            sx={{
+              flex: 1,
+              height: 44,
+              borderRadius: '12px',
+              bgcolor: (t) => alpha(t.palette.primary.main, 0.1),
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              fontWeight: 700,
+              '&:hover': { bgcolor: (t) => alpha(t.palette.primary.main, 0.16), borderColor: 'primary.main' },
+            }}
+          >
+            Ficha completa
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon sx={{ fontSize: 18 }} />}
+            onClick={() => {
+              handleClose();
+              openAppointmentDialog({ patientId: patientId ?? undefined });
+            }}
+            sx={{ height: 44, px: 2.25, borderRadius: '12px', fontWeight: 700, boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+          >
+            Agendar
+          </Button>
+          {data.phone && (
+            <Tooltip title="WhatsApp">
+              <IconButton
+                onClick={() =>
+                  window.open(`https://wa.me/55${onlyDigits(data.phone ?? '')}`, '_blank', 'noopener')
+                }
+                sx={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '12px',
+                  border: 1,
+                  borderColor: 'divider',
+                  bgcolor: 'background.paper',
+                  color: '#1DAE53',
+                }}
+              >
+                <WhatsAppIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
+      )}
     </Drawer>
   );
 }

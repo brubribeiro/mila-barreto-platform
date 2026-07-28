@@ -90,6 +90,7 @@ export function Appointments() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [defaultStart, setDefaultStart] = useState<Date | null>(null);
+  const [defaultPatientId, setDefaultPatientId] = useState<string | null>(null);
   const [filterProfessionalIds, setFilterProfessionalIds] = useState<string[]>([]);
 
   const [range, setRange] = useState<{ from: string; to: string }>(() => {
@@ -207,9 +208,10 @@ export function Appointments() {
     [holidayEvents, unavailabilityEvents, appointmentEvents],
   );
 
-  const openNew = (start: Date | null = null) => {
+  const openNew = (start: Date | null = null, patientId: string | null = null) => {
     setEditing(null);
     setDefaultStart(start);
+    setDefaultPatientId(patientId);
     setFormOpen(true);
   };
 
@@ -217,9 +219,10 @@ export function Appointments() {
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     if (searchParams.get('novo') === '1' && canCreate) {
-      openNew();
+      openNew(null, searchParams.get('paciente'));
       const next = new URLSearchParams(searchParams);
       next.delete('novo');
+      next.delete('paciente');
       setSearchParams(next, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1069,9 +1072,11 @@ export function Appointments() {
         onClose={() => {
           setFormOpen(false);
           setDefaultStart(null);
+          setDefaultPatientId(null);
         }}
         appointment={editing}
         defaultStart={defaultStart}
+        defaultPatientId={defaultPatientId}
       />
       <AuditHistoryDialog
         open={historyOpen}

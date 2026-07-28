@@ -70,6 +70,40 @@ export interface Patient {
   photoUrl?: string | null;
   anamnesis?: Record<string, any> | null;
   createdAt: string;
+  /** Agregações retornadas na listagem */
+  lastVisit?: string | null;
+  totalSpent?: number;
+  reliabilityPercent?: number;
+  appointmentsCount?: number;
+}
+
+export interface PatientStats {
+  total: number;
+  active90: number;
+  newThisMonth: number;
+  averageTicket: number;
+}
+
+export type PatientPhotoPhase = 'BEFORE' | 'AFTER';
+
+export interface PatientPhoto {
+  id: string;
+  patientId: string;
+  appointmentId: string;
+  phase: PatientPhotoPhase;
+  label?: string | null;
+  pairId?: string | null;
+  takenAt: string;
+  url?: string | null;
+  mimeType?: string | null;
+  size?: number | null;
+  createdAt: string;
+  appointment?: {
+    id: string;
+    startAt: string;
+    kind?: AppointmentKind;
+    procedure?: { name: string } | null;
+  } | null;
 }
 
 export interface Procedure {
@@ -136,6 +170,13 @@ export interface Appointment {
   patientPackage?: PatientPackage;
   /** Número da sessão (1-based) deste agendamento dentro do pacote. */
   sessionIndex?: number | null;
+  /** Receitas (INCOME) vinculadas — para exibir forma/valor pago. */
+  financialEntries?: {
+    id: string;
+    amount: number | string;
+    netAmount?: number | string | null;
+    paymentMethod?: { name: string } | null;
+  }[];
   extraMaterials?: AppointmentMaterial[];
   startedAt?: string | null;
   finishedAt?: string | null;

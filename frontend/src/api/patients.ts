@@ -1,5 +1,13 @@
 import { api } from './client';
-import type { Patient, Appointment, PatientSex, PatientReferralSource } from '../types';
+import type {
+  Patient,
+  Appointment,
+  PatientSex,
+  PatientReferralSource,
+  PatientStats,
+  PatientPhoto,
+  PatientPhotoPhase,
+} from '../types';
 
 export interface PatientPayload {
   name: string;
@@ -27,11 +35,18 @@ export interface PatientPayload {
 
 export type PatientWithHistory = Patient & {
   appointments: Appointment[];
+  visits?: number;
+  lastVisit?: string | null;
+  totalSpent?: number;
 };
 
 export const patientsApi = {
   list: async (search?: string): Promise<Patient[]> => {
     const { data } = await api.get<Patient[]>('/patients', { params: { search } });
+    return data;
+  },
+  stats: async (): Promise<PatientStats> => {
+    const { data } = await api.get<PatientStats>('/patients/stats');
     return data;
   },
   findOne: async (id: string): Promise<PatientWithHistory> => {
@@ -75,6 +90,31 @@ export const patientsApi = {
   getReliability: async (id: string): Promise<PatientReliability> => {
     const { data } = await api.get<PatientReliability>(`/patients/${id}/reliability`);
     return data;
+  },
+
+  listPhotos: async (id: string): Promise<PatientPhoto[]> => {
+    const { data } = await api.get<PatientPhoto[]>(`/patients/${id}/photos`);
+    return data;
+  },
+  addPhoto: async (
+    id: string,
+    file: File,
+    meta: { appointmentId: string; phase: PatientPhotoPhase; label?: string; pairId?: string; takenAt?: string },
+  ): Promise<PatientPhoto> => {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('appointmentId', meta.appointmentId);
+    fd.append('phase', meta.phase);
+    if (meta.label) fd.append('label', meta.label);
+    if (meta.pairId) fd.append('pairId', meta.pairId);
+    if (meta.takenAt) fd.append('takenAt', meta.takenAt);
+    const { data } = await api.post<PatientPhoto>(`/patients/${id}/photos`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+  removePhoto2: async (id: string, photoId: string): Promise<void> => {
+    await api.delete(`/patients/${id}/photos/${photoId}`);
   },
 };
 

@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, PatientPhotoPhase } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
@@ -7,6 +7,7 @@ import { UpdatePatientDto } from './dto/update-patient.dto';
 import { composePatientAddress } from './patient-address.util';
 import { NotificationsService } from '../notifications/notifications.service';
 import { R2StorageService } from '../documents/r2-storage.service';
+import { CompressionService } from '../documents/compression.service';
 import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 
 const PATIENT_PHOTO_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -28,6 +29,7 @@ export class PatientsService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly r2: R2StorageService,
+    private readonly compression: CompressionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -39,12 +41,113 @@ export class PatientsService {
               { name: { contains: search, mode: 'insensitive' } },
               { email: { contains: search, mode: 'insensitive' } },
               { phone: { contains: search } },
+              { document: { contains: search } },
             ],
           }
         : undefined,
       orderBy: { name: 'asc' },
     });
-    return this.withPhotoAccessUrls(patients);
+
+    const ids = patients.map((p) => p.id);
+
+    // Agregações por paciente: última visita, total gasto, score e nº de agendamentos
+    const [lastVisits, spentByPatient, statusCounts, apptCounts] = ids.length
+      ? await Promise.all([
+          this.prisma.appointment.groupBy({
+            by: ['patientId'],
+            where: { patientId: { in: ids }, status: 'COMPLETED' },
+            _max: { startAt: true },
+          }),
+          this.prisma.financialEntry.groupBy({
+            by: ['patientId'],
+            where: { patientId: { in: ids }, type: 'INCOME' },
+            _sum: { amount: true },
+          }),
+          this.prisma.appointment.groupBy({
+            by: ['patientId', 'status'],
+            where: { patientId: { in: ids } },
+            _count: { id: true },
+          }),
+          this.prisma.appointment.groupBy({
+            by: ['patientId'],
+            where: { patientId: { in: ids } },
+            _count: { id: true },
+          }),
+        ])
+      : [[], [], [], []];
+
+    const apptCountMap = new Map<string, number>();
+    for (const row of apptCounts) apptCountMap.set(row.patientId, row._count.id);
+
+    const lastVisitMap = new Map<string, Date | null>();
+    for (const row of lastVisits) lastVisitMap.set(row.patientId, row._max.startAt ?? null);
+
+    const spentMap = new Map<string, number>();
+    for (const row of spentByPatient) {
+      if (row.patientId) spentMap.set(row.patientId, Number(row._sum.amount ?? 0));
+    }
+
+    // Confiabilidade: completed / (completed + cancelled + no_show)
+    const relAcc = new Map<string, { completed: number; resolved: number }>();
+    for (const row of statusCounts) {
+      const acc = relAcc.get(row.patientId) ?? { completed: 0, resolved: 0 };
+      const n = row._count.id;
+      if (row.status === 'COMPLETED') {
+        acc.completed += n;
+        acc.resolved += n;
+      } else if (row.status === 'CANCELLED' || row.status === 'NO_SHOW') {
+        acc.resolved += n;
+      }
+      relAcc.set(row.patientId, acc);
+    }
+
+    const withStats = patients.map((p) => {
+      const rel = relAcc.get(p.id);
+      const reliabilityPercent = rel && rel.resolved > 0
+        ? Math.round((rel.completed / rel.resolved) * 100)
+        : 100;
+      return {
+        ...p,
+        lastVisit: lastVisitMap.get(p.id) ?? null,
+        totalSpent: spentMap.get(p.id) ?? 0,
+        reliabilityPercent,
+        appointmentsCount: apptCountMap.get(p.id) ?? 0,
+      };
+    });
+
+    return this.withPhotoAccessUrls(withStats);
+  }
+
+  /** Estatísticas agregadas para os cards da tela de pacientes. */
+  async stats() {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+
+    const [total, newThisMonth, activeRows, income] = await Promise.all([
+      this.prisma.patient.count(),
+      this.prisma.patient.count({ where: { createdAt: { gte: monthStart } } }),
+      this.prisma.appointment.groupBy({
+        by: ['patientId'],
+        where: { status: 'COMPLETED', startAt: { gte: ninetyDaysAgo } },
+      }),
+      this.prisma.financialEntry.aggregate({
+        where: { type: 'INCOME' },
+        _sum: { amount: true },
+        _count: { id: true },
+      }),
+    ]);
+
+    const incomeSum = Number(income._sum.amount ?? 0);
+    const incomeCount = income._count.id ?? 0;
+    const averageTicket = incomeCount > 0 ? incomeSum / incomeCount : 0;
+
+    return {
+      total,
+      active90: activeRows.length,
+      newThisMonth,
+      averageTicket,
+    };
   }
 
   async findOne(id: string) {
@@ -54,14 +157,37 @@ export class PatientsService {
         appointments: {
           orderBy: { startAt: 'desc' },
           include: {
-            procedure: { select: { id: true, name: true } },
+            procedure: { select: { id: true, name: true, price: true } },
             professional: { select: { id: true, name: true } },
+            financialEntries: {
+              where: { type: 'INCOME' },
+              select: {
+                id: true,
+                amount: true,
+                netAmount: true,
+                paymentMethod: { select: { name: true } },
+              },
+            },
           },
         },
       },
     });
     if (!patient) throw new NotFoundException('Paciente não encontrado');
-    return this.withPhotoAccessUrl(patient);
+
+    // Agregações do resumo: visitas, última visita e total gasto
+    const completed = patient.appointments.filter((a) => a.status === 'COMPLETED');
+    const visits = completed.length;
+    const lastVisit = completed.length
+      ? completed.reduce((max, a) => (a.startAt > max ? a.startAt : max), completed[0].startAt)
+      : null;
+    const spent = await this.prisma.financialEntry.aggregate({
+      where: { patientId: id, type: 'INCOME' },
+      _sum: { amount: true },
+    });
+    const totalSpent = Number(spent._sum.amount ?? 0);
+
+    const withUrl = await this.withPhotoAccessUrl(patient);
+    return { ...withUrl, visits, lastVisit, totalSpent };
   }
 
   /** URL temporária assinada para foto privada no R2. */
@@ -369,6 +495,93 @@ export class PatientsService {
       .logUpdate('Patient', id, oldPatient as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user)
       .catch(() => undefined);
     return this.withPhotoAccessUrl(updated);
+  }
+
+  // ─── Fotos "antes e depois" ───
+
+  async listPhotos(patientId: string) {
+    const photos = await this.prisma.patientPhoto.findMany({
+      where: { patientId },
+      orderBy: [{ takenAt: 'desc' }, { createdAt: 'desc' }],
+      include: {
+        appointment: {
+          select: { id: true, startAt: true, kind: true, procedure: { select: { name: true } } },
+        },
+      },
+    });
+    if (!this.r2.isConfigured) {
+      return photos.map((p) => ({ ...p, url: null as string | null }));
+    }
+    return Promise.all(
+      photos.map(async (p) => {
+        try {
+          const url = await this.r2.getPresignedUrl(p.storageKey, PATIENT_PHOTO_URL_TTL_SECONDS);
+          return { ...p, url };
+        } catch {
+          return { ...p, url: null as string | null };
+        }
+      }),
+    );
+  }
+
+  async addPhoto(
+    patientId: string,
+    file: Express.Multer.File,
+    dto: { appointmentId: string; phase: PatientPhotoPhase; label?: string; pairId?: string; takenAt?: string },
+    user?: AuditUser,
+  ) {
+    if (!this.r2.isConfigured) {
+      throw new BadRequestException('Cloudflare R2 não está configurado. Não é possível enviar a foto.');
+    }
+    if (!PATIENT_PHOTO_MIMES.has(file.mimetype)) {
+      throw new BadRequestException('Use uma imagem JPEG, PNG ou WebP.');
+    }
+    const patient = await this.prisma.patient.findUnique({ where: { id: patientId } });
+    if (!patient) throw new NotFoundException('Paciente não encontrado');
+
+    const appointment = await this.prisma.appointment.findFirst({
+      where: { id: dto.appointmentId, patientId },
+    });
+    if (!appointment) throw new NotFoundException('Agendamento não encontrado para este paciente');
+
+    const compressed = await this.compression.compress(file.buffer, file.mimetype);
+    const { key } = await this.r2.upload(
+      `${dto.phase.toLowerCase()}.jpg`,
+      compressed.mimeType,
+      compressed.buffer,
+      `pacientes/${patientId}/fotos`,
+    );
+
+    const created = await this.prisma.patientPhoto.create({
+      data: {
+        patientId,
+        appointmentId: dto.appointmentId,
+        phase: dto.phase,
+        label: dto.label?.trim() || null,
+        pairId: dto.pairId || null,
+        takenAt: dto.takenAt ? new Date(dto.takenAt) : appointment.startAt,
+        storageKey: key,
+        mimeType: compressed.mimeType,
+        size: compressed.compressedSize,
+      },
+    });
+    this.auditLog
+      .logCreate('PatientPhoto', created.id, created as unknown as Record<string, unknown>, user)
+      .catch(() => undefined);
+
+    const url = await this.r2.getPresignedUrl(key, PATIENT_PHOTO_URL_TTL_SECONDS).catch(() => null);
+    return { ...created, url };
+  }
+
+  async removePhotoEntry(patientId: string, photoId: string, user?: AuditUser) {
+    const photo = await this.prisma.patientPhoto.findFirst({ where: { id: photoId, patientId } });
+    if (!photo) throw new NotFoundException('Foto não encontrada');
+    if (photo.storageKey) await this.r2.remove(photo.storageKey).catch(() => undefined);
+    await this.prisma.patientPhoto.delete({ where: { id: photoId } });
+    this.auditLog
+      .logDelete('PatientPhoto', photoId, photo as unknown as Record<string, unknown>, user)
+      .catch(() => undefined);
+    return { ok: true };
   }
 
   async remove(id: string, user?: AuditUser) {
