@@ -673,9 +673,6 @@ export function AppointmentFormDialog({
     ((scheduleSlotBlocked && timeOrProfessionalChanged) ||
       (requiresValidProvider && !!selectedProfessionalId && !selectedPerformsAppointments));
 
-  const selectedDate = watch('date');
-  const selectedStartTime = watch('startTime');
-
   const isRetroactiveSlot = useMemo(() => {
     if (!selectedDate || !selectedStartTime) return false;
     return dayjs(`${selectedDate}T${selectedStartTime}`).isBefore(dayjs());
