@@ -4,6 +4,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-07-30
+
+### Fixed
+
+- Build do backend: correção de tipagem em `isAdminUser` (`AuditUser` não possui `roleName`).
+
 ## [0.1.10] - 2026-07-30
 
 ### Fixed

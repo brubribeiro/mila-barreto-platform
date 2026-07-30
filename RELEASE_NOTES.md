@@ -4,6 +4,18 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ---
 
+## v0.1.11 — 30 jul 2026
+
+### Correções
+
+- Corrigido erro de build na publicação da versão anterior (tipagem do backend).
+
+### Onde ver a versão
+
+Menu lateral (rodapé) e tela de login exibem **v0.1.11**.
+
+---
+
 ## v0.1.10 — 30 jul 2026
 
 ### Correções

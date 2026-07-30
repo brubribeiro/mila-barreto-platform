@@ -45,7 +45,8 @@ function isAdminUser(
 ) {
   if (!user) return false;
   if ('impersonatorId' in user && user.impersonatorId) return true;
-  return user.roleName?.trim() === SYSTEM_ADMIN_ROLE_NAME;
+  if ('roleName' in user && user.roleName?.trim() === SYSTEM_ADMIN_ROLE_NAME) return true;
+  return false;
 }
 
 /** Admin registrando atendimento passado: regras flexíveis (estoque, expediente, recorrência). */
