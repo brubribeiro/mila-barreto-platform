@@ -195,6 +195,7 @@ export interface Appointment {
 }
 
 export type PackageType = 'COMBO' | 'SESSIONS';
+export type PackageHighlight = 'BEST_SELLER' | 'RECURRING';
 export type PatientPackageStatus = 'ACTIVE' | 'COMPLETED' | 'EXPIRED' | 'CANCELLED';
 
 export interface PackageItem {
@@ -216,9 +217,22 @@ export interface Package {
   validityDays?: number | null;
   sessionCount: number;
   active: boolean;
+  /** Destaque manual: 'BEST_SELLER' | 'RECURRING' | null */
+  highlight?: PackageHighlight | null;
   items: PackageItem[];
   _count?: { patientPackages: number };
   createdAt?: string;
+  /** Agregações retornadas na listagem */
+  originalPrice?: number;
+  salePrice?: number;
+  savingsPercent?: number;
+  activePatientsCount?: number;
+  bestSeller?: boolean;
+}
+
+export interface PackageStats {
+  activePackages: number;
+  patientsWithPackage: number;
 }
 
 export interface PatientPackage {

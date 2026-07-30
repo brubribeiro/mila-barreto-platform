@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Package, PatientPackage } from '../types';
+import type { Package, PackageStats, PatientPackage } from '../types';
 
 export interface PackageItemInput {
   procedureId: string;
@@ -15,6 +15,7 @@ export interface PackagePayload {
   discountPercent?: number | null;
   validityDays?: number | null;
   active?: boolean;
+  highlight?: string | null;
   items: PackageItemInput[];
 }
 
@@ -29,6 +30,10 @@ export interface PatientPackagePayload {
 export const packagesApi = {
   list: async (): Promise<Package[]> => {
     const { data } = await api.get<Package[]>('/packages');
+    return data;
+  },
+  getStats: async (): Promise<PackageStats> => {
+    const { data } = await api.get<PackageStats>('/packages/stats/summary');
     return data;
   },
   findOne: async (id: string): Promise<Package> => {

@@ -66,6 +66,12 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 **Barra superior**
 - Sino de notificações reposicionado; botão **Novo agendamento** com estilo outlined.
 
+**Pacotes**
+- Tela redesenhada no estilo Aurora: cards de resumo (**pacotes ativos**, **pacientes com pacote**) e grade de cards por pacote.
+- Cada card exibe **preço original**, **preço de venda**, **economia (%)**, **sessões** e **pacientes ativos**.
+- Destaque automático **Mais vendido** e badges manuais (**Mais vendido**, **Recorrente**) configuráveis no cadastro.
+- Busca por nome, descrição ou procedimentos inclusos; modal de cadastro reorganizada em seções.
+
 ### Correções
 
 **Agenda e disponibilidade**

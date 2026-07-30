@@ -114,7 +114,7 @@ const PAGE_META: (PageMeta & { path: string; exact?: boolean })[] = [
   { path: '/pacientes', title: 'Pacientes', subtitle: 'Cadastro e histórico dos pacientes' },
   { path: '/horarios', title: 'Horários', subtitle: 'Disponibilidade da equipe' },
   { path: '/procedimentos', title: 'Procedimentos', subtitle: 'Catálogo de procedimentos' },
-  { path: '/pacotes', title: 'Pacotes', subtitle: 'Pacotes de procedimentos' },
+  { path: '/pacotes', title: 'Pacotes', subtitle: 'Combos de procedimentos e sessões' },
   { path: '/promocoes', title: 'Promoções', subtitle: 'Descontos e campanhas' },
   { path: '/financeiro', title: 'Financeiro', subtitle: 'Receitas e despesas' },
   { path: '/despesas-recorrentes', title: 'Despesas recorrentes', subtitle: 'Custos fixos e periódicos' },

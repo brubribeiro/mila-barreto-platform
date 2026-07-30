@@ -21,6 +21,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Procedimentos: campo **categoria**, flag **applicationMap**, vínculo `ProcedureEquipment` com custo por uso; migrations Prisma.
 - Procedimentos: lista Aurora com filtro por categoria, paginação e colunas financeiras (margem, custos).
 - Componente compartilhado `FormSection` para seções de modais.
+- Pacotes: campo **highlight** (Mais vendido / Recorrente), `GET /packages/stats/summary`, agregações na listagem (preço, economia, pacientes ativos).
 
 ### Changed
 
@@ -36,6 +37,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Modais de cadastro: adotam `FormSection` (paciente, financeiro, estoque, pacotes, profissionais, roles, etc.).
 - `Layout`: botão **Novo agendamento** outlined; sino de notificações reposicionado.
 - Dashboard: scroll na lista de aniversariantes; botão WhatsApp desabilitado sem telefone.
+- `Packages.tsx`: substitui DataGrid por cards Aurora; `PackageFormDialog` reorganizada.
 
 ### Fixed
 

@@ -73,6 +73,12 @@ export class PackagesController {
   }
 
   @RequirePermissions('packages:view')
+  @Get('stats/summary')
+  stats() {
+    return this.packages.stats();
+  }
+
+  @RequirePermissions('packages:view')
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.packages.findOne(id);

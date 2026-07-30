@@ -1,16 +1,26 @@
 import { useMemo, useState } from 'react';
-import { Box, Button, Card, Chip, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
-import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
+import {
+  Box,
+  Button,
+  Card,
+  Chip,
+  Divider,
+  IconButton,
+  InputBase,
+  Skeleton,
+  Stack,
+  Tooltip,
+  Typography,
+  alpha,
+} from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import HistoryIcon from '@mui/icons-material/History';
+import SearchIcon from '@mui/icons-material/Search';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { PageHeader } from '../components/PageHeader';
-import { ListFiltersBar, ActiveFilterSelect } from '../components/ListFiltersBar';
-import { AppDataGrid } from '../components/AppDataGrid';
-import { FILTER_FIELD_SX, matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
 import { packagesApi } from '../api/packages';
 import { PackageFormDialog } from '../components/packages/PackageFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
@@ -21,6 +31,13 @@ import { usePermissions } from '../contexts/usePermissions';
 import type { Package } from '../types';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const ICON_COLORS = ['#15998B', '#E0915B', '#5BA8DE', '#D46B8A', '#9B7BD4', '#4FB3A8'];
+
+function colorFor(text: string) {
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  return ICON_COLORS[Math.abs(hash) % ICON_COLORS.length];
+}
 
 export function Packages() {
   const queryClient = useQueryClient();
@@ -28,9 +45,9 @@ export function Packages() {
   const toast = useAppToast();
   const { has, isAdmin } = usePermissions();
   const canManage = has('packages:edit');
+  const canCreate = has('packages:create');
+
   const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
-  const [typeFilter, setTypeFilter] = useState<'ALL' | 'COMBO' | 'SESSIONS'>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Package | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -40,239 +57,346 @@ export function Packages() {
     queryFn: () => packagesApi.list(),
   });
 
+  const { data: stats } = useQuery({
+    queryKey: ['packages', 'stats'],
+    queryFn: () => packagesApi.getStats(),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => packagesApi.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['packages'] });
       toast.success('Pacote excluído.');
     },
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o pacote.'));
-    },
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Não foi possível excluir o pacote.')),
   });
 
-  const filteredPackages = useMemo(
-    () =>
-      packages.filter((p) => {
-        if (!matchesActiveFilter(p.active, activeFilter)) return false;
-        if (typeFilter !== 'ALL' && p.type !== typeFilter) return false;
-        return matchFields(search, p.name, p.description);
-      }),
-    [packages, search, activeFilter, typeFilter],
-  );
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return packages;
+    return packages.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.description ?? '').toLowerCase().includes(q) ||
+        p.items?.some((it) => it.procedure?.name.toLowerCase().includes(q)),
+    );
+  }, [packages, search]);
 
-  const columns = useMemo<GridColDef<Package>[]>(
-    () => [
-      { field: 'name', headerName: 'Nome', flex: 1.2, minWidth: 200 },
-      {
-        field: 'type',
-        headerName: 'Tipo',
-        flex: 0.5,
-        minWidth: 110,
-        renderCell: (params) => (
-          <Chip
-            size="small"
-            label={params.value === 'COMBO' ? 'Combo' : 'Sessões'}
-            color={params.value === 'COMBO' ? 'secondary' : 'primary'}
-            variant="outlined"
-          />
-        ),
-      },
-      {
-        field: 'sessionCount',
-        headerName: 'Sessões',
-        flex: 0.4,
-        minWidth: 90,
-        align: 'center',
-        headerAlign: 'center',
-      },
-      {
-        field: 'totalPrice',
-        headerName: 'Preço fixo',
-        flex: 0.6,
-        minWidth: 120,
-        valueFormatter: (params) =>
-          params.value ? brl.format(Number(params.value)) : '—',
-      },
-      {
-        field: 'discountPercent',
-        headerName: 'Desconto',
-        flex: 0.5,
-        minWidth: 100,
-        valueFormatter: (params) =>
-          params.value ? `${Number(params.value)}%` : '—',
-      },
-      {
-        field: 'validityDays',
-        headerName: 'Validade',
-        flex: 0.5,
-        minWidth: 110,
-        valueFormatter: (params) =>
-          params.value ? `${params.value} dias` : 'Sem validade',
-      },
-      {
-        field: 'items',
-        headerName: 'Procedimentos',
-        flex: 0.6,
-        minWidth: 130,
-        renderCell: (params) => {
-          const count = params.row.items?.length ?? 0;
-          return (
-            <Chip
-              size="small"
-              label={`${count} ${count === 1 ? 'proc.' : 'procs.'}`}
-              variant="outlined"
-              color="info"
-            />
-          );
-        },
-      },
-      {
-        field: '_count',
-        headerName: 'Vendidos',
-        flex: 0.4,
-        minWidth: 90,
-        align: 'center',
-        headerAlign: 'center',
-        valueGetter: (params) => params.row._count?.patientPackages ?? 0,
-      },
-      {
-        field: 'active',
-        headerName: 'Status',
-        flex: 0.5,
-        minWidth: 100,
-        renderCell: (params) =>
-          params.value ? (
-            <Chip size="small" label="Ativo" color="success" variant="outlined" />
-          ) : (
-            <Chip size="small" label="Inativo" variant="outlined" />
-          ),
-      },
-      {
-        field: 'actions',
-        type: 'actions',
-        headerName: 'Ações',
-        width: 140,
-        getActions: (params) => {
-          const actions = [];
-          if (!canManage) return actions;
-          actions.push(
-            <GridActionsCellItem
-              key="edit"
-              icon={
-                <Tooltip title="Editar">
-                  <EditIcon fontSize="small" />
-                </Tooltip>
-              }
-              label="Editar"
-              onClick={() => {
-                setEditing(params.row);
-                setFormOpen(true);
-              }}
-            />,
-            <GridActionsCellItem
-              key="delete"
-              icon={
-                <Tooltip title="Excluir">
-                  <DeleteIcon fontSize="small" />
-                </Tooltip>
-              }
-              label="Excluir"
-              onClick={async () => {
-                const ok = await confirm({
-                  title: 'Excluir pacote',
-                  message: `Excluir o pacote "${params.row.name}"?`,
-                  confirmLabel: 'Excluir',
-                  confirmColor: 'error',
-                });
-                if (ok) deleteMutation.mutate(params.row.id);
-              }}
-            />,
-          );
-          return actions;
-        },
-      },
-    ],
-    [confirm, deleteMutation, canManage],
-  );
+  const handleEdit = (p: Package) => {
+    setEditing(p);
+    setFormOpen(true);
+  };
+
+  const handleDelete = async (p: Package) => {
+    const ok = await confirm({
+      title: 'Excluir pacote',
+      message: `Excluir o pacote "${p.name}"?`,
+      confirmLabel: 'Excluir',
+      confirmColor: 'error',
+    });
+    if (ok) deleteMutation.mutate(p.id);
+  };
 
   return (
     <Box>
-      <PageHeader
-        title="Pacotes"
-        subtitle={
-          canManage
-            ? 'Monte combos e pacotes de sessões para oferecer aos pacientes'
-            : 'Catálogo de pacotes disponíveis (apenas leitura)'
-        }
-        action={
-          <Stack direction="row" spacing={1}>
-            {isAdmin && (
-              <Button
-                variant="outlined"
-                startIcon={<HistoryIcon />}
+      {/* Stats + busca + ações */}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+        justifyContent="space-between"
+        spacing={1.5}
+        sx={{ mb: 2.5 }}
+      >
+        <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary', fontWeight: 600 }}>
+          {stats ? (
+            <>
+              <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
+                {stats.activePackages}
+              </Box>{' '}
+              {stats.activePackages === 1 ? 'pacote ativo' : 'pacotes ativos'}
+              {'  ·  '}
+              <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
+                {stats.patientsWithPackage}
+              </Box>{' '}
+              {stats.patientsWithPackage === 1 ? 'paciente com pacote' : 'pacientes com pacote'}
+            </>
+          ) : (
+            <Skeleton width={260} />
+          )}
+        </Typography>
+
+        <Stack direction="row" alignItems="center" spacing={1.25} flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            sx={{
+              height: 42,
+              px: 1.75,
+              borderRadius: '12px',
+              border: 1,
+              borderColor: 'divider',
+              bgcolor: 'grey.50',
+              width: { xs: '100%', sm: 240 },
+            }}
+          >
+            <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+            <InputBase
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar pacote..."
+              sx={{ fontSize: '0.8125rem', flex: 1 }}
+            />
+          </Stack>
+          {isAdmin && (
+            <Tooltip title="Histórico de alterações">
+              <IconButton
                 onClick={() => setHistoryOpen(true)}
+                sx={{ width: 42, height: 42, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
               >
-                Histórico
-              </Button>
-            )}
-            {canManage && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
+                <HistoryIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {canCreate && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+              sx={{ height: 42, px: 2.25, borderRadius: '12px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+            >
+              Criar pacote
+            </Button>
+          )}
+        </Stack>
+      </Stack>
+
+      {/* Lista de cards */}
+      {isLoading ? (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)', xl: 'repeat(4, 1fr)' },
+            gap: 2,
+          }}
+        >
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={230} sx={{ borderRadius: '18px' }} />
+          ))}
+        </Box>
+      ) : filtered.length === 0 ? (
+        <Card sx={{ p: 6, textAlign: 'center', borderRadius: '18px' }}>
+          <Inventory2OutlinedIcon sx={{ fontSize: 46, color: 'text.disabled', mb: 1 }} />
+          <Typography sx={{ fontWeight: 700 }}>
+            {packages.length === 0 ? 'Nenhum pacote cadastrado' : 'Nenhum pacote encontrado'}
+          </Typography>
+          <Typography color="text.secondary" sx={{ fontSize: '0.85rem', mt: 0.5 }}>
+            {packages.length === 0
+              ? 'Monte combos e pacotes de sessões para oferecer aos pacientes.'
+              : 'Tente ajustar a busca.'}
+          </Typography>
+        </Card>
+      ) : (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)', xl: 'repeat(4, 1fr)' },
+            gap: 2,
+          }}
+        >
+          {filtered.map((p) => {
+            const color = colorFor(p.name);
+            const original = p.originalPrice ?? 0;
+            const sale = p.salePrice ?? Number(p.totalPrice ?? 0);
+            const savings = p.savingsPercent ?? 0;
+            const activeCount = p.activePatientsCount ?? 0;
+            return (
+              <Card
+                key={p.id}
+                sx={{
+                  p: 2.25,
+                  borderRadius: '18px',
+                  border: 1,
+                  borderColor: 'divider',
+                  boxShadow: '0 1px 2px rgba(16,40,37,0.03)',
+                  opacity: p.active ? 1 : 0.6,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  transition: 'box-shadow .15s, border-color .15s',
+                  '&:hover': { boxShadow: '0 12px 30px -20px rgba(16,40,37,0.45)', borderColor: alpha(color, 0.5) },
                 }}
               >
-                Novo pacote
-              </Button>
-            )}
-          </Stack>
-        }
-      />
+                {/* Header */}
+                <Stack direction="row" alignItems="flex-start" spacing={1.5}>
+                  <Box
+                    sx={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: '13px',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: alpha(color, 0.12),
+                      color,
+                    }}
+                  >
+                    <Inventory2OutlinedIcon fontSize="small" />
+                  </Box>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography
+                      title={p.name}
+                      sx={{
+                        fontSize: '1rem',
+                        fontWeight: 800,
+                        lineHeight: 1.2,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {p.name}
+                    </Typography>
+                    {(p.highlight || !p.active) && (
+                      <Stack direction="row" spacing={0.75} sx={{ mt: 0.6 }} flexWrap="wrap" useFlexGap>
+                        {p.highlight === 'BEST_SELLER' && (
+                          <Chip
+                            size="small"
+                            label="Mais vendido"
+                            sx={{
+                              height: 21,
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
+                              color: 'primary.dark',
+                            }}
+                          />
+                        )}
+                        {p.highlight === 'RECURRING' && (
+                          <Chip
+                            size="small"
+                            label="Recorrente"
+                            sx={{
+                              height: 21,
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              bgcolor: alpha('#5BA8DE', 0.16),
+                              color: '#2F6FA0',
+                            }}
+                          />
+                        )}
+                        {!p.active && (
+                          <Chip size="small" label="Inativo" sx={{ height: 21, fontSize: '0.68rem', fontWeight: 700 }} />
+                        )}
+                      </Stack>
+                    )}
+                  </Box>
+                  {canManage && (
+                    <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+                      <Tooltip title="Editar">
+                        <IconButton
+                          onClick={() => handleEdit(p)}
+                          sx={{ width: 30, height: 30, borderRadius: '9px', border: 1, borderColor: 'divider', color: 'text.secondary' }}
+                        >
+                          <EditIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Excluir">
+                        <IconButton
+                          onClick={() => handleDelete(p)}
+                          sx={{
+                            width: 30,
+                            height: 30,
+                            borderRadius: '9px',
+                            border: 1,
+                            borderColor: 'divider',
+                            color: 'error.main',
+                          }}
+                        >
+                          <DeleteIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  )}
+                </Stack>
 
-      <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
-        <ListFiltersBar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Buscar por nome"
-          filteredCount={filteredPackages.length}
-          totalCount={packages.length}
-          countLabel={filteredPackages.length === 1 ? 'pacote' : 'pacotes'}
-        >
-          <TextField
-            select
-            size="small"
-            label="Tipo"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
-            sx={FILTER_FIELD_SX}
-          >
-            <MenuItem value="ALL">Todos</MenuItem>
-            <MenuItem value="COMBO">Combo</MenuItem>
-            <MenuItem value="SESSIONS">Sessões</MenuItem>
-          </TextField>
-          <ActiveFilterSelect value={activeFilter} onChange={setActiveFilter} />
-        </ListFiltersBar>
-        <AppDataGrid
-          rows={filteredPackages}
-          columns={columns}
-          loading={isLoading}
-          localeText={{
-            noRowsLabel:
-              packages.length === 0
-                ? 'Nenhum pacote cadastrado'
-                : 'Nenhum pacote encontrado com os filtros',
-          }}
-        />
-      </Card>
+                {/* Tags de procedimentos */}
+                {(p.items?.length ?? 0) > 0 && (
+                  <Stack direction="row" spacing={0.75} sx={{ mt: 1.5 }} flexWrap="wrap" useFlexGap>
+                    {p.items.map((it) => (
+                      <Chip
+                        key={it.id}
+                        size="small"
+                        label={it.quantity > 1 ? `${it.procedure?.name} ×${it.quantity}` : it.procedure?.name}
+                        sx={{
+                          height: 24,
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          bgcolor: 'grey.100',
+                          color: 'text.secondary',
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                )}
 
-      <PackageFormDialog
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        pkg={editing}
-      />
+                <Divider sx={{ my: 1.75 }} />
+
+                {/* Preço + métricas */}
+                <Stack
+                  direction="row"
+                  alignItems="flex-end"
+                  justifyContent="space-between"
+                  spacing={1}
+                  sx={{ mt: 'auto' }}
+                  flexWrap="wrap"
+                  useFlexGap
+                >
+                  <Box sx={{ minWidth: 0 }}>
+                    {original > sale && (
+                      <Typography
+                        sx={{ fontSize: '0.78rem', color: 'text.disabled', textDecoration: 'line-through', lineHeight: 1 }}
+                      >
+                        {brl.format(original)}
+                      </Typography>
+                    )}
+                    <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1.15, mt: 0.25 }}>
+                      {brl.format(sale)}
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.76rem', color: 'text.secondary' }}>
+                      {p.sessionCount} {p.sessionCount === 1 ? 'sessão' : 'sessões'}
+                    </Typography>
+                  </Box>
+                  <Stack alignItems="flex-end" spacing={0.6}>
+                    {savings > 0 && (
+                      <Chip
+                        size="small"
+                        label={`economia ${savings}%`}
+                        sx={{
+                          height: 23,
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
+                          color: 'primary.dark',
+                        }}
+                      />
+                    )}
+                    <Typography sx={{ fontSize: '0.74rem', color: 'text.disabled', textAlign: 'right' }}>
+                      {activeCount} {activeCount === 1 ? 'paciente ativo' : 'pacientes ativos'}
+                    </Typography>
+                  </Stack>
+                </Stack>
+              </Card>
+            );
+          })}
+        </Box>
+      )}
+
+      <PackageFormDialog open={formOpen} onClose={() => setFormOpen(false)} pkg={editing} />
       <AuditHistoryDialog
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}

@@ -56,6 +56,10 @@ export class CreatePackageDto {
   @IsBoolean()
   active?: boolean;
 
+  @IsOptional()
+  @IsString()
+  highlight?: string | null;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PackageItemDto)

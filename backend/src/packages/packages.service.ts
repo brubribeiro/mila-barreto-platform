@@ -34,13 +34,73 @@ export class PackagesService {
   // ─── CRUD de Package (template/catálogo) ───
 
   async list() {
-    return this.prisma.package.findMany({
-      orderBy: { name: 'asc' },
-      include: {
-        ...packageInclude,
-        _count: { select: { patientPackages: true } },
-      },
+    const [items, activeGroups] = await Promise.all([
+      this.prisma.package.findMany({
+        orderBy: { name: 'asc' },
+        include: {
+          ...packageInclude,
+          _count: { select: { patientPackages: true } },
+        },
+      }),
+      this.prisma.patientPackage.groupBy({
+        by: ['packageId'],
+        where: { status: 'ACTIVE' },
+        _count: { id: true },
+      }),
+    ]);
+
+    const activeMap = new Map<string, number>();
+    for (const g of activeGroups) activeMap.set(g.packageId, g._count.id);
+
+    // Descobre o mais vendido (por pacientes ativos; empate → mais vendas totais)
+    let bestSellerId: string | null = null;
+    let bestActive = 0;
+    let bestSold = 0;
+    for (const p of items) {
+      const active = activeMap.get(p.id) ?? 0;
+      const sold = p._count?.patientPackages ?? 0;
+      if (active > bestActive || (active === bestActive && sold > bestSold)) {
+        bestActive = active;
+        bestSold = sold;
+        bestSellerId = active > 0 || sold > 0 ? p.id : bestSellerId;
+      }
+    }
+
+    return items.map((p) => {
+      const originalPrice = p.items.reduce(
+        (acc, it) => acc + Number(it.procedure.price) * it.quantity,
+        0,
+      );
+      const salePrice = this.resolvePackageSalePrice(p);
+      const savingsPercent =
+        originalPrice > 0
+          ? Math.round(((originalPrice - salePrice) / originalPrice) * 100)
+          : 0;
+      return {
+        ...p,
+        originalPrice: Math.round(originalPrice * 100) / 100,
+        salePrice: Math.round(salePrice * 100) / 100,
+        savingsPercent,
+        activePatientsCount: activeMap.get(p.id) ?? 0,
+        bestSeller: p.id === bestSellerId,
+      };
     });
+  }
+
+  /** Totais para o cabeçalho da tela de pacotes. */
+  async stats() {
+    const [activePackages, distinct] = await Promise.all([
+      this.prisma.package.count({ where: { active: true } }),
+      this.prisma.patientPackage.findMany({
+        where: { status: 'ACTIVE' },
+        select: { patientId: true },
+        distinct: ['patientId'],
+      }),
+    ]);
+    return {
+      activePackages,
+      patientsWithPackage: distinct.length,
+    };
   }
 
   async findOne(id: string) {
