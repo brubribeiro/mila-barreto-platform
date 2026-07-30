@@ -9,11 +9,14 @@ export interface ProcedureMaterialInput {
 export interface ProcedurePayload {
   name: string;
   description?: string;
+  category?: string;
   durationMinutes: number;
   price: number;
   active?: boolean;
   recurrenceDays?: number | null;
+  applicationMap?: boolean;
   materials?: ProcedureMaterialInput[];
+  equipments?: { equipmentId: string; costPerUse: number }[];
 }
 
 export const proceduresApi = {

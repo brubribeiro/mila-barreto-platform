@@ -110,11 +110,15 @@ export interface Procedure {
   id: string;
   name: string;
   description?: string;
+  category?: string | null;
   durationMinutes: number;
   price: number | string;
   active: boolean;
   recurrenceDays?: number | null;
+  applicationMap?: boolean;
+  appointmentsCount?: number;
   baseCost?: number;
+  equipmentCost?: number;
   maxFeePercent?: number;
   maxFeeCost?: number;
   fixedCostShare?: number;
@@ -122,6 +126,14 @@ export interface Procedure {
   totalCost?: number;
   profitMargin?: number;
   materials?: ProcedureMaterial[];
+  equipments?: ProcedureEquipmentLink[];
+}
+
+export interface ProcedureEquipmentLink {
+  id: string;
+  equipmentId: string;
+  costPerUse: number | string;
+  equipment?: { id: string; name: string };
 }
 
 export interface ProcedureMaterial {

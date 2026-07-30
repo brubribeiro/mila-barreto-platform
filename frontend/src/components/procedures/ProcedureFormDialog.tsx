@@ -34,7 +34,11 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { proceduresApi, ProcedurePayload } from '../../api/procedures';
+import { LabeledField } from '../LabeledField';
+import { FormSection } from '../FormSection';
 import { inventoryApi } from '../../api/inventory';
+import { equipmentApi } from '../../api/equipment';
+import { recurringExpensesApi } from '../../api/recurring-expenses';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader } from '../DialogCloseButton';
@@ -47,117 +51,42 @@ interface ProcedureFormDialogProps {
 }
 
 type MaterialRow = { itemId: string; quantity: number };
+type EquipmentRow = { equipmentId: string; costPerUse: number | string };
 
 type FormValues = {
   name: string;
   description: string;
+  category: string;
   durationMinutes: number;
   price: number;
   active: boolean;
+  applicationMap: boolean;
   recurrenceDays: number | string;
   materials: MaterialRow[];
+  equipments: EquipmentRow[];
 };
 
 const empty: FormValues = {
   name: '',
   description: '',
+  category: '',
   durationMinutes: 60,
   price: 0,
   active: true,
+  applicationMap: false,
   recurrenceDays: '',
   materials: [],
+  equipments: [],
 };
 
-const DIALOG_HEIGHT_DESKTOP = 860;
-const DIALOG_MAX_WIDTH = 1200;
+const CATEGORY_SUGGESTIONS = ['Facial', 'Injetáveis', 'Laser', 'Corporal', 'Peeling', 'Depilação', 'Capilar'];
 
-const FIELD_SX = {
-  '& .MuiOutlinedInput-root': { bgcolor: '#fff' },
-} as const;
+const DIALOG_HEIGHT_DESKTOP = 760;
+const DIALOG_MAX_WIDTH = 1140;
+
+const FIELD_SX = {} as const;
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-
-function HeaderIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 40,
-        height: 40,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function FormSection({
-  title,
-  subtitle,
-  icon,
-  action,
-  children,
-  sx,
-  fill,
-}: {
-  title: string;
-  subtitle?: string;
-  icon: ReactNode;
-  action?: ReactNode;
-  children: ReactNode;
-  sx?: object;
-  fill?: boolean;
-}) {
-  return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: { xs: 2, sm: 2 },
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        ...sx,
-      }}
-    >
-      <Stack
-        direction="row"
-        alignItems="flex-start"
-        justifyContent="space-between"
-        spacing={1.5}
-        sx={{ mb: 1.5 }}
-      >
-        <Stack direction="row" spacing={1.25} alignItems="flex-start" sx={{ minWidth: 0 }}>
-          <HeaderIcon>{icon}</HeaderIcon>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="subtitle1" fontWeight={600} letterSpacing="-0.01em">
-              {title}
-            </Typography>
-            {subtitle && (
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
-                {subtitle}
-              </Typography>
-            )}
-          </Box>
-        </Stack>
-        {action}
-      </Stack>
-      {fill ? (
-        <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>{children}</Box>
-      ) : (
-        children
-      )}
-    </Paper>
-  );
-}
 
 export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormDialogProps) {
   const theme = useTheme();
@@ -167,12 +96,29 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
   const toast = useAppToast();
   const { control, handleSubmit, reset, watch } = useForm<FormValues>({ defaultValues: empty });
   const { fields, append, remove } = useFieldArray({ control, name: 'materials' });
+  const { fields: equipFields, append: appendEquip, remove: removeEquip } = useFieldArray({
+    control,
+    name: 'equipments',
+  });
 
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory'],
     queryFn: () => inventoryApi.list(),
     enabled: open,
   });
+
+  const { data: equipmentList = [] } = useQuery({
+    queryKey: ['equipment'],
+    queryFn: () => equipmentApi.list(),
+    enabled: open,
+  });
+
+  const { data: hourlySummary } = useQuery({
+    queryKey: ['hourly-cost-summary'],
+    queryFn: () => recurringExpensesApi.getHourlyCostSummary(false),
+    enabled: open,
+  });
+  const hourlyCost = hourlySummary?.hourlyCost ?? 0;
 
   useEffect(() => {
     if (!open) return;
@@ -181,14 +127,21 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
         ? {
             name: procedure.name,
             description: procedure.description ?? '',
+            category: procedure.category ?? '',
             durationMinutes: procedure.durationMinutes,
             price: Number(procedure.price),
             active: procedure.active,
+            applicationMap: procedure.applicationMap ?? false,
             recurrenceDays: procedure.recurrenceDays ?? '',
             materials:
               procedure.materials?.map((m) => ({
                 itemId: m.itemId,
                 quantity: m.quantity,
+              })) ?? [],
+            equipments:
+              procedure.equipments?.map((e) => ({
+                equipmentId: e.equipmentId,
+                costPerUse: Number(e.costPerUse),
               })) ?? [],
           }
         : empty,
@@ -209,10 +162,15 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
         price: Number(values.price),
         active: values.active,
         recurrenceDays: values.recurrenceDays ? Number(values.recurrenceDays) : null,
+        applicationMap: values.applicationMap,
         ...(values.description ? { description: values.description } : {}),
+        ...(values.category?.trim() ? { category: values.category.trim() } : {}),
         materials: values.materials
           .filter((m) => m.itemId && Number(m.quantity) > 0)
           .map((m) => ({ itemId: m.itemId, quantity: Number(m.quantity) })),
+        equipments: values.equipments
+          .filter((e) => e.equipmentId)
+          .map((e) => ({ equipmentId: e.equipmentId, costPerUse: Number(e.costPerUse) || 0 })),
       };
       return procedure
         ? proceduresApi.update(procedure.id, payload)
@@ -241,6 +199,22 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
       ? watchedPrice - procedure.baseCost
       : null;
 
+  // Custo de material + equipamento + despesa fixa (custo/hora × duração) → margem
+  const watchedEquipments = watch('equipments');
+  const materialCost = watchedMaterials.reduce((sum, m) => {
+    const item = inventory.find((i) => i.id === m.itemId);
+    const unit = item?.costPrice != null ? Number(item.costPrice) : 0;
+    return sum + unit * Number(m.quantity || 0);
+  }, 0);
+  const equipmentCost = watchedEquipments.reduce(
+    (sum, e) => sum + (Number(e.costPerUse) || 0),
+    0,
+  );
+  const fixedCostShare = hourlyCost * (watchedDuration / 60);
+  const totalCost = materialCost + equipmentCost + fixedCostShare;
+  const marginValue = watchedPrice - totalCost;
+  const marginPct = watchedPrice > 0 ? (marginValue / watchedPrice) * 100 : 0;
+
   return (
     <Dialog
       open={open}
@@ -250,15 +224,14 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
       fullScreen={isMobile}
       PaperProps={{
         sx: {
-          borderRadius: isMobile ? 0 : 3,
+          borderRadius: isMobile ? 0 : '20px',
           overflow: 'hidden',
           width: '100%',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
             : {
                 maxWidth: DIALOG_MAX_WIDTH,
-                height: DIALOG_HEIGHT_DESKTOP,
-                maxHeight: '96dvh',
+                maxHeight: '94dvh',
               }),
         },
       }}
@@ -272,29 +245,9 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
           onClose={onClose}
           isMobile={isMobile}
           title={isEditing ? 'Editar procedimento' : 'Novo procedimento'}
-          subtitle={watchedName?.trim() || 'Nome, valores, retorno e materiais do estoque'}
+          subtitle="Cadastre um item no catálogo"
+          subtitleWrap
           icon={<SpaOutlinedIcon fontSize="small" />}
-          trailing={
-            <Stack direction="row" spacing={0.75} flexWrap="wrap" justifyContent="flex-end">
-              {watchedDuration > 0 && (
-                <Chip
-                  size="small"
-                  icon={<ScheduleOutlinedIcon sx={{ fontSize: '16px !important' }} />}
-                  label={`${watchedDuration} min`}
-                  variant="outlined"
-                />
-              )}
-              {watchedPrice > 0 && (
-                <Chip size="small" label={brl.format(watchedPrice)} color="primary" variant="outlined" />
-              )}
-              <Chip
-                size="small"
-                label={watchedActive ? 'Ativo' : 'Inativo'}
-                color={watchedActive ? 'success' : 'default'}
-                variant={watchedActive ? 'filled' : 'outlined'}
-              />
-            </Stack>
-          }
         />
 
         <DialogContent
@@ -303,7 +256,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
             minHeight: 0,
             overflow: 'auto',
             p: { xs: 2, sm: 3 },
-            bgcolor: (t) => alpha(t.palette.primary.main, 0.02),
+            bgcolor: 'background.paper',
             display: 'flex',
             flexDirection: 'column',
             '&.MuiDialogContent-root': {
@@ -311,246 +264,299 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
             },
           }}
         >
-          <Grid container spacing={2} sx={{ flex: 1, minHeight: 0, alignItems: 'stretch' }}>
-            <Grid item xs={12} lg={6} sx={{ display: 'flex', minHeight: 0 }}>
-              <Stack spacing={2} sx={{ width: '100%' }}>
-                <FormSection
-                  title="Identificação"
-                  subtitle="Como o procedimento aparece na agenda e nas listagens"
-                  icon={<DescriptionOutlinedIcon fontSize="small" />}
-                  sx={{ height: 'auto' }}
-                >
-                  <Stack spacing={1.5}>
-                    <Controller
-                      name="name"
-                      control={control}
-                      rules={{ required: 'Nome é obrigatório' }}
-                      render={({ field, fieldState }) => (
-                        <TextField
-                          {...field}
-                          label="Nome do procedimento"
-                          fullWidth
-                          required
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                          sx={FIELD_SX}
-                        />
-                      )}
-                    />
-                    <Controller
-                      name="description"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Descrição"
-                          fullWidth
-                          multiline
-                          minRows={3}
-                          placeholder="Detalhes visíveis para a equipe..."
-                          sx={FIELD_SX}
-                        />
-                      )}
-                    />
-                  </Stack>
-                </FormSection>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '2fr 3fr' },
+              gap: 2,
+              alignItems: 'stretch',
+            }}
+          >
+            {/* ─── Coluna esquerda: informações ─── */}
+            <FormSection title="Informações do procedimento" sx={{ height: '100%' }}>
+            <Stack spacing={1.75}>
 
-                <FormSection
-                  title="Agendamento e valores"
-                  subtitle="Duração, preço cobrado e retorno sugerido"
-                  icon={<ScheduleOutlinedIcon fontSize="small" />}
-                  sx={{ height: 'auto' }}
-                >
-                  <Stack spacing={1.5} sx={{ width: '100%' }}>
-                    <Stack direction="row" spacing={2} sx={{ width: '100%', '& > *': { flex: 1, minWidth: 0 } }}>
-                      <Controller
-                        name="durationMinutes"
-                        control={control}
-                        rules={{ required: true, min: 5 }}
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            type="number"
-                            label="Duração"
-                            fullWidth
-                            required
-                            sx={FIELD_SX}
-                            InputProps={{
-                              endAdornment: <InputAdornment position="end">min</InputAdornment>,
-                            }}
-                          />
-                        )}
+              <Controller
+                name="name"
+                control={control}
+                rules={{ required: 'Nome é obrigatório' }}
+                render={({ field, fieldState }) => (
+                  <LabeledField label="Nome do procedimento" required>
+                    <TextField
+                      {...field}
+                      fullWidth
+                      size="small"
+                      placeholder="Ex.: Toxina Botulínica"
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      sx={FIELD_SX}
+                    />
+                  </LabeledField>
+                )}
+              />
+
+              <Controller
+                name="category"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Categoria">
+                    <TextField
+                      {...field}
+                      fullWidth
+                      size="small"
+                      placeholder="Ex.: Facial, Injetáveis, Laser..."
+                      sx={FIELD_SX}
+                      inputProps={{ list: 'procedure-category-list' }}
+                    />
+                  </LabeledField>
+                )}
+              />
+              <datalist id="procedure-category-list">
+                {CATEGORY_SUGGESTIONS.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.75 }}>
+                <Controller
+                  name="durationMinutes"
+                  control={control}
+                  rules={{ required: true, min: 5 }}
+                  render={({ field }) => (
+                    <LabeledField label="Duração" required>
+                      <TextField
+                        {...field}
+                        type="number"
+                        fullWidth
+                        size="small"
+                        sx={FIELD_SX}
+                        InputProps={{ endAdornment: <InputAdornment position="end">min</InputAdornment> }}
                       />
-                      <Controller
-                        name="price"
-                        control={control}
-                        rules={{ required: true, min: 0 }}
-                        render={({ field }) => (
-                          <TextField
-                            {...field}
-                            type="number"
-                            inputProps={{ step: '0.01' }}
-                            label="Preço"
-                            fullWidth
-                            required
-                            sx={FIELD_SX}
-                            InputProps={{
-                              startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                            }}
-                          />
-                        )}
+                    </LabeledField>
+                  )}
+                />
+                <Controller
+                  name="recurrenceDays"
+                  control={control}
+                  render={({ field }) => (
+                    <LabeledField label="Retorno em (dias)">
+                      <TextField
+                        {...field}
+                        type="number"
+                        fullWidth
+                        size="small"
+                        placeholder="Opcional"
+                        sx={FIELD_SX}
+                        InputProps={{ endAdornment: <InputAdornment position="end">dias</InputAdornment> }}
                       />
-                    </Stack>
+                    </LabeledField>
+                  )}
+                />
+              </Box>
 
-                    <Controller
-                      name="recurrenceDays"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          type="number"
-                          label="Intervalo de retorno"
-                          fullWidth
-                          sx={FIELD_SX}
-                          InputProps={{
-                            endAdornment: <InputAdornment position="end">dias</InputAdornment>,
-                          }}
-                          FormHelperTextProps={{ sx: { mx: 0 } }}
-                          helperText="Dias até a próxima visita sugerida (opcional)"
-                        />
-                      )}
+              <Controller
+                name="description"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Descrição">
+                    <TextField
+                      {...field}
+                      fullWidth
+                      multiline
+                      minRows={4}
+                      placeholder="Detalhes do procedimento, cuidados e indicações"
+                      sx={FIELD_SX}
                     />
+                  </LabeledField>
+                )}
+              />
 
-                    {procedure?.baseCost != null && (
-                      <Alert severity="info" sx={{ py: 0.5 }}>
-                        <Stack spacing={0.25}>
-                          <Typography variant="body2">
-                            Custo base (materiais):{' '}
-                            <strong>{brl.format(procedure.baseCost)}</strong>
-                          </Typography>
-                          {estimatedMargin != null && (
-                            <Typography variant="caption" color="text.secondary">
-                              Margem estimada:{' '}
-                              <strong style={{ color: estimatedMargin >= 0 ? undefined : theme.palette.error.main }}>
-                                {brl.format(estimatedMargin)}
-                              </strong>
-                            </Typography>
-                          )}
-                        </Stack>
-                      </Alert>
-                    )}
-
-                    <Paper
-                      variant="outlined"
+              <Controller
+                name="active"
+                control={control}
+                render={({ field }) => (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.5,
+                      px: 1.75,
+                      py: 1.25,
+                      borderRadius: '13px',
+                      border: 1,
+                      borderColor: 'divider',
+                      bgcolor: 'grey.50',
+                    }}
+                  >
+                    <Box
                       sx={{
-                        px: 2,
-                        py: 1.25,
-                        borderColor: 'divider',
-                        bgcolor: watchedActive
-                          ? alpha(theme.palette.success.main, 0.06)
-                          : alpha(theme.palette.action.disabledBackground, 0.4),
+                        width: 34,
+                        height: 34,
+                        borderRadius: '10px',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
+                        color: 'primary.main',
                       }}
                     >
-                      <Controller
-                        name="active"
-                        control={control}
-                        render={({ field }) => (
-                          <FormControlLabel
-                            sx={{ m: 0, width: '100%', justifyContent: 'space-between' }}
-                            labelPlacement="start"
-                            control={
-                              <Switch
-                                checked={field.value}
-                                onChange={(e) => field.onChange(e.target.checked)}
-                              />
-                            }
-                            label={
-                              <Box>
-                                <Typography variant="body2" fontWeight={600}>
-                                  Disponível para agendamento
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {field.value
-                                    ? 'Visível na agenda e nos pacotes'
-                                    : 'Oculto até reativar'}
-                                </Typography>
-                              </Box>
-                            }
-                          />
-                        )}
-                      />
-                    </Paper>
-                  </Stack>
-                </FormSection>
-              </Stack>
-            </Grid>
+                      <ScheduleOutlinedIcon sx={{ fontSize: 18 }} />
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
+                      <Typography sx={{ fontSize: '0.82rem', fontWeight: 800 }}>
+                        Disponível para agendamento
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                        {field.value ? 'Visível na agenda e nos pacotes' : 'Oculto até reativar'}
+                      </Typography>
+                    </Box>
+                    <Switch checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+                  </Box>
+                )}
+              />
 
-            <Grid item xs={12} lg={6} sx={{ display: 'flex', minHeight: 0 }}>
+              <Controller
+                name="applicationMap"
+                control={control}
+                render={({ field }) => (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.5,
+                      px: 1.75,
+                      py: 1.25,
+                      borderRadius: '13px',
+                      border: 1,
+                      borderColor: 'divider',
+                      bgcolor: 'grey.50',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: '10px',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
+                        color: 'primary.main',
+                      }}
+                    >
+                      <SpaOutlinedIcon sx={{ fontSize: 18 }} />
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
+                      <Typography sx={{ fontSize: '0.82rem', fontWeight: 800 }}>Mapa de aplicação</Typography>
+                      <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                        Habilita marcação de pontos no atendimento
+                      </Typography>
+                    </Box>
+                    <Switch checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+                  </Box>
+                )}
+              />
+            </Stack>
+            </FormSection>
+
+            {/* ─── Coluna direita: materiais + valor + custo ─── */}
             <FormSection
-              fill
-              sx={{ flex: 1, width: '100%', minHeight: 0 }}
-              title="Materiais do estoque"
-              subtitle="Itens deduzidos automaticamente a cada atendimento"
-              icon={<Inventory2OutlinedIcon fontSize="small" />}
+              title="Materiais e equipamentos"
+              subtitle="Compõe o custo de cada atendimento"
+              sx={{ height: '100%' }}
               action={
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  onClick={() => append({ itemId: '', quantity: 1 })}
-                >
-                  Adicionar
-                </Button>
+                <Stack direction="row" spacing={0.75} sx={{ flexShrink: 0 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={() => append({ itemId: '', quantity: 1 })}
+                    sx={{
+                      bgcolor: 'background.paper',
+                      borderColor: 'divider',
+                      color: 'text.primary',
+                      '&:hover': { bgcolor: 'grey.50', borderColor: 'divider' },
+                    }}
+                  >
+                    Material
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={() => appendEquip({ equipmentId: '', costPerUse: 0 })}
+                    sx={{
+                      bgcolor: 'background.paper',
+                      borderColor: 'divider',
+                      color: 'text.primary',
+                      '&:hover': { bgcolor: 'grey.50', borderColor: 'divider' },
+                    }}
+                  >
+                    Equip.
+                  </Button>
+                </Stack>
               }
             >
-              {fields.length === 0 ? (
+              <Stack spacing={1.5} sx={{ flex: 1, minHeight: 0 }}>
+              <Box sx={{ border: 1, borderColor: 'divider', borderRadius: '13px', overflow: 'hidden' }}>
                 <Box
                   sx={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    py: 2,
-                    px: 2,
-                    textAlign: 'center',
-                    borderRadius: 2,
-                    border: '1px dashed',
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 96px 92px 34px',
+                    gap: 1,
+                    px: 1.5,
+                    py: 1,
+                    bgcolor: 'grey.50',
+                    borderBottom: 1,
                     borderColor: 'divider',
-                    bgcolor: 'background.paper',
+                    fontSize: '0.66rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    color: 'text.disabled',
                   }}
                 >
-                  <Typography variant="body2" color="text.secondary">
-                    Nenhum material vinculado. Esse procedimento não alterará o estoque.
-                  </Typography>
+                  <span>Item</span>
+                  <span>Qtd.</span>
+                  <span>Custo</span>
+                  <span />
                 </Box>
-              ) : (
-                <Stack spacing={1.25} sx={{ flex: 1, minHeight: 0, overflow: isMobile ? 'visible' : 'auto', pr: 0.5 }}>
-                  {fields.map((field, index) => {
-                    const currentItemId = watchedMaterials[index]?.itemId;
-                    const currentQty = Number(watchedMaterials[index]?.quantity ?? 0);
-                    const selectedItem = inventory.find((i) => i.id === currentItemId);
-                    const availableItems = inventory.filter(
-                      (i) => i.id === currentItemId || !usedIds.has(i.id),
-                    );
-                    const insufficient =
-                      selectedItem && currentQty > 0 && selectedItem.quantity < currentQty;
 
-                    return (
-                      <Paper
-                        key={field.id}
-                        variant="outlined"
-                        sx={{
-                          p: 1.5,
-                          borderColor: insufficient ? 'warning.main' : 'divider',
-                          bgcolor: insufficient
-                            ? alpha(theme.palette.warning.main, 0.04)
-                            : 'background.paper',
-                        }}
-                      >
-                        <Stack
-                          direction={{ xs: 'column', sm: 'row' }}
-                          spacing={1.5}
-                          alignItems={{ sm: 'flex-start' }}
+                {fields.length === 0 ? (
+                  <Box sx={{ px: 2, py: 3, textAlign: 'center' }}>
+                    <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                      Nenhum material vinculado.
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ maxHeight: 260, overflowY: 'auto' }}>
+                    {fields.map((field, index) => {
+                      const currentItemId = watchedMaterials[index]?.itemId;
+                      const currentQty = Number(watchedMaterials[index]?.quantity ?? 0);
+                      const selectedItem = inventory.find((i) => i.id === currentItemId);
+                      const availableItems = inventory.filter(
+                        (i) => i.id === currentItemId || !usedIds.has(i.id),
+                      );
+                      const insufficient =
+                        selectedItem && currentQty > 0 && selectedItem.quantity < currentQty;
+                      const lineCost =
+                        selectedItem?.costPrice != null ? Number(selectedItem.costPrice) * currentQty : 0;
+                      return (
+                        <Box
+                          key={field.id}
+                          sx={{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 96px 92px 34px',
+                            gap: 1,
+                            px: 1.5,
+                            py: 1,
+                            alignItems: 'center',
+                            borderBottom: 1,
+                            borderColor: 'divider',
+                            '&:last-of-type': { borderBottom: 0 },
+                          }}
                         >
                           <Controller
                             name={`materials.${index}.itemId` as const}
@@ -558,26 +564,19 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                             rules={{ required: true }}
                             render={({ field: f }) => (
                               <Autocomplete
-                                sx={{ flex: 1, width: '100%' }}
+                                size="small"
+                                sx={{ minWidth: 0 }}
                                 options={availableItems}
-                                getOptionLabel={(i) =>
-                                  `${i.name}${i.unit ? ` (${i.unit})` : ''} — ${i.quantity} em estoque`
-                                }
+                                getOptionLabel={(i) => `${i.name}${i.unit ? ` (${i.unit})` : ''}`}
                                 value={availableItems.find((i) => i.id === f.value) ?? null}
                                 onChange={(_, val) => f.onChange(val?.id ?? '')}
                                 renderInput={(params) => (
-                                  <TextField
-                                    {...params}
-                                    label="Material"
-                                    size="small"
-                                    required
-                                    sx={FIELD_SX}
-                                  />
+                                  <TextField {...params} placeholder="Selecionar" size="small" sx={FIELD_SX} />
                                 )}
                               />
                             )}
                           />
-                          <Stack direction="row" spacing={1} alignItems="flex-start">
+                          <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
                             <Controller
                               name={`materials.${index}.quantity` as const}
                               control={control}
@@ -587,55 +586,199 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                                   {...f}
                                   type="number"
                                   size="small"
-                                  label="Quantidade"
-                                  inputProps={{ min: 1 }}
-                                  sx={{ width: { xs: '100%', sm: 120 }, ...FIELD_SX }}
+                                  inputProps={{ min: 1, style: { textAlign: 'center' } }}
                                   error={insufficient}
-                                  helperText={
-                                    insufficient
-                                      ? `Só ${selectedItem?.quantity} disponível`
-                                      : selectedItem?.unit
-                                        ? `Unidade: ${selectedItem.unit}`
-                                        : undefined
-                                  }
+                                  sx={{ width: 56, ...FIELD_SX }}
                                 />
                               )}
                             />
-                            <Tooltip title="Remover material">
-                              <IconButton
-                                onClick={() => remove(index)}
-                                sx={{ mt: 0.25 }}
-                                aria-label="Remover material"
-                              >
-                                <DeleteOutlineIcon />
-                              </IconButton>
-                            </Tooltip>
+                            {selectedItem?.unit && (
+                              <Typography sx={{ fontSize: '0.66rem', color: 'text.disabled', fontWeight: 600 }} noWrap>
+                                {selectedItem.unit}
+                              </Typography>
+                            )}
                           </Stack>
-                        </Stack>
-                      </Paper>
-                    );
-                  })}
-                </Stack>
+                          <Typography sx={{ fontSize: '0.78rem', fontWeight: 700 }} noWrap>
+                            {lineCost > 0 ? brl.format(lineCost) : '—'}
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() => remove(index)}
+                            aria-label="Remover material"
+                            sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}
+                          >
+                            <DeleteOutlineIcon sx={{ fontSize: 17 }} />
+                          </IconButton>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                )}
+              </Box>
+
+              {equipFields.length > 0 && (
+                <Box sx={{ border: 1, borderColor: 'divider', borderRadius: '13px', overflow: 'hidden' }}>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 120px 34px',
+                      gap: 1,
+                      px: 1.5,
+                      py: 1,
+                      bgcolor: 'grey.50',
+                      borderBottom: 1,
+                      borderColor: 'divider',
+                      fontSize: '0.66rem',
+                      fontWeight: 800,
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                      color: 'text.disabled',
+                    }}
+                  >
+                    <span>Equipamento</span>
+                    <span>Custo / uso</span>
+                    <span />
+                  </Box>
+                  <Box sx={{ maxHeight: 200, overflowY: 'auto' }}>
+                    {equipFields.map((field, index) => (
+                      <Box
+                        key={field.id}
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 120px 34px',
+                          gap: 1,
+                          px: 1.5,
+                          py: 1,
+                          alignItems: 'center',
+                          borderBottom: 1,
+                          borderColor: 'divider',
+                          '&:last-of-type': { borderBottom: 0 },
+                        }}
+                      >
+                        <Controller
+                          name={`equipments.${index}.equipmentId` as const}
+                          control={control}
+                          rules={{ required: true }}
+                          render={({ field: f }) => (
+                            <Autocomplete
+                              size="small"
+                              sx={{ minWidth: 0 }}
+                              options={equipmentList}
+                              getOptionLabel={(e) => e.name}
+                              value={equipmentList.find((e) => e.id === f.value) ?? null}
+                              onChange={(_, val) => f.onChange(val?.id ?? '')}
+                              renderInput={(params) => (
+                                <TextField {...params} placeholder="Selecionar" size="small" sx={FIELD_SX} />
+                              )}
+                            />
+                          )}
+                        />
+                        <Controller
+                          name={`equipments.${index}.costPerUse` as const}
+                          control={control}
+                          render={({ field: f }) => (
+                            <TextField
+                              {...f}
+                              type="number"
+                              size="small"
+                              inputProps={{ step: '0.01', min: 0 }}
+                              sx={FIELD_SX}
+                              InputProps={{ startAdornment: <InputAdornment position="start">R$</InputAdornment> }}
+                            />
+                          )}
+                        />
+                        <IconButton
+                          size="small"
+                          onClick={() => removeEquip(index)}
+                          aria-label="Remover equipamento"
+                          sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}
+                        >
+                          <DeleteOutlineIcon sx={{ fontSize: 17 }} />
+                        </IconButton>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
               )}
 
               {hasStockWarning && (
-                <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ mt: 1.5, flexShrink: 0 }}>
-                  Algum material está acima do estoque atual. Você pode salvar, mas novos
-                  agendamentos só serão permitidos quando houver quantidade suficiente.
+                <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ py: 0.25 }}>
+                  Algum material está acima do estoque atual.
                 </Alert>
               )}
-            </FormSection>
-            </Grid>
 
-            {mutation.isError && (
-              <Grid item xs={12}>
-              <Alert severity="error">
-                {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
-                  ?.message ?? 'Erro ao salvar procedimento'}
-              </Alert>
-              </Grid>
-            )}
-          </Grid>
+              <Controller
+                name="price"
+                control={control}
+                rules={{ required: true, min: 0 }}
+                render={({ field }) => (
+                  <LabeledField label="Valor de venda (R$)" required>
+                    <TextField
+                      {...field}
+                      type="number"
+                      inputProps={{ step: '0.01' }}
+                      fullWidth
+                      size="small"
+                      sx={FIELD_SX}
+                      InputProps={{ startAdornment: <InputAdornment position="start">R$</InputAdornment> }}
+                    />
+                  </LabeledField>
+                )}
+              />
+
+              {/* Caixa de custo */}
+              <Box
+                sx={{
+                  p: 1.75,
+                  borderRadius: '13px',
+                  border: 1,
+                  borderColor: (t) => alpha(t.palette.primary.main, 0.22),
+                  bgcolor: (t) => alpha(t.palette.primary.main, 0.07),
+                }}
+              >
+                <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.6 }}>
+                  <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>Custo de material</Typography>
+                  <Typography sx={{ fontSize: '0.78rem', fontWeight: 700 }}>{brl.format(materialCost)}</Typography>
+                </Stack>
+                {equipmentCost > 0 && (
+                  <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.6 }}>
+                    <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>Custo de equipamento</Typography>
+                    <Typography sx={{ fontSize: '0.78rem', fontWeight: 700 }}>{brl.format(equipmentCost)}</Typography>
+                  </Stack>
+                )}
+                <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.6 }}>
+                  <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>
+                    Despesa fixa ({watchedDuration} min)
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.78rem', fontWeight: 700 }}>{brl.format(fixedCostShare)}</Typography>
+                </Stack>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  sx={{ pt: 0.75, borderTop: 1, borderColor: (t) => alpha(t.palette.primary.main, 0.22) }}
+                >
+                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700 }}>Custo total</Typography>
+                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 800 }}>{brl.format(totalCost)}</Typography>
+                </Stack>
+                <Stack direction="row" justifyContent="space-between" sx={{ mt: 0.75 }}>
+                  <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>Margem</Typography>
+                  <Typography
+                    sx={{ fontSize: '0.78rem', fontWeight: 800, color: marginValue >= 0 ? 'primary.dark' : 'error.main' }}
+                  >
+                    {brl.format(marginValue)} · {marginPct.toFixed(0)}%
+                  </Typography>
+                </Stack>
+              </Box>
+              </Stack>
+            </FormSection>
+          </Box>
+
+          {mutation.isError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
+                ?.message ?? 'Erro ao salvar procedimento'}
+            </Alert>
+          )}
         </DialogContent>
 
         <DialogActions
@@ -649,11 +792,26 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
             gap: 1,
           }}
         >
-          <Button onClick={onClose} color="inherit">
+          <Button
+            onClick={onClose}
+            type="button"
+            variant="outlined"
+            sx={{
+              bgcolor: 'background.paper',
+              borderColor: 'divider',
+              color: 'text.secondary',
+              '&:hover': { bgcolor: 'grey.50', borderColor: 'divider' },
+            }}
+          >
             Cancelar
           </Button>
-          <Button type="submit" variant="contained" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Cadastrar procedimento'}
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={mutation.isPending}
+            sx={{ boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+          >
+            {mutation.isPending ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Salvar procedimento'}
           </Button>
         </DialogActions>
       </Box>

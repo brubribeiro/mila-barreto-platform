@@ -10,6 +10,7 @@ import { UpdateProcedureDto } from './dto/update-procedure.dto';
 
 export interface ProcedureFinancials {
   baseCost: number;
+  equipmentCost: number;
   maxFeePercent: number;
   maxFeeCost: number;
   fixedCostShare: number;
@@ -27,6 +28,7 @@ export class ProceduresService {
     price: number,
     durationMinutes: number,
     materials: any[],
+    equipments: any[],
     maxFeePercent: number,
     hourlyCost: number,
   ): ProcedureFinancials {
@@ -34,15 +36,20 @@ export class ProceduresService {
       (sum, m) => sum + Number(m.item?.costPrice ?? 0) * Number(m.quantity ?? 0),
       0,
     );
+    const equipmentCost = (equipments ?? []).reduce(
+      (sum, e) => sum + Number(e.costPerUse ?? 0),
+      0,
+    );
     const maxFeeCost = price * (maxFeePercent / 100);
     // Despesa fixa proporcional ao tempo do procedimento
     const fixedCostShare = hourlyCost * (durationMinutes / 60);
-    const totalCost = baseCost + maxFeeCost + fixedCostShare;
+    const totalCost = baseCost + equipmentCost + maxFeeCost + fixedCostShare;
     const profitMargin = price > 0
       ? Math.round(((price - totalCost) / price) * 10000) / 100
       : 0;
     return {
       baseCost: Math.round(baseCost * 100) / 100,
+      equipmentCost: Math.round(equipmentCost * 100) / 100,
       maxFeePercent,
       maxFeeCost: Math.round(maxFeeCost * 100) / 100,
       fixedCostShare: Math.round(fixedCostShare * 100) / 100,
@@ -73,61 +80,84 @@ export class ProceduresService {
   }
 
   async list() {
-    const [items, shared] = await Promise.all([
+    const [items, shared, doneCounts] = await Promise.all([
       this.prisma.procedure.findMany({
         orderBy: { name: 'asc' },
-        include: { materials: { include: { item: true } } },
+        include: {
+          materials: { include: { item: true } },
+          equipments: { include: { equipment: { select: { id: true, name: true } } } },
+        },
       }),
       this.getSharedCosts(),
+      this.prisma.appointment.groupBy({
+        by: ['procedureId'],
+        where: { status: 'COMPLETED', procedureId: { not: null } },
+        _count: { id: true },
+      }),
     ]);
+
+    const doneMap = new Map<string, number>();
+    for (const row of doneCounts) {
+      if (row.procedureId) doneMap.set(row.procedureId, row._count.id);
+    }
 
     return items.map((p) => ({
       ...p,
+      appointmentsCount: doneMap.get(p.id) ?? 0,
       ...this.computeFinancials(
         Number(p.price),
         p.durationMinutes,
         p.materials,
+        p.equipments,
         shared.maxFeePercent,
         shared.hourlyCost,
       ),
     }));
   }
 
+  private readonly procedureInclude = {
+    materials: { include: { item: true } },
+    equipments: { include: { equipment: { select: { id: true, name: true } } } },
+  } as const;
+
   async findOne(id: string) {
     const p = await this.prisma.procedure.findUnique({
       where: { id },
-      include: { materials: { include: { item: true } } },
+      include: this.procedureInclude,
     });
     if (!p) throw new NotFoundException('Procedimento não encontrado');
     const shared = await this.getSharedCosts();
     return {
       ...p,
-      ...this.computeFinancials(Number(p.price), p.durationMinutes, p.materials, shared.maxFeePercent, shared.hourlyCost),
+      ...this.computeFinancials(Number(p.price), p.durationMinutes, p.materials, p.equipments, shared.maxFeePercent, shared.hourlyCost),
     };
   }
 
   async create(dto: CreateProcedureDto, user?: AuditUser) {
-    const { materials, ...data } = dto;
+    const { materials, equipments, ...data } = dto;
     const created = await this.prisma.procedure.create({
       data: {
         ...data,
         materials: materials?.length
           ? { create: materials.map((m) => ({ itemId: m.itemId, quantity: m.quantity })) }
           : undefined,
+        equipments: equipments?.length
+          ? { create: equipments.map((e) => ({ equipmentId: e.equipmentId, costPerUse: e.costPerUse ?? 0 })) }
+          : undefined,
       },
-      include: { materials: { include: { item: true } } },
+      include: this.procedureInclude,
     });
     this.auditLog.logCreate('Procedure', created.id, created as unknown as Record<string, unknown>, user).catch(() => undefined);
     const shared = await this.getSharedCosts();
     return {
       ...created,
-      ...this.computeFinancials(Number(created.price), created.durationMinutes, created.materials, shared.maxFeePercent, shared.hourlyCost),
+      ...this.computeFinancials(Number(created.price), created.durationMinutes, created.materials, created.equipments, shared.maxFeePercent, shared.hourlyCost),
     };
   }
 
   async update(id: string, dto: UpdateProcedureDto, user?: AuditUser) {
     const oldProcedure = await this.findOne(id);
-    const { materials, ...data } = dto;
+    const { materials, equipments, ...data } = dto;
 
     const updated = await this.prisma.$transactionWithRetry(async (tx) => {
       if (materials !== undefined) {
@@ -142,17 +172,29 @@ export class ProceduresService {
           });
         }
       }
+      if (equipments !== undefined) {
+        await tx.procedureEquipment.deleteMany({ where: { procedureId: id } });
+        if (equipments.length > 0) {
+          await tx.procedureEquipment.createMany({
+            data: equipments.map((e) => ({
+              procedureId: id,
+              equipmentId: e.equipmentId,
+              costPerUse: e.costPerUse ?? 0,
+            })),
+          });
+        }
+      }
       return tx.procedure.update({
         where: { id },
         data,
-        include: { materials: { include: { item: true } } },
+        include: this.procedureInclude,
       });
     });
     this.auditLog.logUpdate('Procedure', id, oldProcedure as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
     const shared = await this.getSharedCosts();
     return {
       ...updated,
-      ...this.computeFinancials(Number(updated.price), updated.durationMinutes, updated.materials, shared.maxFeePercent, shared.hourlyCost),
+      ...this.computeFinancials(Number(updated.price), updated.durationMinutes, updated.materials, updated.equipments, shared.maxFeePercent, shared.hourlyCost),
     };
   }
 
