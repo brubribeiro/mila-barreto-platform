@@ -227,6 +227,33 @@ describe('AppointmentsService', () => {
       expect(prisma.appointment.create).toHaveBeenCalled();
     });
 
+    it('should skip material deduction when admin is impersonating', async () => {
+      prisma.procedureMaterial.findMany.mockResolvedValue([
+        { itemId: 'item-1', quantity: new Prisma.Decimal(5) },
+      ]);
+      prisma.inventoryItem.findUnique.mockResolvedValue({
+        id: 'item-1',
+        name: 'Botox',
+        quantity: 0,
+      });
+
+      const pastStart = new Date(Date.now() - 86_400_000).toISOString();
+      const pastEnd = new Date(Date.now() - 82_800_000).toISOString();
+
+      await service.create(
+        {
+          patientId: 'patient-1',
+          procedureId: 'proc-1',
+          professionalId: 'user-1',
+          startAt: pastStart,
+          endAt: pastEnd,
+        } as any,
+        { roleName: 'Profissional', impersonatorId: 'admin-1' } as any,
+      );
+
+      expect(prisma.inventoryItem.update).not.toHaveBeenCalled();
+    });
+
     it('should skip material deduction for admin retroactive appointments', async () => {
       prisma.procedureMaterial.findMany.mockResolvedValue([
         { itemId: 'item-1', quantity: new Prisma.Decimal(5) },

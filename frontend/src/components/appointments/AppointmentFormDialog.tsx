@@ -72,6 +72,7 @@ import {
   formatRecurrenceEarliestLabel,
   isDateBeforeRecurrenceEarliest,
 } from '../../utils/appointmentRecurrence';
+import { isRetroactiveAppointmentSlot } from '../../utils/appointmentRetroactive';
 import { getApiErrorMessage } from '../../utils/apiError';
 import type { Appointment, AppointmentKind, AppointmentStatus, PatientPackage, Package, PaymentMethodEntry, Procedure } from '../../types';
 
@@ -669,9 +670,21 @@ export function AppointmentFormDialog({
   const requiresValidProvider = !appointment || timeOrProfessionalChanged;
 
   const isRetroactiveSlot = useMemo(() => {
-    if (!selectedDate || !selectedStartTime) return false;
-    return dayjs(`${selectedDate}T${selectedStartTime}`).isBefore(dayjs());
-  }, [selectedDate, selectedStartTime]);
+    const source = appointmentDetail ?? appointment;
+    return isRetroactiveAppointmentSlot({
+      date: selectedDate,
+      startTime: selectedStartTime,
+      durationMinutes: selectedProcedure?.durationMinutes ?? 60,
+      startAt: source?.startAt,
+      endAt: source?.endAt,
+    });
+  }, [
+    appointment,
+    appointmentDetail,
+    selectedDate,
+    selectedStartTime,
+    selectedProcedure?.durationMinutes,
+  ]);
 
   /** Admin registrando atendimento passado: estoque, expediente e recorrência flexíveis. */
   const skipRetroactiveAdminRules = isAdmin && isRetroactiveSlot;
@@ -959,7 +972,7 @@ export function AppointmentFormDialog({
     ) {
       return;
     }
-    if (!values.professionalId || !selectedPerformsAppointments) {
+    if (!values.professionalId || (!skipRetroactiveAdminRules && !selectedPerformsAppointments)) {
       void alert({
         title: 'Profissional inválido',
         message: 'Selecione um profissional que realiza atendimentos e esteja disponível neste horário.',
@@ -2167,7 +2180,7 @@ export function AppointmentFormDialog({
                 loggedUserCannotBeScheduled ||
                 noProfessionalAvailable ||
                 professionalSlotConflict ||
-                (requiresValidProvider && !selectedPerformsAppointments) ||
+                (requiresValidProvider && !selectedPerformsAppointments && !skipRetroactiveAdminRules) ||
                 (willDeductMaterials && hasInsufficient && watch('kind') === 'PROCEDURE' && !skipRetroactiveAdminRules)
               }
             >

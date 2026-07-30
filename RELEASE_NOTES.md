@@ -4,6 +4,21 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ---
 
+## v0.1.10 — 30 jul 2026
+
+### Correções
+
+**Agenda — agendamentos retroativos (administrador)**
+- Corrigido bloqueio de **estoque** ao salvar: datas anteriores a hoje (horário de Brasília) passam a ser reconhecidas como retroativas de forma consistente entre tela e servidor.
+- Administradores deixam de ser impedidos de salvar por validações de profissional/disponibilidade em horários passados.
+- Edição de agendamentos retroativos não tenta baixar estoque novamente.
+
+### Onde ver a versão
+
+Menu lateral (rodapé) e tela de login exibem **v0.1.10**.
+
+---
+
 ## v0.1.9 — 30 jul 2026
 
 ### Correções

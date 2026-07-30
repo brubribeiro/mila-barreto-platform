@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useAuth } from './AuthContext';
-import type { Permission } from './permissions';
+import { SYSTEM_ADMIN_ROLE_NAME, type Permission } from './permissions';
 
 export function usePermissions() {
   const { user } = useAuth();
@@ -11,7 +11,7 @@ export function usePermissions() {
     return {
       permissions: user?.permissions ?? [],
       roleName: user?.roleName,
-      isAdmin: user?.roleName === 'Administrador',
+      isAdmin: user?.roleName === SYSTEM_ADMIN_ROLE_NAME || !!user?.impersonating,
       restrictToOwnAppointments: !!user?.restrictToOwnAppointments,
       has,
       hasAny,

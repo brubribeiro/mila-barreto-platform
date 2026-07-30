@@ -28,6 +28,8 @@ import {
   isBeforeRecurrenceEarliest,
   toDateInputValue,
 } from './recurrence.util';
+import { SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
+import { isRetroactiveAppointmentInstant } from '../common/utils/brazil-time.util';
 
 function isActive(status: AppointmentStatus) {
   return (
@@ -38,23 +40,29 @@ function isActive(status: AppointmentStatus) {
   );
 }
 
-function isAdminUser(user?: Pick<AuthenticatedUser, 'roleName'> | AuditUser) {
-  return user?.roleName === 'Administrador';
+function isAdminUser(
+  user?: Pick<AuthenticatedUser, 'roleName' | 'impersonatorId'> | AuditUser,
+) {
+  if (!user) return false;
+  if ('impersonatorId' in user && user.impersonatorId) return true;
+  return user.roleName?.trim() === SYSTEM_ADMIN_ROLE_NAME;
 }
 
 /** Admin registrando atendimento passado: regras flexíveis (estoque, expediente, recorrência). */
 function isRetroactiveAdminBackfill(
   startAt: Date,
-  user?: Pick<AuthenticatedUser, 'roleName'> | AuditUser,
+  endAt: Date | undefined,
+  user?: Pick<AuthenticatedUser, 'roleName' | 'impersonatorId'> | AuditUser,
 ) {
-  return startAt.getTime() < Date.now() && isAdminUser(user);
+  return isRetroactiveAppointmentInstant(startAt, endAt) && isAdminUser(user);
 }
 
 function shouldSkipMaterialDeduction(
   startAt: Date,
-  user?: Pick<AuthenticatedUser, 'roleName'> | AuditUser,
+  endAt: Date | undefined,
+  user?: Pick<AuthenticatedUser, 'roleName' | 'impersonatorId'> | AuditUser,
 ) {
-  return isRetroactiveAdminBackfill(startAt, user);
+  return isRetroactiveAdminBackfill(startAt, endAt, user);
 }
 
 /** Procedimento só é exigido para kind = PROCEDURE. AVAL e RETURN ficam livres. */
@@ -431,7 +439,7 @@ export class AppointmentsService {
 
     const startAt = new Date(dto.startAt);
     const endAt = new Date(dto.endAt);
-    const retroAdminBackfill = isRetroactiveAdminBackfill(startAt, user);
+    const retroAdminBackfill = isRetroactiveAdminBackfill(startAt, endAt, user);
 
     if (!retroAdminBackfill) {
       await this.checkAvailability(dto.professionalId, startAt, endAt);
@@ -461,7 +469,7 @@ export class AppointmentsService {
 
       const status = dto.status ?? AppointmentStatus.SCHEDULED;
       const extraItems = this.normalizeExtraMaterials(dto.extraMaterials);
-      const skipMaterialDeduction = shouldSkipMaterialDeduction(startAt, user);
+      const skipMaterialDeduction = shouldSkipMaterialDeduction(startAt, endAt, user);
       const willDeduct =
         isActive(status) &&
         (!!dto.procedureId || extraItems.length > 0) &&
@@ -528,7 +536,14 @@ export class AppointmentsService {
     const recurrenceStartAt = dto.startAt
       ? new Date(dto.startAt)
       : currentForRecurrence.startAt;
-    const retroAdminBackfill = isRetroactiveAdminBackfill(recurrenceStartAt, user);
+    const recurrenceEndAt = dto.endAt
+      ? new Date(dto.endAt)
+      : currentForRecurrence.endAt;
+    const retroAdminBackfill = isRetroactiveAdminBackfill(
+      recurrenceStartAt,
+      recurrenceEndAt,
+      user,
+    );
 
     if (dto.startAt || dto.endAt || dto.professionalId) {
       const startAt = dto.startAt ? new Date(dto.startAt) : currentForRecurrence.startAt;
@@ -588,7 +603,12 @@ export class AppointmentsService {
       const newProcedureId = dto.procedureId ?? before.procedureId;
       const newKind = dto.kind ?? before.kind;
       const effectiveStartAt = dto.startAt ? new Date(dto.startAt) : before.startAt;
-      const skipMaterialDeduction = shouldSkipMaterialDeduction(effectiveStartAt, user);
+      const effectiveEndAt = dto.endAt ? new Date(dto.endAt) : before.endAt;
+      const skipMaterialDeduction = shouldSkipMaterialDeduction(
+        effectiveStartAt,
+        effectiveEndAt,
+        user,
+      );
       const willBeActive = isActive(newStatus);
       const procedureChanged = before.procedureId !== newProcedureId;
       const extraItems =
@@ -853,7 +873,11 @@ export class AppointmentsService {
           kind: dto.kind,
           notes: dto.notes,
           clinicalNotes: dto.clinicalNotes,
-          materialsDeducted: willDeduct,
+          materialsDeducted: skipMaterialDeduction
+            ? before.materialsDeducted
+            : willDeduct
+              ? true
+              : before.materialsDeducted && willBeActive,
           financeGenerated,
           patientPackageId: dto.patientPackageId === undefined ? undefined : dto.patientPackageId ?? null,
         },

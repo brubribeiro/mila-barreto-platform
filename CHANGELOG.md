@@ -4,6 +4,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-07-30
+
+### Fixed
+
+- Agendamentos retroativos (admin): detecção de horário passado alinhada ao fuso de Brasília (dia de calendário anterior ou instante já encerrado), corrigindo bloqueio de estoque para administrador direto.
+- Backend: preserva `materialsDeducted` ao editar agendamentos retroativos sem tentar nova baixa de estoque.
+- Formulário de agendamento: validação de profissional/disponibilidade flexibilizada em cadastros retroativos de admin.
+
 ## [0.1.9] - 2026-07-30
 
 ### Fixed

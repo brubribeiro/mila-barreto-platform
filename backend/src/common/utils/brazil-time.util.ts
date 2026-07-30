@@ -17,6 +17,13 @@ const partsFormatter = new Intl.DateTimeFormat('en-US', {
   hour12: false,
 });
 
+const brazilDateFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: BRAZIL_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
 const WEEKDAY_INDEX: Record<string, number> = {
   Sun: 0,
   Mon: 1,
@@ -44,4 +51,22 @@ export function getBrazilWallClock(date: Date): BrazilWallClock {
     dayOfWeek: WEEKDAY_INDEX[lookup.weekday] ?? 0,
     hhmm: `${hour}:${lookup.minute}`,
   };
+}
+
+/** YYYY-MM-DD no fuso America/Sao_Paulo (para comparar dias de calendário). */
+export function toBrazilDateKey(date: Date): string {
+  return brazilDateFormatter.format(date);
+}
+
+/** Horário já passou ou cai em dia anterior ao de hoje no Brasil. */
+export function isRetroactiveAppointmentInstant(startAt: Date, endAt?: Date): boolean {
+  const now = Date.now();
+  if (!Number.isNaN(startAt.getTime()) && startAt.getTime() < now) return true;
+  if (endAt && !Number.isNaN(endAt.getTime()) && endAt.getTime() < now) return true;
+
+  const todayBrazil = toBrazilDateKey(new Date());
+  if (toBrazilDateKey(startAt) < todayBrazil) return true;
+  if (endAt && toBrazilDateKey(endAt) < todayBrazil) return true;
+
+  return false;
 }
