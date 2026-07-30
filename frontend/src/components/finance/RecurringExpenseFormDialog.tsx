@@ -30,6 +30,7 @@ import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { ExpenseType, RecurringExpense } from '../../types';
+import { fontSizes } from '../../theme/fontSizes';
 
 interface Props {
   open: boolean;
@@ -95,7 +96,7 @@ function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
       sx={{
         display: 'block',
         mb: 1.75,
-        fontSize: '0.72rem',
+        fontSize: fontSizes.xs,
         fontWeight: 800,
         letterSpacing: '0.06em',
         textTransform: 'uppercase',

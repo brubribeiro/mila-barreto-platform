@@ -51,6 +51,7 @@ import { patientReferralSourceLabel } from '../../utils/patientReferralSource';
 import { maskCEP, maskPhone, onlyDigits } from '../../utils/masks';
 import type { Appointment, AppointmentKind } from '../../types';
 import { patientInitials } from '../../utils/patientPhoto';
+import { fontSizes } from '../../theme/fontSizes';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -200,10 +201,10 @@ function InfoLine({ icon, label, value }: { icon: ReactNode; label: string; valu
         {icon}
       </Box>
       <Box sx={{ minWidth: 0, lineHeight: 1.3 }}>
-        <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', fontWeight: 600 }}>
+        <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', fontWeight: 600 }}>
           {label}
         </Typography>
-        <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+        <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
           {value}
         </Typography>
       </Box>
@@ -327,16 +328,16 @@ function AppointmentRowCard({ appt }: { appt: Appointment }) {
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
             <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontSize: '0.9rem', fontWeight: 800 }} noWrap>
+              <Typography sx={{ fontSize: fontSizes.md, fontWeight: 800 }} noWrap>
                 {appt.procedure?.name ?? kindLabel[appt.kind] ?? 'Atendimento'}
               </Typography>
-              <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+              <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                 {dayjs(appt.startAt).format('DD/MM/YYYY [às] HH:mm')}
                 {appt.professional?.name ? ` · ${appt.professional.name}` : ''}
               </Typography>
             </Box>
             {appt.procedure?.price != null && (
-              <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, flexShrink: 0 }}>
+              <Typography sx={{ fontSize: fontSizes.md, fontWeight: 800, flexShrink: 0 }}>
                 {brl.format(Number(appt.procedure.price))}
               </Typography>
             )}
@@ -348,12 +349,12 @@ function AppointmentRowCard({ appt }: { appt: Appointment }) {
                 pt: 1.25,
                 borderTop: 1,
                 borderColor: 'divider',
-                fontSize: '0.78rem',
+                fontSize: fontSizes.xs,
                 color: 'text.secondary',
                 lineHeight: 1.5,
               }}
             >
-              <Box component="b" sx={{ color: 'text.disabled', fontSize: '0.66rem', letterSpacing: '0.3px' }}>
+              <Box component="b" sx={{ color: 'text.disabled', fontSize: fontSizes['2xs'], letterSpacing: '0.3px' }}>
                 OBSERVAÇÃO:{' '}
               </Box>
               {obs}
@@ -552,7 +553,7 @@ export function PatientDetailDrawer({
                   width: 64,
                   height: 64,
                   borderRadius: '18px',
-                  fontSize: '1.35rem',
+                  fontSize: fontSizes['4xl'],
                   fontWeight: 800,
                   bgcolor: 'primary.main',
                   color: '#fff',
@@ -565,7 +566,7 @@ export function PatientDetailDrawer({
               <Box sx={{ minWidth: 0 }}>
                 <Typography
                   sx={{
-                    fontSize: '0.68rem',
+                    fontSize: fontSizes['2xs'],
                     fontWeight: 700,
                     color: 'primary.main',
                     letterSpacing: '0.06em',
@@ -574,7 +575,7 @@ export function PatientDetailDrawer({
                 >
                   Ficha do paciente
                 </Typography>
-                <Typography sx={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em' }} noWrap>
+                <Typography sx={{ fontSize: fontSizes['3xl'], fontWeight: 800, letterSpacing: '-0.02em' }} noWrap>
                   {data.name}
                 </Typography>
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
@@ -596,7 +597,7 @@ export function PatientDetailDrawer({
                             px: 1,
                             py: 0.35,
                             borderRadius: '9px',
-                            fontSize: '0.76rem',
+                            fontSize: fontSizes.xs,
                             fontWeight: 800,
                             color: tone.main,
                             bgcolor: alpha(tone.main, 0.14),
@@ -649,7 +650,7 @@ export function PatientDetailDrawer({
                       px: 1,
                       borderRadius: '9px',
                       fontFamily: 'inherit',
-                      fontSize: '0.78rem',
+                      fontSize: fontSizes.xs,
                       fontWeight: 700,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
@@ -710,7 +711,7 @@ export function PatientDetailDrawer({
                   <Typography sx={{ fontSize: stat.label === 'última visita' ? '0.9rem' : '1.25rem', fontWeight: 800, color: stat.tone }}>
                     {stat.value}
                   </Typography>
-                  <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary', fontWeight: 600, mt: 0.25 }}>
+                  <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', fontWeight: 600, mt: 0.25 }}>
                     {stat.label}
                   </Typography>
                 </Box>
@@ -774,7 +775,7 @@ export function PatientDetailDrawer({
                 }}
               >
                 <Typography
-                  sx={{ fontSize: '0.7rem', color: 'text.secondary', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', mb: 0.75 }}
+                  sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', mb: 0.75 }}
                 >
                   Observações
                 </Typography>
@@ -851,7 +852,7 @@ export function PatientDetailDrawer({
             }}
             sx={{
               flex: 1,
-              height: 44,
+              height: 38,
               borderRadius: '12px',
               bgcolor: (t) => alpha(t.palette.primary.main, 0.1),
               borderColor: 'primary.main',
@@ -869,7 +870,7 @@ export function PatientDetailDrawer({
               handleClose();
               openAppointmentDialog({ patientId: patientId ?? undefined });
             }}
-            sx={{ height: 44, px: 2.25, borderRadius: '12px', fontWeight: 700, boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+            sx={{ height: 38, px: 2.25, borderRadius: '12px', fontWeight: 700, boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
           >
             Agendar
           </Button>
@@ -880,8 +881,8 @@ export function PatientDetailDrawer({
                   window.open(`https://wa.me/55${onlyDigits(data.phone ?? '')}`, '_blank', 'noopener')
                 }
                 sx={{
-                  width: 44,
-                  height: 44,
+                  width: 38,
+                  height: 38,
                   borderRadius: '12px',
                   border: 1,
                   borderColor: 'divider',

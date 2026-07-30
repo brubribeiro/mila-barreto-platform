@@ -64,6 +64,7 @@ import {
   patientInitials,
   validatePatientPhotoFile,
 } from '../../utils/patientPhoto';
+import { fontSizes } from '../../theme/fontSizes';
 
 interface PatientFormDialogProps {
   open: boolean;
@@ -144,7 +145,7 @@ function LabeledField({
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, minWidth: 0 }}>
       <Typography
         component="span"
-        sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'text.primary' }}
+        sx={{ fontSize: fontSizes.xs, fontWeight: 700, color: 'text.primary' }}
       >
         {label}
         {required && <Box component="span" sx={{ color: 'error.main', ml: 0.25 }}>*</Box>}
@@ -534,7 +535,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
             variant="fullWidth"
             sx={{
               minHeight: 46,
-              '& .MuiTab-root': { minHeight: 46, py: 1, textTransform: 'none', fontWeight: 600, fontSize: '0.85rem' },
+              '& .MuiTab-root': { minHeight: 46, py: 1, textTransform: 'none', fontWeight: 600, fontSize: fontSizes.md },
             }}
           >
             {TABS.map((t) => (
@@ -609,7 +610,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                       sx={{
                         width: 72,
                         height: 72,
-                        fontSize: '1.25rem',
+                        fontSize: fontSizes['3xl'],
                         fontWeight: 700,
                         bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
                         color: 'primary.dark',

@@ -77,6 +77,7 @@ import {
 } from '../../utils/appointmentRecurrence';
 import { getApiErrorMessage } from '../../utils/apiError';
 import type { Appointment, AppointmentKind, AppointmentStatus, PatientPackage, Package, PaymentMethodEntry, Procedure } from '../../types';
+import { fontSizes } from '../../theme/fontSizes';
 
 function selectValueIfListed(value: string, options: { id: string }[]) {
   if (!value) return '';
@@ -192,7 +193,7 @@ function LabeledField({
       >
         <Typography
           component="label"
-          sx={{ fontSize: '0.75rem', fontWeight: 700, color: 'text.secondary' }}
+          sx={{ fontSize: fontSizes.xs, fontWeight: 700, color: 'text.secondary' }}
         >
           {label}
           {required ? ' *' : ''}
@@ -270,7 +271,7 @@ function AppointmentFormSection({
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.75 }}>
         <Typography
           sx={{
-            fontSize: '0.72rem',
+            fontSize: fontSizes.xs,
             fontWeight: 800,
             letterSpacing: '0.06em',
             textTransform: 'uppercase',
@@ -1346,7 +1347,7 @@ export function AppointmentFormDialog({
                   <Stack direction="row" alignItems="center" spacing={1} sx={{ flexShrink: 0 }}>
                     <Typography
                       sx={{
-                        fontSize: '0.7rem',
+                        fontSize: fontSizes['2xs'],
                         fontWeight: 700,
                         color: 'text.secondary',
                         letterSpacing: '0.5px',
@@ -1518,7 +1519,7 @@ export function AppointmentFormDialog({
                                 disabled={!selectedPatient}
                                 onClick={(e) => setSummaryAnchor(e.currentTarget)}
                                 startIcon={<InfoOutlinedIcon sx={{ fontSize: 15 }} />}
-                                sx={{ fontSize: '0.72rem', fontWeight: 700, py: 0.15, px: 0.75, minWidth: 0 }}
+                                sx={{ fontSize: fontSizes.xs, fontWeight: 700, py: 0.15, px: 0.75, minWidth: 0 }}
                               >
                                 Resumo
                               </Button>
@@ -1575,7 +1576,7 @@ export function AppointmentFormDialog({
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  fontSize: '0.8rem',
+                                  fontSize: fontSizes.sm,
                                   fontWeight: 800,
                                   flexShrink: 0,
                                 }}
@@ -1589,10 +1590,10 @@ export function AppointmentFormDialog({
                                   .toUpperCase()}
                               </Box>
                               <Box sx={{ minWidth: 0, flex: 1 }}>
-                                <Typography noWrap sx={{ fontSize: '0.85rem', fontWeight: 800 }}>
+                                <Typography noWrap sx={{ fontSize: fontSizes.md, fontWeight: 800 }}>
                                   {selectedPatient.name}
                                 </Typography>
-                                <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                                <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                                   {patientSummary.visits} visita{patientSummary.visits !== 1 ? 's' : ''}
                                   {patientSummary.last
                                     ? ` · última ${dayjs(patientSummary.last.startAt).format('DD MMM YYYY')}`
@@ -1611,7 +1612,7 @@ export function AppointmentFormDialog({
                                     borderRadius: '8px',
                                     bgcolor: 'rgba(201,138,18,.14)',
                                     color: '#C98A12',
-                                    fontSize: '0.72rem',
+                                    fontSize: fontSizes.xs,
                                     fontWeight: 800,
                                     flexShrink: 0,
                                   }}
@@ -1623,7 +1624,7 @@ export function AppointmentFormDialog({
                             {reliability && reliability.total >= 4 && (
                               <Stack direction="row" alignItems="center" spacing={0.75}>
                                 <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main', flexShrink: 0 }} />
-                                <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, color: 'success.main' }}>
+                                <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700, color: 'success.main' }}>
                                   Paciente recorrente · {reliability.total} atendimentos
                                 </Typography>
                               </Stack>
@@ -1632,7 +1633,7 @@ export function AppointmentFormDialog({
                               <Box sx={{ pt: 1.25, borderTop: '1px solid', borderColor: 'divider' }}>
                                 <Typography
                                   sx={{
-                                    fontSize: '0.62rem',
+                                    fontSize: fontSizes['3xs'],
                                     fontWeight: 700,
                                     color: 'text.secondary',
                                     textTransform: 'uppercase',
@@ -1642,13 +1643,13 @@ export function AppointmentFormDialog({
                                 >
                                   Último atendimento
                                 </Typography>
-                                <Typography sx={{ fontSize: '0.78rem', fontWeight: 600 }}>
+                                <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 600 }}>
                                   {patientSummary.last.procedure?.name ?? 'Atendimento'}
                                   {patientSummary.last.professional?.name
                                     ? ` · ${patientSummary.last.professional.name}`
                                     : ''}
                                 </Typography>
-                                <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', mt: 0.25 }}>
+                                <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', mt: 0.25 }}>
                                   {dayjs(patientSummary.last.startAt).format('DD MMM YYYY')}
                                 </Typography>
                               </Box>
@@ -1660,7 +1661,7 @@ export function AppointmentFormDialog({
                               sx={{ pt: 1.25, borderTop: '1px solid', borderColor: 'divider' }}
                             >
                               <InfoOutlinedIcon sx={{ fontSize: 15, color: '#C98A12', mt: '1px', flexShrink: 0 }} />
-                              <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', fontWeight: 500, lineHeight: 1.4 }}>
+                              <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 500, lineHeight: 1.4 }}>
                                 {selectedPatient.notes?.trim()
                                   ? selectedPatient.notes
                                   : 'Sem observações clínicas relevantes'}
@@ -1691,7 +1692,7 @@ export function AppointmentFormDialog({
                                 border: 'none',
                                 borderRadius: '8px !important',
                                 fontWeight: 700,
-                                fontSize: '0.8125rem',
+                                fontSize: fontSizes.sm,
                                 textTransform: 'none',
                                 color: 'text.secondary',
                                 '&.Mui-selected': {
@@ -1758,7 +1759,7 @@ export function AppointmentFormDialog({
                                   key={label}
                                   component="span"
                                   sx={{
-                                    fontSize: '0.72rem',
+                                    fontSize: fontSizes.xs,
                                     fontWeight: 700,
                                     color: 'text.secondary',
                                     px: 1.25,
@@ -1942,12 +1943,12 @@ export function AppointmentFormDialog({
                           <TimerOutlinedIcon fontSize="small" />
                         </SectionIcon>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'text.secondary' }}>
+                          <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 600, color: 'text.secondary' }}>
                             Timer da sessão (opcional)
                           </Typography>
                           <Typography
                             sx={{
-                              fontSize: '1.25rem',
+                              fontSize: fontSizes['3xl'],
                               fontWeight: 800,
                               fontVariantNumeric: 'tabular-nums',
                               lineHeight: 1.1,
@@ -2022,7 +2023,7 @@ export function AppointmentFormDialog({
                               minWidth: 0,
                               px: 0.75,
                               py: 0.25,
-                              fontSize: '0.75rem',
+                              fontSize: fontSizes.xs,
                               fontWeight: 700,
                               color: 'primary.main',
                             }}
@@ -2278,7 +2279,7 @@ export function AppointmentFormDialog({
                                         display: 'inline-flex',
                                         alignItems: 'center',
                                         gap: 0.6,
-                                        fontSize: '0.72rem',
+                                        fontSize: fontSizes.xs,
                                         fontWeight: 700,
                                         px: 1.15,
                                         py: 0.55,
@@ -2320,7 +2321,7 @@ export function AppointmentFormDialog({
                                       bgcolor: (t) => alpha(t.palette.warning.main, 0.14),
                                     }}
                                   />
-                                  <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary' }}>
+                                  <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary' }}>
                                     Estoque baixo
                                   </Typography>
                                 </Stack>
@@ -2335,7 +2336,7 @@ export function AppointmentFormDialog({
                                       bgcolor: (t) => alpha(t.palette.error.main, 0.14),
                                     }}
                                   />
-                                  <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary' }}>
+                                  <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary' }}>
                                     Sem estoque
                                   </Typography>
                                 </Stack>
@@ -2732,7 +2733,7 @@ export function AppointmentFormDialog({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '0.75rem',
+                        fontSize: fontSizes.xs,
                         fontWeight: 800,
                         bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
                         color: 'primary.dark',
@@ -2741,12 +2742,12 @@ export function AppointmentFormDialog({
                       {idx + 1}
                     </Box>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography sx={{ fontSize: '0.85rem', fontWeight: 700 }} noWrap>
+                      <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700 }} noWrap>
                         {dayjs(sess.startAt).format('DD/MM/YYYY [às] HH:mm')}
                       </Typography>
                       {sess.procedure?.name && (
                         <Typography
-                          sx={{ fontSize: '0.75rem', color: 'text.secondary' }}
+                          sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}
                           noWrap
                         >
                           {sess.procedure.name}
@@ -2760,7 +2761,7 @@ export function AppointmentFormDialog({
                         alignItems: 'center',
                         gap: 0.6,
                         flexShrink: 0,
-                        fontSize: '0.72rem',
+                        fontSize: fontSizes.xs,
                         fontWeight: 700,
                         color: 'text.secondary',
                       }}
@@ -2860,10 +2861,10 @@ export function AppointmentFormDialog({
                 <PaymentIcon fontSize="small" />
               </Box>
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography noWrap sx={{ fontSize: '0.875rem', fontWeight: 800, lineHeight: 1.35 }}>
+                <Typography noWrap sx={{ fontSize: fontSizes.md, fontWeight: 800, lineHeight: 1.35 }}>
                   {selectedPatient?.name ?? 'Paciente'}
                 </Typography>
-                <Typography noWrap sx={{ fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.35 }}>
+                <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.secondary', lineHeight: 1.35 }}>
                   {selectedProcedure?.name ?? 'Atendimento'}
                 </Typography>
               </Box>
@@ -2879,12 +2880,12 @@ export function AppointmentFormDialog({
                 borderColor: (t) => alpha(t.palette.primary.main, 0.22),
               }}
             >
-              <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+              <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                 {selectedPackageId && selectedPatientPkg
                   ? 'Receita do pacote ao confirmar'
                   : 'Receita ao confirmar'}
               </Typography>
-              <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: 'primary.dark' }}>
+              <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 800, color: 'primary.dark' }}>
                 {paymentAmountOnComplete > 0 ? brl.format(paymentAmountOnComplete) : '—'}
               </Typography>
             </Stack>
@@ -2945,7 +2946,7 @@ export function AppointmentFormDialog({
                   ))}
                 </TextField>
               </LabeledField>
-              <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.75, lineHeight: 1.4 }}>
+              <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', mt: 0.75, lineHeight: 1.4 }}>
                 Use um mês passado para registrar agendamentos atrasados no financeiro correto.
               </Typography>
             </Box>

@@ -41,6 +41,7 @@ import { usePermissions } from '../contexts/usePermissions';
 import { maskPhone } from '../utils/masks';
 import { patientInitials } from '../utils/patientPhoto';
 import type { Patient } from '../types';
+import { fontSizes } from '../theme/fontSizes';
 
 const PAGE_SIZE = 8;
 const AVATAR_COLORS = ['#15998B', '#5BA8DE', '#D46B8A', '#E0915B', '#9B7BD4', '#4FB3A8'];
@@ -70,13 +71,13 @@ function StatCard({ label, value, loading }: { label: string; value: string; loa
   return (
     <Card sx={{ p: { xs: 2, sm: 2.25 } }}>
       {loading ? (
-        <Skeleton variant="text" width={80} sx={{ fontSize: '1.65rem' }} />
+        <Skeleton variant="text" width={80} sx={{ fontSize: fontSizes['6xl'] }} />
       ) : (
         <Typography sx={{ fontSize: { xs: '1.4rem', sm: '1.65rem' }, fontWeight: 800, letterSpacing: '-0.5px' }}>
           {value}
         </Typography>
       )}
-      <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 600, mt: 0.25 }}>
+      <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600, mt: 0.25 }}>
         {label}
       </Typography>
     </Card>
@@ -241,7 +242,7 @@ export function Patients() {
           spacing={1.5}
           sx={{ px: { xs: 2, sm: 2.75 }, py: 2, borderBottom: 1, borderColor: 'divider' }}
         >
-          <Typography sx={{ fontSize: '1rem', fontWeight: 700 }}>Todos os pacientes</Typography>
+          <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>Todos os pacientes</Typography>
           <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
             <Stack
               direction="row"
@@ -262,7 +263,7 @@ export function Patients() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Buscar paciente, CPF..."
-                sx={{ fontSize: '0.8125rem', flex: 1 }}
+                sx={{ fontSize: fontSizes.sm, flex: 1 }}
               />
             </Stack>
             {isAdmin && (
@@ -310,7 +311,7 @@ export function Patients() {
             borderBottom: 1,
             borderColor: 'divider',
             bgcolor: 'grey.50',
-            fontSize: '0.7rem',
+            fontSize: fontSizes['2xs'],
             fontWeight: 800,
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
@@ -387,10 +388,10 @@ export function Patients() {
             >
               <SearchIcon />
             </Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 800 }}>
+            <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 800 }}>
               {search ? 'Nenhum paciente encontrado' : 'Nenhum paciente cadastrado'}
             </Typography>
-            <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary', maxWidth: 380 }}>
+            <Typography sx={{ fontSize: fontSizes.md, color: 'text.secondary', maxWidth: 380 }}>
               {search
                 ? 'Não encontramos ninguém com esse nome, CPF ou telefone. Confira a grafia ou cadastre um novo paciente.'
                 : 'Comece adicionando o primeiro paciente à sua base.'}
@@ -441,7 +442,7 @@ export function Patients() {
                       width: 40,
                       height: 40,
                       borderRadius: '11px',
-                      fontSize: '0.8rem',
+                      fontSize: fontSizes.sm,
                       fontWeight: 700,
                       color: '#fff',
                       bgcolor: color,
@@ -452,11 +453,11 @@ export function Patients() {
                     {patientInitials(p.name)}
                   </Avatar>
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 700 }} noWrap title={p.name}>
+                    <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700 }} noWrap title={p.name}>
                       {p.name}
                     </Typography>
                     <Typography
-                      sx={{ display: { md: 'none' }, fontSize: '0.72rem', color: 'text.secondary' }}
+                      sx={{ display: { md: 'none' }, fontSize: fontSizes.xs, color: 'text.secondary' }}
                       noWrap
                     >
                       {p.phone ? maskPhone(p.phone) : formatCpf(p.document)}
@@ -468,7 +469,7 @@ export function Patients() {
                 <Typography
                   sx={{
                     display: { xs: 'none', md: 'block' },
-                    fontSize: '0.8rem',
+                    fontSize: fontSizes.sm,
                     color: 'text.secondary',
                     fontWeight: 600,
                     fontVariantNumeric: 'tabular-nums',
@@ -479,20 +480,20 @@ export function Patients() {
 
                 {/* Telefone */}
                 <Typography
-                  sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.82rem', color: 'text.secondary', fontWeight: 600 }}
+                  sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}
                 >
                   {p.phone ? maskPhone(p.phone) : '—'}
                 </Typography>
 
                 {/* Última visita */}
                 <Typography
-                  sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.82rem', color: 'text.secondary', fontWeight: 600 }}
+                  sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}
                 >
                   {p.lastVisit ? dayjs(p.lastVisit).format('DD MMM YYYY') : '—'}
                 </Typography>
 
                 {/* Total gasto */}
-                <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.85rem', fontWeight: 800 }}>
+                <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.md, fontWeight: 800 }}>
                   {p.totalSpent ? brl.format(p.totalSpent) : '—'}
                 </Typography>
 
@@ -500,7 +501,7 @@ export function Patients() {
                 <Typography
                   sx={{
                     display: { xs: 'none', md: 'block' },
-                    fontSize: '0.85rem',
+                    fontSize: fontSizes.md,
                     fontWeight: 700,
                     color: 'text.secondary',
                     fontVariantNumeric: 'tabular-nums',
@@ -520,7 +521,7 @@ export function Patients() {
                       px: 1.1,
                       py: 0.5,
                       borderRadius: '9px',
-                      fontSize: '0.78rem',
+                      fontSize: fontSizes.xs,
                       fontWeight: 800,
                       color: tone.main,
                       bgcolor: alpha(tone.main, 0.12),
@@ -593,7 +594,7 @@ export function Patients() {
             spacing={1.5}
             sx={{ px: 2.75, py: 1.75, borderTop: 1, borderColor: 'divider' }}
           >
-            <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 600 }}>
+            <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600 }}>
               {rangeStart}–{rangeEnd} de {patients.length}
             </Typography>
             <Stack direction="row" alignItems="center" spacing={0.75}>
@@ -613,7 +614,7 @@ export function Patients() {
                       minWidth: 24,
                       textAlign: 'center',
                       color: 'text.disabled',
-                      fontSize: '0.78rem',
+                      fontSize: fontSizes.xs,
                       fontWeight: 700,
                     }}
                   >
@@ -633,7 +634,7 @@ export function Patients() {
                       borderColor: item === currentPage ? 'primary.main' : 'divider',
                       bgcolor: item === currentPage ? 'primary.main' : 'background.paper',
                       color: item === currentPage ? '#fff' : 'text.secondary',
-                      fontSize: '0.78rem',
+                      fontSize: fontSizes.xs,
                       fontWeight: 700,
                       fontFamily: 'inherit',
                       cursor: 'pointer',

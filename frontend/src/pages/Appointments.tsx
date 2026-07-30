@@ -27,6 +27,7 @@ import {
   slotOverlapsUnavailability,
 } from '../utils/unavailabilityCalendar';
 import { slotOverlapsProfessionalAppointment } from '../utils/appointmentScheduling';
+import { fontSizes } from '../theme/fontSizes';
 
 const statusColors: Record<AppointmentStatus, { bg: string; border: string; text: string }> = {
   SCHEDULED: { bg: '#B8E5E2', border: '#0ABAB5', text: '#07807C' },
@@ -344,7 +345,7 @@ export function Appointments() {
             onClick={() => setPendingExpanded((v) => !v)}
           >
             <Box sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: '#C25A4C', flexShrink: 0 }} />
-            <Typography sx={{ flex: 1, fontSize: '0.85rem', fontWeight: 700 }}>
+            <Typography sx={{ flex: 1, fontSize: fontSizes.md, fontWeight: 700 }}>
               {pendingAppointments.length} agendamento{pendingAppointments.length > 1 ? 's' : ''} com pendência
             </Typography>
             <IconButton
@@ -401,7 +402,7 @@ export function Appointments() {
                   <Box
                     component="span"
                     sx={{
-                      fontSize: '0.72rem',
+                      fontSize: fontSizes.xs,
                       fontWeight: 800,
                       color: '#C25A4C',
                       textTransform: 'uppercase',
@@ -411,10 +412,10 @@ export function Appointments() {
                     {new Date(a.startAt).toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}{' '}
                     {new Date(a.startAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                   </Box>
-                  <Box component="span" sx={{ fontSize: '0.78rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  <Box component="span" sx={{ fontSize: fontSizes.xs, fontWeight: 700, whiteSpace: 'nowrap' }}>
                     {a.patient?.name ?? 'Paciente'}
                   </Box>
-                  <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>
+                  <Box component="span" sx={{ fontSize: fontSizes.xs, color: 'text.secondary', whiteSpace: 'nowrap' }}>
                     · {a.procedure?.name ?? kindLabel[a.kind] ?? a.kind}
                   </Box>
                 </Box>
@@ -455,7 +456,7 @@ export function Appointments() {
             </IconButton>
             <Typography
               sx={{
-                fontSize: '1rem',
+                fontSize: fontSizes.xl,
                 fontWeight: 700,
                 px: 1,
                 textTransform: 'capitalize',
@@ -488,7 +489,7 @@ export function Appointments() {
               bgcolor: `${theme.palette.primary.main}1F`,
               color: 'primary.main',
               fontWeight: 700,
-              fontSize: '0.8125rem',
+              fontSize: fontSizes.sm,
               borderRadius: '10px',
               px: 2,
               '&:hover': { bgcolor: `${theme.palette.primary.main}2E` },
@@ -509,7 +510,7 @@ export function Appointments() {
                     border: 'none',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
-                    fontSize: '0.8125rem',
+                    fontSize: fontSizes.sm,
                     fontWeight: 700,
                     px: 1.75,
                     py: 0.75,
@@ -533,7 +534,7 @@ export function Appointments() {
           {AGENDA_CATEGORIES.map((c) => (
             <Stack key={c.label} direction="row" alignItems="center" spacing={0.9}>
               <Box sx={{ width: 10, height: 10, borderRadius: '3px', bgcolor: c.color, flexShrink: 0 }} />
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: 'text.secondary' }}>
+              <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 600, color: 'text.secondary' }}>
                 {c.label}
               </Typography>
             </Stack>
@@ -560,7 +561,7 @@ export function Appointments() {
       >
         <Typography
           sx={{
-            fontSize: '0.72rem',
+            fontSize: fontSizes.xs,
             fontWeight: 700,
             color: 'text.secondary',
             textTransform: 'uppercase',
@@ -580,7 +581,7 @@ export function Appointments() {
                 flexShrink: 0,
               }}
             />
-            <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'text.secondary' }}>
+            <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 600, color: 'text.secondary' }}>
               {label}
             </Typography>
           </Stack>
@@ -691,14 +692,14 @@ export function Appointments() {
           '& .fc .fc-col-header-cell-cushion': {
             color: theme.palette.text.secondary,
             fontWeight: 600,
-            fontSize: '0.75rem',
+            fontSize: fontSizes.xs,
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
             padding: 0,
           },
           '& .fc .fc-daygrid-day-number, & .fc .fc-timegrid-axis-cushion': {
             color: theme.palette.text.secondary,
-            fontSize: '0.85rem',
+            fontSize: fontSizes.md,
           },
           '& .fc .fc-day-today': {
             backgroundColor: '#EDF8F7 !important',
@@ -707,7 +708,7 @@ export function Appointments() {
             height: '2.7em',
           },
           '& .fc .fc-timegrid-slot-label-cushion, & .fc .fc-timegrid-axis-cushion': {
-            fontSize: '0.72rem',
+            fontSize: fontSizes.xs,
             fontWeight: 600,
             color: theme.palette.text.secondary,
           },
@@ -720,7 +721,7 @@ export function Appointments() {
           '& .fc-event': {
             padding: 0,
             cursor: 'pointer',
-            fontSize: '0.78rem',
+            fontSize: fontSizes.xs,
             fontWeight: 600,
             borderRadius: '12px',
             border: 'none',
@@ -752,7 +753,7 @@ export function Appointments() {
             backgroundColor: 'rgba(10, 186, 181, 0.15)',
           },
           '& .fc .fc-event.fc-holiday-nacional, & .fc .fc-event.fc-holiday-municipal': {
-            fontSize: '0.72rem',
+            fontSize: fontSizes.xs,
             fontWeight: 600,
             cursor: 'default',
           },
@@ -760,7 +761,7 @@ export function Appointments() {
             filter: 'none',
           },
           '& .fc .fc-event.fc-unavailability': {
-            fontSize: '0.72rem',
+            fontSize: fontSizes.xs,
             fontWeight: 600,
             cursor: 'default',
             opacity: 0.95,
@@ -873,7 +874,7 @@ export function Appointments() {
               return (
                 <Box
                   sx={{
-                    fontSize: '0.66rem',
+                    fontSize: fontSizes['2xs'],
                     fontWeight: 700,
                     color: 'text.secondary',
                     textTransform: 'uppercase',
@@ -897,7 +898,7 @@ export function Appointments() {
               >
                 <Box
                   sx={{
-                    fontSize: '0.62rem',
+                    fontSize: fontSizes['3xs'],
                     fontWeight: 700,
                     color: 'text.secondary',
                     textTransform: 'uppercase',
@@ -915,7 +916,7 @@ export function Appointments() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '0.9rem',
+                    fontSize: fontSizes.md,
                     fontWeight: 800,
                     ...(arg.isToday
                       ? { bgcolor: 'primary.main', color: '#fff' }
@@ -939,14 +940,14 @@ export function Appointments() {
                     <Box
                       sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: barColor, flexShrink: 0 }}
                     />
-                    <Box component="span" sx={{ fontWeight: 700, fontSize: '0.7rem', flexShrink: 0 }}>
+                    <Box component="span" sx={{ fontWeight: 700, fontSize: fontSizes['2xs'], flexShrink: 0 }}>
                       {arg.timeText}
                     </Box>
                     <Box
                       component="span"
                       sx={{
                         fontWeight: 700,
-                        fontSize: '0.7rem',
+                        fontSize: fontSizes['2xs'],
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -984,12 +985,12 @@ export function Appointments() {
                     }}
                   />
                   <Box sx={{ minWidth: 0, lineHeight: 1.25 }}>
-                    <Box sx={{ fontSize: '0.64rem', fontWeight: 700, opacity: 0.9 }}>
+                    <Box sx={{ fontSize: fontSizes['3xs'], fontWeight: 700, opacity: 0.9 }}>
                       {arg.timeText}
                     </Box>
                     <Box
                       sx={{
-                        fontSize: '0.72rem',
+                        fontSize: fontSizes.xs,
                         fontWeight: 800,
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
@@ -1011,7 +1012,7 @@ export function Appointments() {
                           borderRadius: '6px',
                           bgcolor: `${barColor}26`,
                           color: barColor,
-                          fontSize: '0.58rem',
+                          fontSize: fontSizes['3xs'],
                           fontWeight: 800,
                           letterSpacing: '0.03em',
                           textTransform: 'uppercase',
@@ -1034,7 +1035,7 @@ export function Appointments() {
                       appt.procedure?.name && (
                         <Box
                           sx={{
-                            fontSize: '0.64rem',
+                            fontSize: fontSizes['3xs'],
                             opacity: 0.82,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
@@ -1053,7 +1054,7 @@ export function Appointments() {
               <Box
                 sx={{
                   px: 0.5,
-                  fontSize: '0.66rem',
+                  fontSize: fontSizes['2xs'],
                   fontWeight: 600,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',

@@ -60,6 +60,7 @@ import { patientReferralSourceLabel } from '../utils/patientReferralSource';
 import { maskCEP, maskPhone, onlyDigits } from '../utils/masks';
 import { patientInitials } from '../utils/patientPhoto';
 import type { Appointment, AppointmentKind, FinancialEntry, DocumentFile } from '../types';
+import { fontSizes } from '../theme/fontSizes';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -219,11 +220,11 @@ function HighlightCard({ icon, label, value, sub }: { icon: ReactNode; label: st
         >
           {icon}
         </Box>
-        <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', fontWeight: 600 }}>{label}</Typography>
+        <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600 }}>{label}</Typography>
       </Stack>
-      <Typography sx={{ fontSize: '1.05rem', fontWeight: 800, mt: 1 }}>{value}</Typography>
+      <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 800, mt: 1 }}>{value}</Typography>
       {sub && (
-        <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }} noWrap>
+        <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }} noWrap>
           {sub}
         </Typography>
       )}
@@ -281,7 +282,7 @@ function GeneralTab({ data, activePackagesCount }: { data: any; activePackagesCo
                 key={c.key}
                 component="span"
                 sx={{
-                  fontSize: '0.75rem',
+                  fontSize: fontSizes.xs,
                   fontWeight: 700,
                   px: 1.25,
                   py: 0.5,
@@ -298,7 +299,7 @@ function GeneralTab({ data, activePackagesCount }: { data: any; activePackagesCo
                 key={a.label}
                 component="span"
                 sx={{
-                  fontSize: '0.75rem',
+                  fontSize: fontSizes.xs,
                   fontWeight: 700,
                   px: 1.25,
                   py: 0.5,
@@ -410,7 +411,7 @@ function AppointmentsTab({ appointments }: { appointments: Appointment[] }) {
                   py: 0.65,
                   borderRadius: '8px',
                   fontFamily: 'inherit',
-                  fontSize: '0.78rem',
+                  fontSize: fontSizes.xs,
                   fontWeight: 700,
                   color: active ? 'primary.main' : 'text.secondary',
                   bgcolor: active ? 'background.paper' : 'transparent',
@@ -437,7 +438,7 @@ function AppointmentsTab({ appointments }: { appointments: Appointment[] }) {
             borderColor: 'divider',
             color: 'text.secondary',
             fontWeight: 700,
-            fontSize: '0.78rem',
+            fontSize: fontSizes.xs,
             '&:hover': { bgcolor: 'grey.50', borderColor: 'divider' },
           }}
         >
@@ -458,7 +459,7 @@ function AppointmentsTab({ appointments }: { appointments: Appointment[] }) {
       )}
       {pageCount > 1 && (
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ pt: 0.5 }}>
-          <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 600 }}>
+          <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600 }}>
             {current * APPTS_PAGE_SIZE + 1}–{Math.min((current + 1) * APPTS_PAGE_SIZE, filtered.length)} de{' '}
             {filtered.length}
           </Typography>
@@ -703,16 +704,16 @@ function AppointmentRowCard({ appt }: { appt: Appointment }) {
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
             <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontSize: '0.9rem', fontWeight: 800 }} noWrap>
+              <Typography sx={{ fontSize: fontSizes.md, fontWeight: 800 }} noWrap>
                 {appt.procedure?.name ?? kindLabel[appt.kind] ?? 'Atendimento'}
               </Typography>
-              <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+              <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                 {dayjs(appt.startAt).format('DD/MM/YYYY [às] HH:mm')}
                 {appt.professional?.name ? ` · ${appt.professional.name}` : ''}
               </Typography>
             </Box>
             {value != null && (
-              <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, flexShrink: 0 }}>
+              <Typography sx={{ fontSize: fontSizes.md, fontWeight: 800, flexShrink: 0 }}>
                 {brl.format(Number(value))}
               </Typography>
             )}
@@ -726,7 +727,7 @@ function AppointmentRowCard({ appt }: { appt: Appointment }) {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 0.5,
-                fontSize: '0.7rem',
+                fontSize: fontSizes['2xs'],
                 fontWeight: 800,
                 px: 1,
                 py: 0.35,
@@ -738,7 +739,7 @@ function AppointmentRowCard({ appt }: { appt: Appointment }) {
               {paid ? 'Pago' : 'Não pago'}
             </Box>
             {paid && paymentName && (
-              <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', fontWeight: 600 }}>
+              <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600 }}>
                 via {paymentName}
               </Typography>
             )}
@@ -747,16 +748,16 @@ function AppointmentRowCard({ appt }: { appt: Appointment }) {
           {(adminNotes || clinicalNotes) && (
             <Box sx={{ mt: 1.25, pt: 1.25, borderTop: 1, borderColor: 'divider' }}>
               {adminNotes && (
-                <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.5 }}>
-                  <Box component="b" sx={{ color: 'text.disabled', fontSize: '0.66rem', letterSpacing: '0.3px' }}>
+                <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', lineHeight: 1.5 }}>
+                  <Box component="b" sx={{ color: 'text.disabled', fontSize: fontSizes['2xs'], letterSpacing: '0.3px' }}>
                     OBSERVAÇÃO:{' '}
                   </Box>
                   {adminNotes}
                 </Typography>
               )}
               {clinicalNotes && (
-                <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.5, mt: adminNotes ? 0.75 : 0 }}>
-                  <Box component="b" sx={{ color: 'text.disabled', fontSize: '0.66rem', letterSpacing: '0.3px' }}>
+                <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', lineHeight: 1.5, mt: adminNotes ? 0.75 : 0 }}>
+                  <Box component="b" sx={{ color: 'text.disabled', fontSize: fontSizes['2xs'], letterSpacing: '0.3px' }}>
                     ANOTAÇÃO CLÍNICA:{' '}
                   </Box>
                   {clinicalNotes}
@@ -947,7 +948,7 @@ export function PatientDetail() {
                 borderRadius: '24px',
                 mx: 'auto',
                 mb: 1.5,
-                fontSize: '1.75rem',
+                fontSize: fontSizes['6xl'],
                 fontWeight: 800,
                 bgcolor: (theme) => alpha(theme.palette.primary.main, 0.16),
                 color: 'primary.dark',
@@ -956,7 +957,7 @@ export function PatientDetail() {
             >
               {patientInitials(data.name)}
             </Avatar>
-            <Typography sx={{ fontSize: '1.3rem', fontWeight: 800, letterSpacing: '-0.4px' }}>
+            <Typography sx={{ fontSize: fontSizes['3xl'], fontWeight: 800, letterSpacing: '-0.4px' }}>
               {data.name}
             </Typography>
             {data.phone && (
@@ -978,7 +979,7 @@ export function PatientDetail() {
                         px: 1.1,
                         py: 0.4,
                         borderRadius: '9px',
-                        fontSize: '0.8rem',
+                        fontSize: fontSizes.sm,
                         fontWeight: 800,
                         color: tone.main,
                         bgcolor: alpha(tone.main, 0.14),
@@ -987,7 +988,7 @@ export function PatientDetail() {
                       <StarRoundedIcon sx={{ fontSize: 15 }} />
                       {reliability.reliabilityPercent}
                     </Box>
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: tone.main }}>
+                    <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700, color: tone.main }}>
                       {tone.label}
                     </Typography>
                   </Stack>
@@ -1007,8 +1008,8 @@ export function PatientDetail() {
                 },
               ].map((s) => (
                 <Box key={s.label} sx={{ textAlign: 'center' }}>
-                  <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: s.tone }}>{s.value}</Typography>
-                  <Typography sx={{ fontSize: '0.66rem', color: 'text.secondary', fontWeight: 600 }}>
+                  <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 800, color: s.tone }}>{s.value}</Typography>
+                  <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', fontWeight: 600 }}>
                     {s.label}
                   </Typography>
                 </Box>
@@ -1019,20 +1020,20 @@ export function PatientDetail() {
 
             {data.document && (
               <Box>
-                <Typography sx={{ fontSize: '0.66rem', fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                <Typography sx={{ fontSize: fontSizes['2xs'], fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                   CPF
                 </Typography>
-                <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
                   {data.document}
                 </Typography>
               </Box>
             )}
             {data.birthDate && (
               <Box>
-                <Typography sx={{ fontSize: '0.66rem', fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                <Typography sx={{ fontSize: fontSizes['2xs'], fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                   Nascimento
                 </Typography>
-                <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                <Typography sx={{ fontSize: fontSizes.md, fontWeight: 600 }}>
                   {formatDateOnlyFromApi(data.birthDate)}
                   {ageLabel ? ` · ${ageLabel}` : ''}
                 </Typography>
@@ -1040,30 +1041,30 @@ export function PatientDetail() {
             )}
             {data.sex && (
               <Box>
-                <Typography sx={{ fontSize: '0.66rem', fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                <Typography sx={{ fontSize: fontSizes['2xs'], fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                   Sexo
                 </Typography>
-                <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                <Typography sx={{ fontSize: fontSizes.md, fontWeight: 600 }}>
                   {patientSexLabel(data.sex)}
                 </Typography>
               </Box>
             )}
             {addressLine && (
               <Box>
-                <Typography sx={{ fontSize: '0.66rem', fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                <Typography sx={{ fontSize: fontSizes['2xs'], fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                   Endereço
                 </Typography>
-                <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, lineHeight: 1.4 }}>
+                <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 500, lineHeight: 1.4 }}>
                   {addressLine}
                 </Typography>
               </Box>
             )}
             {data.email && (
               <Box>
-                <Typography sx={{ fontSize: '0.66rem', fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                <Typography sx={{ fontSize: fontSizes['2xs'], fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                   E-mail
                 </Typography>
-                <Typography sx={{ fontSize: '0.82rem', fontWeight: 500 }} noWrap>
+                <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 500 }} noWrap>
                   {data.email}
                 </Typography>
               </Box>
@@ -1086,7 +1087,8 @@ export function PatientDetail() {
                       window.open(`https://wa.me/55${onlyDigits(data.phone ?? '')}`, '_blank', 'noopener')
                     }
                     sx={{
-                      width: 44,
+                      width: 38,
+                      height: 38,
                       flexShrink: 0,
                       borderRadius: '11px',
                       border: 1,
@@ -1115,7 +1117,7 @@ export function PatientDetail() {
                 minHeight: 48,
                 borderBottom: 1,
                 borderColor: 'divider',
-                '& .MuiTab-root': { minHeight: 48, textTransform: 'none', fontWeight: 600, fontSize: '0.85rem' },
+                '& .MuiTab-root': { minHeight: 48, textTransform: 'none', fontWeight: 600, fontSize: fontSizes.md },
               }}
             >
               <Tab value="general" label="Visão geral" icon={<PersonOutlineIcon sx={{ fontSize: 18 }} />} iconPosition="start" />

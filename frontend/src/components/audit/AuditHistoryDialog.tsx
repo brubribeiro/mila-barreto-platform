@@ -25,6 +25,7 @@ import { auditLogsApi, type AuditLogFilters } from '../../api/auditLogs';
 import { AppDataGrid } from '../AppDataGrid';
 import { DialogHeader } from '../DialogCloseButton';
 import { actionConfig, flattenAuditLogs, type AuditChangeRow } from './auditUtils';
+import { fontSizes } from '../../theme/fontSizes';
 
 const ACTION_OPTIONS = [
   { value: '', label: 'Todas' },
@@ -94,7 +95,7 @@ export function AuditHistoryDialog({ open, onClose, entity, title }: AuditHistor
               color={cfg.color}
               size="small"
               variant="outlined"
-              sx={{ fontSize: '0.7rem', height: 22 }}
+              sx={{ fontSize: fontSizes['2xs'], height: 22 }}
             />
           );
         },

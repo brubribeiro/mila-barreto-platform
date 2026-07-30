@@ -1,6 +1,7 @@
 import { Box, useMediaQuery, useTheme } from '@mui/material';
 import { alpha, type SxProps, type Theme } from '@mui/material/styles';
 import { DataGrid, type DataGridProps } from '@mui/x-data-grid';
+import { fontSizes } from '../theme/fontSizes';
 
 export const appDataGridSx: SxProps<Theme> = {
   border: '1px solid',
@@ -8,7 +9,7 @@ export const appDataGridSx: SxProps<Theme> = {
   borderRadius: 2,
   bgcolor: 'background.paper',
   overflow: 'hidden',
-  fontSize: '0.875rem',
+  fontSize: fontSizes.md,
 
   '& .MuiDataGrid-columnHeaders': {
     bgcolor: 'grey.50',
@@ -21,7 +22,7 @@ export const appDataGridSx: SxProps<Theme> = {
   },
   '& .MuiDataGrid-columnHeaderTitle': {
     fontWeight: 600,
-    fontSize: '0.75rem',
+    fontSize: fontSizes.xs,
     letterSpacing: '0.04em',
     textTransform: 'uppercase',
     color: 'text.secondary',
@@ -67,7 +68,7 @@ export const appDataGridSx: SxProps<Theme> = {
   },
   '& .MuiDataGrid-overlay': {
     bgcolor: 'background.paper',
-    fontSize: '0.875rem',
+    fontSize: fontSizes.md,
     color: 'text.secondary',
   },
   '& .MuiDataGrid-actionsCell': {

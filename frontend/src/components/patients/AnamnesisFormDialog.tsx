@@ -42,6 +42,7 @@ import {
   mergeAnamnesis,
   type AnamnesisFieldDef,
 } from './anamnesisFields';
+import { fontSizes } from '../../theme/fontSizes';
 
 interface AnamnesisFormDialogProps {
   open: boolean;
@@ -121,7 +122,7 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
             control={control}
             render={({ field }) => (
               <Box sx={ANAMNESIS_SWITCH_ROW_SX}>
-                <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, lineHeight: 1.35 }}>
+                <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 600, lineHeight: 1.35 }}>
                   {fieldDef.label}
                 </Typography>
                 <Switch
@@ -307,7 +308,7 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
                         </Grid>
                       )}
                       {section.title === 'Medidas corporais' && (
-                        <Typography sx={{ mt: 1.25, fontSize: '0.78rem', color: 'text.secondary' }}>
+                        <Typography sx={{ mt: 1.25, fontSize: fontSizes.xs, color: 'text.secondary' }}>
                           IMC:{' '}
                           {imcVal != null ? (
                             <Box component="span" sx={{ fontWeight: 800, color: imcColor(imcVal) }}>

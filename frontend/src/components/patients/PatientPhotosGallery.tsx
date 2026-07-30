@@ -28,6 +28,7 @@ import { LabeledField } from '../LabeledField';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import type { PatientPhoto } from '../../types';
+import { fontSizes } from '../../theme/fontSizes';
 
 interface Props {
   patientId: string;
@@ -104,7 +105,7 @@ function PhotoSlot({
           position: 'absolute',
           top: 8,
           left: 8,
-          fontSize: '0.62rem',
+          fontSize: fontSizes['3xs'],
           fontWeight: 800,
           letterSpacing: '0.04em',
           color: '#fff',
@@ -238,7 +239,7 @@ export function PatientPhotosGallery({
         sx={{ mb: 2 }}
       >
         {showTitle && (
-          <Typography sx={{ fontSize: '1rem', fontWeight: 700 }}>Fotos · antes e depois</Typography>
+          <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>Fotos · antes e depois</Typography>
         )}
         {canEdit && (
           <Button
@@ -266,7 +267,7 @@ export function PatientPhotosGallery({
       ) : groups.length === 0 ? (
         <Stack alignItems="center" spacing={1} sx={{ py: 4, textAlign: 'center' }}>
           <PhotoCameraOutlinedIcon sx={{ fontSize: 34, color: 'text.disabled' }} />
-          <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+          <Typography sx={{ fontSize: fontSizes.md, color: 'text.secondary' }}>
             Nenhuma foto registrada ainda.
           </Typography>
         </Stack>
@@ -275,10 +276,10 @@ export function PatientPhotosGallery({
           {groups.map((g) => (
             <Box key={g.key}>
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                <Typography sx={{ fontSize: '0.85rem', fontWeight: 800 }}>
+                <Typography sx={{ fontSize: fontSizes.md, fontWeight: 800 }}>
                   {g.label || 'Registro'}
                 </Typography>
-                <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', fontWeight: 600 }}>
+                <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600 }}>
                   {dayjs(g.takenAt).format('DD/MM/YYYY')}
                 </Typography>
               </Stack>
@@ -359,14 +360,14 @@ export function PatientPhotosGallery({
               <Box key={index}>
                 {pairs.length > 1 && (
                   <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.75 }}>
-                    <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, color: 'text.secondary' }}>
+                    <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700, color: 'text.secondary' }}>
                       Par {index + 1}
                     </Typography>
                     <Button
                       size="small"
                       startIcon={<CloseIcon sx={{ fontSize: 14 }} />}
                       onClick={() => removePair(index)}
-                      sx={{ fontSize: '0.72rem', color: 'text.secondary', minWidth: 0 }}
+                      sx={{ fontSize: fontSizes.xs, color: 'text.secondary', minWidth: 0 }}
                     >
                       Remover
                     </Button>
@@ -381,7 +382,7 @@ export function PatientPhotosGallery({
                   ).map((z) => (
                     <Box key={z.phase}>
                       <Typography
-                        sx={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.04em', color: z.tone, mb: 0.75 }}
+                        sx={{ fontSize: fontSizes['2xs'], fontWeight: 800, letterSpacing: '0.04em', color: z.tone, mb: 0.75 }}
                       >
                         {z.label}
                       </Typography>
@@ -447,10 +448,10 @@ export function PatientPhotosGallery({
                         ) : (
                           <>
                             <ImageOutlinedIcon sx={{ fontSize: 30, color: z.tone, opacity: 0.75 }} />
-                            <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: 'text.secondary' }}>
+                            <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 600, color: 'text.secondary' }}>
                               {z.placeholder}
                             </Typography>
-                            <Typography sx={{ fontSize: '0.72rem', color: 'text.disabled' }}>
+                            <Typography sx={{ fontSize: fontSizes.xs, color: 'text.disabled' }}>
                               ou{' '}
                               <Box component="span" sx={{ color: z.tone, textDecoration: 'underline' }}>
                                 procurar arquivos
@@ -486,7 +487,7 @@ export function PatientPhotosGallery({
               Adicionar par de fotos
             </Button>
 
-            <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', lineHeight: 1.5 }}>
+            <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', lineHeight: 1.5 }}>
               Cada par antes/depois fica vinculado ao mesmo ponto do procedimento e visível junto na aba
               Fotos da ficha.
             </Typography>

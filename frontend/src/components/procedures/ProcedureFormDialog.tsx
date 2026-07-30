@@ -43,6 +43,7 @@ import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader } from '../DialogCloseButton';
 import type { Procedure } from '../../types';
+import { fontSizes } from '../../theme/fontSizes';
 
 interface ProcedureFormDialogProps {
   open: boolean;
@@ -404,10 +405,10 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                       <ScheduleOutlinedIcon sx={{ fontSize: 18 }} />
                     </Box>
                     <Box sx={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
-                      <Typography sx={{ fontSize: '0.82rem', fontWeight: 800 }}>
+                      <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 800 }}>
                         Disponível para agendamento
                       </Typography>
-                      <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                      <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                         {field.value ? 'Visível na agenda e nos pacotes' : 'Oculto até reativar'}
                       </Typography>
                     </Box>
@@ -449,8 +450,8 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                       <SpaOutlinedIcon sx={{ fontSize: 18 }} />
                     </Box>
                     <Box sx={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
-                      <Typography sx={{ fontSize: '0.82rem', fontWeight: 800 }}>Mapa de aplicação</Typography>
-                      <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                      <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 800 }}>Mapa de aplicação</Typography>
+                      <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                         Habilita marcação de pontos no atendimento
                       </Typography>
                     </Box>
@@ -511,7 +512,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                     bgcolor: 'grey.50',
                     borderBottom: 1,
                     borderColor: 'divider',
-                    fontSize: '0.66rem',
+                    fontSize: fontSizes['2xs'],
                     fontWeight: 800,
                     letterSpacing: '0.04em',
                     textTransform: 'uppercase',
@@ -526,7 +527,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
 
                 {fields.length === 0 ? (
                   <Box sx={{ px: 2, py: 3, textAlign: 'center' }}>
-                    <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                    <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary' }}>
                       Nenhum material vinculado.
                     </Typography>
                   </Box>
@@ -593,12 +594,12 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                               )}
                             />
                             {selectedItem?.unit && (
-                              <Typography sx={{ fontSize: '0.66rem', color: 'text.disabled', fontWeight: 600 }} noWrap>
+                              <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', fontWeight: 600 }} noWrap>
                                 {selectedItem.unit}
                               </Typography>
                             )}
                           </Stack>
-                          <Typography sx={{ fontSize: '0.78rem', fontWeight: 700 }} noWrap>
+                          <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700 }} noWrap>
                             {lineCost > 0 ? brl.format(lineCost) : '—'}
                           </Typography>
                           <IconButton
@@ -628,7 +629,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                       bgcolor: 'grey.50',
                       borderBottom: 1,
                       borderColor: 'divider',
-                      fontSize: '0.66rem',
+                      fontSize: fontSizes['2xs'],
                       fontWeight: 800,
                       letterSpacing: '0.04em',
                       textTransform: 'uppercase',
@@ -737,33 +738,33 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                 }}
               >
                 <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.6 }}>
-                  <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>Custo de material</Typography>
-                  <Typography sx={{ fontSize: '0.78rem', fontWeight: 700 }}>{brl.format(materialCost)}</Typography>
+                  <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>Custo de material</Typography>
+                  <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700 }}>{brl.format(materialCost)}</Typography>
                 </Stack>
                 {equipmentCost > 0 && (
                   <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.6 }}>
-                    <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>Custo de equipamento</Typography>
-                    <Typography sx={{ fontSize: '0.78rem', fontWeight: 700 }}>{brl.format(equipmentCost)}</Typography>
+                    <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>Custo de equipamento</Typography>
+                    <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700 }}>{brl.format(equipmentCost)}</Typography>
                   </Stack>
                 )}
                 <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.6 }}>
-                  <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>
+                  <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                     Despesa fixa ({watchedDuration} min)
                   </Typography>
-                  <Typography sx={{ fontSize: '0.78rem', fontWeight: 700 }}>{brl.format(fixedCostShare)}</Typography>
+                  <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700 }}>{brl.format(fixedCostShare)}</Typography>
                 </Stack>
                 <Stack
                   direction="row"
                   justifyContent="space-between"
                   sx={{ pt: 0.75, borderTop: 1, borderColor: (t) => alpha(t.palette.primary.main, 0.22) }}
                 >
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700 }}>Custo total</Typography>
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 800 }}>{brl.format(totalCost)}</Typography>
+                  <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 700 }}>Custo total</Typography>
+                  <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 800 }}>{brl.format(totalCost)}</Typography>
                 </Stack>
                 <Stack direction="row" justifyContent="space-between" sx={{ mt: 0.75 }}>
-                  <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>Margem</Typography>
+                  <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>Margem</Typography>
                   <Typography
-                    sx={{ fontSize: '0.78rem', fontWeight: 800, color: marginValue >= 0 ? 'primary.dark' : 'error.main' }}
+                    sx={{ fontSize: fontSizes.xs, fontWeight: 800, color: marginValue >= 0 ? 'primary.dark' : 'error.main' }}
                   >
                     {brl.format(marginValue)} · {marginPct.toFixed(0)}%
                   </Typography>

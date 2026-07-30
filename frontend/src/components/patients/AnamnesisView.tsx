@@ -7,6 +7,7 @@ import { Box, Grid, Paper, Stack, Typography, alpha } from '@mui/material';
 import type { ReactNode } from 'react';
 
 import { ANAMNESIS_SECTIONS, calcIMC, hasAnamnesisData, imcClassificacao, imcColor } from './anamnesisFields';
+import { fontSizes } from '../../theme/fontSizes';
 
 const SECTION_ICONS: Record<string, ReactNode> = {
   'Medidas corporais': <StraightenOutlinedIcon sx={{ fontSize: 18 }} />,
@@ -170,7 +171,7 @@ export function AnamnesisView({ anamnesis }: AnamnesisViewProps) {
           >
             <Typography
               sx={{
-                fontSize: '0.72rem',
+                fontSize: fontSizes.xs,
                 fontWeight: 800,
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
@@ -189,7 +190,7 @@ export function AnamnesisView({ anamnesis }: AnamnesisViewProps) {
                     <Grid item key={field.key} xs={12} sm={field.fullWidth ? 12 : 6}>
                       <Typography
                         sx={{
-                          fontSize: '0.68rem',
+                          fontSize: fontSizes['2xs'],
                           fontWeight: 700,
                           letterSpacing: '0.04em',
                           textTransform: 'uppercase',
@@ -201,7 +202,7 @@ export function AnamnesisView({ anamnesis }: AnamnesisViewProps) {
                       </Typography>
                       <Typography
                         sx={{
-                          fontSize: '0.875rem',
+                          fontSize: fontSizes.md,
                           fontWeight: 600,
                           lineHeight: 1.45,
                           whiteSpace: 'pre-wrap',
@@ -217,7 +218,7 @@ export function AnamnesisView({ anamnesis }: AnamnesisViewProps) {
             )}
 
             {isMedidas && imcVal != null && (
-              <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: infoFields.length > 0 ? 1.5 : 0 }}>
+              <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', mt: infoFields.length > 0 ? 1.5 : 0 }}>
                 IMC:{' '}
                 <Box component="span" sx={{ fontWeight: 800, color: imcColor(imcVal) }}>
                   {imcVal} · {imcClassificacao(imcVal)}
@@ -245,12 +246,12 @@ export function AnamnesisView({ anamnesis }: AnamnesisViewProps) {
                           bgcolor: 'grey.50',
                         }}
                       >
-                        <Typography sx={{ fontSize: '0.82rem', fontWeight: 700 }}>{field.label}</Typography>
+                        <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 700 }}>{field.label}</Typography>
                         <Box
                           component="span"
                           sx={{
                             flexShrink: 0,
-                            fontSize: '0.72rem',
+                            fontSize: fontSizes.xs,
                             fontWeight: 800,
                             px: 1.1,
                             py: 0.35,

@@ -10,6 +10,7 @@ import {
   InputBase,
   Skeleton,
   Stack,
+  Switch,
   Tooltip,
   Typography,
   alpha,
@@ -33,6 +34,9 @@ import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Promotion } from '../types';
+import { fontSizes } from '../theme/fontSizes';
+
+const PAGE_SIZE = 8;
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
   ACTIVE: { label: 'Ativa', color: '#0E7C7B', bg: alpha('#15998B', 0.14) },
@@ -69,6 +73,7 @@ export function Promotions() {
   const canDelete = has('promotions:delete');
 
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Promotion | null>(null);
   const [initialCommemorativeDate, setInitialCommemorativeDate] = useState<string | undefined>();
@@ -99,6 +104,12 @@ export function Promotions() {
     onError: (err) => toast.error(getApiErrorMessage(err, 'Não foi possível excluir a promoção.')),
   });
 
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) => promotionsApi.update(id, { active }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['promotions'] }),
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Não foi possível atualizar o status.')),
+  });
+
   const activeCount = useMemo(() => promotions.filter(isPromotionActive).length, [promotions]);
 
   const filtered = useMemo(() => {
@@ -111,6 +122,12 @@ export function Promotions() {
         (p.commemorativeDate ?? '').toLowerCase().includes(q),
     );
   }, [promotions, search]);
+
+  useEffect(() => setPage(0), [search]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const current = Math.min(page, pageCount - 1);
+  const rows = filtered.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
 
   const handleEdit = (p: Promotion) => {
     setEditing(p);
@@ -138,7 +155,7 @@ export function Promotions() {
         spacing={1.5}
         sx={{ mb: 2.5 }}
       >
-        <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary', fontWeight: 600 }}>
+        <Typography sx={{ fontSize: fontSizes.md, color: 'text.secondary', fontWeight: 600 }}>
           {isLoading ? (
             <Skeleton width={260} />
           ) : (
@@ -156,19 +173,28 @@ export function Promotions() {
           )}
         </Typography>
 
-        <Stack direction="row" alignItems="center" spacing={1.25} flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={1.25}
+          flexWrap={{ xs: 'wrap', md: 'nowrap' }}
+          useFlexGap
+          justifyContent={{ md: 'flex-end' }}
+          sx={{ minWidth: 0 }}
+        >
           <Stack
             direction="row"
             alignItems="center"
             spacing={1}
             sx={{
-              height: 42,
+              height: 38,
               px: 1.75,
               borderRadius: '12px',
               border: 1,
               borderColor: 'divider',
               bgcolor: 'grey.50',
               width: { xs: '100%', sm: 240 },
+              minWidth: 0,
             }}
           >
             <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
@@ -176,14 +202,14 @@ export function Promotions() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar campanha..."
-              sx={{ fontSize: '0.8125rem', flex: 1 }}
+              sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />
           </Stack>
           {isAdmin && (
             <Tooltip title="Histórico de alterações">
               <IconButton
                 onClick={() => setHistoryOpen(true)}
-                sx={{ width: 42, height: 42, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
+                sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
               >
                 <HistoryIcon fontSize="small" />
               </IconButton>
@@ -198,7 +224,7 @@ export function Promotions() {
                 setInitialCommemorativeDate(undefined);
                 setFormOpen(true);
               }}
-              sx={{ height: 42, px: 2.25, borderRadius: '12px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+              sx={{ flexShrink: 0, whiteSpace: 'nowrap', height: 38, px: 2.25, borderRadius: '12px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
             >
               Nova promoção
             </Button>
@@ -225,7 +251,7 @@ export function Promotions() {
           <Typography sx={{ fontWeight: 700 }}>
             {promotions.length === 0 ? 'Nenhuma promoção cadastrada' : 'Nenhuma promoção encontrada'}
           </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: '0.85rem', mt: 0.5 }}>
+          <Typography color="text.secondary" sx={{ fontSize: fontSizes.md, mt: 0.5 }}>
             {promotions.length === 0
               ? 'Crie campanhas e descontos sazonais para atrair pacientes.'
               : 'Tente ajustar a busca.'}
@@ -239,7 +265,7 @@ export function Promotions() {
             gap: 2,
           }}
         >
-          {filtered.map((p) => {
+          {rows.map((p) => {
             const badge = discountBadge(p);
             const status = STATUS_META[getPromotionStatusKey(p)];
             const uses = p._count?.appointments ?? 0;
@@ -256,64 +282,49 @@ export function Promotions() {
                   flexDirection: 'column',
                   transition: 'box-shadow .15s, border-color .15s',
                   '&:hover': { boxShadow: '0 12px 30px -20px rgba(16,40,37,0.45)', borderColor: alpha(badge.color, 0.5) },
-                  '&:hover .promo-actions': { opacity: 1 },
                 }}
               >
-                {/* Top: badge de desconto + status */}
+                {/* Top: badge de desconto + status + switch */}
                 <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
                   <Chip
                     label={badge.label}
                     sx={{
                       height: 30,
-                      fontSize: '0.85rem',
+                      fontSize: fontSizes.md,
                       fontWeight: 800,
                       borderRadius: '10px',
                       bgcolor: alpha(badge.color, 0.14),
                       color: badge.color === '#8B8680' ? 'text.secondary' : badge.color,
                     }}
                   />
-                  <Stack direction="row" alignItems="center" spacing={0.75}>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
                     {status && (
                       <Chip
                         label={status.label}
                         size="small"
-                        sx={{ height: 22, fontSize: '0.7rem', fontWeight: 700, bgcolor: status.bg, color: status.color }}
+                        sx={{ height: 22, fontSize: fontSizes['2xs'], fontWeight: 700, bgcolor: status.bg, color: status.color }}
                       />
                     )}
-                    {(canEdit || canDelete) && (
-                      <Stack
-                        className="promo-actions"
-                        direction="row"
-                        spacing={0.25}
-                        sx={{ opacity: { xs: 1, md: 0 }, transition: 'opacity .15s' }}
-                      >
-                        {canEdit && (
-                          <Tooltip title="Editar">
-                            <IconButton size="small" onClick={() => handleEdit(p)} sx={{ color: 'text.secondary' }}>
-                              <EditIcon sx={{ fontSize: 17 }} />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        {canDelete && (
-                          <Tooltip title="Excluir">
-                            <IconButton size="small" onClick={() => handleDelete(p)} sx={{ color: 'error.main' }}>
-                              <DeleteIcon sx={{ fontSize: 17 }} />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      </Stack>
+                    {canEdit && (
+                      <Tooltip title={p.active ? 'Desativar' : 'Ativar'}>
+                        <Switch
+                          size="small"
+                          checked={p.active}
+                          onChange={() => toggleActiveMutation.mutate({ id: p.id, active: !p.active })}
+                        />
+                      </Tooltip>
                     )}
                   </Stack>
                 </Stack>
 
                 {/* Nome + descrição */}
                 <Box sx={{ mt: 1.75, minWidth: 0 }}>
-                  <Typography sx={{ fontSize: '1.02rem', fontWeight: 800, lineHeight: 1.25 }} noWrap title={p.name}>
+                  <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 800, lineHeight: 1.25 }} noWrap title={p.name}>
                     {p.name}
                   </Typography>
                   <Typography
                     sx={{
-                      fontSize: '0.82rem',
+                      fontSize: fontSizes.sm,
                       color: 'text.secondary',
                       mt: 0.25,
                       display: '-webkit-box',
@@ -329,22 +340,104 @@ export function Promotions() {
 
                 <Divider sx={{ my: 1.75 }} />
 
-                {/* Vigência + usos */}
-                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mt: 'auto' }}>
-                  <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
-                    <CalendarTodayOutlinedIcon sx={{ fontSize: 15, color: 'text.disabled' }} />
-                    <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }} noWrap>
-                      {formatRange(p.startAt, p.endAt)}
+                {/* Vigência/usos + ações */}
+                <Stack direction="row" alignItems="flex-end" justifyContent="space-between" spacing={1} sx={{ mt: 'auto' }}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
+                      <CalendarTodayOutlinedIcon sx={{ fontSize: 15, color: 'text.disabled' }} />
+                      <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary' }} noWrap>
+                        {formatRange(p.startAt, p.endAt)}
+                      </Typography>
+                    </Stack>
+                    <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 800, mt: 0.25 }}>
+                      {uses} {uses === 1 ? 'uso' : 'usos'}
                     </Typography>
-                  </Stack>
-                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 800 }}>
-                    {uses} {uses === 1 ? 'uso' : 'usos'}
-                  </Typography>
+                  </Box>
+                  {(canEdit || canDelete) && (
+                    <Stack direction="row" spacing={0.75} sx={{ flexShrink: 0 }}>
+                      {canEdit && (
+                        <Tooltip title="Editar">
+                          <IconButton
+                            onClick={() => handleEdit(p)}
+                            sx={{ width: 34, height: 34, borderRadius: '10px', border: 1, borderColor: 'divider', color: 'text.secondary' }}
+                          >
+                            <EditIcon sx={{ fontSize: 17 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {canDelete && (
+                        <Tooltip title="Excluir">
+                          <IconButton
+                            onClick={() => handleDelete(p)}
+                            sx={{
+                              width: 34,
+                              height: 34,
+                              borderRadius: '10px',
+                              border: 1,
+                              borderColor: (t) => alpha(t.palette.error.main, 0.35),
+                              bgcolor: (t) => alpha(t.palette.error.main, 0.06),
+                              color: 'error.main',
+                              '&:hover': { bgcolor: (t) => alpha(t.palette.error.main, 0.12) },
+                            }}
+                          >
+                            <DeleteIcon sx={{ fontSize: 17 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Stack>
+                  )}
                 </Stack>
               </Card>
             );
           })}
         </Box>
+      )}
+
+      {/* Paginação */}
+      {!isLoading && filtered.length > 0 && (
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems="center"
+          justifyContent="space-between"
+          spacing={1.5}
+          sx={{ mt: 3 }}
+        >
+          <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary' }}>
+            Mostrando {current * PAGE_SIZE + 1}–{Math.min((current + 1) * PAGE_SIZE, filtered.length)} de {filtered.length}
+          </Typography>
+          {pageCount > 1 && (
+            <Stack direction="row" spacing={1}>
+              {Array.from({ length: pageCount }).map((_, i) => {
+                const activePage = i === current;
+                return (
+                  <Box
+                    key={i}
+                    component="button"
+                    type="button"
+                    onClick={() => setPage(i)}
+                    sx={{
+                      minWidth: 38,
+                      height: 38,
+                      px: 1,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      fontSize: fontSizes.md,
+                      fontWeight: 700,
+                      borderRadius: '10px',
+                      border: 1,
+                      borderColor: activePage ? 'primary.main' : 'divider',
+                      color: activePage ? '#fff' : 'text.secondary',
+                      bgcolor: activePage ? 'primary.main' : 'background.paper',
+                      '&:hover': { bgcolor: activePage ? 'primary.main' : 'grey.50' },
+                    }}
+                  >
+                    {i + 1}
+                  </Box>
+                );
+              })}
+            </Stack>
+          )}
+        </Stack>
       )}
 
       <PromotionFormDialog

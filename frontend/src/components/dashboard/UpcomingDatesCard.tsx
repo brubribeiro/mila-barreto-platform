@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import { usePermissions } from '../../contexts/usePermissions';
 import { DashboardEmptyState } from './DashboardEmptyState';
 import { AuroraIcon } from '../AuroraIcon';
+import { fontSizes } from '../../theme/fontSizes';
 
 interface CommemorativeDate {
   name: string;
@@ -200,8 +201,8 @@ export function UpcomingDatesCard({ embedded = false }: UpcomingDatesCardProps) 
             <AuroraIcon name="calendarStar" size={19} strokeWidth={1.7} />
           </Box>
           <Box sx={{ lineHeight: 1.2, minWidth: 0 }}>
-            <Typography sx={{ fontSize: '0.9375rem', fontWeight: 700 }}>Datas comemorativas</Typography>
-            <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', fontWeight: 500 }} noWrap>
+            <Typography sx={{ fontSize: fontSizes.lg, fontWeight: 700 }}>Datas comemorativas</Typography>
+            <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 500 }} noWrap>
               próximos {LOOKAHEAD_DAYS} dias · oportunidades
             </Typography>
           </Box>
@@ -233,12 +234,12 @@ export function UpcomingDatesCard({ embedded = false }: UpcomingDatesCardProps) 
                       pr: 1.25,
                     }}
                   >
-                    <Typography sx={{ fontSize: '1.05rem', fontWeight: 800, color: 'primary.main', lineHeight: 1 }}>
+                    <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 800, color: 'primary.main', lineHeight: 1 }}>
                       {d.when.format('DD')}
                     </Typography>
                     <Typography
                       sx={{
-                        fontSize: '0.58rem',
+                        fontSize: fontSizes['3xs'],
                         fontWeight: 700,
                         color: 'text.secondary',
                         letterSpacing: '0.6px',
@@ -250,10 +251,10 @@ export function UpcomingDatesCard({ embedded = false }: UpcomingDatesCardProps) 
                     </Typography>
                   </Box>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography noWrap sx={{ fontSize: '0.8125rem', fontWeight: 700 }}>
+                    <Typography noWrap sx={{ fontSize: fontSizes.sm, fontWeight: 700 }}>
                       {d.name}
                     </Typography>
-                    <Typography noWrap sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                    <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                       {d.daysUntil === 0
                         ? 'hoje'
                         : d.daysUntil === 1
@@ -268,7 +269,7 @@ export function UpcomingDatesCard({ embedded = false }: UpcomingDatesCardProps) 
                       startIcon={<AuroraIcon name="plus" size={12} strokeWidth={2.4} />}
                       sx={{
                         flexShrink: 0,
-                        fontSize: '0.66rem',
+                        fontSize: fontSizes['2xs'],
                         fontWeight: 700,
                         px: 1.25,
                         py: 0.4,

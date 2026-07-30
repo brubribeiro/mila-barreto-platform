@@ -17,6 +17,7 @@ import dayjs from 'dayjs';
 
 import type { DocumentFile } from '../../types';
 import { categoryMeta, canOpenDocument, documentFileIcon, fmtFileSize } from './documentUtils';
+import { fontSizes } from '../../theme/fontSizes';
 
 interface DocumentCardProps {
   doc: DocumentFile;
@@ -86,7 +87,7 @@ export function DocumentCard({
                 label={category.label}
                 sx={{
                   height: 20,
-                  fontSize: '0.65rem',
+                  fontSize: fontSizes['3xs'],
                   bgcolor: alpha(category.color, 0.1),
                   color: category.color,
                   border: '1px solid',

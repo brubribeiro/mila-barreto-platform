@@ -28,6 +28,7 @@ import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Procedure } from '../types';
+import { fontSizes } from '../theme/fontSizes';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const PAGE_SIZE = 8;
@@ -140,7 +141,7 @@ export function Procedures() {
                   height: 36,
                   borderRadius: '10px',
                   fontFamily: 'inherit',
-                  fontSize: '0.81rem',
+                  fontSize: fontSizes.sm,
                   fontWeight: active ? 700 : 600,
                   color: active ? '#fff' : 'text.secondary',
                   bgcolor: active ? 'primary.main' : 'grey.50',
@@ -152,19 +153,28 @@ export function Procedures() {
             );
           })}
         </Box>
-        <Stack direction="row" alignItems="center" spacing={1.25} flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={1.25}
+          flexWrap={{ xs: 'wrap', md: 'nowrap' }}
+          useFlexGap
+          justifyContent={{ md: 'flex-end' }}
+          sx={{ minWidth: 0 }}
+        >
           <Stack
             direction="row"
             alignItems="center"
             spacing={1}
             sx={{
-              height: 42,
+              height: 38,
               px: 1.75,
               borderRadius: '12px',
               border: 1,
               borderColor: 'divider',
               bgcolor: 'grey.50',
               width: { xs: '100%', sm: 220 },
+              minWidth: 0,
             }}
           >
             <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
@@ -172,14 +182,14 @@ export function Procedures() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar procedimento..."
-              sx={{ fontSize: '0.8125rem', flex: 1 }}
+              sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />
           </Stack>
           {isAdmin && (
             <Tooltip title="Histórico de alterações">
               <IconButton
                 onClick={() => setHistoryOpen(true)}
-                sx={{ width: 42, height: 42, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
+                sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
               >
                 <HistoryIcon fontSize="small" />
               </IconButton>
@@ -193,7 +203,7 @@ export function Procedures() {
                 setEditing(null);
                 setFormOpen(true);
               }}
-              sx={{ height: 42, px: 2.25, borderRadius: '12px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+              sx={{ flexShrink: 0, whiteSpace: 'nowrap', height: 38, px: 2.25, borderRadius: '12px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
             >
               Novo procedimento
             </Button>
@@ -215,7 +225,7 @@ export function Procedures() {
             borderBottom: 1,
             borderColor: 'divider',
             bgcolor: 'grey.50',
-            fontSize: '0.7rem',
+            fontSize: fontSizes['2xs'],
             fontWeight: 800,
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
@@ -287,7 +297,7 @@ export function Procedures() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '0.8rem',
+                      fontSize: fontSizes.sm,
                       fontWeight: 800,
                       color: '#fff',
                       bgcolor: color,
@@ -296,10 +306,10 @@ export function Procedures() {
                     {initialsFor(p.name)}
                   </Box>
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 700 }} noWrap title={p.name}>
+                    <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700 }} noWrap title={p.name}>
                       {p.name}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }} noWrap>
+                    <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }} noWrap>
                       {p.recurrenceDays ? `Retorno: ${p.recurrenceDays} dias` : 'Sem retorno'}
                       {!p.active ? ' · Inativo' : ''}
                     </Typography>
@@ -313,7 +323,7 @@ export function Procedures() {
                       component="span"
                       sx={{
                         display: 'inline-block',
-                        fontSize: '0.72rem',
+                        fontSize: fontSizes.xs,
                         fontWeight: 700,
                         px: 1,
                         py: 0.4,
@@ -325,28 +335,28 @@ export function Procedures() {
                       {p.category}
                     </Box>
                   ) : (
-                    <Typography sx={{ fontSize: '0.8rem', color: 'text.disabled' }}>—</Typography>
+                    <Typography sx={{ fontSize: fontSizes.sm, color: 'text.disabled' }}>—</Typography>
                   )}
                 </Box>
 
                 {/* Duração */}
-                <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.82rem', color: 'text.secondary', fontWeight: 600 }}>
+                <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}>
                   {p.durationMinutes} min
                 </Typography>
 
                 {/* Realizados */}
-                <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.82rem', color: 'text.secondary', fontWeight: 600 }}>
+                <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}>
                   {p.appointmentsCount ?? 0}×
                 </Typography>
 
                 {/* Custo mat. */}
-                <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.82rem', color: 'text.secondary', fontWeight: 700 }}>
+                <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 700 }}>
                   {p.baseCost ? brl.format(p.baseCost) : '—'}
                 </Typography>
 
                 {/* Taxa pgto. */}
                 <Tooltip title={p.maxFeePercent ? `Maior taxa ativa: ${p.maxFeePercent.toFixed(1)}%` : ''}>
-                  <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.82rem', color: 'text.secondary', fontWeight: 600 }}>
+                  <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}>
                     {p.maxFeeCost ? brl.format(p.maxFeeCost) : '—'}
                   </Typography>
                 </Tooltip>
@@ -359,18 +369,18 @@ export function Procedures() {
                       : 'Despesa fixa proporcional ao tempo'
                   }
                 >
-                  <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.82rem', color: 'text.secondary', fontWeight: 600 }}>
+                  <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}>
                     {p.fixedCostShare ? brl.format(p.fixedCostShare) : '—'}
                   </Typography>
                 </Tooltip>
 
                 {/* Custo total */}
-                <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.82rem', fontWeight: 800, color: 'error.main' }}>
+                <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.sm, fontWeight: 800, color: 'error.main' }}>
                   {p.totalCost != null ? brl.format(p.totalCost) : '—'}
                 </Typography>
 
                 {/* Valor */}
-                <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.85rem', fontWeight: 800 }}>
+                <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.md, fontWeight: 800 }}>
                   {brl.format(Number(p.price))}
                 </Typography>
 
@@ -379,7 +389,7 @@ export function Procedures() {
                   <Box
                     component="span"
                     sx={{
-                      fontSize: '0.72rem',
+                      fontSize: fontSizes.xs,
                       fontWeight: 800,
                       px: 1,
                       py: 0.4,
@@ -429,7 +439,7 @@ export function Procedures() {
             justifyContent="space-between"
             sx={{ px: 2.75, py: 1.75, borderTop: 1, borderColor: 'divider' }}
           >
-            <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 600 }}>
+            <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600 }}>
               {current * PAGE_SIZE + 1}–{Math.min((current + 1) * PAGE_SIZE, filtered.length)} de {filtered.length}
             </Typography>
             <Stack direction="row" spacing={0.75}>

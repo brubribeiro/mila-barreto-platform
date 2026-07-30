@@ -34,6 +34,7 @@ import 'dayjs/locale/pt-br';
 import { Link as RouterLink } from 'react-router-dom';
 import { alpha, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import { fontSizes } from '../theme/fontSizes';
 
 dayjs.locale('pt-br');
 
@@ -247,7 +248,7 @@ function SummaryCard({
               <Box
                 component="span"
                 sx={{
-                  fontSize: '0.75rem',
+                  fontSize: fontSizes.xs,
                   fontWeight: 700,
                   color: DELTA_TONES[deltaTone].color,
                   bgcolor: DELTA_TONES[deltaTone].bg,
@@ -263,7 +264,7 @@ function SummaryCard({
             {hint && (
               <Typography
                 component="span"
-                sx={{ fontSize: '0.72rem', color: 'text.secondary', fontWeight: 500 }}
+                sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 500 }}
               >
                 {hint}
               </Typography>
@@ -481,7 +482,7 @@ export function Dashboard() {
     '& .MuiOutlinedInput-root': {
       bgcolor: 'background.paper',
       borderRadius: 1.5,
-      fontSize: '0.875rem',
+      fontSize: fontSizes.md,
       '& fieldset': { borderColor: (theme: { palette: { primary: { main: string } } }) => alpha(theme.palette.primary.main, 0.22) },
       '&:hover fieldset': { borderColor: 'primary.light' },
       '&.Mui-focused fieldset': { borderColor: 'primary.main' },
@@ -790,7 +791,7 @@ export function Dashboard() {
         <Card sx={{ display: 'flex', flexDirection: 'column' }}>
           <CardContent sx={{ p: { xs: 2, sm: 2.75 } }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-              <Typography sx={{ fontSize: '1rem', fontWeight: 700 }}>Agenda para os próximos dias</Typography>
+              <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>Agenda para os próximos dias</Typography>
               {canSeeAgenda && (
                 <Button size="small" component={RouterLink} to="/agenda" sx={{ fontWeight: 700 }}>
                   Ver tudo
@@ -829,7 +830,7 @@ export function Dashboard() {
                     <Box sx={{ width: 46, flexShrink: 0, textAlign: 'center', lineHeight: 1.15 }}>
                       <Typography
                         sx={{
-                          fontSize: '0.6rem',
+                          fontSize: fontSizes['3xs'],
                           fontWeight: 700,
                           color: 'text.secondary',
                           textTransform: 'uppercase',
@@ -840,7 +841,7 @@ export function Dashboard() {
                       </Typography>
                       <Typography
                         sx={{
-                          fontSize: '0.8rem',
+                          fontSize: fontSizes.sm,
                           fontWeight: 800,
                           color: 'text.primary',
                           fontVariantNumeric: 'tabular-nums',
@@ -851,10 +852,10 @@ export function Dashboard() {
                     </Box>
                     <Box sx={{ width: 3, height: 34, borderRadius: 3, bgcolor: 'primary.main', flexShrink: 0 }} />
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography noWrap sx={{ fontSize: '0.85rem', fontWeight: 700 }}>
+                      <Typography noWrap sx={{ fontSize: fontSizes.md, fontWeight: 700 }}>
                         {a.patient?.name ?? 'Paciente'}
                       </Typography>
-                      <Typography noWrap sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                      <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                         {[a.procedure?.name ?? 'Procedimento', a.professional?.name]
                           .filter(Boolean)
                           .join(' · ')}
@@ -864,7 +865,7 @@ export function Dashboard() {
                       component="span"
                       sx={{
                         flexShrink: 0,
-                        fontSize: '0.6875rem',
+                        fontSize: fontSizes['2xs'],
                         fontWeight: 700,
                         px: 1.25,
                         py: 0.5,
@@ -886,12 +887,12 @@ export function Dashboard() {
         <Card sx={{ display: 'flex', flexDirection: 'column' }}>
           <CardContent sx={{ p: { xs: 2, sm: 2.75 } }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2.25 }}>
-              <Typography sx={{ fontSize: '1rem', fontWeight: 700 }}>Metas do mês</Typography>
+              <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>Metas do mês</Typography>
               <Chip
                 label="Em breve"
                 size="small"
                 variant="outlined"
-                sx={{ height: 22, fontSize: '0.68rem', fontWeight: 700 }}
+                sx={{ height: 22, fontSize: fontSizes['2xs'], fontWeight: 700 }}
               />
             </Stack>
             <Stack spacing={2}>
@@ -902,15 +903,15 @@ export function Dashboard() {
               ].map((m) => (
                 <Box key={m.label}>
                   <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.75 }}>
-                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>{m.label}</Typography>
-                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, color: 'text.secondary' }}>
+                    <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 600 }}>{m.label}</Typography>
+                    <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 800, color: 'text.secondary' }}>
                       0%
                     </Typography>
                   </Stack>
                   <Box sx={{ height: 8, borderRadius: 8, bgcolor: 'grey.100', overflow: 'hidden' }}>
                     <Box sx={{ height: '100%', width: '0%', borderRadius: 8, bgcolor: 'primary.main' }} />
                   </Box>
-                  <Typography sx={{ display: 'block', fontSize: '0.72rem', color: 'text.secondary', mt: 0.75 }}>
+                  <Typography sx={{ display: 'block', fontSize: fontSizes.xs, color: 'text.secondary', mt: 0.75 }}>
                     {m.detail}
                   </Typography>
                 </Box>
@@ -948,8 +949,8 @@ export function Dashboard() {
                   <AuroraIcon name="gift" size={19} strokeWidth={1.7} />
                 </Box>
                 <Box sx={{ lineHeight: 1.2 }}>
-                  <Typography sx={{ fontSize: '0.9375rem', fontWeight: 700 }}>Aniversariantes</Typography>
-                  <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', fontWeight: 500 }}>
+                  <Typography sx={{ fontSize: fontSizes.lg, fontWeight: 700 }}>Aniversariantes</Typography>
+                  <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 500 }}>
                     próximos {UPCOMING_BIRTHDAY_WINDOW_DAYS} dias
                   </Typography>
                 </Box>
@@ -983,7 +984,7 @@ export function Dashboard() {
                             borderRadius: '10px',
                             bgcolor: bdColor,
                             color: '#fff',
-                            fontSize: '0.72rem',
+                            fontSize: fontSizes.xs,
                             fontWeight: 700,
                             flexShrink: 0,
                           }}
@@ -991,10 +992,10 @@ export function Dashboard() {
                           {initials}
                         </Avatar>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography noWrap sx={{ fontSize: '0.8125rem', fontWeight: 700 }}>
+                          <Typography noWrap sx={{ fontSize: fontSizes.sm, fontWeight: 700 }}>
                             {patient.name}
                           </Typography>
-                          <Typography noWrap sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                          <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                             {turnsAge} anos · {when.format('DD/MM')}
                           </Typography>
                         </Box>
@@ -1002,7 +1003,7 @@ export function Dashboard() {
                           component="span"
                           sx={{
                             flexShrink: 0,
-                            fontSize: '0.6875rem',
+                            fontSize: fontSizes['2xs'],
                             fontWeight: 700,
                             px: 1.1,
                             py: '3px',

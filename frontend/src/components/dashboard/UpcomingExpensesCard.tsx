@@ -27,6 +27,7 @@ import { usePermissions } from '../../contexts/usePermissions';
 import type { FinancialEntry } from '../../types';
 import { DashboardEmptyState } from './DashboardEmptyState';
 import { AuroraIcon } from '../AuroraIcon';
+import { fontSizes } from '../../theme/fontSizes';
 
 const LOOKAHEAD_DAYS = 7;
 
@@ -163,15 +164,15 @@ export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardP
             <AuroraIcon name="receipt" size={19} strokeWidth={1.7} />
           </Box>
           <Box sx={{ lineHeight: 1.2, flex: 1, minWidth: 0 }}>
-            <Typography sx={{ fontSize: '0.9375rem', fontWeight: 700 }}>Contas a pagar</Typography>
-            <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', fontWeight: 500 }} noWrap>
+            <Typography sx={{ fontSize: fontSizes.lg, fontWeight: 700 }}>Contas a pagar</Typography>
+            <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 500 }} noWrap>
               próximos {LOOKAHEAD_DAYS} dias
             </Typography>
           </Box>
           {upcoming.length > 0 && (
             <Box sx={{ textAlign: 'right', lineHeight: 1.1, flexShrink: 0 }}>
-              <Typography sx={{ fontSize: '1rem', fontWeight: 800 }}>{fmt(totalAmount)}</Typography>
-              <Typography sx={{ fontSize: '0.62rem', color: 'text.secondary', fontWeight: 600 }}>
+              <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 800 }}>{fmt(totalAmount)}</Typography>
+              <Typography sx={{ fontSize: fontSizes['3xs'], color: 'text.secondary', fontWeight: 600 }}>
                 total
               </Typography>
             </Box>
@@ -192,8 +193,8 @@ export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardP
                 <Stack key={i} direction="row" alignItems="center" spacing={1.5} sx={{ px: 0.5, py: 1 }}>
                   <Skeleton variant="circular" width={9} height={9} sx={{ flexShrink: 0 }} />
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Skeleton variant="text" width={`${70 - i * 8}%`} sx={{ fontSize: '0.8125rem' }} />
-                    <Skeleton variant="text" width={`${45 - i * 4}%`} sx={{ fontSize: '0.72rem' }} />
+                    <Skeleton variant="text" width={`${70 - i * 8}%`} sx={{ fontSize: fontSizes.sm }} />
+                    <Skeleton variant="text" width={`${45 - i * 4}%`} sx={{ fontSize: fontSizes.xs }} />
                   </Box>
                   <Skeleton variant="rounded" width={30} height={30} sx={{ flexShrink: 0 }} />
                 </Stack>
@@ -214,14 +215,14 @@ export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardP
                   <Stack key={e.id} direction="row" alignItems="center" spacing={1.5} sx={{ px: 0.5, py: 1 }}>
                     <Box sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: dotColor, flexShrink: 0 }} />
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography noWrap sx={{ fontSize: '0.8125rem', fontWeight: 700 }}>
+                      <Typography noWrap sx={{ fontSize: fontSizes.sm, fontWeight: 700 }}>
                         {e.description}
                       </Typography>
-                      <Typography noWrap sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                      <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                         {dueDateLabel(e.daysUntil)}
                       </Typography>
                     </Box>
-                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, whiteSpace: 'nowrap' }}>
+                    <Typography sx={{ fontSize: fontSizes.md, fontWeight: 800, whiteSpace: 'nowrap' }}>
                       {fmt(Number(e.amount))}
                     </Typography>
                     {canEdit && (

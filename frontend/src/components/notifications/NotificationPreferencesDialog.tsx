@@ -18,6 +18,7 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { NOTIFICATION_TYPES } from '../../contexts/notificationsLabels';
 import type { NotificationPreference, NotificationType } from '../../types';
 import { AuroraIcon } from '../AuroraIcon';
+import { fontSizes } from '../../theme/fontSizes';
 
 interface NotificationPreferencesDialogProps {
   open: boolean;
@@ -97,10 +98,10 @@ export function NotificationPreferencesDialog({
         }}
       >
         <Box sx={{ lineHeight: 1.3 }}>
-          <Typography sx={{ fontSize: '1.125rem', fontWeight: 800, letterSpacing: '-0.3px' }}>
+          <Typography sx={{ fontSize: fontSizes['2xl'], fontWeight: 800, letterSpacing: '-0.3px' }}>
             Preferências de notificação
           </Typography>
-          <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
+          <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary' }}>
             Escolha o que e como você quer ser avisado
           </Typography>
         </Box>
@@ -132,7 +133,7 @@ export function NotificationPreferencesDialog({
           <Box sx={{ px: 3, py: 2.75 }}>
             <Typography
               sx={{
-                fontSize: '0.72rem',
+                fontSize: fontSizes.xs,
                 fontWeight: 800,
                 color: 'text.secondary',
                 letterSpacing: '0.6px',
@@ -159,8 +160,8 @@ export function NotificationPreferencesDialog({
                   }}
                 >
                   <Box sx={{ lineHeight: 1.35, minWidth: 0 }}>
-                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 700 }}>{t.label}</Typography>
-                    <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                    <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700 }}>{t.label}</Typography>
+                    <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                       {t.description}
                     </Typography>
                   </Box>
@@ -193,7 +194,7 @@ export function NotificationPreferencesDialog({
         <Button
           variant="contained"
           onClick={onClose}
-          sx={{ height: 42, px: 2.5, borderRadius: '11px', fontWeight: 700 }}
+          sx={{ height: 38, px: 2.5, borderRadius: '11px', fontWeight: 700 }}
         >
           Concluído
         </Button>

@@ -44,6 +44,7 @@ import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import { downloadCsv } from '../utils/csv';
+import { fontSizes } from '../theme/fontSizes';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -532,7 +533,7 @@ export function Finance() {
                 <TrendingUpIcon sx={{ color: 'success.main' }} />
               </Stack>
               {summaryLoading ? (
-                <Skeleton variant="text" width={120} sx={{ fontSize: '2.125rem' }} />
+                <Skeleton variant="text" width={120} sx={{ fontSize: fontSizes['7xl'] }} />
               ) : (
                 <Typography variant="h4" fontWeight={700} color="success.main">
                   {brl.format(summary?.totalIncome ?? 0)}
@@ -556,7 +557,7 @@ export function Finance() {
                 <TrendingDownIcon sx={{ color: 'error.main' }} />
               </Stack>
               {summaryLoading ? (
-                <Skeleton variant="text" width={120} sx={{ fontSize: '2.125rem' }} />
+                <Skeleton variant="text" width={120} sx={{ fontSize: fontSizes['7xl'] }} />
               ) : (
                 <Typography variant="h4" fontWeight={700} color="error.main">
                   {brl.format(summary?.totalExpense ?? 0)}
@@ -575,7 +576,7 @@ export function Finance() {
                 <ShowChartOutlinedIcon sx={{ color: profit >= 0 ? 'success.main' : 'error.main' }} />
               </Stack>
               {summaryLoading ? (
-                <Skeleton variant="text" width={120} sx={{ fontSize: '2.125rem' }} />
+                <Skeleton variant="text" width={120} sx={{ fontSize: fontSizes['7xl'] }} />
               ) : (
                 <>
                   <Typography

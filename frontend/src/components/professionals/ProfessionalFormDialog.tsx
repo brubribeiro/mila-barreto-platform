@@ -34,6 +34,7 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { ALL_PERMISSIONS, countCatalogPermissions } from '../../contexts/permissions';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { UserSummary } from '../../types';
+import { fontSizes } from '../../theme/fontSizes';
 
 interface ProfessionalFormDialogProps {
   open: boolean;
@@ -97,7 +98,7 @@ function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
       sx={{
         display: 'block',
         mb: 1.75,
-        fontSize: '0.72rem',
+        fontSize: fontSizes.xs,
         fontWeight: 800,
         letterSpacing: '0.06em',
         textTransform: 'uppercase',

@@ -26,6 +26,7 @@ import { useAppointmentDialog } from '../contexts/AppointmentDialogContext';
 import type { Permission } from '../contexts/permissions';
 import { NotificationsBell } from './notifications/NotificationsBell';
 import { AuroraIcon } from './AuroraIcon';
+import { fontSizes } from '../theme/fontSizes';
 
 const DRAWER_WIDTH = 258;
 const DRAWER_COLLAPSED_WIDTH = 68;
@@ -266,7 +267,7 @@ export function Layout() {
                   color: SIDEBAR_TEXT,
                   fontWeight: 700,
                   letterSpacing: '0.12em',
-                  fontSize: '0.6rem',
+                  fontSize: fontSizes['3xs'],
                   textTransform: 'uppercase',
                 }}
               >
@@ -301,7 +302,7 @@ export function Layout() {
                     px: 1.75,
                     pt: isCollapsed ? 0 : groupIndex === 0 ? 0.5 : 1.75,
                     pb: isCollapsed ? 0 : 0.75,
-                    fontSize: '0.625rem',
+                    fontSize: fontSizes['3xs'],
                     fontWeight: 800,
                     letterSpacing: '0.14em',
                     textTransform: 'uppercase',
@@ -418,7 +419,7 @@ export function Layout() {
                   borderRadius: '11px',
                   background: 'linear-gradient(135deg,#3A6B64,#1F4A45)',
                   color: '#CFECE7',
-                  fontSize: '0.78rem',
+                  fontSize: fontSizes.xs,
                   fontWeight: 700,
                 }}
               >
@@ -452,7 +453,7 @@ export function Layout() {
                 borderRadius: '11px',
                 background: 'linear-gradient(135deg,#3A6B64,#1F4A45)',
                 color: '#CFECE7',
-                fontSize: '0.78rem',
+                fontSize: fontSizes.xs,
                 fontWeight: 700,
                 flexShrink: 0,
               }}
@@ -460,11 +461,11 @@ export function Layout() {
               {userInitials}
             </Avatar>
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography noWrap sx={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
+              <Typography noWrap sx={{ fontSize: fontSizes.sm, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
                 {user?.name ?? 'Usuário'}
               </Typography>
               {user?.roleName && (
-                <Typography noWrap sx={{ fontSize: '0.7rem', color: SIDEBAR_TEXT, lineHeight: 1.2 }}>
+                <Typography noWrap sx={{ fontSize: fontSizes['2xs'], color: SIDEBAR_TEXT, lineHeight: 1.2 }}>
                   {user.roleName}
                 </Typography>
               )}
@@ -528,7 +529,7 @@ export function Layout() {
               bgcolor: 'transparent',
               color: '#fff',
               cursor: 'pointer',
-              fontSize: '0.8rem',
+              fontSize: fontSizes.sm,
               fontWeight: 600,
               '&:hover': { bgcolor: 'rgba(255,255,255,0.15)' },
             }}
@@ -631,7 +632,7 @@ export function Layout() {
                   startIcon={<AuroraIcon name="plus" size={18} strokeWidth={2.2} />}
                   onClick={() => openAppointmentDialog()}
                   sx={{
-                    height: 42,
+                    height: 38,
                     px: { xs: 1.25, md: 2.25 },
                     borderRadius: '12px',
                     fontWeight: 700,

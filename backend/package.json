@@ -19,6 +19,8 @@
     "prisma:seed": "ts-node --transpile-only prisma/seed.ts",
     "prisma:seed-patients": "ts-node --transpile-only prisma/seed-patients.ts",
     "prisma:seed-package-appointments": "ts-node --transpile-only prisma/seed-package-appointments.ts",
+    "prisma:seed-promotions": "ts-node --transpile-only prisma/seed-promotions.ts",
+    "prisma:seed-packages": "ts-node --transpile-only prisma/seed-packages.ts",
     "prisma:cleanup-patients": "ts-node --transpile-only prisma/cleanup-patients.ts",
     "prisma:import-patients": "ts-node --transpile-only prisma/import-patients.ts"
   },

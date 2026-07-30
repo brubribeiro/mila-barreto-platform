@@ -21,6 +21,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 import { APP_VERSION } from '../version';
+import { fontSizes } from '../theme/fontSizes';
 
 const FEATURES = [
   {
@@ -121,7 +122,7 @@ export function Login() {
               bgcolor: alpha('#fff', 0.2),
               color: 'inherit',
               fontWeight: 800,
-              fontSize: '1.1rem',
+              fontSize: fontSizes['2xl'],
               border: `1px solid ${alpha('#fff', 0.35)}`,
               boxShadow: `0 8px 24px ${alpha('#000', 0.15)}`,
             }}
@@ -193,7 +194,7 @@ export function Login() {
               borderRadius: 2,
               bgcolor: 'primary.main',
               fontWeight: 800,
-              fontSize: '0.95rem',
+              fontSize: fontSizes.lg,
             }}
           >
             MB

@@ -39,6 +39,7 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { dateOnlyToApiIso, formatDateOnlyFromApi } from '../../utils/dateOnly';
 import type { InventoryItem } from '../../types';
+import { fontSizes } from '../../theme/fontSizes';
 
 interface BulkPurchaseDialogProps {
   open: boolean;
@@ -85,7 +86,7 @@ const MATERIAL_FIELD_SX = {
   '& .MuiInputLabel-root': {
     color: 'text.primary',
     fontWeight: 500,
-    fontSize: '0.875rem',
+    fontSize: fontSizes.md,
     backgroundColor: 'background.paper',
     px: 0.5,
     zIndex: 1,
@@ -98,7 +99,7 @@ const MATERIAL_FIELD_SX = {
   },
   '& .MuiFormHelperText-root': {
     color: 'text.secondary',
-    fontSize: '0.75rem',
+    fontSize: fontSizes.xs,
     lineHeight: 1.45,
     mt: 0.75,
   },
@@ -199,7 +200,7 @@ function FormSection({
           <Box sx={{ minWidth: 0 }}>
             <Typography
               sx={{
-                fontSize: '0.72rem',
+                fontSize: fontSizes.xs,
                 fontWeight: 800,
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
@@ -992,7 +993,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
                                       size="small"
                                       color="warning"
                                       variant="outlined"
-                                      sx={{ height: 20, fontSize: '0.65rem' }}
+                                      sx={{ height: 20, fontSize: fontSizes['3xs'] }}
                                     />
                                   )}
                                 </Stack>

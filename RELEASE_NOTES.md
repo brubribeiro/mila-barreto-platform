@@ -46,6 +46,7 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 **Visual geral**
 - Barras de rolagem finas e discretas em todo o painel (tema global).
 - Campos de formulário (`OutlinedInput`) com fundo levemente cinza e bordas arredondadas.
+- Tipografia padronizada em todo o painel; títulos e textos ficam um pouco menores em telas estreitas para melhor leitura no celular.
 
 **Pacientes**
 - Lista redesenhada no estilo Aurora: cards de resumo (**total**, **novos no mês**, **ativos**, **receita**), busca por nome/telefone/e-mail/CPF e paginação.
@@ -71,12 +72,14 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Cada card exibe **preço original**, **preço de venda**, **economia (%)**, **sessões** e **pacientes ativos**.
 - Destaque automático **Mais vendido** e badges manuais (**Mais vendido**, **Recorrente**) configuráveis no cadastro.
 - Busca por nome, descrição ou procedimentos inclusos; modal de cadastro reorganizada em seções.
+- Paginação na grade (8 pacotes por página) quando a lista cresce.
 
 **Promoções**
 - Tela redesenhada no estilo Aurora: cards com **status** (Ativa, Agendada, Encerrada), badge de desconto e **período** da campanha.
 - Contador de **promoções ativas** no topo; busca por nome, data comemorativa ou descrição.
 - Modal de cadastro reorganizada: tipos **Percentual**, **Valor fixo** e **Combo**; opção **Aplica-se a** (todos, procedimentos ou pacotes).
 - Data comemorativa selecionável (Dia das Mães, Black Friday, etc.).
+- Paginação na lista (8 campanhas por página) e interruptor em cada card para **ativar ou desativar** sem abrir o cadastro.
 
 ### Correções
 

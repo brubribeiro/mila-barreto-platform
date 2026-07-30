@@ -26,6 +26,7 @@ import { AuroraIcon } from '../AuroraIcon';
 import { NotificationPreferencesDialog } from './NotificationPreferencesDialog';
 import { useAppToast } from '../../contexts/AppToastContext';
 import type { Notification } from '../../types';
+import { fontSizes } from '../../theme/fontSizes';
 
 dayjs.extend(relativeTime);
 dayjs.locale('pt-br');
@@ -95,8 +96,8 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
         <IconButton
           onClick={handleOpen}
           sx={{
-            width: 42,
-            height: 42,
+            width: 38,
+            height: 38,
             borderRadius: '12px',
             border: '1px solid',
             borderColor: 'divider',
@@ -109,7 +110,7 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
             badgeContent={count}
             color="error"
             max={99}
-            sx={{ '& .MuiBadge-badge': { fontWeight: 700, fontSize: '0.65rem' } }}
+            sx={{ '& .MuiBadge-badge': { fontWeight: 700, fontSize: fontSizes['3xs'] } }}
           >
             <AuroraIcon name="bell" size={20} strokeWidth={1.8} />
           </Badge>
@@ -145,12 +146,12 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
           sx={{ px: 2.1, py: 1.75, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}
         >
           <Stack direction="row" alignItems="center" spacing={1.25}>
-            <Typography sx={{ fontSize: '0.9375rem', fontWeight: 800 }}>Notificações</Typography>
+            <Typography sx={{ fontSize: fontSizes.lg, fontWeight: 800 }}>Notificações</Typography>
             {count > 0 && (
               <Box
                 component="span"
                 sx={{
-                  fontSize: '0.6875rem',
+                  fontSize: fontSizes['2xs'],
                   fontWeight: 800,
                   color: 'primary.main',
                   bgcolor: '#EAF6F4',
@@ -167,7 +168,7 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
             size="small"
             disabled={count === 0 || markAllAsReadMutation.isPending}
             onClick={() => markAllAsReadMutation.mutate()}
-            sx={{ fontSize: '0.75rem', fontWeight: 700, minWidth: 0, px: 0.75 }}
+            sx={{ fontSize: fontSizes.xs, fontWeight: 700, minWidth: 0, px: 0.75 }}
           >
             Marcar lidas
           </Button>
@@ -216,7 +217,7 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0, lineHeight: 1.4 }}>
                   <Stack direction="row" alignItems="center" spacing={0.9}>
-                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800 }} noWrap>
+                    <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 800 }} noWrap>
                       {n.title}
                     </Typography>
                     {!n.read && (
@@ -225,10 +226,10 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
                       />
                     )}
                   </Stack>
-                  <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 500, mt: 0.25 }}>
+                  <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 500, mt: 0.25 }}>
                     {n.message}
                   </Typography>
-                  <Typography sx={{ fontSize: '0.6875rem', color: 'text.disabled', fontWeight: 600, mt: 0.5 }}>
+                  <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', fontWeight: 600, mt: 0.5 }}>
                     {dayjs(n.createdAt).fromNow()}
                   </Typography>
                 </Box>
@@ -261,7 +262,7 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
             bgcolor: 'grey.50',
             color: 'text.secondary',
             fontFamily: 'inherit',
-            fontSize: '0.8125rem',
+            fontSize: fontSizes.sm,
             fontWeight: 700,
             cursor: 'pointer',
             '&:hover': { bgcolor: 'grey.100' },

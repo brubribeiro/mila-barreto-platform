@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -29,9 +29,11 @@ import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Package } from '../types';
+import { fontSizes } from '../theme/fontSizes';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const ICON_COLORS = ['#15998B', '#E0915B', '#5BA8DE', '#D46B8A', '#9B7BD4', '#4FB3A8'];
+const PAGE_SIZE = 8;
 
 function colorFor(text: string) {
   let hash = 0;
@@ -82,6 +84,13 @@ export function Packages() {
     );
   }, [packages, search]);
 
+  const [page, setPage] = useState(0);
+  useEffect(() => setPage(0), [search]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const current = Math.min(page, pageCount - 1);
+  const rows = filtered.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
+
   const handleEdit = (p: Package) => {
     setEditing(p);
     setFormOpen(true);
@@ -107,7 +116,7 @@ export function Packages() {
         spacing={1.5}
         sx={{ mb: 2.5 }}
       >
-        <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary', fontWeight: 600 }}>
+        <Typography sx={{ fontSize: fontSizes.md, color: 'text.secondary', fontWeight: 600 }}>
           {stats ? (
             <>
               <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
@@ -125,19 +134,28 @@ export function Packages() {
           )}
         </Typography>
 
-        <Stack direction="row" alignItems="center" spacing={1.25} flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={1.25}
+          flexWrap={{ xs: 'wrap', md: 'nowrap' }}
+          useFlexGap
+          justifyContent={{ md: 'flex-end' }}
+          sx={{ minWidth: 0 }}
+        >
           <Stack
             direction="row"
             alignItems="center"
             spacing={1}
             sx={{
-              height: 42,
+              height: 38,
               px: 1.75,
               borderRadius: '12px',
               border: 1,
               borderColor: 'divider',
               bgcolor: 'grey.50',
               width: { xs: '100%', sm: 240 },
+              minWidth: 0,
             }}
           >
             <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
@@ -145,14 +163,14 @@ export function Packages() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar pacote..."
-              sx={{ fontSize: '0.8125rem', flex: 1 }}
+              sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />
           </Stack>
           {isAdmin && (
             <Tooltip title="Histórico de alterações">
               <IconButton
                 onClick={() => setHistoryOpen(true)}
-                sx={{ width: 42, height: 42, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
+                sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
               >
                 <HistoryIcon fontSize="small" />
               </IconButton>
@@ -166,7 +184,7 @@ export function Packages() {
                 setEditing(null);
                 setFormOpen(true);
               }}
-              sx={{ height: 42, px: 2.25, borderRadius: '12px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+              sx={{ flexShrink: 0, whiteSpace: 'nowrap', height: 38, px: 2.25, borderRadius: '12px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
             >
               Criar pacote
             </Button>
@@ -193,7 +211,7 @@ export function Packages() {
           <Typography sx={{ fontWeight: 700 }}>
             {packages.length === 0 ? 'Nenhum pacote cadastrado' : 'Nenhum pacote encontrado'}
           </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: '0.85rem', mt: 0.5 }}>
+          <Typography color="text.secondary" sx={{ fontSize: fontSizes.md, mt: 0.5 }}>
             {packages.length === 0
               ? 'Monte combos e pacotes de sessões para oferecer aos pacientes.'
               : 'Tente ajustar a busca.'}
@@ -207,7 +225,7 @@ export function Packages() {
             gap: 2,
           }}
         >
-          {filtered.map((p) => {
+          {rows.map((p) => {
             const color = colorFor(p.name);
             const original = p.originalPrice ?? 0;
             const sale = p.salePrice ?? Number(p.totalPrice ?? 0);
@@ -250,7 +268,7 @@ export function Packages() {
                     <Typography
                       title={p.name}
                       sx={{
-                        fontSize: '1rem',
+                        fontSize: fontSizes.xl,
                         fontWeight: 800,
                         lineHeight: 1.2,
                         display: '-webkit-box',
@@ -269,7 +287,7 @@ export function Packages() {
                             label="Mais vendido"
                             sx={{
                               height: 21,
-                              fontSize: '0.68rem',
+                              fontSize: fontSizes['2xs'],
                               fontWeight: 700,
                               bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
                               color: 'primary.dark',
@@ -282,7 +300,7 @@ export function Packages() {
                             label="Recorrente"
                             sx={{
                               height: 21,
-                              fontSize: '0.68rem',
+                              fontSize: fontSizes['2xs'],
                               fontWeight: 700,
                               bgcolor: alpha('#5BA8DE', 0.16),
                               color: '#2F6FA0',
@@ -290,7 +308,7 @@ export function Packages() {
                           />
                         )}
                         {!p.active && (
-                          <Chip size="small" label="Inativo" sx={{ height: 21, fontSize: '0.68rem', fontWeight: 700 }} />
+                          <Chip size="small" label="Inativo" sx={{ height: 21, fontSize: fontSizes['2xs'], fontWeight: 700 }} />
                         )}
                       </Stack>
                     )}
@@ -334,7 +352,7 @@ export function Packages() {
                         label={it.quantity > 1 ? `${it.procedure?.name} ×${it.quantity}` : it.procedure?.name}
                         sx={{
                           height: 24,
-                          fontSize: '0.72rem',
+                          fontSize: fontSizes.xs,
                           fontWeight: 600,
                           bgcolor: 'grey.100',
                           color: 'text.secondary',
@@ -359,15 +377,15 @@ export function Packages() {
                   <Box sx={{ minWidth: 0 }}>
                     {original > sale && (
                       <Typography
-                        sx={{ fontSize: '0.78rem', color: 'text.disabled', textDecoration: 'line-through', lineHeight: 1 }}
+                        sx={{ fontSize: fontSizes.xs, color: 'text.disabled', textDecoration: 'line-through', lineHeight: 1 }}
                       >
                         {brl.format(original)}
                       </Typography>
                     )}
-                    <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1.15, mt: 0.25 }}>
+                    <Typography sx={{ fontSize: fontSizes['5xl'], fontWeight: 800, lineHeight: 1.15, mt: 0.25 }}>
                       {brl.format(sale)}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.76rem', color: 'text.secondary' }}>
+                    <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                       {p.sessionCount} {p.sessionCount === 1 ? 'sessão' : 'sessões'}
                     </Typography>
                   </Box>
@@ -378,14 +396,14 @@ export function Packages() {
                         label={`economia ${savings}%`}
                         sx={{
                           height: 23,
-                          fontSize: '0.7rem',
+                          fontSize: fontSizes['2xs'],
                           fontWeight: 700,
                           bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
                           color: 'primary.dark',
                         }}
                       />
                     )}
-                    <Typography sx={{ fontSize: '0.74rem', color: 'text.disabled', textAlign: 'right' }}>
+                    <Typography sx={{ fontSize: fontSizes.xs, color: 'text.disabled', textAlign: 'right' }}>
                       {activeCount} {activeCount === 1 ? 'paciente ativo' : 'pacientes ativos'}
                     </Typography>
                   </Stack>
@@ -394,6 +412,60 @@ export function Packages() {
             );
           })}
         </Box>
+      )}
+
+      {/* Paginação */}
+      {!isLoading && filtered.length > 0 && (
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems="center"
+          justifyContent="space-between"
+          spacing={1.5}
+          sx={{ mt: 3 }}
+        >
+          <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary' }}>
+            Mostrando {current * PAGE_SIZE + 1}–{Math.min((current + 1) * PAGE_SIZE, filtered.length)} de{' '}
+            {filtered.length}
+          </Typography>
+          {pageCount > 1 && (
+            <Stack
+              direction="row"
+              spacing={1}
+              flexWrap="wrap"
+              useFlexGap
+              justifyContent={{ xs: 'center', sm: 'flex-end' }}
+            >
+              {Array.from({ length: pageCount }).map((_, i) => {
+                const activePage = i === current;
+                return (
+                  <Box
+                    key={i}
+                    component="button"
+                    type="button"
+                    onClick={() => setPage(i)}
+                    sx={{
+                      minWidth: 38,
+                      height: 38,
+                      px: 1,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      fontSize: fontSizes.md,
+                      fontWeight: 700,
+                      borderRadius: '10px',
+                      border: 1,
+                      borderColor: activePage ? 'primary.main' : 'divider',
+                      color: activePage ? '#fff' : 'text.secondary',
+                      bgcolor: activePage ? 'primary.main' : 'background.paper',
+                      '&:hover': { bgcolor: activePage ? 'primary.main' : 'grey.50' },
+                    }}
+                  >
+                    {i + 1}
+                  </Box>
+                );
+              })}
+            </Stack>
+          )}
+        </Stack>
       )}
 
       <PackageFormDialog open={formOpen} onClose={() => setFormOpen(false)} pkg={editing} />

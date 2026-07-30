@@ -1,5 +1,6 @@
 import { createTheme } from '@mui/material/styles';
 import { ptBR } from '@mui/material/locale';
+import { fontSizes } from './fontSizes';
 
 const baseTheme = createTheme();
 
@@ -21,6 +22,10 @@ const aurora = {
   shadow: '0 1px 2px rgba(16,40,37,.04),0 8px 24px -12px rgba(16,40,37,.10)',
   shadowLg: '0 8px 40px -16px rgba(16,40,37,.22)',
 };
+
+// Alturas padrão dos controles (knobs únicos).
+const CONTROL_HEIGHT = 32; // inputs e selects (compacto)
+const BUTTON_HEIGHT = 38; // botões: altura única para todos
 
 export const theme = createTheme(
   {
@@ -82,16 +87,16 @@ export const theme = createTheme(
       h3: {
         fontWeight: 800,
         letterSpacing: '-0.4px',
-        [baseTheme.breakpoints.down('sm')]: { fontSize: '1.5rem' },
+        [baseTheme.breakpoints.down('sm')]: { fontSize: fontSizes['5xl'] },
       },
       h4: {
         fontWeight: 700,
         letterSpacing: '-0.3px',
-        [baseTheme.breakpoints.down('sm')]: { fontSize: '1.35rem' },
+        [baseTheme.breakpoints.down('sm')]: { fontSize: fontSizes['4xl'] },
       },
       h5: {
         fontWeight: 700,
-        [baseTheme.breakpoints.down('sm')]: { fontSize: '1.1rem' },
+        [baseTheme.breakpoints.down('sm')]: { fontSize: fontSizes['2xl'] },
       },
       h6: { fontWeight: 700 },
       button: { textTransform: 'none', fontWeight: 700 },
@@ -100,6 +105,16 @@ export const theme = createTheme(
     components: {
       MuiCssBaseline: {
         styleOverrides: {
+          // Knob global da tipografia: como toda a UI usa rem, este font-size
+          // da raiz controla o tamanho de TODAS as fontes de uma vez. Baixe o
+          // valor base para deixar tudo menor em qualquer tela; os breakpoints
+          // reduzem mais em telas menores. (Padrão do navegador = 16px.)
+          html: {
+            fontSize: '13px', // base compacta (telas pequenas, <900px)
+            [baseTheme.breakpoints.up('md')]: { fontSize: '14px' }, // >=900
+            [baseTheme.breakpoints.up('lg')]: { fontSize: '15px' }, // >=1200
+            [baseTheme.breakpoints.up('xl')]: { fontSize: '16px' }, // >=1536: volta ao tamanho original
+          },
           '*': {
             scrollbarWidth: 'thin',
             scrollbarColor: `${aurora.border} transparent`,
@@ -123,8 +138,21 @@ export const theme = createTheme(
         },
       },
       MuiButton: {
+        // Controles compactos por padrão. Botões sem size explícito ficam ~32px.
+        defaultProps: { size: 'small' },
         styleOverrides: {
           root: { boxShadow: 'none', borderRadius: 12 },
+          // Todos os botões com a mesma altura (BUTTON_HEIGHT = 38px).
+          sizeSmall: {
+            minHeight: BUTTON_HEIGHT,
+            paddingTop: 4,
+            paddingBottom: 4,
+            paddingLeft: 12,
+            paddingRight: 12,
+            fontSize: fontSizes.md,
+          },
+          sizeMedium: { minHeight: BUTTON_HEIGHT },
+          sizeLarge: { minHeight: BUTTON_HEIGHT },
           containedPrimary: {
             backgroundColor: aurora.primary,
             '&:hover': {
@@ -180,8 +208,16 @@ export const theme = createTheme(
               borderWidth: 1,
             },
           },
+          // Input de uma linha em size small -> altura compacta ~32px.
+          // Textareas (multiline) mantêm o padding padrão para crescer com as linhas.
+          inputSizeSmall: {
+            '&:not(.MuiInputBase-inputMultiline)': {
+              paddingTop: 6,
+              paddingBottom: 6,
+            },
+          },
           input: {
-            fontSize: '0.875rem',
+            fontSize: fontSizes.md,
             '&:-webkit-autofill': {
               WebkitBoxShadow: `0 0 0 1000px ${aurora.surface2} inset`,
               WebkitTextFillColor: aurora.text,
@@ -200,15 +236,22 @@ export const theme = createTheme(
           },
         },
       },
+      MuiTextField: {
+        // Todos os campos compactos por padrão (altura ~32px via OutlinedInput).
+        defaultProps: { size: 'small' },
+      },
+      MuiSelect: {
+        defaultProps: { size: 'small' },
+      },
       MuiMenuItem: {
         styleOverrides: {
-          root: { fontSize: '0.875rem' },
+          root: { fontSize: fontSizes.md },
         },
       },
       MuiAutocomplete: {
         styleOverrides: {
-          option: { fontSize: '0.875rem' },
-          input: { fontSize: '0.875rem' },
+          option: { fontSize: fontSizes.md },
+          input: { fontSize: fontSizes.md },
         },
       },
       MuiChip: {
@@ -225,7 +268,7 @@ export const theme = createTheme(
             '& .MuiTableCell-head': {
               backgroundColor: aurora.surface2,
               fontWeight: 700,
-              fontSize: '0.75rem',
+              fontSize: fontSizes.xs,
               letterSpacing: '0.04em',
               textTransform: 'uppercase',
               color: aurora.textMuted,
@@ -251,7 +294,7 @@ export const theme = createTheme(
         styleOverrides: {
           root: {
             borderBottom: `1px solid ${aurora.borderSoft}`,
-            fontSize: '0.875rem',
+            fontSize: fontSizes.md,
           },
         },
       },

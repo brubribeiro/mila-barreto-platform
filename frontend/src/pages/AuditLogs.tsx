@@ -23,6 +23,7 @@ import {
   flattenAuditLogs,
   type AuditChangeRow,
 } from '../components/audit/auditUtils';
+import { fontSizes } from '../theme/fontSizes';
 
 const ENTITY_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'Todas' },
@@ -117,7 +118,7 @@ export function AuditLogs() {
               color={cfg.color}
               size="small"
               variant="outlined"
-              sx={{ fontSize: '0.7rem', height: 22 }}
+              sx={{ fontSize: fontSizes['2xs'], height: 22 }}
             />
           );
         },

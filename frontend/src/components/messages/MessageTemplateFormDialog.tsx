@@ -37,6 +37,7 @@ import { categoryOptions, TEMPLATE_VARIABLES } from './messageTemplateConstants'
 import { WHATSAPP_EMOJI_GROUPS } from './whatsappTemplateEmojis';
 import { WhatsAppPreview } from './WhatsAppPreview';
 import type { MessageTemplate, Procedure } from '../../types';
+import { fontSizes } from '../../theme/fontSizes';
 
 interface MessageTemplateFormDialogProps {
   open: boolean;
@@ -94,7 +95,7 @@ function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
       sx={{
         display: 'block',
         mb: 1.75,
-        fontSize: '0.72rem',
+        fontSize: fontSizes.xs,
         fontWeight: 800,
         letterSpacing: '0.06em',
         textTransform: 'uppercase',

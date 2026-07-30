@@ -17,6 +17,7 @@ import dayjs from 'dayjs';
 import { auditLogsApi } from '../../api/auditLogs';
 import { AppDataGrid } from '../AppDataGrid';
 import { actionConfig, flattenAuditLogs, type AuditChangeRow } from './auditUtils';
+import { fontSizes } from '../../theme/fontSizes';
 
 interface AuditHistoryPanelProps {
   entity: string;
@@ -61,7 +62,7 @@ export function AuditHistoryPanel({ entity, entityId }: AuditHistoryPanelProps) 
               color={cfg.color}
               size="small"
               variant="outlined"
-              sx={{ fontSize: '0.7rem', height: 22 }}
+              sx={{ fontSize: fontSizes['2xs'], height: 22 }}
             />
           );
         },

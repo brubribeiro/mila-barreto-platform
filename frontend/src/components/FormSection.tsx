@@ -1,5 +1,6 @@
 import { Box, Paper, Stack, Typography, type SxProps, type Theme } from '@mui/material';
 import type { ReactNode } from 'react';
+import { fontSizes } from '../theme/fontSizes';
 
 /**
  * Seção padrão das modais (card branco com título em maiúsculas).
@@ -42,7 +43,7 @@ export function FormSection({
         <Box sx={{ minWidth: 0 }}>
           <Typography
             sx={{
-              fontSize: '0.72rem',
+              fontSize: fontSizes.xs,
               fontWeight: 800,
               letterSpacing: '0.06em',
               textTransform: 'uppercase',
@@ -52,7 +53,7 @@ export function FormSection({
             {title}
           </Typography>
           {subtitle && (
-            <Typography sx={{ fontSize: '0.72rem', color: 'text.disabled', mt: 0.25 }}>
+            <Typography sx={{ fontSize: fontSizes.xs, color: 'text.disabled', mt: 0.25 }}>
               {subtitle}
             </Typography>
           )}
