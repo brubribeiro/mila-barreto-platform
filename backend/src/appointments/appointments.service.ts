@@ -42,9 +42,19 @@ function isAdminUser(user?: Pick<AuthenticatedUser, 'roleName'> | AuditUser) {
   return user?.roleName === 'Administrador';
 }
 
-/** Admin registrando atendimento passado: não baixa estoque retroativamente. */
-function shouldSkipMaterialDeduction(startAt: Date, user?: Pick<AuthenticatedUser, 'roleName'> | AuditUser) {
+/** Admin registrando atendimento passado: regras flexíveis (estoque, expediente, recorrência). */
+function isRetroactiveAdminBackfill(
+  startAt: Date,
+  user?: Pick<AuthenticatedUser, 'roleName'> | AuditUser,
+) {
   return startAt.getTime() < Date.now() && isAdminUser(user);
+}
+
+function shouldSkipMaterialDeduction(
+  startAt: Date,
+  user?: Pick<AuthenticatedUser, 'roleName'> | AuditUser,
+) {
+  return isRetroactiveAdminBackfill(startAt, user);
 }
 
 /** Procedimento só é exigido para kind = PROCEDURE. AVAL e RETURN ficam livres. */
@@ -419,17 +429,15 @@ export class AppointmentsService {
 
     await this.assertCreateReferences(dto, kind);
 
-    // Validação de disponibilidade (working hours + indisponibilidade + conflitos)
-    await this.checkAvailability(
-      dto.professionalId,
-      new Date(dto.startAt),
-      new Date(dto.endAt),
-    );
-
     const startAt = new Date(dto.startAt);
     const endAt = new Date(dto.endAt);
+    const retroAdminBackfill = isRetroactiveAdminBackfill(startAt, user);
 
-    if (dto.procedureId) {
+    if (!retroAdminBackfill) {
+      await this.checkAvailability(dto.professionalId, startAt, endAt);
+    }
+
+    if (dto.procedureId && !retroAdminBackfill) {
       await this.assertRecurrenceInterval(dto.patientId, dto.procedureId, startAt);
     }
 
@@ -511,30 +519,31 @@ export class AppointmentsService {
   async update(id: string, dto: UpdateAppointmentDto, user?: AuthenticatedUser) {
     const wasCancelledRequested = dto.status === AppointmentStatus.CANCELLED;
 
-    // Quando há mudança de horário/profissional, valida disponibilidade
-    if (dto.startAt || dto.endAt || dto.professionalId) {
-      const current = await this.prisma.appointment.findUnique({ where: { id } });
-      if (!current) throw new NotFoundException('Agendamento não encontrado');
-      const startAt = dto.startAt ? new Date(dto.startAt) : current.startAt;
-      const endAt = dto.endAt ? new Date(dto.endAt) : current.endAt;
-      const professionalId = dto.professionalId ?? current.professionalId;
-      await this.checkAvailability(professionalId, startAt, endAt, id);
-    }
-
     const currentForRecurrence = await this.prisma.appointment.findUnique({
       where: { id },
       include: appointmentRelationsInclude,
     });
     if (!currentForRecurrence) throw new NotFoundException('Agendamento não encontrado');
 
-    const recurrencePatientId = dto.patientId ?? currentForRecurrence.patientId;
-    const recurrenceProcedureId =
-      dto.procedureId === undefined ? currentForRecurrence.procedureId : dto.procedureId;
     const recurrenceStartAt = dto.startAt
       ? new Date(dto.startAt)
       : currentForRecurrence.startAt;
+    const retroAdminBackfill = isRetroactiveAdminBackfill(recurrenceStartAt, user);
 
-    if (recurrenceProcedureId) {
+    if (dto.startAt || dto.endAt || dto.professionalId) {
+      const startAt = dto.startAt ? new Date(dto.startAt) : currentForRecurrence.startAt;
+      const endAt = dto.endAt ? new Date(dto.endAt) : currentForRecurrence.endAt;
+      const professionalId = dto.professionalId ?? currentForRecurrence.professionalId;
+      if (!retroAdminBackfill) {
+        await this.checkAvailability(professionalId, startAt, endAt, id);
+      }
+    }
+
+    const recurrencePatientId = dto.patientId ?? currentForRecurrence.patientId;
+    const recurrenceProcedureId =
+      dto.procedureId === undefined ? currentForRecurrence.procedureId : dto.procedureId;
+
+    if (recurrenceProcedureId && !retroAdminBackfill) {
       await this.assertRecurrenceInterval(
         recurrencePatientId,
         recurrenceProcedureId,

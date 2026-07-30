@@ -4,6 +4,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-07-30
+
+### Fixed
+
+- Agendamentos retroativos (admin): cadastro passa a ignorar também validação de **expediente**, **indisponibilidade** e **intervalo de retorno** no backend, corrigindo erro ao salvar com o botão habilitado.
+- Formulário de agendamento: admin retroativo não é bloqueado por conflito de disponibilidade no frontend; status escolhido (ex.: Concluído) é enviado na criação.
+
 ## [0.1.8] - 2026-07-30
 
 ### Added

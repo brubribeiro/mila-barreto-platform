@@ -4,6 +4,21 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ---
 
+## v0.1.9 — 30 jul 2026
+
+### Correções
+
+**Agenda — agendamentos retroativos (administrador)**
+- Corrigido erro ao **salvar** agendamento passado: além do estoque, o sistema deixa de bloquear por **expediente**, **folga/indisponibilidade** e **intervalo mínimo entre procedimentos**.
+- O formulário permite salvar mesmo quando o profissional não aparece como “disponível” naquele horário passado.
+- Ao criar um agendamento retroativo, o **status selecionado** (ex.: Concluído) é respeitado.
+
+### Onde ver a versão
+
+Menu lateral (rodapé) e tela de login exibem **v0.1.9**.
+
+---
+
 ## v0.1.8 — 30 jul 2026
 
 ### Novidades

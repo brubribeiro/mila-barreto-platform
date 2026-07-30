@@ -668,18 +668,19 @@ export function AppointmentFormDialog({
 
   const requiresValidProvider = !appointment || timeOrProfessionalChanged;
 
-  const professionalSlotConflict =
-    !fetchingProfessionals &&
-    ((scheduleSlotBlocked && timeOrProfessionalChanged) ||
-      (requiresValidProvider && !!selectedProfessionalId && !selectedPerformsAppointments));
-
   const isRetroactiveSlot = useMemo(() => {
     if (!selectedDate || !selectedStartTime) return false;
     return dayjs(`${selectedDate}T${selectedStartTime}`).isBefore(dayjs());
   }, [selectedDate, selectedStartTime]);
 
-  /** Admin registrando atendimento passado: estoque não é baixado retroativamente. */
-  const skipStockDeduction = isAdmin && isRetroactiveSlot;
+  /** Admin registrando atendimento passado: estoque, expediente e recorrência flexíveis. */
+  const skipRetroactiveAdminRules = isAdmin && isRetroactiveSlot;
+
+  const professionalSlotConflict =
+    !skipRetroactiveAdminRules &&
+    !fetchingProfessionals &&
+    ((scheduleSlotBlocked && timeOrProfessionalChanged) ||
+      (requiresValidProvider && !!selectedProfessionalId && !selectedPerformsAppointments));
 
   const willDeductMaterials =
     selectedStatus === 'SCHEDULED' ||
@@ -878,7 +879,11 @@ export function AppointmentFormDialog({
         professionalId: values.professionalId,
         startAt: start.toISOString(),
         endAt: end.toISOString(),
-        status: appointment ? values.status : 'SCHEDULED',
+        status: appointment
+          ? values.status
+          : skipRetroactiveAdminRules
+            ? values.status
+            : 'SCHEDULED',
         kind: values.kind,
         ...(values.notes.trim() ? { notes: values.notes.trim() } : {}),
         ...(values.clinicalNotes.trim() ? { clinicalNotes: values.clinicalNotes.trim() } : {}),
@@ -948,7 +953,10 @@ export function AppointmentFormDialog({
   };
 
   const onSubmit = (values: FormValues) => {
-    if (loggedUserCannotBeScheduled || noProfessionalAvailable || professionalSlotConflict) {
+    if (
+      !skipRetroactiveAdminRules &&
+      (loggedUserCannotBeScheduled || noProfessionalAvailable || professionalSlotConflict)
+    ) {
       return;
     }
     if (!values.professionalId || !selectedPerformsAppointments) {
@@ -1855,7 +1863,7 @@ export function AppointmentFormDialog({
                           label={
                             <Stack direction="row" spacing={0.75} alignItems="center">
                               <span>Materiais</span>
-                              {willDeductMaterials && hasInsufficient && !skipStockDeduction && (
+                              {willDeductMaterials && hasInsufficient && !skipRetroactiveAdminRules && (
                                 <Chip label="!" size="small" color="warning" sx={{ height: 18, fontSize: 11 }} />
                               )}
                             </Stack>
@@ -1893,7 +1901,7 @@ export function AppointmentFormDialog({
                               >
                                 Previstos no procedimento
                                 {!willDeductMaterials && ' (reservados)'}
-                                {skipStockDeduction && ' (sem baixa — retroativo)'}
+                                {skipRetroactiveAdminRules && ' (sem baixa — retroativo)'}
                               </Typography>
                               <Stack direction="row" flexWrap="wrap" gap={0.75}>
                                 {materials.map((m) => {
@@ -2035,14 +2043,15 @@ export function AppointmentFormDialog({
                             )}
                           </Box>
 
-                          {willDeductMaterials && hasInsufficient && !skipStockDeduction && (
+                          {willDeductMaterials && hasInsufficient && !skipRetroactiveAdminRules && (
                             <Alert severity="error">
                               Estoque insuficiente para os materiais previstos e extras.
                             </Alert>
                           )}
-                          {skipStockDeduction && willDeductMaterials && (
+                          {skipRetroactiveAdminRules && willDeductMaterials && (
                             <Alert severity="info">
-                              Agendamento retroativo: o estoque não será baixado automaticamente.
+                              Agendamento retroativo: estoque, expediente e intervalo de retorno não
+                              bloqueiam o cadastro.
                             </Alert>
                           )}
                         </Stack>
@@ -2159,7 +2168,7 @@ export function AppointmentFormDialog({
                 noProfessionalAvailable ||
                 professionalSlotConflict ||
                 (requiresValidProvider && !selectedPerformsAppointments) ||
-                (willDeductMaterials && hasInsufficient && watch('kind') === 'PROCEDURE' && !skipStockDeduction)
+                (willDeductMaterials && hasInsufficient && watch('kind') === 'PROCEDURE' && !skipRetroactiveAdminRules)
               }
             >
               {mutation.isPending ? 'Salvando...' : 'Salvar'}

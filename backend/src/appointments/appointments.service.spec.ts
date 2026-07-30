@@ -195,6 +195,38 @@ describe('AppointmentsService', () => {
       expect(notifications.notify).toHaveBeenCalled();
     });
 
+    it('should skip availability and recurrence for admin retroactive appointments', async () => {
+      availability.checkProfessionalSlot.mockRejectedValue(
+        new BadRequestException('Horário fora do expediente'),
+      );
+      prisma.procedure.findUnique.mockResolvedValue({
+        id: 'proc-1',
+        active: true,
+        recurrenceDays: 15,
+      });
+      prisma.appointment.findFirst.mockResolvedValue({
+        startAt: new Date(),
+        status: 'COMPLETED',
+      });
+
+      const pastStart = new Date(Date.now() - 86_400_000).toISOString();
+      const pastEnd = new Date(Date.now() - 82_800_000).toISOString();
+
+      await service.create(
+        {
+          patientId: 'patient-1',
+          procedureId: 'proc-1',
+          professionalId: 'user-1',
+          startAt: pastStart,
+          endAt: pastEnd,
+        } as any,
+        { roleName: 'Administrador' } as any,
+      );
+
+      expect(availability.checkProfessionalSlot).not.toHaveBeenCalled();
+      expect(prisma.appointment.create).toHaveBeenCalled();
+    });
+
     it('should skip material deduction for admin retroactive appointments', async () => {
       prisma.procedureMaterial.findMany.mockResolvedValue([
         { itemId: 'item-1', quantity: new Prisma.Decimal(5) },
