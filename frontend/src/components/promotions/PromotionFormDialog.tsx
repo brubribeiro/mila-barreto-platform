@@ -118,14 +118,21 @@ function SectionIcon({ children }: { children: ReactNode }) {
   );
 }
 
-function SectionTitle({ icon, title }: { icon: ReactNode; title: string }) {
+function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
   return (
-    <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 1.5 }}>
-      <SectionIcon>{icon}</SectionIcon>
-      <Typography variant="subtitle1" fontWeight={600} letterSpacing="-0.01em">
-        {title}
-      </Typography>
-    </Stack>
+    <Typography
+      sx={{
+        display: 'block',
+        mb: 1.75,
+        fontSize: '0.72rem',
+        fontWeight: 800,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: 'text.disabled',
+      }}
+    >
+      {title}
+    </Typography>
   );
 }
 
@@ -638,14 +645,17 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
                     sx={{ mb: 1.5, flexShrink: 0 }}
                   >
                     <Box sx={{ minWidth: 0 }}>
-                      <Stack direction="row" alignItems="center" spacing={1.25}>
-                        <SectionIcon>
-                          <PlaylistAddCheckOutlinedIcon fontSize="small" />
-                        </SectionIcon>
-                        <Typography variant="subtitle1" fontWeight={600} letterSpacing="-0.01em">
-                          Itens elegíveis
-                        </Typography>
-                      </Stack>
+                      <Typography
+                        sx={{
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
+                          color: 'text.disabled',
+                        }}
+                      >
+                        Itens elegíveis
+                      </Typography>
                     </Box>
                     {eligibleCount > 0 && (
                       <Chip size="small" label={`${eligibleCount} selecionado(s)`} variant="outlined" />

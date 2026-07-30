@@ -55,6 +55,17 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Botão **Novo agendamento** na ficha abre a modal já com o paciente selecionado.
 - Modal de **anamnese** com visual Aurora alinhado ao restante do painel.
 
+**Procedimentos**
+- Lista redesenhada no estilo Aurora: busca, filtro por **categoria**, paginação e colunas de **margem**, **custo de materiais** e **custo de equipamentos**.
+- Cadastro com **categoria** (Facial, Injetáveis, Laser, etc.), vínculo de **equipamentos** com custo por uso e opção **Mapa de aplicação** (em breve).
+- Modal de procedimento reorganizada em seções padronizadas.
+
+**Formulários**
+- Modais de cadastro (paciente, financeiro, estoque, pacotes, profissionais, etc.) passam a usar seções visuais consistentes (**FormSection**), alinhadas ao estilo Aurora.
+
+**Barra superior**
+- Sino de notificações reposicionado; botão **Novo agendamento** com estilo outlined.
+
 ### Correções
 
 **Agenda e disponibilidade**

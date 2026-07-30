@@ -311,10 +311,10 @@ export function Patients() {
             borderColor: 'divider',
             bgcolor: 'grey.50',
             fontSize: '0.7rem',
-            fontWeight: 700,
+            fontWeight: 800,
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
-            color: 'text.disabled',
+            color: 'text.secondary',
           }}
         >
           <span>Paciente</span>
@@ -342,7 +342,7 @@ export function Patients() {
                   letterSpacing: 'inherit',
                   textTransform: 'inherit',
                   color: active ? 'text.primary' : 'inherit',
-                  fontWeight: 700,
+                  fontWeight: 800,
                   '&:hover': { color: 'text.primary' },
                 }}
               >

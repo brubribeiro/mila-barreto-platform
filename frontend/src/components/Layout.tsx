@@ -620,29 +620,36 @@ export function Layout() {
 
           <Box sx={{ flex: 1 }} />
 
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
-            {has('appointments:view') && (
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<AuroraIcon name="plus" size={18} strokeWidth={2.2} />}
-                onClick={() => openAppointmentDialog()}
-                sx={{
-                  height: 42,
-                  px: { xs: 1.25, md: 2.25 },
-                  borderRadius: '12px',
-                  fontWeight: 700,
-                  whiteSpace: 'nowrap',
-                  boxShadow: `0 6px 16px -6px ${theme.palette.primary.main}`,
-                  '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
-                }}
-              >
-                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                  Novo agendamento
-                </Box>
-              </Button>
-            )}
+          <Stack direction="row" spacing={3} alignItems="center" sx={{ flexShrink: 0 }}>
             <NotificationsBell />
+            {has('appointments:view') && (
+              <>
+                <Box sx={{ width: '1px', height: 26, bgcolor: 'divider', mx: 2 }} />
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<AuroraIcon name="plus" size={18} strokeWidth={2.2} />}
+                  onClick={() => openAppointmentDialog()}
+                  sx={{
+                    height: 42,
+                    px: { xs: 1.25, md: 2.25 },
+                    borderRadius: '12px',
+                    fontWeight: 700,
+                    whiteSpace: 'nowrap',
+                    bgcolor: 'background.paper',
+                    borderColor: 'primary.main',
+                    color: 'primary.main',
+                    boxShadow: '0 1px 2px rgba(16,40,37,0.04)',
+                    '&:hover': { bgcolor: (t) => alpha(t.palette.primary.main, 0.06), borderColor: 'primary.main' },
+                    '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+                  }}
+                >
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                    Novo agendamento
+                  </Box>
+                </Button>
+              </>
+            )}
           </Stack>
         </Toolbar>
       </AppBar>

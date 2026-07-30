@@ -97,14 +97,21 @@ function SectionIcon({ children }: { children: ReactNode }) {
   );
 }
 
-function SectionTitle({ icon, title }: { icon: ReactNode; title: string }) {
+function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
   return (
-    <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 1.5 }}>
-      <SectionIcon>{icon}</SectionIcon>
-      <Typography variant="subtitle1" fontWeight={600} letterSpacing="-0.01em">
-        {title}
-      </Typography>
-    </Stack>
+    <Typography
+      sx={{
+        display: 'block',
+        mb: 1.75,
+        fontSize: '0.72rem',
+        fontWeight: 800,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: 'text.disabled',
+      }}
+    >
+      {title}
+    </Typography>
   );
 }
 

@@ -30,6 +30,7 @@ import { patientsApi } from '../../api/patients';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx } from '../DialogCloseButton';
+import { FormSection } from '../FormSection';
 import { LabeledField } from '../LabeledField';
 import {
   ANAMNESIS_MULTILINE_KEYS,
@@ -67,36 +68,6 @@ const ANAMNESIS_SWITCH_ROW_SX = {
   borderRadius: '11px',
   bgcolor: 'grey.50',
 } as const;
-
-function FieldGroup({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: { xs: 1.75, sm: 2.25 },
-        borderRadius: '16px',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
-        boxShadow: '0 1px 2px rgba(16,40,37,0.03)',
-      }}
-    >
-      <Typography
-        sx={{
-          display: 'block',
-          mb: 1.75,
-          fontSize: '0.75rem',
-          fontWeight: 800,
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase',
-          color: 'text.secondary',
-        }}
-      >
-        {title}
-      </Typography>
-      {children}
-    </Paper>
-  );
-}
 
 export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormDialogProps) {
   const theme = useTheme();
@@ -329,7 +300,7 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
                   const inputs = section.fields.filter((f) => f.type !== 'boolean');
                   const toggles = section.fields.filter((f) => f.type === 'boolean');
                   return (
-                    <FieldGroup key={section.title} title={section.title}>
+                    <FormSection key={section.title} title={section.title}>
                       {inputs.length > 0 && (
                         <Grid container spacing={1.75} alignItems="flex-start">
                           {inputs.map(renderField)}
@@ -354,7 +325,7 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
                           {toggles.map(renderField)}
                         </Grid>
                       )}
-                    </FieldGroup>
+                    </FormSection>
                   );
                 })}
               </Stack>

@@ -112,14 +112,21 @@ function SectionIcon({ children }: { children: ReactNode }) {
   );
 }
 
-function SectionTitle({ icon, title }: { icon: ReactNode; title: string }) {
+function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
   return (
-    <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 1.5 }}>
-      <SectionIcon>{icon}</SectionIcon>
-      <Typography variant="subtitle1" fontWeight={600} letterSpacing="-0.01em">
-        {title}
-      </Typography>
-    </Stack>
+    <Typography
+      sx={{
+        display: 'block',
+        mb: 1.75,
+        fontSize: '0.72rem',
+        fontWeight: 800,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: 'text.disabled',
+      }}
+    >
+      {title}
+    </Typography>
   );
 }
 
@@ -581,10 +588,15 @@ export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps
                   sx={{ mb: 1.5, flexShrink: 0 }}
                 >
                   <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 0 }}>
-                    <SectionIcon>
-                      <MedicalServicesOutlinedIcon fontSize="small" />
-                    </SectionIcon>
-                    <Typography variant="subtitle1" fontWeight={600} letterSpacing="-0.01em">
+                    <Typography
+                      sx={{
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        color: 'text.disabled',
+                      }}
+                    >
                       Procedimentos
                     </Typography>
                   </Stack>

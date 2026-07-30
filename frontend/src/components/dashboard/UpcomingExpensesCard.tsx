@@ -182,7 +182,7 @@ export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardP
           sx={{
             flex: embedded ? '1 1 auto' : undefined,
             overflow: 'auto',
-            ...(embedded ? { minHeight: 0 } : { maxHeight: 350 }),
+            ...(embedded ? { minHeight: 0, maxHeight: 260 } : { maxHeight: 350 }),
             pr: 0.5,
           }}
         >

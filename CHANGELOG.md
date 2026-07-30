@@ -18,6 +18,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Backend: `resolveRevenuePaidAt` projeta `paidAt` da receita conforme mês de referência.
 - Seed: notas clínicas demo (`demo-appointment-notes.ts`), agendamentos de sexta/sábado, script `prisma:seed-package-appointments`.
 - Tema: scrollbar global via `MuiCssBaseline`; estilos refinados em `MuiOutlinedInput` e `MuiSelect`.
+- Procedimentos: campo **categoria**, flag **applicationMap**, vínculo `ProcedureEquipment` com custo por uso; migrations Prisma.
+- Procedimentos: lista Aurora com filtro por categoria, paginação e colunas financeiras (margem, custos).
+- Componente compartilhado `FormSection` para seções de modais.
 
 ### Changed
 
@@ -29,6 +32,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Dashboard: semana da agenda = 7 dias a partir do anchor (não mais segunda–domingo fixos).
 - `UpcomingExpensesCard`: skeleton no lugar de texto "Carregando...".
 - `DialogCloseButton`: bordas arredondadas, rodapé cinza claro, botão fechar estilizado.
+- `Procedures.tsx`: substitui DataGrid por lista customizada Aurora; `ProcedureFormDialog` com equipamentos e categoria.
+- Modais de cadastro: adotam `FormSection` (paciente, financeiro, estoque, pacotes, profissionais, roles, etc.).
+- `Layout`: botão **Novo agendamento** outlined; sino de notificações reposicionado.
+- Dashboard: scroll na lista de aniversariantes; botão WhatsApp desabilitado sem telefone.
 
 ### Fixed
 

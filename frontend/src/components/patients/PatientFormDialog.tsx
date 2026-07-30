@@ -48,6 +48,7 @@ import { patientsApi, PatientPayload } from '../../api/patients';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { FormSection } from '../FormSection';
 import type { Patient, PatientSex, PatientReferralSource } from '../../types';
 import { isValidCPF, maskCPF, maskCEP, maskPhone, onlyDigits } from '../../utils/masks';
 import { birthDatePayloadFromInput, dateInputValueFromApi } from '../../utils/dateOnly';
@@ -129,60 +130,6 @@ const FORM_CARD_FILL_SX = {
   display: 'flex',
   flexDirection: 'column',
 } as const;
-
-function SectionIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function SectionTitle({ icon, title }: { icon: ReactNode; title: string }) {
-  return (
-    <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 1.5 }}>
-      <SectionIcon>{icon}</SectionIcon>
-      <Typography variant="subtitle1" fontWeight={600} letterSpacing="-0.01em">
-        {title}
-      </Typography>
-    </Stack>
-  );
-}
-
-function FormSection({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
-  return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: 1.75,
-        borderRadius: '14px',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
-        boxShadow: '0 1px 2px rgba(16,40,37,0.03)',
-      }}
-    >
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.75 }}>
-        <SectionIcon>{icon}</SectionIcon>
-        <Typography sx={{ fontSize: '0.9rem', fontWeight: 800, letterSpacing: '-0.01em' }}>
-          {title}
-        </Typography>
-      </Stack>
-      {children}
-    </Paper>
-  );
-}
 
 function LabeledField({
   label,
@@ -615,7 +562,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
               alignItems: 'start',
             }}
           >
-            <FormSection icon={<BadgeOutlinedIcon fontSize="small" />} title="Dados do paciente">
+            <FormSection title="Dados do paciente">
               <Stack spacing={1.75}>
             {/* Foto centralizada acima dos campos */}
             <Stack alignItems="center" spacing={0.75}>
@@ -882,7 +829,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
             </FormSection>
 
             {/* Endereço */}
-            <FormSection icon={<LocationOnOutlinedIcon fontSize="small" />} title="Endereço">
+            <FormSection title="Endereço">
               <Stack spacing={1.25}>
                 <Box>
                   <Controller

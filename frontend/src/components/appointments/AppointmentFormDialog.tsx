@@ -267,9 +267,16 @@ function AppointmentFormSection({
         ...sx,
       }}
     >
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.25 }}>
-        <SectionIcon>{icon}</SectionIcon>
-        <Typography sx={{ fontSize: '0.9rem', fontWeight: 800, letterSpacing: '-0.01em' }}>
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.75 }}>
+        <Typography
+          sx={{
+            fontSize: '0.72rem',
+            fontWeight: 800,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: 'text.disabled',
+          }}
+        >
           {title}
         </Typography>
         {action && <Box sx={{ ml: 'auto' }}>{action}</Box>}

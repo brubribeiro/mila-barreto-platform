@@ -196,9 +196,16 @@ function FormSection({
         sx={{ mb: 1.5, flexShrink: 0 }}
       >
         <Stack direction="row" spacing={1.25} alignItems="flex-start" sx={{ minWidth: 0 }}>
-          <SectionIcon>{icon}</SectionIcon>
           <Box sx={{ minWidth: 0 }}>
-            <Typography variant="subtitle1" fontWeight={600} letterSpacing="-0.01em">
+            <Typography
+              sx={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: 'text.disabled',
+              }}
+            >
               {title}
             </Typography>
             {subtitle && (

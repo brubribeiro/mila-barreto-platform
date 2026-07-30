@@ -963,7 +963,7 @@ export function Dashboard() {
               ) : upcomingBirthdays.length === 0 ? (
                 <DashboardEmptyState message="Nenhum aniversário neste período." />
               ) : (
-                <Stack spacing={0.25}>
+                <Stack spacing={0.25} sx={{ maxHeight: 260, overflowY: 'auto', pr: 0.5, mr: -0.5 }}>
                   {upcomingBirthdays.map(({ patient, when, turnsAge, daysUntil }, idx) => {
                     const initials = patient.name
                       .trim()
@@ -1015,18 +1015,19 @@ export function Dashboard() {
                         >
                           {countdownBirthdayLabel(daysUntil)}
                         </Box>
-                        {patient.phone?.trim() && (
-                          <Tooltip title="Enviar mensagem no WhatsApp">
+                        <Tooltip title={patient.phone?.trim() ? 'Enviar mensagem no WhatsApp' : 'Sem telefone cadastrado'}>
+                          <span style={{ flexShrink: 0 }}>
                             <IconButton
                               size="small"
+                              disabled={!patient.phone?.trim()}
                               onClick={() => setWhatsappPatient(patient)}
                               aria-label={`Enviar WhatsApp para ${patient.name}`}
                               sx={{ color: '#1DAE53', flexShrink: 0 }}
                             >
                               <WhatsAppIcon fontSize="small" />
                             </IconButton>
-                          </Tooltip>
-                        )}
+                          </span>
+                        </Tooltip>
                       </Stack>
                     );
                   })}
