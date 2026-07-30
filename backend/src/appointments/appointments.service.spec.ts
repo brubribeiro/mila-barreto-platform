@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 import { AppointmentsService } from './appointments.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -192,6 +193,39 @@ describe('AppointmentsService', () => {
 
       expect(prisma.appointment.create).toHaveBeenCalled();
       expect(notifications.notify).toHaveBeenCalled();
+    });
+
+    it('should skip material deduction for admin retroactive appointments', async () => {
+      prisma.procedureMaterial.findMany.mockResolvedValue([
+        { itemId: 'item-1', quantity: new Prisma.Decimal(5) },
+      ]);
+      prisma.inventoryItem.findUnique.mockResolvedValue({
+        id: 'item-1',
+        name: 'Botox',
+        quantity: 0,
+      });
+
+      const pastStart = new Date(Date.now() - 86_400_000).toISOString();
+      const pastEnd = new Date(Date.now() - 82_800_000).toISOString();
+
+      await service.create(
+        {
+          patientId: 'patient-1',
+          procedureId: 'proc-1',
+          professionalId: 'user-1',
+          startAt: pastStart,
+          endAt: pastEnd,
+          status: 'COMPLETED',
+        } as any,
+        { roleName: 'Administrador' } as any,
+      );
+
+      expect(prisma.inventoryItem.update).not.toHaveBeenCalled();
+      expect(prisma.appointment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ materialsDeducted: false }),
+        }),
+      );
     });
 
     it('should throw if procedure does not exist', async () => {

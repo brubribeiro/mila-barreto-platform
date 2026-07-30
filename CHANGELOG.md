@@ -4,6 +4,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-07-30
+
+### Added
+
+- Agendamentos retroativos (admin): administradores podem registrar atendimentos passados sem baixa automática de estoque.
+
+### Changed
+
+- Formulário de agendamento: aviso informativo e liberação do botão Salvar quando admin cadastra horário retroativo com estoque insuficiente.
+
 ## [0.1.7] - 2026-07-23
 
 ### Fixed

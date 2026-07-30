@@ -4,6 +4,21 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ---
 
+## v0.1.8 — 30 jul 2026
+
+### Novidades
+
+**Agenda — agendamentos retroativos (administrador)**
+- Administradores podem cadastrar agendamentos com **data/hora no passado** sem ser bloqueados por **estoque insuficiente**.
+- Nesses casos o estoque **não é baixado automaticamente** — ideal para registrar atendimentos que já aconteceram.
+- O formulário exibe um aviso informando que a baixa de materiais não ocorrerá.
+
+### Onde ver a versão
+
+Menu lateral (rodapé) e tela de login exibem **v0.1.8**.
+
+---
+
 ## v0.1.7 — 23 jul 2026
 
 ### Correções

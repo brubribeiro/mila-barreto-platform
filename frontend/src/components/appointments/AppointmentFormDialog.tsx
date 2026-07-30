@@ -230,7 +230,7 @@ export function AppointmentFormDialog({
   const { user } = useAuth();
   const { confirm, alert } = useAppDialog();
   const toast = useAppToast();
-  const { has, restrictToOwnAppointments } = usePermissions();
+  const { has, restrictToOwnAppointments, isAdmin } = usePermissions();
   const canDelete = has('appointments:delete');
   const canCreate = has('appointments:create');
   const canViewPatient = has('patients:view');
@@ -672,6 +672,17 @@ export function AppointmentFormDialog({
     !fetchingProfessionals &&
     ((scheduleSlotBlocked && timeOrProfessionalChanged) ||
       (requiresValidProvider && !!selectedProfessionalId && !selectedPerformsAppointments));
+
+  const selectedDate = watch('date');
+  const selectedStartTime = watch('startTime');
+
+  const isRetroactiveSlot = useMemo(() => {
+    if (!selectedDate || !selectedStartTime) return false;
+    return dayjs(`${selectedDate}T${selectedStartTime}`).isBefore(dayjs());
+  }, [selectedDate, selectedStartTime]);
+
+  /** Admin registrando atendimento passado: estoque não é baixado retroativamente. */
+  const skipStockDeduction = isAdmin && isRetroactiveSlot;
 
   const willDeductMaterials =
     selectedStatus === 'SCHEDULED' ||
@@ -1847,7 +1858,7 @@ export function AppointmentFormDialog({
                           label={
                             <Stack direction="row" spacing={0.75} alignItems="center">
                               <span>Materiais</span>
-                              {willDeductMaterials && hasInsufficient && (
+                              {willDeductMaterials && hasInsufficient && !skipStockDeduction && (
                                 <Chip label="!" size="small" color="warning" sx={{ height: 18, fontSize: 11 }} />
                               )}
                             </Stack>
@@ -1885,6 +1896,7 @@ export function AppointmentFormDialog({
                               >
                                 Previstos no procedimento
                                 {!willDeductMaterials && ' (reservados)'}
+                                {skipStockDeduction && ' (sem baixa — retroativo)'}
                               </Typography>
                               <Stack direction="row" flexWrap="wrap" gap={0.75}>
                                 {materials.map((m) => {
@@ -2026,9 +2038,14 @@ export function AppointmentFormDialog({
                             )}
                           </Box>
 
-                          {willDeductMaterials && hasInsufficient && (
+                          {willDeductMaterials && hasInsufficient && !skipStockDeduction && (
                             <Alert severity="error">
                               Estoque insuficiente para os materiais previstos e extras.
+                            </Alert>
+                          )}
+                          {skipStockDeduction && willDeductMaterials && (
+                            <Alert severity="info">
+                              Agendamento retroativo: o estoque não será baixado automaticamente.
                             </Alert>
                           )}
                         </Stack>
@@ -2145,7 +2162,7 @@ export function AppointmentFormDialog({
                 noProfessionalAvailable ||
                 professionalSlotConflict ||
                 (requiresValidProvider && !selectedPerformsAppointments) ||
-                (willDeductMaterials && hasInsufficient && watch('kind') === 'PROCEDURE')
+                (willDeductMaterials && hasInsufficient && watch('kind') === 'PROCEDURE' && !skipStockDeduction)
               }
             >
               {mutation.isPending ? 'Salvando...' : 'Salvar'}

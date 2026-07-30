@@ -38,6 +38,15 @@ function isActive(status: AppointmentStatus) {
   );
 }
 
+function isAdminUser(user?: Pick<AuthenticatedUser, 'roleName'> | AuditUser) {
+  return user?.roleName === 'Administrador';
+}
+
+/** Admin registrando atendimento passado: não baixa estoque retroativamente. */
+function shouldSkipMaterialDeduction(startAt: Date, user?: Pick<AuthenticatedUser, 'roleName'> | AuditUser) {
+  return startAt.getTime() < Date.now() && isAdminUser(user);
+}
+
 /** Procedimento só é exigido para kind = PROCEDURE. AVAL e RETURN ficam livres. */
 function requiresProcedure(kind: AppointmentKind | null | undefined) {
   return !kind || kind === AppointmentKind.PROCEDURE;
@@ -402,7 +411,7 @@ export class AppointmentsService {
     }
   }
 
-  async create(dto: CreateAppointmentDto, user?: AuditUser) {
+  async create(dto: CreateAppointmentDto, user?: AuthenticatedUser) {
     const kind = dto.kind ?? AppointmentKind.PROCEDURE;
     if (requiresProcedure(kind) && !dto.procedureId) {
       throw new BadRequestException('Procedimento é obrigatório para agendamentos do tipo PROCEDURE.');
@@ -444,7 +453,11 @@ export class AppointmentsService {
 
       const status = dto.status ?? AppointmentStatus.SCHEDULED;
       const extraItems = this.normalizeExtraMaterials(dto.extraMaterials);
-      const willDeduct = isActive(status) && (!!dto.procedureId || extraItems.length > 0);
+      const skipMaterialDeduction = shouldSkipMaterialDeduction(startAt, user);
+      const willDeduct =
+        isActive(status) &&
+        (!!dto.procedureId || extraItems.length > 0) &&
+        !skipMaterialDeduction;
 
       if (willDeduct && dto.procedureId) {
         await this.deductMaterials(tx, dto.procedureId, 'Materiais do agendamento');
@@ -565,6 +578,8 @@ export class AppointmentsService {
       const newStatus = dto.status ?? before.status;
       const newProcedureId = dto.procedureId ?? before.procedureId;
       const newKind = dto.kind ?? before.kind;
+      const effectiveStartAt = dto.startAt ? new Date(dto.startAt) : before.startAt;
+      const skipMaterialDeduction = shouldSkipMaterialDeduction(effectiveStartAt, user);
       const willBeActive = isActive(newStatus);
       const procedureChanged = before.procedureId !== newProcedureId;
       const extraItems =
@@ -573,7 +588,8 @@ export class AppointmentsService {
           : undefined;
       const willHaveExtras =
         extraItems !== undefined ? extraItems.length > 0 : before.extraMaterials.length > 0;
-      const willDeduct = willBeActive && (!!newProcedureId || willHaveExtras);
+      const willDeduct =
+        willBeActive && (!!newProcedureId || willHaveExtras) && !skipMaterialDeduction;
 
       if (requiresProcedure(newKind) && !newProcedureId) {
         throw new BadRequestException('Procedimento é obrigatório para agendamentos do tipo PROCEDURE.');
@@ -589,11 +605,13 @@ export class AppointmentsService {
           'Devolução de materiais extras por cancelamento/no-show',
         );
       } else if (before.materialsDeducted && willBeActive && procedureChanged) {
-        if (before.procedureId) {
-          await this.returnMaterials(tx, before.procedureId, 'Devolução por troca de procedimento');
-        }
-        if (newProcedureId) {
-          await this.deductMaterials(tx, newProcedureId, 'Materiais do agendamento (novo procedimento)');
+        if (!skipMaterialDeduction) {
+          if (before.procedureId) {
+            await this.returnMaterials(tx, before.procedureId, 'Devolução por troca de procedimento');
+          }
+          if (newProcedureId) {
+            await this.deductMaterials(tx, newProcedureId, 'Materiais do agendamento (novo procedimento)');
+          }
         }
       } else if (!before.materialsDeducted && willDeduct) {
         if (newProcedureId) {
@@ -606,18 +624,23 @@ export class AppointmentsService {
       }
 
       if (extraItems !== undefined) {
-        if (before.materialsDeducted && willBeActive) {
+        if (before.materialsDeducted && willBeActive && !skipMaterialDeduction) {
           await this.applyExtraMaterialsStockDiff(tx, before.extraMaterials, extraItems);
         }
         await this.replaceExtraMaterialRecords(tx, id, extraItems);
-        if (!before.materialsDeducted && willBeActive && extraItems.length > 0) {
+        if (!before.materialsDeducted && willBeActive && extraItems.length > 0 && !skipMaterialDeduction) {
           await this.deductMaterialItems(
             tx,
             extraItems,
             'Materiais extras do agendamento (reativado)',
           );
         }
-      } else if (!before.materialsDeducted && willBeActive && before.extraMaterials.length > 0) {
+      } else if (
+        !before.materialsDeducted &&
+        willBeActive &&
+        before.extraMaterials.length > 0 &&
+        !skipMaterialDeduction
+      ) {
         await this.deductMaterialItems(
           tx,
           before.extraMaterials,
