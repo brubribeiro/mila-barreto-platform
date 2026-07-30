@@ -1,17 +1,16 @@
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { useEffect } from 'react';
 import {
   Alert,
-  alpha,
-  Autocomplete,
   Box,
   Button,
+  Checkbox,
   Chip,
   Dialog,
   DialogActions,
   DialogContent,
-  Grid,
   InputAdornment,
-  Paper,
+  ListItemText,
+  MenuItem,
   Stack,
   TextField,
   ToggleButton,
@@ -20,13 +19,8 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
-import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
-import PercentOutlinedIcon from '@mui/icons-material/PercentOutlined';
-import PlaylistAddCheckOutlinedIcon from '@mui/icons-material/PlaylistAddCheckOutlined';
 import { useForm, Controller, type Control } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -35,6 +29,7 @@ import { promotionsApi, CreatePromotionPayload } from '../../api/promotions';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { LabeledField } from '../LabeledField';
 import { dateInputValueFromApi, dateOnlyToApiIso } from '../../utils/dateOnly';
 import { proceduresApi } from '../../api/procedures';
 import { packagesApi } from '../../api/packages';
@@ -45,6 +40,23 @@ interface Props {
   onClose: () => void;
   editing?: Promotion | null;
   initialCommemorativeDate?: string;
+}
+
+type DiscountType = 'PERCENTAGE' | 'FIXED' | 'COMBO';
+type ApplicableTo = 'ALL' | 'PROCEDURES' | 'PACKAGES';
+
+interface FormValues {
+  name: string;
+  description: string;
+  commemorativeDate: string;
+  startAt: string;
+  endAt: string;
+  discountType: DiscountType;
+  discountValue: number | '';
+  applicableTo: ApplicableTo;
+  procedureIds: string[];
+  packageIds: string[];
+  active: boolean;
 }
 
 const COMMEMORATIVE_OPTIONS = [
@@ -62,87 +74,22 @@ const COMMEMORATIVE_OPTIONS = [
   'Natal',
 ];
 
-const QUICK_COMMEMORATIVE = [
-  'Dia das Mães',
-  'Dia dos Namorados',
-  'Black Friday',
-  'Natal',
-  'Dia Internacional da Mulher',
-  'Dia do Cliente',
-] as const;
+const DIALOG_MAX_WIDTH = 640;
 
-const DIALOG_MAX_WIDTH = 960;
-const DIALOG_HEIGHT_DESKTOP = 760;
-
-const FORM_CARD_SX = {
-  p: { xs: 1.5, sm: 1.75 },
-  borderRadius: 2,
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-  height: '100%',
+const DISABLED_FIELD_SX = {
+  '& .MuiOutlinedInput-root.Mui-disabled': {
+    bgcolor: 'grey.100',
+    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+  },
+  '& .MuiInputBase-input.Mui-disabled': {
+    WebkitTextFillColor: (t: import('@mui/material').Theme) => t.palette.text.disabled,
+    cursor: 'not-allowed',
+  },
+  '& .Mui-disabled .MuiInputAdornment-root .MuiTypography-root': { color: 'text.disabled' },
 } as const;
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-
-interface FormValues {
-  name: string;
-  description: string;
-  commemorativeDate: string;
-  startAt: string;
-  endAt: string;
-  discountType: 'PERCENTAGE' | 'FIXED';
-  discountValue: number | '';
-  active: boolean;
-  procedureIds: string[];
-  packageIds: string[];
-}
-
-function SectionIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
-  return (
-    <Typography
-      sx={{
-        display: 'block',
-        mb: 1.75,
-        fontSize: '0.72rem',
-        fontWeight: 800,
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-        color: 'text.disabled',
-      }}
-    >
-      {title}
-    </Typography>
-  );
-}
-
-function PromotionActiveToggle({
-  control,
-  fullWidth = false,
-}: {
-  control: Control<FormValues>;
-  fullWidth?: boolean;
-}) {
+function PromotionActiveToggle({ control, fullWidth = false }: { control: Control<FormValues>; fullWidth?: boolean }) {
   return (
     <Controller
       name="active"
@@ -199,49 +146,51 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
       endAt: '',
       discountType: 'PERCENTAGE',
       discountValue: '',
-      active: true,
+      applicableTo: 'ALL',
       procedureIds: [],
       packageIds: [],
+      active: true,
     },
   });
 
   const discountType = watch('discountType');
-  const discountValue = watch('discountValue');
+  const applicableTo = watch('applicableTo');
   const startAt = watch('startAt');
-  const endAt = watch('endAt');
   const procedureIds = watch('procedureIds');
   const packageIds = watch('packageIds');
-  const commemorativeDate = watch('commemorativeDate');
 
   useEffect(() => {
-    if (open) {
-      if (editing) {
-        reset({
-          name: editing.name,
-          description: editing.description ?? '',
-          commemorativeDate: editing.commemorativeDate ?? '',
-          startAt: dateInputValueFromApi(editing.startAt),
-          endAt: dateInputValueFromApi(editing.endAt),
-          discountType: editing.discountType,
-          discountValue: Number(editing.discountValue),
-          active: editing.active,
-          procedureIds: editing.procedures?.map((p) => p.procedureId) ?? [],
-          packageIds: editing.packages?.map((p) => p.packageId) ?? [],
-        });
-      } else {
-        reset({
-          name: '',
-          description: '',
-          commemorativeDate: initialCommemorativeDate ?? '',
-          startAt: '',
-          endAt: '',
-          discountType: 'PERCENTAGE',
-          discountValue: '',
-          active: true,
-          procedureIds: [],
-          packageIds: [],
-        });
-      }
+    if (!open) return;
+    if (editing) {
+      const hasPackages = (editing.packages?.length ?? 0) > 0;
+      const hasProcedures = (editing.procedures?.length ?? 0) > 0;
+      reset({
+        name: editing.name,
+        description: editing.description ?? '',
+        commemorativeDate: editing.commemorativeDate ?? '',
+        startAt: dateInputValueFromApi(editing.startAt),
+        endAt: dateInputValueFromApi(editing.endAt),
+        discountType: editing.discountType,
+        discountValue: editing.discountType === 'COMBO' ? '' : Number(editing.discountValue),
+        applicableTo: hasPackages ? 'PACKAGES' : hasProcedures ? 'PROCEDURES' : 'ALL',
+        procedureIds: editing.procedures?.map((p) => p.procedureId) ?? [],
+        packageIds: editing.packages?.map((p) => p.packageId) ?? [],
+        active: editing.active,
+      });
+    } else {
+      reset({
+        name: '',
+        description: '',
+        commemorativeDate: initialCommemorativeDate ?? '',
+        startAt: '',
+        endAt: '',
+        discountType: 'PERCENTAGE',
+        discountValue: '',
+        applicableTo: 'ALL',
+        procedureIds: [],
+        packageIds: [],
+        active: true,
+      });
     }
   }, [open, editing, initialCommemorativeDate, reset]);
 
@@ -252,9 +201,7 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
       toast.success('Promoção criada.');
       onClose();
     },
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err, 'Não foi possível criar a promoção.'));
-    },
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Não foi possível criar a promoção.')),
   });
 
   const updateMutation = useMutation({
@@ -265,9 +212,7 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
       toast.success('Promoção atualizada.');
       onClose();
     },
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err, 'Não foi possível atualizar a promoção.'));
-    },
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Não foi possível atualizar a promoção.')),
   });
 
   const onSubmit = (values: FormValues) => {
@@ -278,39 +223,21 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
       startAt: dateOnlyToApiIso(values.startAt),
       endAt: dateOnlyToApiIso(values.endAt),
       discountType: values.discountType,
-      discountValue: Number(values.discountValue),
+      discountValue: values.discountType === 'COMBO' ? 0 : Number(values.discountValue),
       active: values.active,
-      procedureIds: values.procedureIds,
-      packageIds: values.packageIds,
+      procedureIds: values.applicableTo === 'PROCEDURES' ? values.procedureIds : [],
+      packageIds: values.applicableTo === 'PACKAGES' ? values.packageIds : [],
     };
-
-    if (editing) {
-      updateMutation.mutate({ id: editing.id, payload });
-    } else {
-      createMutation.mutate(payload);
-    }
+    if (editing) updateMutation.mutate({ id: editing.id, payload });
+    else createMutation.mutate(payload);
   };
 
   const saving = createMutation.isPending || updateMutation.isPending;
   const mutationError = createMutation.error ?? updateMutation.error;
+  const isCombo = discountType === 'COMBO';
 
-  const discountPreview = useMemo(() => {
-    const value = Number(discountValue);
-    if (!value || value <= 0) return null;
-    return discountType === 'PERCENTAGE' ? `${value}% de desconto` : `${brl.format(value)} de desconto`;
-  }, [discountType, discountValue]);
-
-  const validityLabel = useMemo(() => {
-    if (!startAt || !endAt) return null;
-    const start = dayjs(startAt);
-    const end = dayjs(endAt);
-    if (!start.isValid() || !end.isValid()) return null;
-    if (end.isBefore(start, 'day')) return 'A data de fim deve ser igual ou posterior ao início';
-    const days = end.diff(start, 'day') + 1;
-    return `${days} ${days === 1 ? 'dia' : 'dias'} de vigência`;
-  }, [startAt, endAt]);
-
-  const eligibleCount = procedureIds.length + packageIds.length;
+  const commemorativeKnown =
+    !watch('commemorativeDate') || COMMEMORATIVE_OPTIONS.includes(watch('commemorativeDate'));
 
   return (
     <Dialog
@@ -327,38 +254,22 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
           width: '100%',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
-            : {
-                maxWidth: DIALOG_MAX_WIDTH,
-                height: DIALOG_HEIGHT_DESKTOP,
-                maxHeight: '94dvh',
-                overflow: 'hidden',
-              }),
+            : { maxWidth: DIALOG_MAX_WIDTH, maxHeight: '94dvh' }),
         },
       }}
     >
       <Box
         component="form"
         onSubmit={handleSubmit(onSubmit)}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          minHeight: 0,
-          ...(isMobile ? { height: '100%' } : {}),
-        }}
+        sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
       >
         <DialogHeader
           onClose={onClose}
           isMobile={isMobile}
           title={editing ? 'Editar promoção' : 'Nova promoção'}
-          subtitle={
-            editing
-              ? `${editing.name}${discountPreview ? ` · ${discountPreview}` : ''}`
-              : 'Desconto, vigência e itens elegíveis'
-          }
-          icon={
-            editing ? <EditOutlinedIcon fontSize="small" /> : <LocalOfferOutlinedIcon fontSize="small" />
-          }
+          subtitle="Configure uma campanha de desconto"
+          subtitleWrap
+          icon={editing ? <EditOutlinedIcon fontSize="small" /> : <LocalOfferOutlinedIcon fontSize="small" />}
           trailing={!isCompact ? <PromotionActiveToggle control={control} /> : undefined}
           bottom={
             isCompact ? (
@@ -373,381 +284,280 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
         />
 
         <DialogContent
-          dividers
           sx={{
             px: { xs: 2, sm: 3 },
-            py: { xs: 2, sm: 2.5 },
+            pb: { xs: 2, sm: 2.5 },
             flex: 1,
             minHeight: 0,
             overflow: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            bgcolor: (t) => t.palette.background.default,
+            bgcolor: 'background.paper',
+            '&.MuiDialogContent-root': { pt: { xs: 2.75, sm: 3 } },
           }}
         >
-          <Grid
-            container
-            spacing={2.5}
-            sx={{
-              flex: 1,
-              minHeight: 0,
-              alignItems: 'stretch',
-            }}
-          >
-            <Grid item xs={12} md={5}>
-              <Stack spacing={2.5} sx={{ height: '100%' }}>
-                <Paper variant="outlined" sx={FORM_CARD_SX}>
-                  <SectionTitle icon={<LabelOutlinedIcon fontSize="small" />} title="Identificação" />
-                  <Stack spacing={2}>
-                    <Controller
-                      name="name"
-                      control={control}
-                      rules={{ required: 'Nome é obrigatório' }}
-                      render={({ field, fieldState }) => (
-                        <TextField
-                          {...field}
-                          label="Nome da promoção"
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                          fullWidth
-                          required
-                          autoFocus={!editing}
-                        />
-                      )}
-                    />
+          <Stack spacing={2.5}>
+            {/* Nome */}
+            <Controller
+              name="name"
+              control={control}
+              rules={{ required: 'Nome é obrigatório' }}
+              render={({ field, fieldState }) => (
+                <LabeledField label="Nome da campanha" required>
+                  <TextField
+                    {...field}
+                    fullWidth
+                    autoFocus={!editing}
+                    placeholder="Ex.: Inverno na Pele"
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                  />
+                </LabeledField>
+              )}
+            />
 
-                    <Controller
-                      name="description"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Descrição"
-                          multiline
-                          minRows={3}
-                          fullWidth
-                          placeholder="Detalhes visíveis para a equipe…"
-                        />
-                      )}
-                    />
-                  </Stack>
-                </Paper>
+            {/* Descrição */}
+            <Controller
+              name="description"
+              control={control}
+              render={({ field }) => (
+                <LabeledField label="Descrição">
+                  <TextField {...field} fullWidth placeholder="Ex.: 20% OFF em tratamentos faciais" />
+                </LabeledField>
+              )}
+            />
 
-                <Paper variant="outlined" sx={{ ...FORM_CARD_SX, height: 'auto' }}>
-                  <SectionTitle icon={<EventOutlinedIcon fontSize="small" />} title="Data comemorativa" />
-                  <Stack spacing={1.5}>
-                    <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 0.75 }}>
-                      {QUICK_COMMEMORATIVE.map((option) => (
-                        <Chip
-                          key={option}
-                          label={option}
-                          size="small"
-                          clickable
-                          color={commemorativeDate === option ? 'primary' : 'default'}
-                          variant={commemorativeDate === option ? 'filled' : 'outlined'}
-                          onClick={() =>
-                            setValue(
-                              'commemorativeDate',
-                              commemorativeDate === option ? '' : option,
-                              { shouldDirty: true },
-                            )
-                          }
-                        />
-                      ))}
-                    </Stack>
-                    <Controller
-                      name="commemorativeDate"
-                      control={control}
-                      render={({ field }) => (
-                        <Autocomplete
-                          freeSolo
-                          options={COMMEMORATIVE_OPTIONS}
-                          value={field.value}
-                          onChange={(_, value) => field.onChange(value ?? '')}
-                          onInputChange={(_, value) => field.onChange(value)}
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              label="Data comemorativa (opcional)"
-                              placeholder="Selecione ou digite…"
-                              fullWidth
-                              size="small"
-                            />
-                          )}
-                        />
-                      )}
-                    />
-                  </Stack>
-                </Paper>
-              </Stack>
-            </Grid>
-
-            <Grid
-              item
-              xs={12}
-              md={7}
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: 0,
-                ...(isCompact ? {} : { height: '100%' }),
-              }}
-            >
-              <Stack spacing={2.5} sx={{ flex: 1, minHeight: 0 }}>
-                <Paper variant="outlined" sx={{ ...FORM_CARD_SX, height: 'auto' }}>
-                  <SectionTitle icon={<PercentOutlinedIcon fontSize="small" />} title="Desconto e vigência" />
-                  <Stack spacing={2}>
-                    <Box>
-                      <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
-                        Tipo de desconto
-                      </Typography>
-                      <Controller
-                        name="discountType"
-                        control={control}
-                        render={({ field }) => (
-                          <ToggleButtonGroup
-                            exclusive
-                            fullWidth
-                            size="small"
-                            color="primary"
-                            value={field.value}
-                            onChange={(_, val) => val && field.onChange(val)}
-                          >
-                            <ToggleButton value="PERCENTAGE">
-                              <PercentOutlinedIcon sx={{ fontSize: 16, mr: 0.75 }} />
-                              Porcentagem
-                            </ToggleButton>
-                            <ToggleButton value="FIXED">Valor fixo (R$)</ToggleButton>
-                          </ToggleButtonGroup>
-                        )}
-                      />
-                    </Box>
-
-                    <Controller
-                      name="discountValue"
-                      control={control}
-                      rules={{
-                        required: 'Valor do desconto é obrigatório',
-                        min: { value: 0.01, message: 'Deve ser maior que zero' },
-                        ...(discountType === 'PERCENTAGE'
-                          ? { max: { value: 100, message: 'Máximo 100%' } }
-                          : {}),
+            {/* Tipo de desconto + Valor */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr' }, gap: 2 }}>
+              <LabeledField label="Tipo de desconto">
+                <Controller
+                  name="discountType"
+                  control={control}
+                  render={({ field }) => (
+                    <ToggleButtonGroup
+                      exclusive
+                      fullWidth
+                      color="primary"
+                      value={field.value}
+                      onChange={(_, val) => {
+                        if (!val) return;
+                        field.onChange(val);
+                        if (val === 'COMBO') setValue('discountValue', '');
                       }}
-                      render={({ field, fieldState }) => (
-                        <TextField
-                          {...field}
-                          label={discountType === 'PERCENTAGE' ? 'Desconto (%)' : 'Desconto (R$)'}
-                          type="number"
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                          fullWidth
-                          InputProps={
-                            discountType === 'FIXED'
-                              ? { startAdornment: <InputAdornment position="start">R$</InputAdornment> }
-                              : discountType === 'PERCENTAGE'
-                                ? { endAdornment: <InputAdornment position="end">%</InputAdornment> }
-                                : undefined
-                          }
-                          inputProps={{
-                            step: discountType === 'PERCENTAGE' ? 1 : 0.01,
-                            min: 0,
-                            max: discountType === 'PERCENTAGE' ? 100 : undefined,
-                          }}
-                        />
-                      )}
-                    />
+                      sx={{ '& .MuiToggleButton-root': { textTransform: 'none', fontWeight: 700 } }}
+                    >
+                      <ToggleButton value="PERCENTAGE">Percentual</ToggleButton>
+                      <ToggleButton value="FIXED">Valor</ToggleButton>
+                      <ToggleButton value="COMBO">Combo</ToggleButton>
+                    </ToggleButtonGroup>
+                  )}
+                />
+              </LabeledField>
 
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                      <Controller
-                        name="startAt"
-                        control={control}
-                        rules={{ required: 'Data de início é obrigatória' }}
-                        render={({ field, fieldState }) => (
-                          <TextField
-                            {...field}
-                            label="Início"
-                            type="date"
-                            InputLabelProps={{ shrink: true }}
-                            error={!!fieldState.error}
-                            helperText={fieldState.error?.message}
-                            fullWidth
-                            sx={{ flex: 1, minWidth: 0 }}
-                          />
-                        )}
+              <LabeledField label="Valor">
+                <Controller
+                  name="discountValue"
+                  control={control}
+                  rules={{
+                    validate: (v) => {
+                      if (isCombo) return true;
+                      if (v === '' || Number(v) <= 0) return 'Informe o valor';
+                      if (discountType === 'PERCENTAGE' && Number(v) > 100) return 'Máximo 100%';
+                      return true;
+                    },
+                  }}
+                  render={({ field, fieldState }) =>
+                    isCombo ? (
+                      <TextField fullWidth disabled sx={DISABLED_FIELD_SX} value="—" />
+                    ) : (
+                      <TextField
+                        {...field}
+                        type="number"
+                        fullWidth
+                        placeholder={discountType === 'PERCENTAGE' ? '20%' : '0,00'}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        inputProps={{ step: discountType === 'PERCENTAGE' ? 1 : 0.01, min: 0, max: discountType === 'PERCENTAGE' ? 100 : undefined }}
+                        InputProps={
+                          discountType === 'FIXED'
+                            ? { startAdornment: <InputAdornment position="start">R$</InputAdornment> }
+                            : { endAdornment: <InputAdornment position="end">%</InputAdornment> }
+                        }
                       />
-                      <Controller
-                        name="endAt"
-                        control={control}
-                        rules={{
-                          required: 'Data de fim é obrigatória',
-                          validate: (value) => {
-                            if (!startAt || !value) return true;
-                            return (
-                              !dayjs(value).isBefore(dayjs(startAt), 'day') ||
-                              'Deve ser igual ou posterior ao início'
-                            );
-                          },
-                        }}
-                        render={({ field, fieldState }) => (
-                          <TextField
-                            {...field}
-                            label="Fim"
-                            type="date"
-                            InputLabelProps={{ shrink: true }}
-                            error={!!fieldState.error}
-                            helperText={fieldState.error?.message}
-                            fullWidth
-                            sx={{ flex: 1, minWidth: 0 }}
-                          />
-                        )}
-                      />
-                    </Stack>
+                    )
+                  }
+                />
+              </LabeledField>
+            </Box>
 
-                    {(discountPreview || validityLabel) && (
-                      <Alert
-                        severity={validityLabel?.includes('deve ser') ? 'warning' : 'info'}
-                        icon={<CalendarMonthOutlinedIcon fontSize="inherit" />}
-                        sx={{ py: 0.75 }}
-                      >
-                        <Stack spacing={0.25}>
-                          {discountPreview && (
-                            <Typography variant="body2" fontWeight={600}>
-                              {discountPreview}
-                            </Typography>
-                          )}
-                          {validityLabel && (
-                            <Typography variant="caption" color="text.secondary">
-                              {validityLabel}
-                            </Typography>
-                          )}
-                        </Stack>
-                      </Alert>
-                    )}
-                  </Stack>
-                </Paper>
+            {/* Aplicável a */}
+            <Controller
+              name="applicableTo"
+              control={control}
+              render={({ field }) => (
+                <LabeledField label="Aplicável a">
+                  <TextField {...field} select fullWidth>
+                    <MenuItem value="ALL">Todos os procedimentos</MenuItem>
+                    <MenuItem value="PROCEDURES">Procedimentos específicos</MenuItem>
+                    <MenuItem value="PACKAGES">Pacotes específicos</MenuItem>
+                  </TextField>
+                </LabeledField>
+              )}
+            />
 
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    ...FORM_CARD_SX,
-                    flex: 1,
-                    minHeight: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden',
+            {/* Multi-select condicional */}
+            {applicableTo === 'PROCEDURES' && (
+              <LabeledField label="Procedimentos">
+                <TextField
+                  select
+                  fullWidth
+                  value={procedureIds}
+                  onChange={(e) =>
+                    setValue(
+                      'procedureIds',
+                      typeof e.target.value === 'string' ? e.target.value.split(',') : (e.target.value as unknown as string[]),
+                      { shouldDirty: true },
+                    )
+                  }
+                  SelectProps={{
+                    multiple: true,
+                    displayEmpty: true,
+                    renderValue: (selected) => {
+                      const ids = selected as string[];
+                      if (ids.length === 0) return <Box component="span" sx={{ color: 'text.disabled' }}>Selecione os procedimentos</Box>;
+                      return (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {ids.map((id) => (
+                            <Chip key={id} size="small" label={procedures.find((p) => p.id === id)?.name ?? '—'} />
+                          ))}
+                        </Box>
+                      );
+                    },
                   }}
                 >
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="flex-start"
-                    spacing={1}
-                    sx={{ mb: 1.5, flexShrink: 0 }}
+                  {procedures.filter((p) => p.active || procedureIds.includes(p.id)).map((p) => (
+                    <MenuItem key={p.id} value={p.id}>
+                      <Checkbox size="small" checked={procedureIds.includes(p.id)} sx={{ py: 0, mr: 1 }} />
+                      <ListItemText primary={p.name} />
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </LabeledField>
+            )}
+
+            {applicableTo === 'PACKAGES' && (
+              <LabeledField label="Pacotes">
+                <TextField
+                  select
+                  fullWidth
+                  value={packageIds}
+                  onChange={(e) =>
+                    setValue(
+                      'packageIds',
+                      typeof e.target.value === 'string' ? e.target.value.split(',') : (e.target.value as unknown as string[]),
+                      { shouldDirty: true },
+                    )
+                  }
+                  SelectProps={{
+                    multiple: true,
+                    displayEmpty: true,
+                    renderValue: (selected) => {
+                      const ids = selected as string[];
+                      if (ids.length === 0) return <Box component="span" sx={{ color: 'text.disabled' }}>Selecione os pacotes</Box>;
+                      return (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {ids.map((id) => (
+                            <Chip key={id} size="small" label={packages.find((p) => p.id === id)?.name ?? '—'} />
+                          ))}
+                        </Box>
+                      );
+                    },
+                  }}
+                >
+                  {packages.filter((p) => p.active || packageIds.includes(p.id)).map((p) => (
+                    <MenuItem key={p.id} value={p.id}>
+                      <Checkbox size="small" checked={packageIds.includes(p.id)} sx={{ py: 0, mr: 1 }} />
+                      <ListItemText primary={p.name} />
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </LabeledField>
+            )}
+
+            {/* Data comemorativa */}
+            <Controller
+              name="commemorativeDate"
+              control={control}
+              render={({ field }) => (
+                <LabeledField label="Data comemorativa">
+                  <TextField
+                    {...field}
+                    select
+                    fullWidth
+                    SelectProps={{ displayEmpty: true }}
+                    helperText="Vincule para acompanhar o desempenho da campanha na data."
                   >
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography
-                        sx={{
-                          fontSize: '0.72rem',
-                          fontWeight: 800,
-                          letterSpacing: '0.06em',
-                          textTransform: 'uppercase',
-                          color: 'text.disabled',
-                        }}
-                      >
-                        Itens elegíveis
-                      </Typography>
-                    </Box>
-                    {eligibleCount > 0 && (
-                      <Chip size="small" label={`${eligibleCount} selecionado(s)`} variant="outlined" />
-                    )}
-                  </Stack>
+                    <MenuItem value="">Nenhuma</MenuItem>
+                    {COMMEMORATIVE_OPTIONS.map((o) => (
+                      <MenuItem key={o} value={o}>
+                        {o}
+                      </MenuItem>
+                    ))}
+                    {!commemorativeKnown && <MenuItem value={field.value}>{field.value}</MenuItem>}
+                  </TextField>
+                </LabeledField>
+              )}
+            />
 
-                  <Stack
-                    spacing={2}
-                    sx={{
-                      flex: 1,
-                      minHeight: 0,
-                      overflowY: 'auto',
-                      pr: 0.5,
-                    }}
-                  >
-                    <Controller
-                      name="procedureIds"
-                      control={control}
-                      render={({ field }) => (
-                        <Autocomplete
-                          multiple
-                          size="small"
-                          options={procedures.filter((p) => p.active)}
-                          getOptionLabel={(opt) => opt.name}
-                          value={procedures.filter((p) => field.value.includes(p.id))}
-                          onChange={(_, selected) => field.onChange(selected.map((s) => s.id))}
-                          renderTags={(value, getTagProps) =>
-                            value.map((option, index) => (
-                              <Chip
-                                size="small"
-                                label={option.name}
-                                {...getTagProps({ index })}
-                                key={option.id}
-                              />
-                            ))
-                          }
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              label="Procedimentos incluídos"
-                              placeholder="Buscar procedimentos…"
-                            />
-                          )}
-                        />
-                      )}
+            {/* Início + Fim */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+              <Controller
+                name="startAt"
+                control={control}
+                rules={{ required: 'Início é obrigatório' }}
+                render={({ field, fieldState }) => (
+                  <LabeledField label="Início" required>
+                    <TextField
+                      {...field}
+                      type="date"
+                      fullWidth
+                      InputLabelProps={{ shrink: true }}
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
                     />
-
-                    <Controller
-                      name="packageIds"
-                      control={control}
-                      render={({ field }) => (
-                        <Autocomplete
-                          multiple
-                          size="small"
-                          options={packages.filter((p) => p.active)}
-                          getOptionLabel={(opt) => opt.name}
-                          value={packages.filter((p) => field.value.includes(p.id))}
-                          onChange={(_, selected) => field.onChange(selected.map((s) => s.id))}
-                          renderTags={(value, getTagProps) =>
-                            value.map((option, index) => (
-                              <Chip
-                                size="small"
-                                label={option.name}
-                                {...getTagProps({ index })}
-                                key={option.id}
-                              />
-                            ))
-                          }
-                          renderInput={(params) => (
-                            <TextField {...params} label="Pacotes incluídos" placeholder="Buscar pacotes…" />
-                          )}
-                        />
-                      )}
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="endAt"
+                control={control}
+                rules={{
+                  required: 'Fim é obrigatório',
+                  validate: (value) => {
+                    if (!startAt || !value) return true;
+                    return !dayjs(value).isBefore(dayjs(startAt), 'day') || 'Deve ser igual ou posterior ao início';
+                  },
+                }}
+                render={({ field, fieldState }) => (
+                  <LabeledField label="Fim" required>
+                    <TextField
+                      {...field}
+                      type="date"
+                      fullWidth
+                      InputLabelProps={{ shrink: true }}
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
                     />
-
-                    <Typography variant="caption" color="text.secondary">
-                      Deixe vazio para aplicar a todos os procedimentos e pacotes ativos.
-                    </Typography>
-                  </Stack>
-                </Paper>
-              </Stack>
-            </Grid>
+                  </LabeledField>
+                )}
+              />
+            </Box>
 
             {mutationError && (
-              <Grid item xs={12}>
-                <Alert severity="error" variant="outlined">
-                  {(mutationError as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-                    'Erro ao salvar promoção'}
-                </Alert>
-              </Grid>
+              <Alert severity="error" variant="outlined">
+                {(mutationError as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+                  'Erro ao salvar promoção'}
+              </Alert>
             )}
-          </Grid>
+          </Stack>
         </DialogContent>
 
         <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
@@ -755,7 +565,7 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
             Cancelar
           </Button>
           <Button type="submit" variant="contained" disabled={saving}>
-            {saving ? 'Salvando…' : editing ? 'Salvar' : 'Criar promoção'}
+            {saving ? 'Salvando…' : editing ? 'Salvar' : 'Salvar promoção'}
           </Button>
         </DialogActions>
       </Box>

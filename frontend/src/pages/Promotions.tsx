@@ -1,24 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Box, Button, Card, Chip, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
-import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
+import {
+  Box,
+  Button,
+  Card,
+  Chip,
+  Divider,
+  IconButton,
+  InputBase,
+  Skeleton,
+  Stack,
+  Tooltip,
+  Typography,
+  alpha,
+} from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import HistoryIcon from '@mui/icons-material/History';
+import SearchIcon from '@mui/icons-material/Search';
+import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
+import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { formatDateOnlyFromApi } from '../utils/dateOnly';
+import dayjs from 'dayjs';
 
-import { PageHeader } from '../components/PageHeader';
-import { ListFiltersBar } from '../components/ListFiltersBar';
-import { AppDataGrid } from '../components/AppDataGrid';
-import {
-  FILTER_FIELD_SX,
-  isPromotionActive,
-  matchFields,
-  matchesPromotionStatusFilter,
-  type PromotionStatusFilter,
-} from '../utils/listFilters';
+import { getPromotionStatusKey, isPromotionActive } from '../utils/listFilters';
 import { promotionsApi } from '../api/promotions';
 import { PromotionFormDialog } from '../components/promotions/PromotionFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
@@ -28,7 +34,30 @@ import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Promotion } from '../types';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
+  ACTIVE: { label: 'Ativa', color: '#0E7C7B', bg: alpha('#15998B', 0.14) },
+  FUTURE: { label: 'Agendada', color: '#2F6FA0', bg: alpha('#5BA8DE', 0.16) },
+  EXPIRED: { label: 'Encerrada', color: '#6B6B6B', bg: alpha('#8B8680', 0.16) },
+  INACTIVE: { label: 'Inativa', color: '#6B6B6B', bg: alpha('#8B8680', 0.16) },
+};
+
+function discountBadge(promo: Promotion): { label: string; color: string } {
+  if (promo.discountType === 'PERCENTAGE') {
+    return { label: `−${Number(promo.discountValue)}%`, color: '#15998B' };
+  }
+  if (promo.discountType === 'COMBO') {
+    return { label: 'Combo', color: '#8B8680' };
+  }
+  const v = Number(promo.discountValue);
+  return { label: `R$ ${Number.isInteger(v) ? v : v.toFixed(2)}`, color: '#9B7BD4' };
+}
+
+function formatRange(startAt: string, endAt: string) {
+  const s = dayjs(startAt);
+  const e = dayjs(endAt);
+  if (!s.isValid() || !e.isValid()) return '—';
+  return `${s.format('DD MMM')} – ${e.format('DD MMM')}`;
+}
 
 export function Promotions() {
   const queryClient = useQueryClient();
@@ -38,8 +67,8 @@ export function Promotions() {
   const canCreate = has('promotions:create');
   const canEdit = has('promotions:edit');
   const canDelete = has('promotions:delete');
+
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<PromotionStatusFilter>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Promotion | null>(null);
   const [initialCommemorativeDate, setInitialCommemorativeDate] = useState<string | undefined>();
@@ -67,243 +96,256 @@ export function Promotions() {
       queryClient.invalidateQueries({ queryKey: ['promotions'] });
       toast.success('Promoção excluída.');
     },
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err, 'Não foi possível excluir a promoção.'));
-    },
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Não foi possível excluir a promoção.')),
   });
 
-  const filteredPromotions = useMemo(
-    () =>
-      promotions.filter(
-        (p) =>
-          matchesPromotionStatusFilter(p, statusFilter) &&
-          matchFields(search, p.name, p.commemorativeDate, p.description),
-      ),
-    [promotions, search, statusFilter],
-  );
+  const activeCount = useMemo(() => promotions.filter(isPromotionActive).length, [promotions]);
 
-  const columns = useMemo<GridColDef<Promotion>[]>(
-    () => [
-      { field: 'name', headerName: 'Nome', flex: 1.2, minWidth: 200 },
-      {
-        field: 'commemorativeDate',
-        headerName: 'Data comemorativa',
-        flex: 0.8,
-        minWidth: 160,
-        valueGetter: (params) => params.row.commemorativeDate || '—',
-      },
-      {
-        field: 'discountType',
-        headerName: 'Desconto',
-        flex: 0.6,
-        minWidth: 130,
-        renderCell: (params) => {
-          const row = params.row;
-          if (row.discountType === 'PERCENTAGE') {
-            return <Chip size="small" label={`${Number(row.discountValue)}%`} color="secondary" variant="outlined" />;
-          }
-          return <Chip size="small" label={brl.format(Number(row.discountValue))} color="primary" variant="outlined" />;
-        },
-      },
-      {
-        field: 'startAt',
-        headerName: 'Início',
-        flex: 0.5,
-        minWidth: 110,
-        valueFormatter: (params) => formatDateOnlyFromApi(params.value as string),
-      },
-      {
-        field: 'endAt',
-        headerName: 'Fim',
-        flex: 0.5,
-        minWidth: 110,
-        valueFormatter: (params) => formatDateOnlyFromApi(params.value as string),
-      },
-      {
-        field: 'procedures',
-        headerName: 'Procedimentos',
-        flex: 0.5,
-        minWidth: 130,
-        renderCell: (params) => {
-          const count = params.row.procedures?.length ?? 0;
-          if (count === 0) return <Typography variant="body2" color="text.secondary">—</Typography>;
-          return (
-            <Tooltip title={params.row.procedures!.map((p) => p.procedure.name).join(', ')}>
-              <Chip size="small" label={`${count}`} variant="outlined" />
-            </Tooltip>
-          );
-        },
-      },
-      {
-        field: 'packages',
-        headerName: 'Pacotes',
-        flex: 0.5,
-        minWidth: 110,
-        renderCell: (params) => {
-          const count = params.row.packages?.length ?? 0;
-          if (count === 0) return <Typography variant="body2" color="text.secondary">—</Typography>;
-          return (
-            <Tooltip title={params.row.packages!.map((p) => p.package.name).join(', ')}>
-              <Chip size="small" label={`${count}`} variant="outlined" />
-            </Tooltip>
-          );
-        },
-      },
-      {
-        field: 'active',
-        headerName: 'Status',
-        flex: 0.5,
-        minWidth: 110,
-        renderCell: (params) => {
-          const promo = params.row;
-          if (isPromotionActive(promo)) {
-            return <Chip size="small" label="Ativa" color="success" variant="outlined" />;
-          }
-          if (promo.active && new Date(promo.startAt) > new Date()) {
-            return <Chip size="small" label="Futura" color="info" variant="outlined" />;
-          }
-          if (!promo.active) {
-            return <Chip size="small" label="Inativa" color="default" variant="outlined" />;
-          }
-          return <Chip size="small" label="Expirada" color="warning" variant="outlined" />;
-        },
-      },
-      {
-        field: '_count',
-        headerName: 'Usos',
-        flex: 0.3,
-        minWidth: 80,
-        align: 'center',
-        headerAlign: 'center',
-        valueGetter: (params) => params.row._count?.appointments ?? 0,
-      },
-      {
-        field: 'actions',
-        type: 'actions',
-        headerName: 'Ações',
-        width: 140,
-        getActions: (params) => {
-          const actions = [];
-          if (canEdit) {
-            actions.push(
-              <GridActionsCellItem
-                key="edit"
-                icon={
-                  <Tooltip title="Editar">
-                    <EditIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Editar"
-                onClick={() => {
-                  setEditing(params.row);
-                  setFormOpen(true);
-                }}
-              />,
-            );
-          }
-          if (canDelete) {
-            actions.push(
-              <GridActionsCellItem
-                key="delete"
-                icon={
-                  <Tooltip title="Excluir">
-                    <DeleteIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Excluir"
-                onClick={async () => {
-                  const ok = await confirm({
-                    title: 'Excluir promoção',
-                    message: `Excluir a promoção "${params.row.name}"?`,
-                    confirmLabel: 'Excluir',
-                    confirmColor: 'error',
-                  });
-                  if (ok) deleteMutation.mutate(params.row.id);
-                }}
-              />,
-            );
-          }
-          return actions;
-        },
-      },
-    ],
-    [confirm, canEdit, canDelete, deleteMutation],
-  );
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return promotions;
+    return promotions.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.description ?? '').toLowerCase().includes(q) ||
+        (p.commemorativeDate ?? '').toLowerCase().includes(q),
+    );
+  }, [promotions, search]);
+
+  const handleEdit = (p: Promotion) => {
+    setEditing(p);
+    setInitialCommemorativeDate(undefined);
+    setFormOpen(true);
+  };
+
+  const handleDelete = async (p: Promotion) => {
+    const ok = await confirm({
+      title: 'Excluir promoção',
+      message: `Excluir a promoção "${p.name}"?`,
+      confirmLabel: 'Excluir',
+      confirmColor: 'error',
+    });
+    if (ok) deleteMutation.mutate(p.id);
+  };
 
   return (
     <Box>
-      <PageHeader
-        title="Promoções"
-        subtitle="Gerencie promoções e descontos para datas comemorativas"
-        action={
-          <Stack direction="row" spacing={1}>
-            {isAdmin && (
-              <Button
-                variant="outlined"
-                startIcon={<HistoryIcon />}
+      {/* Stats + busca + ações */}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+        justifyContent="space-between"
+        spacing={1.5}
+        sx={{ mb: 2.5 }}
+      >
+        <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary', fontWeight: 600 }}>
+          {isLoading ? (
+            <Skeleton width={260} />
+          ) : (
+            <>
+              <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
+                {promotions.length}
+              </Box>{' '}
+              {promotions.length === 1 ? 'campanha' : 'campanhas'}
+              {'  ·  '}
+              <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
+                {activeCount}
+              </Box>{' '}
+              {activeCount === 1 ? 'ativa no momento' : 'ativas no momento'}
+            </>
+          )}
+        </Typography>
+
+        <Stack direction="row" alignItems="center" spacing={1.25} flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            sx={{
+              height: 42,
+              px: 1.75,
+              borderRadius: '12px',
+              border: 1,
+              borderColor: 'divider',
+              bgcolor: 'grey.50',
+              width: { xs: '100%', sm: 240 },
+            }}
+          >
+            <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+            <InputBase
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar campanha..."
+              sx={{ fontSize: '0.8125rem', flex: 1 }}
+            />
+          </Stack>
+          {isAdmin && (
+            <Tooltip title="Histórico de alterações">
+              <IconButton
                 onClick={() => setHistoryOpen(true)}
+                sx={{ width: 42, height: 42, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
               >
-                Histórico
-              </Button>
-            )}
-            {canCreate && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  setEditing(null);
-                  setInitialCommemorativeDate(undefined);
-                  setFormOpen(true);
+                <HistoryIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {canCreate && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setEditing(null);
+                setInitialCommemorativeDate(undefined);
+                setFormOpen(true);
+              }}
+              sx={{ height: 42, px: 2.25, borderRadius: '12px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+            >
+              Nova promoção
+            </Button>
+          )}
+        </Stack>
+      </Stack>
+
+      {/* Cards */}
+      {isLoading ? (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)', xl: 'repeat(4, 1fr)' },
+            gap: 2,
+          }}
+        >
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={170} sx={{ borderRadius: '18px' }} />
+          ))}
+        </Box>
+      ) : filtered.length === 0 ? (
+        <Card sx={{ p: 6, textAlign: 'center', borderRadius: '18px' }}>
+          <LocalOfferOutlinedIcon sx={{ fontSize: 46, color: 'text.disabled', mb: 1 }} />
+          <Typography sx={{ fontWeight: 700 }}>
+            {promotions.length === 0 ? 'Nenhuma promoção cadastrada' : 'Nenhuma promoção encontrada'}
+          </Typography>
+          <Typography color="text.secondary" sx={{ fontSize: '0.85rem', mt: 0.5 }}>
+            {promotions.length === 0
+              ? 'Crie campanhas e descontos sazonais para atrair pacientes.'
+              : 'Tente ajustar a busca.'}
+          </Typography>
+        </Card>
+      ) : (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)', xl: 'repeat(4, 1fr)' },
+            gap: 2,
+          }}
+        >
+          {filtered.map((p) => {
+            const badge = discountBadge(p);
+            const status = STATUS_META[getPromotionStatusKey(p)];
+            const uses = p._count?.appointments ?? 0;
+            return (
+              <Card
+                key={p.id}
+                sx={{
+                  p: 2.25,
+                  borderRadius: '18px',
+                  border: 1,
+                  borderColor: 'divider',
+                  boxShadow: '0 1px 2px rgba(16,40,37,0.03)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  transition: 'box-shadow .15s, border-color .15s',
+                  '&:hover': { boxShadow: '0 12px 30px -20px rgba(16,40,37,0.45)', borderColor: alpha(badge.color, 0.5) },
+                  '&:hover .promo-actions': { opacity: 1 },
                 }}
               >
-                Nova promoção
-              </Button>
-            )}
-          </Stack>
-        }
-      />
+                {/* Top: badge de desconto + status */}
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                  <Chip
+                    label={badge.label}
+                    sx={{
+                      height: 30,
+                      fontSize: '0.85rem',
+                      fontWeight: 800,
+                      borderRadius: '10px',
+                      bgcolor: alpha(badge.color, 0.14),
+                      color: badge.color === '#8B8680' ? 'text.secondary' : badge.color,
+                    }}
+                  />
+                  <Stack direction="row" alignItems="center" spacing={0.75}>
+                    {status && (
+                      <Chip
+                        label={status.label}
+                        size="small"
+                        sx={{ height: 22, fontSize: '0.7rem', fontWeight: 700, bgcolor: status.bg, color: status.color }}
+                      />
+                    )}
+                    {(canEdit || canDelete) && (
+                      <Stack
+                        className="promo-actions"
+                        direction="row"
+                        spacing={0.25}
+                        sx={{ opacity: { xs: 1, md: 0 }, transition: 'opacity .15s' }}
+                      >
+                        {canEdit && (
+                          <Tooltip title="Editar">
+                            <IconButton size="small" onClick={() => handleEdit(p)} sx={{ color: 'text.secondary' }}>
+                              <EditIcon sx={{ fontSize: 17 }} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {canDelete && (
+                          <Tooltip title="Excluir">
+                            <IconButton size="small" onClick={() => handleDelete(p)} sx={{ color: 'error.main' }}>
+                              <DeleteIcon sx={{ fontSize: 17 }} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Stack>
+                    )}
+                  </Stack>
+                </Stack>
 
-      <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
-        <ListFiltersBar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Buscar por nome ou data comemorativa"
-          filteredCount={filteredPromotions.length}
-          totalCount={promotions.length}
-          countLabel={filteredPromotions.length === 1 ? 'promoção' : 'promoções'}
-        >
-          <TextField
-            select
-            size="small"
-            label="Situação"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as PromotionStatusFilter)}
-            sx={FILTER_FIELD_SX}
-          >
-            <MenuItem value="ALL">Todas</MenuItem>
-            <MenuItem value="ACTIVE">Ativas</MenuItem>
-            <MenuItem value="FUTURE">Futuras</MenuItem>
-            <MenuItem value="EXPIRED">Expiradas</MenuItem>
-            <MenuItem value="INACTIVE">Inativas</MenuItem>
-          </TextField>
-        </ListFiltersBar>
+                {/* Nome + descrição */}
+                <Box sx={{ mt: 1.75, minWidth: 0 }}>
+                  <Typography sx={{ fontSize: '1.02rem', fontWeight: 800, lineHeight: 1.25 }} noWrap title={p.name}>
+                    {p.name}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: '0.82rem',
+                      color: 'text.secondary',
+                      mt: 0.25,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      minHeight: 34,
+                    }}
+                  >
+                    {p.description || p.commemorativeDate || '—'}
+                  </Typography>
+                </Box>
 
-        <AppDataGrid
-          rows={filteredPromotions}
-          columns={columns}
-          loading={isLoading}
-          localeText={{
-            noRowsLabel:
-              promotions.length === 0
-                ? 'Nenhuma promoção cadastrada'
-                : 'Nenhuma promoção encontrada com os filtros',
-            footerRowSelected: (count) => `${count} selecionado(s)`,
-          }}
-          initialState={{
-            sorting: { sortModel: [{ field: 'startAt', sort: 'desc' }] },
-          }}
-        />
-      </Card>
+                <Divider sx={{ my: 1.75 }} />
+
+                {/* Vigência + usos */}
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mt: 'auto' }}>
+                  <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
+                    <CalendarTodayOutlinedIcon sx={{ fontSize: 15, color: 'text.disabled' }} />
+                    <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }} noWrap>
+                      {formatRange(p.startAt, p.endAt)}
+                    </Typography>
+                  </Stack>
+                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 800 }}>
+                    {uses} {uses === 1 ? 'uso' : 'usos'}
+                  </Typography>
+                </Stack>
+              </Card>
+            );
+          })}
+        </Box>
+      )}
 
       <PromotionFormDialog
         open={formOpen}

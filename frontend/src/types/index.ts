@@ -388,7 +388,7 @@ export interface InventoryItem {
   expiryNotifyDaysBefore?: number;
 }
 
-export type DiscountType = 'PERCENTAGE' | 'FIXED';
+export type DiscountType = 'PERCENTAGE' | 'FIXED' | 'COMBO';
 
 export interface Promotion {
   id: string;

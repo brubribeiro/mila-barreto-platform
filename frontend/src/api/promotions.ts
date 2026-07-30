@@ -7,7 +7,7 @@ export interface CreatePromotionPayload {
   commemorativeDate?: string;
   startAt: string;
   endAt: string;
-  discountType: 'PERCENTAGE' | 'FIXED';
+  discountType: 'PERCENTAGE' | 'FIXED' | 'COMBO';
   discountValue: number;
   active?: boolean;
   procedureIds?: string[];

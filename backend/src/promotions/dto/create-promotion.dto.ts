@@ -14,6 +14,7 @@ import {
 export enum DiscountTypeDto {
   PERCENTAGE = 'PERCENTAGE',
   FIXED = 'FIXED',
+  COMBO = 'COMBO',
 }
 
 export class CreatePromotionDto {

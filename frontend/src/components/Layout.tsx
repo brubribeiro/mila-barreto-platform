@@ -115,7 +115,7 @@ const PAGE_META: (PageMeta & { path: string; exact?: boolean })[] = [
   { path: '/horarios', title: 'Horários', subtitle: 'Disponibilidade da equipe' },
   { path: '/procedimentos', title: 'Procedimentos', subtitle: 'Catálogo de procedimentos' },
   { path: '/pacotes', title: 'Pacotes', subtitle: 'Combos de procedimentos e sessões' },
-  { path: '/promocoes', title: 'Promoções', subtitle: 'Descontos e campanhas' },
+  { path: '/promocoes', title: 'Promoções', subtitle: 'Campanhas e descontos sazonais' },
   { path: '/financeiro', title: 'Financeiro', subtitle: 'Receitas e despesas' },
   { path: '/despesas-recorrentes', title: 'Despesas recorrentes', subtitle: 'Custos fixos e periódicos' },
   { path: '/formas-pagamento', title: 'Formas de pagamento', subtitle: 'Métodos de pagamento' },

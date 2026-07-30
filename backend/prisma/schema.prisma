@@ -449,6 +449,7 @@ model PatientPackage {
 enum DiscountType {
   PERCENTAGE // desconto em percentual
   FIXED // desconto em valor fixo (R$)
+  COMBO // promoção do tipo combo (sem valor de desconto direto)
 }
 
 // Promoção vinculada a datas comemorativas, procedimentos e/ou pacotes.

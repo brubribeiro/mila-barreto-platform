@@ -72,6 +72,12 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Destaque automático **Mais vendido** e badges manuais (**Mais vendido**, **Recorrente**) configuráveis no cadastro.
 - Busca por nome, descrição ou procedimentos inclusos; modal de cadastro reorganizada em seções.
 
+**Promoções**
+- Tela redesenhada no estilo Aurora: cards com **status** (Ativa, Agendada, Encerrada), badge de desconto e **período** da campanha.
+- Contador de **promoções ativas** no topo; busca por nome, data comemorativa ou descrição.
+- Modal de cadastro reorganizada: tipos **Percentual**, **Valor fixo** e **Combo**; opção **Aplica-se a** (todos, procedimentos ou pacotes).
+- Data comemorativa selecionável (Dia das Mães, Black Friday, etc.).
+
 ### Correções
 
 **Agenda e disponibilidade**
