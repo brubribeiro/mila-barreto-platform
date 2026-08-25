@@ -8,6 +8,11 @@ export interface UserPayload {
   active?: boolean;
   providesAppointments?: boolean;
   isPrimary?: boolean;
+  specialty?: string | null;
+  specialties?: string[];
+  councilRegister?: string | null;
+  calendarColor?: string | null;
+  bio?: string | null;
 }
 
 export const usersApi = {
@@ -34,5 +39,21 @@ export const usersApi = {
   },
   remove: async (id: string): Promise<void> => {
     await api.delete(`/users/${id}`);
+  },
+  uploadPhoto: async (id: string, file: File): Promise<UserSummary> => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const { data } = await api.post<UserSummary>(`/users/${id}/photo`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+  removePhoto: async (id: string): Promise<UserSummary> => {
+    const { data } = await api.delete<UserSummary>(`/users/${id}/photo`);
+    return data;
+  },
+  getPhotoUrl: async (id: string): Promise<string | null> => {
+    const { data } = await api.get<{ url: string | null }>(`/users/${id}/photo-url`);
+    return data.url;
   },
 };

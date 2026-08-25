@@ -1,8 +1,9 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
   Alert,
   alpha,
+  Avatar,
   Box,
   Button,
   Chip,
@@ -17,6 +18,7 @@ import {
   Stack,
   Switch,
   TextField,
+  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
@@ -25,6 +27,10 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
 import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import CheckIcon from '@mui/icons-material/Check';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { usersApi, UserPayload } from '../../api/users';
@@ -49,6 +55,10 @@ type FormValues = {
   active: boolean;
   providesAppointments: boolean;
   isPrimary: boolean;
+  specialty: string;
+  councilRegister: string;
+  calendarColor: string;
+  bio: string;
 };
 
 const empty: FormValues = {
@@ -58,10 +68,16 @@ const empty: FormValues = {
   active: true,
   providesAppointments: true,
   isPrimary: false,
+  specialty: '',
+  councilRegister: '',
+  calendarColor: '',
+  bio: '',
 };
 
+const COLOR_SWATCHES = ['#15998B', '#E0915B', '#5BA8DE', '#D46B8A', '#9B7BD4', '#4FB3A8', '#C99230', '#5A9A7D'];
+
 const DIALOG_MAX_WIDTH = 900;
-const DIALOG_HEIGHT_DESKTOP = 640;
+const DIALOG_HEIGHT_DESKTOP = 720;
 
 const FORM_CARD_SX = {
   p: { xs: 1.5, sm: 1.75 },
@@ -71,26 +87,6 @@ const FORM_CARD_SX = {
   boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
   height: '100%',
 } as const;
-
-function SectionIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
 
 function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
   return (
@@ -124,6 +120,8 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
   const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
   const toast = useAppToast();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const { control, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
     defaultValues: empty,
@@ -137,6 +135,7 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
 
   useEffect(() => {
     if (!open) return;
+    setPhotoPreview(user?.photoUrl ?? null);
     reset(
       user
         ? {
@@ -146,6 +145,10 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
             active: user.active,
             providesAppointments: user.providesAppointments ?? true,
             isPrimary: user.isPrimary ?? false,
+            specialty: user.specialty ?? '',
+            councilRegister: user.councilRegister ?? '',
+            calendarColor: user.calendarColor ?? '',
+            bio: user.bio ?? '',
           }
         : empty,
     );
@@ -153,11 +156,31 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
 
   const providesAppointments = watch('providesAppointments');
   const active = watch('active');
+  const nameValue = watch('name');
+  const calendarColor = watch('calendarColor');
   const selectedRoleId = watch('roleId');
   const selectedRole = roles.find((r) => r.id === selectedRoleId);
-  const selectedPermissionCount = selectedRole
-    ? countCatalogPermissions(selectedRole.permissions)
-    : 0;
+  const selectedPermissionCount = selectedRole ? countCatalogPermissions(selectedRole.permissions) : 0;
+
+  const photoUpload = useMutation({
+    mutationFn: (file: File) => usersApi.uploadPhoto(user!.id, file),
+    onSuccess: (updated) => {
+      setPhotoPreview(updated.photoUrl ?? null);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('Foto atualizada.');
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Não foi possível enviar a foto.')),
+  });
+
+  const photoRemove = useMutation({
+    mutationFn: () => usersApi.removePhoto(user!.id),
+    onSuccess: () => {
+      setPhotoPreview(null);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('Foto removida.');
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Não foi possível remover a foto.')),
+  });
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
@@ -168,9 +191,13 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
         active: values.active,
         providesAppointments: values.providesAppointments,
         isPrimary: values.providesAppointments ? values.isPrimary : false,
+        specialty: values.specialty.trim() || null,
+        councilRegister: values.councilRegister.trim() || null,
+        calendarColor: values.calendarColor || null,
+        bio: values.bio.trim() || null,
       };
       if (user) return usersApi.update(user.id, payload);
-      return usersApi.create(payload as UserPayload);
+      return usersApi.create(payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -183,6 +210,8 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
       toast.error(getApiErrorMessage(err, 'Não foi possível salvar o profissional.'));
     },
   });
+
+  const photoBusy = photoUpload.isPending || photoRemove.isPending;
 
   return (
     <Dialog
@@ -223,18 +252,8 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
           onClose={onClose}
           isMobile={isMobile}
           title={user ? 'Editar profissional' : 'Novo profissional'}
-          subtitle={
-            user
-              ? `${user.name} · ${user.email}`
-              : 'Dados de acesso, permissões e agenda'
-          }
-          icon={
-            user ? (
-              <EditOutlinedIcon fontSize="small" />
-            ) : (
-              <PersonAddOutlinedIcon fontSize="small" />
-            )
-          }
+          subtitle={user ? `${user.name} · ${user.email}` : 'Dados de acesso, perfil e agenda'}
+          icon={user ? <EditOutlinedIcon fontSize="small" /> : <PersonAddOutlinedIcon fontSize="small" />}
           trailing={
             !isCompact && selectedPermissionCount > 0 ? (
               <Chip
@@ -353,20 +372,13 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
                   control={control}
                   render={({ field }) => (
                     <FormControlLabel
-                      control={
-                        <Switch
-                          checked={field.value}
-                          onChange={(e) => field.onChange(e.target.checked)}
-                        />
-                      }
+                      control={<Switch checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />}
                       label={field.value ? 'Usuário ativo' : 'Usuário inativo'}
                     />
                   )}
                 />
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, mb: 0.5 }}>
-                  {active
-                    ? 'Pode fazer login e usar a plataforma.'
-                    : 'Acesso bloqueado até reativar o usuário.'}
+                  {active ? 'Pode fazer login e usar a plataforma.' : 'Acesso bloqueado até reativar o usuário.'}
                 </Typography>
 
                 <Divider sx={{ my: 2 }} />
@@ -400,12 +412,7 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
                       render={({ field }) => (
                         <FormControlLabel
                           sx={{ ml: 3 }}
-                          control={
-                            <Switch
-                              checked={field.value}
-                              onChange={(e) => field.onChange(e.target.checked)}
-                            />
-                          }
+                          control={<Switch checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />}
                           label="Profissional principal"
                         />
                       )}
@@ -415,17 +422,154 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
 
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
                   {providesAppointments
-                    ? 'Aparece em agendamentos e horários. O profissional principal entra no cálculo de custo/hora dos procedimentos — apenas um pode ser marcado.'
+                    ? 'Aparece em agendamentos e horários. O profissional principal entra no cálculo de custo/hora — apenas um pode ser marcado.'
                     : 'Não aparece na seleção de profissionais em agendamentos e horários.'}
                 </Typography>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Paper variant="outlined" sx={{ ...FORM_CARD_SX, height: 'auto' }}>
+                <SectionTitle icon={<BadgeOutlinedIcon fontSize="small" />} title="Perfil profissional" />
+
+                <Grid container spacing={2.5} alignItems="flex-start">
+                  <Grid item xs={12} sm="auto">
+                    <Stack alignItems="center" spacing={1}>
+                      <Avatar
+                        src={photoPreview ?? undefined}
+                        sx={{
+                          width: 88,
+                          height: 88,
+                          fontSize: fontSizes['4xl'],
+                          fontWeight: 700,
+                          bgcolor: calendarColor || 'primary.main',
+                        }}
+                      >
+                        {(nameValue || '?').trim().charAt(0).toUpperCase()}
+                      </Avatar>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        hidden
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) photoUpload.mutate(file);
+                          e.target.value = '';
+                        }}
+                      />
+                      <Tooltip title={user ? '' : 'Salve o profissional para adicionar a foto'}>
+                        <span>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<PhotoCameraOutlinedIcon />}
+                            disabled={!user || photoBusy}
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            {photoPreview ? 'Trocar foto' : 'Enviar foto'}
+                          </Button>
+                        </span>
+                      </Tooltip>
+                      {photoPreview && user && (
+                        <Button
+                          size="small"
+                          color="error"
+                          startIcon={<DeleteOutlineIcon />}
+                          disabled={photoBusy}
+                          onClick={() => photoRemove.mutate()}
+                        >
+                          Remover
+                        </Button>
+                      )}
+                    </Stack>
+                  </Grid>
+
+                  <Grid item xs={12} sm>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <Controller
+                          name="specialty"
+                          control={control}
+                          render={({ field }) => (
+                            <TextField {...field} label="Especialidade" fullWidth placeholder="Ex.: Biomédica esteta" />
+                          )}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Controller
+                          name="councilRegister"
+                          control={control}
+                          render={({ field }) => (
+                            <TextField {...field} label="Registro do conselho" fullWidth placeholder="Ex.: CRBM 12345" />
+                          )}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <SubsectionLabel>Cor na agenda</SubsectionLabel>
+                        <Controller
+                          name="calendarColor"
+                          control={control}
+                          render={({ field }) => (
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                              {COLOR_SWATCHES.map((c) => {
+                                const selected = field.value?.toLowerCase() === c.toLowerCase();
+                                return (
+                                  <Box
+                                    key={c}
+                                    component="button"
+                                    type="button"
+                                    aria-label={c}
+                                    onClick={() => field.onChange(selected ? '' : c)}
+                                    sx={{
+                                      width: 30,
+                                      height: 30,
+                                      borderRadius: '50%',
+                                      cursor: 'pointer',
+                                      bgcolor: c,
+                                      border: (t) =>
+                                        selected ? `2px solid ${t.palette.text.primary}` : '2px solid transparent',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: '#fff',
+                                    }}
+                                  >
+                                    {selected && <CheckIcon sx={{ fontSize: 16 }} />}
+                                  </Box>
+                                );
+                              })}
+                            </Stack>
+                          )}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Controller
+                          name="bio"
+                          control={control}
+                          render={({ field }) => (
+                            <TextField
+                              {...field}
+                              label="Bio / descrição"
+                              fullWidth
+                              multiline
+                              minRows={2}
+                              placeholder="Breve descrição do profissional"
+                            />
+                          )}
+                        />
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                </Grid>
               </Paper>
             </Grid>
 
             {mutation.isError && (
               <Grid item xs={12}>
                 <Alert severity="error" variant="outlined">
-                  {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
-                    ?.message ?? 'Erro ao salvar profissional'}
+                  {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+                    'Erro ao salvar profissional'}
                 </Alert>
               </Grid>
             )}

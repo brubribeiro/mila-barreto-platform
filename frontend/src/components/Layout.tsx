@@ -75,6 +75,7 @@ const navGrouped: NavGroup[] = [
     title: 'Equipe & recursos',
     items: [
       { label: 'Profissionais', path: '/profissionais', icon: <AuroraIcon name="profissionais" />, permission: 'users:view' },
+      { label: 'Usuários', path: '/usuarios', icon: <AuroraIcon name="permissoes" />, permission: 'users:view' },
       { label: 'Horários', path: '/horarios', icon: <AuroraIcon name="horarios" /> },
       { label: 'Equipamentos', path: '/equipamentos', icon: <AuroraIcon name="equipamentos" />, permission: 'equipment:view' },
       { label: 'Estoque', path: '/estoque', icon: <AuroraIcon name="estoque" />, permission: 'inventory:view' },
@@ -121,7 +122,8 @@ const PAGE_META: (PageMeta & { path: string; exact?: boolean })[] = [
   { path: '/despesas-recorrentes', title: 'Despesas recorrentes', subtitle: 'Custos fixos e periódicos' },
   { path: '/formas-pagamento', title: 'Formas de pagamento', subtitle: 'Métodos de pagamento' },
   { path: '/estoque', title: 'Estoque', subtitle: 'Produtos e insumos' },
-  { path: '/profissionais', title: 'Profissionais', subtitle: 'Equipe da clínica' },
+  { path: '/profissionais', title: 'Profissionais', subtitle: 'Equipe que realiza atendimentos' },
+  { path: '/usuarios', title: 'Usuários', subtitle: 'Contas e permissões' },
   { path: '/grupos', title: 'Grupos', subtitle: 'Papéis e permissões' },
   { path: '/mensagens', title: 'Mensagens', subtitle: 'Modelos e envios' },
   { path: '/documentos', title: 'Documentos', subtitle: 'Arquivos e modelos' },

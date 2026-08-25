@@ -35,7 +35,21 @@ export interface UserSummary {
   roleId: string;
   createdAt: string;
   role: { id: string; name: string; isSystem: boolean };
+  // Perfil de profissional (preenchido quando providesAppointments = true)
+  specialty?: string | null;
+  specialties?: string[];
+  councilRegister?: string | null;
+  calendarColor?: string | null;
+  bio?: string | null;
+  photoStorageKey?: string | null;
+  photoUrl?: string | null;
+  appointmentsCount?: number;
+  appointmentsCountMonth?: number;
+  appointmentsCountWeek?: number;
+  availability?: ProfessionalAvailability | null;
 }
+
+export type ProfessionalAvailability = 'IN_SERVICE' | 'OFF' | 'OUTSIDE_HOURS' | 'AVAILABLE';
 
 /** M = masculino, F = feminino */
 export type PatientSex = 'M' | 'F';

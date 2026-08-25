@@ -12,6 +12,7 @@ import { Finance } from './pages/Finance';
 import { Inventory } from './pages/Inventory';
 import { InventoryDetail } from './pages/InventoryDetail';
 import { Professionals } from './pages/Professionals';
+import { Users } from './pages/Users';
 import { Roles } from './pages/Roles';
 import { Messages } from './pages/Messages';
 import { Availability } from './pages/Availability';
@@ -117,6 +118,14 @@ export default function App() {
           element={
             <PermissionRoute permission="users:view">
               <Professionals />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="/usuarios"
+          element={
+            <PermissionRoute permission="users:view">
+              <Users />
             </PermissionRoute>
           }
         />

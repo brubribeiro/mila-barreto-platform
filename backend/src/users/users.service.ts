@@ -5,13 +5,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { NotificationType } from '@prisma/client';
+import { AppointmentStatus, NotificationType } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
+import { R2StorageService } from '../documents/r2-storage.service';
 
 const SAFE_SELECT = {
   id: true,
@@ -21,9 +22,52 @@ const SAFE_SELECT = {
   active: true,
   providesAppointments: true,
   isPrimary: true,
+  specialty: true,
+  specialties: true,
+  councilRegister: true,
+  calendarColor: true,
+  bio: true,
+  photoStorageKey: true,
+  photoUrl: true,
   createdAt: true,
   role: { select: { id: true, name: true, isSystem: true } },
 } as const;
+
+const PHOTO_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+const PHOTO_URL_TTL_SECONDS = 3600;
+
+const WEEKDAY_INDEX: Record<string, number> = {
+  Sunday: 0,
+  Monday: 1,
+  Tuesday: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+  Saturday: 6,
+};
+
+/** Momento atual no fuso da clínica (America/Sao_Paulo). */
+function clinicNowParts(): { weekday: number; minutes: number } {
+  const now = new Date();
+  const tz = 'America/Sao_Paulo';
+  const weekdayName = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'long' }).format(now);
+  const time = new Intl.DateTimeFormat('en-GB', {
+    timeZone: tz,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(now); // "HH:MM"
+  const [h, m] = time.split(':').map(Number);
+  return { weekday: WEEKDAY_INDEX[weekdayName] ?? 0, minutes: h * 60 + m };
+}
+
+function hhmmToMinutes(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+export type ProfessionalAvailability = 'IN_SERVICE' | 'OFF' | 'OUTSIDE_HOURS' | 'AVAILABLE';
 
 @Injectable()
 export class UsersService {
@@ -31,6 +75,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly auditLog: AuditLogService,
+    private readonly r2: R2StorageService,
   ) {}
 
   /** Versão completa com password e relação para autenticação. */
@@ -48,11 +93,76 @@ export class UsersService {
     });
   }
 
-  list() {
-    return this.prisma.user.findMany({
+  async list() {
+    const users = await this.prisma.user.findMany({
       select: SAFE_SELECT,
       orderBy: { name: 'asc' },
     });
+    const ids = users.map((u) => u.id);
+    const now = new Date();
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const [totalC, monthC, weekC, inProgress, unavailNow, workingHours] = await Promise.all([
+      this.prisma.appointment.groupBy({
+        by: ['professionalId'],
+        where: { status: AppointmentStatus.COMPLETED },
+        _count: { _all: true },
+      }),
+      this.prisma.appointment.groupBy({
+        by: ['professionalId'],
+        where: { status: AppointmentStatus.COMPLETED, startAt: { gte: monthAgo } },
+        _count: { _all: true },
+      }),
+      this.prisma.appointment.groupBy({
+        by: ['professionalId'],
+        where: { status: AppointmentStatus.COMPLETED, startAt: { gte: weekAgo } },
+        _count: { _all: true },
+      }),
+      this.prisma.appointment.findMany({
+        where: { status: AppointmentStatus.IN_PROGRESS, professionalId: { in: ids } },
+        select: { professionalId: true },
+      }),
+      this.prisma.unavailability.findMany({
+        where: { userId: { in: ids }, startAt: { lte: now }, endAt: { gte: now } },
+        select: { userId: true },
+      }),
+      this.prisma.workingHours.findMany({ where: { userId: { in: ids } } }),
+    ]);
+
+    const totalMap = new Map(totalC.map((c) => [c.professionalId, c._count._all]));
+    const monthMap = new Map(monthC.map((c) => [c.professionalId, c._count._all]));
+    const weekMap = new Map(weekC.map((c) => [c.professionalId, c._count._all]));
+    const inProgressSet = new Set(inProgress.map((a) => a.professionalId));
+    const unavailSet = new Set(unavailNow.map((u) => u.userId));
+    const whByUser = new Map<string, { dayOfWeek: number; startTime: string; endTime: string }[]>();
+    for (const w of workingHours) {
+      const list = whByUser.get(w.userId) ?? [];
+      list.push({ dayOfWeek: w.dayOfWeek, startTime: w.startTime, endTime: w.endTime });
+      whByUser.set(w.userId, list);
+    }
+
+    const { weekday, minutes } = clinicNowParts();
+    const availabilityFor = (u: { id: string; providesAppointments: boolean }): ProfessionalAvailability | null => {
+      if (!u.providesAppointments) return null;
+      if (inProgressSet.has(u.id)) return 'IN_SERVICE';
+      if (unavailSet.has(u.id)) return 'OFF';
+      const today = (whByUser.get(u.id) ?? []).filter((w) => w.dayOfWeek === weekday);
+      if (today.length === 0) return 'OFF';
+      const within = today.some(
+        (w) => hhmmToMinutes(w.startTime) <= minutes && minutes <= hhmmToMinutes(w.endTime),
+      );
+      return within ? 'AVAILABLE' : 'OUTSIDE_HOURS';
+    };
+
+    const enriched = users.map((u) => ({
+      ...u,
+      appointmentsCount: totalMap.get(u.id) ?? 0,
+      appointmentsCountMonth: monthMap.get(u.id) ?? 0,
+      appointmentsCountWeek: weekMap.get(u.id) ?? 0,
+      availability: availabilityFor(u),
+    }));
+    return this.withPhotoAccessUrls(enriched);
   }
 
   /** Lista resumida usada em dropdowns (qualquer autenticado) — campos mínimos */
@@ -101,6 +211,11 @@ export class UsersService {
         active: dto.active ?? true,
         providesAppointments: dto.providesAppointments ?? true,
         isPrimary: dto.isPrimary ?? false,
+        specialty: dto.specialty ?? null,
+        specialties: dto.specialties ?? [],
+        councilRegister: dto.councilRegister ?? null,
+        calendarColor: dto.calendarColor ?? null,
+        bio: dto.bio ?? null,
       },
       select: SAFE_SELECT,
     });
@@ -155,7 +270,7 @@ export class UsersService {
       select: SAFE_SELECT,
     });
     this.auditLog.logUpdate('User', id, user as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, auditUser).catch(() => undefined);
-    return updated;
+    return this.withPhotoAccessUrl(updated);
   }
 
   async remove(id: string, requesterId: string, auditUser?: AuditUser) {
@@ -177,5 +292,84 @@ export class UsersService {
     await this.prisma.user.delete({ where: { id } });
     this.auditLog.logDelete('User', id, user as unknown as Record<string, unknown>, auditUser).catch(() => undefined);
     return { ok: true };
+  }
+
+  async uploadPhoto(id: string, file: Express.Multer.File, auditUser?: AuditUser) {
+    if (!this.r2.isConfigured) {
+      throw new BadRequestException('Cloudflare R2 não está configurado. Não é possível enviar a foto.');
+    }
+    if (!PHOTO_MIMES.has(file.mimetype)) {
+      throw new BadRequestException('Use uma imagem JPEG, PNG ou WebP.');
+    }
+    if (file.size > PHOTO_MAX_BYTES) {
+      throw new BadRequestException('A foto deve ter no máximo 5 MB.');
+    }
+
+    const before = await this.prisma.user.findUnique({ where: { id } });
+    if (!before) throw new NotFoundException('Usuário não encontrado');
+
+    if (before.photoStorageKey) {
+      await this.r2.remove(before.photoStorageKey);
+    }
+
+    const ext = file.mimetype === 'image/png' ? 'png' : file.mimetype === 'image/webp' ? 'webp' : 'jpg';
+    const { key } = await this.r2.upload(`foto.${ext}`, file.mimetype, file.buffer, `profissionais/${id}`);
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { photoStorageKey: key, photoUrl: null },
+      select: SAFE_SELECT,
+    });
+    this.auditLog
+      .logUpdate('User', id, before as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, auditUser)
+      .catch(() => undefined);
+    return this.withPhotoAccessUrl(updated);
+  }
+
+  async removePhoto(id: string, auditUser?: AuditUser) {
+    const before = await this.prisma.user.findUnique({ where: { id } });
+    if (!before) throw new NotFoundException('Usuário não encontrado');
+    if (before.photoStorageKey) {
+      await this.r2.remove(before.photoStorageKey);
+    }
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { photoStorageKey: null, photoUrl: null },
+      select: SAFE_SELECT,
+    });
+    this.auditLog
+      .logUpdate('User', id, before as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, auditUser)
+      .catch(() => undefined);
+    return updated;
+  }
+
+  async getPhotoAccessUrl(id: string): Promise<{ url: string | null }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { photoStorageKey: true },
+    });
+    if (!user?.photoStorageKey) return { url: null };
+    const url = await this.r2.getPresignedUrl(user.photoStorageKey, PHOTO_URL_TTL_SECONDS);
+    return { url };
+  }
+
+  private async withPhotoAccessUrl<T extends { photoStorageKey?: string | null; photoUrl?: string | null }>(
+    user: T,
+  ): Promise<T> {
+    if (user.photoStorageKey && this.r2.isConfigured) {
+      try {
+        const url = await this.r2.getPresignedUrl(user.photoStorageKey, PHOTO_URL_TTL_SECONDS);
+        return { ...user, photoUrl: url };
+      } catch {
+        return { ...user, photoUrl: null };
+      }
+    }
+    return { ...user, photoUrl: null };
+  }
+
+  private async withPhotoAccessUrls<T extends { photoStorageKey?: string | null; photoUrl?: string | null }>(
+    users: T[],
+  ): Promise<T[]> {
+    return Promise.all(users.map((u) => this.withPhotoAccessUrl(u)));
   }
 }

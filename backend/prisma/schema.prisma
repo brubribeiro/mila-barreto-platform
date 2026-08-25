@@ -53,6 +53,14 @@ model User {
   active               Boolean  @default(true)
   providesAppointments Boolean  @default(true) // false = não aparece em agendamentos (ex.: recepção)
   isPrimary            Boolean  @default(false) // profissional principal (usado para cálculo de custo/hora)
+  // Perfil de profissional (preenchido quando providesAppointments = true)
+  specialty            String? // função/título (ex.: Dermatologista, Biomédica esteta)
+  specialties          String[] @default([]) // áreas de atuação (ex.: Toxina, Preenchimento)
+  councilRegister      String? // registro do conselho (CRM/COREN/CRBM...)
+  calendarColor        String? // cor de identificação na agenda (hex)
+  bio                  String? // descrição/bio curta
+  photoStorageKey      String? // chave da foto no Cloudflare R2
+  photoUrl             String? // URL pública/derivada da foto
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

@@ -1,322 +1,271 @@
 import { useMemo, useState } from 'react';
-import { Box, Button, Card, Chip, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
-import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
+import {
+  Avatar,
+  Box,
+  Button,
+  Card,
+  Chip,
+  Divider,
+  InputBase,
+  Skeleton,
+  Stack,
+  Typography,
+} from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
-import SwitchAccountIcon from '@mui/icons-material/SwitchAccount';
+import SearchIcon from '@mui/icons-material/Search';
 import StarIcon from '@mui/icons-material/Star';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import dayjs from 'dayjs';
+import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
+import { useQuery } from '@tanstack/react-query';
 
-import { PageHeader } from '../components/PageHeader';
-import { ListFiltersBar, ActiveFilterSelect } from '../components/ListFiltersBar';
-import { AppDataGrid } from '../components/AppDataGrid';
-import { FILTER_FIELD_SX, matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
 import { usersApi } from '../api/users';
-import { ProfessionalFormDialog } from '../components/professionals/ProfessionalFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
-import { useAuth } from '../contexts/AuthContext';
-import { useAppDialog } from '../contexts/AppDialogContext';
-import { useAppToast } from '../contexts/AppToastContext';
-import { getApiErrorMessage } from '../utils/apiError';
+import { UserFormDialog } from '../components/users/UserFormDialog';
 import { usePermissions } from '../contexts/usePermissions';
-import type { UserSummary } from '../types';
+import type { ProfessionalAvailability, UserSummary } from '../types';
+import { fontSizes } from '../theme/fontSizes';
+
+function initials(name: string) {
+  const parts = name
+    .trim()
+    .replace(/^(dra?\.?|sra?\.?|profa?\.?|esteta\.?|enf\.?)\s+/i, '')
+    .split(/\s+/)
+    .filter(Boolean);
+  const first = parts[0]?.[0] ?? '';
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return (first + last).toUpperCase() || '?';
+}
+
+const AVAIL_META: Record<ProfessionalAvailability, { label: string; color: string; bg: string }> = {
+  AVAILABLE: { label: 'Disponível', color: '#0E7C7B', bg: 'rgba(21,153,139,0.14)' },
+  IN_SERVICE: { label: 'Em atendimento', color: '#2f6fb0', bg: 'rgba(91,168,222,0.18)' },
+  OFF: { label: 'Folga', color: '#6b7772', bg: 'rgba(16,40,37,0.06)' },
+  OUTSIDE_HOURS: { label: 'Fora do horário', color: '#8E6620', bg: 'rgba(201,146,48,0.16)' },
+};
+
+function Stat({ value, label }: { value: number; label: string }) {
+  return (
+    <Box sx={{ textAlign: 'center', flex: 1 }}>
+      <Typography sx={{ fontSize: fontSizes['2xl'], fontWeight: 800, lineHeight: 1 }}>{value}</Typography>
+      <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', mt: 0.5 }}>{label}</Typography>
+    </Box>
+  );
+}
 
 export function Professionals() {
-  const queryClient = useQueryClient();
-  const { user: me, impersonate } = useAuth();
-  const { confirm } = useAppDialog();
-  const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('users:create');
-  const canEdit = has('users:edit');
-  const canDelete = has('users:delete');
 
   const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
-  const [roleFilter, setRoleFilter] = useState('ALL');
-  const [appointmentsFilter, setAppointmentsFilter] = useState<'ALL' | 'YES' | 'NO'>('ALL');
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<UserSummary | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users'],
     queryFn: () => usersApi.list(),
   });
 
-  const roleOptions = useMemo(() => {
-    const names = new Set(users.map((u) => u.role?.name).filter(Boolean) as string[]);
-    return Array.from(names).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  }, [users]);
+  const professionals = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return users
+      .filter((u) => u.providesAppointments)
+      .filter((u) => {
+        if (!q) return true;
+        return (
+          u.name.toLowerCase().includes(q) ||
+          (u.specialty ?? '').toLowerCase().includes(q) ||
+          (u.specialties ?? []).some((s) => s.toLowerCase().includes(q)) ||
+          (u.role?.name ?? '').toLowerCase().includes(q)
+        );
+      });
+  }, [users, search]);
 
-  const filteredUsers = useMemo(
-    () =>
-      users.filter((u) => {
-        if (!matchesActiveFilter(u.active, activeFilter)) return false;
-        if (roleFilter !== 'ALL' && u.role?.name !== roleFilter) return false;
-        if (appointmentsFilter === 'YES' && !u.providesAppointments) return false;
-        if (appointmentsFilter === 'NO' && u.providesAppointments) return false;
-        return matchFields(search, u.name, u.email, u.role?.name);
-      }),
-    [users, search, activeFilter, roleFilter, appointmentsFilter],
-  );
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => usersApi.remove(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Profissional excluído.');
-    },
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o profissional.'));
-    },
-  });
-
-  const columns = useMemo<GridColDef<UserSummary>[]>(
-    () => [
-      { field: 'name', headerName: 'Nome', flex: 1.2, minWidth: 200 },
-      { field: 'email', headerName: 'E-mail', flex: 1.2, minWidth: 220 },
-      {
-        field: 'role',
-        headerName: 'Grupo',
-        flex: 0.8,
-        minWidth: 140,
-        renderCell: (params) => (
-          <Chip
-            size="small"
-            label={params.row.role?.name ?? '—'}
-            color="primary"
-            variant="outlined"
-          />
-        ),
-      },
-      {
-        field: 'providesAppointments',
-        headerName: 'Atendimentos',
-        flex: 0.6,
-        minWidth: 130,
-        renderCell: (params) =>
-          params.value ? (
-            <Chip size="small" label="Sim" color="info" variant="outlined" />
-          ) : (
-            <Chip size="small" label="Não" variant="outlined" />
-          ),
-      },
-      {
-        field: 'isPrimary',
-        headerName: 'Principal',
-        flex: 0.5,
-        minWidth: 120,
-        renderCell: (params) =>
-          params.row.isPrimary ? (
-            <Chip
-              size="small"
-              icon={<StarIcon sx={{ fontSize: '16px !important' }} />}
-              label="Principal"
-              color="warning"
-              variant="outlined"
-            />
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              —
-            </Typography>
-          ),
-      },
-      {
-        field: 'active',
-        headerName: 'Status',
-        flex: 0.5,
-        minWidth: 110,
-        renderCell: (params) =>
-          params.value ? (
-            <Chip size="small" label="Ativo" color="success" variant="outlined" />
-          ) : (
-            <Chip size="small" label="Inativo" variant="outlined" />
-          ),
-      },
-      {
-        field: 'createdAt',
-        headerName: 'Cadastro',
-        flex: 0.6,
-        minWidth: 120,
-        valueGetter: (params) => dayjs(params.row.createdAt).format('DD/MM/YYYY'),
-      },
-      {
-        field: 'actions',
-        type: 'actions',
-        headerName: 'Ações',
-        width: 190,
-        getActions: (params) => {
-          const isSelf = params.row.id === me?.id;
-          const isCurrentUserAdmin = me?.roleName === 'Administrador';
-          const actions = [];
-          if (isCurrentUserAdmin && !isSelf && params.row.active) {
-            actions.push(
-              <GridActionsCellItem
-                key="impersonate"
-                icon={
-                  <Tooltip title="Personificar">
-                    <SwitchAccountIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Personificar"
-                onClick={async () => {
-                  const ok = await confirm({
-                    title: 'Personificar usuário',
-                    message: `Entrar como ${params.row.name}? Você poderá voltar a qualquer momento.`,
-                    confirmLabel: 'Entrar',
-                  });
-                  if (ok) impersonate(params.row.id);
-                }}
-              />,
-            );
-          }
-          if (canEdit) {
-            actions.push(
-              <GridActionsCellItem
-                key="edit"
-                icon={
-                  <Tooltip title="Editar">
-                    <EditIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Editar"
-                onClick={() => {
-                  setEditing(params.row);
-                  setFormOpen(true);
-                }}
-              />,
-            );
-          }
-          if (canDelete) {
-            actions.push(
-              <GridActionsCellItem
-                key="delete"
-                disabled={isSelf}
-                icon={
-                  <Tooltip title={isSelf ? 'Você não pode excluir a si mesmo' : 'Excluir'}>
-                    <DeleteIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Excluir"
-                onClick={async () => {
-                  const ok = await confirm({
-                    title: 'Excluir profissional',
-                    message: `Excluir ${params.row.name}? Se houver agendamentos vinculados, o usuário será apenas desativado.`,
-                    confirmLabel: 'Excluir',
-                    confirmColor: 'error',
-                  });
-                  if (ok) deleteMutation.mutate(params.row.id);
-                }}
-              />,
-            );
-          }
-          return actions;
-        },
-      },
-    ],
-    [confirm, deleteMutation, me?.id, me?.roleName, canEdit, canDelete, impersonate],
-  );
+  const availableToday = professionals.filter((p) => p.availability === 'AVAILABLE').length;
 
   return (
     <Box>
-      <PageHeader
-        title="Profissionais"
-        subtitle="Usuários da plataforma, permissões e quem realiza atendimentos"
-        action={
-          <Stack direction="row" spacing={1}>
-            {isAdmin && (
-              <Button
-                variant="outlined"
-                startIcon={<HistoryIcon />}
-                onClick={() => setHistoryOpen(true)}
-              >
-                Histórico
-              </Button>
-            )}
-            {canCreate && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
+      {/* Header: contagem à esquerda, busca + adicionar à direita */}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+        justifyContent="space-between"
+        spacing={1.5}
+        sx={{ mb: 2.5 }}
+      >
+        <Typography sx={{ fontSize: fontSizes.md, color: 'text.secondary', fontWeight: 600 }}>
+          <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
+            {professionals.length}
+          </Box>{' '}
+          {professionals.length === 1 ? 'profissional' : 'profissionais'}
+          {'  ·  '}
+          <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
+            {availableToday}
+          </Box>{' '}
+          {availableToday === 1 ? 'disponível agora' : 'disponíveis agora'}
+        </Typography>
+
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={1.25}
+          flexWrap={{ xs: 'wrap', md: 'nowrap' }}
+          useFlexGap
+          justifyContent={{ md: 'flex-end' }}
+          sx={{ minWidth: 0 }}
+        >
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            sx={{
+              height: 38,
+              px: 1.75,
+              borderRadius: '12px',
+              border: 1,
+              borderColor: 'divider',
+              bgcolor: 'grey.50',
+              width: { xs: '100%', sm: 260 },
+              minWidth: 0,
+            }}
+          >
+            <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+            <InputBase
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar profissional..."
+              sx={{ fontSize: fontSizes.sm, flex: 1 }}
+            />
+          </Stack>
+          {canCreate && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setFormOpen(true)}
+              sx={{ flexShrink: 0, whiteSpace: 'nowrap', height: 38, px: 2.25, borderRadius: '12px' }}
+            >
+              Adicionar profissional
+            </Button>
+          )}
+        </Stack>
+      </Stack>
+
+      {isLoading ? (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)', xl: 'repeat(4, 1fr)' },
+            gap: 2,
+          }}
+        >
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={210} sx={{ borderRadius: '18px' }} />
+          ))}
+        </Box>
+      ) : professionals.length === 0 ? (
+        <Card sx={{ p: 6, textAlign: 'center', borderRadius: '18px' }}>
+          <PeopleOutlineIcon sx={{ fontSize: 46, color: 'text.disabled', mb: 1 }} />
+          <Typography sx={{ fontWeight: 700 }}>Nenhum profissional</Typography>
+          <Typography color="text.secondary" sx={{ fontSize: fontSizes.md, mt: 0.5 }}>
+            Adicione um profissional ou marque um usuário como profissional na tela de Usuários.
+          </Typography>
+        </Card>
+      ) : (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)', xl: 'repeat(4, 1fr)' },
+            gap: 2,
+          }}
+        >
+          {professionals.map((p) => {
+            const color = p.calendarColor || undefined;
+            const avail = p.availability ? AVAIL_META[p.availability] : null;
+            const tags = p.specialties ?? [];
+            return (
+              <Card
+                key={p.id}
+                sx={{
+                  p: 2.25,
+                  borderRadius: '18px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1.5,
+                  opacity: p.active ? 1 : 0.7,
                 }}
               >
-                Novo profissional
-              </Button>
-            )}
-          </Stack>
-        }
-      />
+                <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                  <Avatar
+                    variant="rounded"
+                    src={p.photoUrl ?? undefined}
+                    sx={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: '14px',
+                      fontSize: fontSizes.lg,
+                      fontWeight: 800,
+                      bgcolor: color || 'primary.main',
+                    }}
+                  >
+                    {initials(p.name)}
+                  </Avatar>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
+                      <Typography sx={{ fontSize: fontSizes.md, fontWeight: 800, lineHeight: 1.2 }} noWrap title={p.name}>
+                        {p.name}
+                      </Typography>
+                      {p.isPrimary && <StarIcon sx={{ fontSize: 15, color: 'warning.main', flexShrink: 0 }} />}
+                    </Stack>
+                    <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', mt: 0.25 }} noWrap>
+                      {p.specialty || p.role?.name || '—'}
+                    </Typography>
+                    {p.councilRegister && (
+                      <Typography sx={{ fontSize: fontSizes.xs, color: 'text.disabled' }} noWrap>
+                        {p.councilRegister}
+                      </Typography>
+                    )}
+                  </Box>
+                  {avail && (
+                    <Chip
+                      size="small"
+                      label={avail.label}
+                      sx={{
+                        flexShrink: 0,
+                        height: 22,
+                        fontSize: fontSizes['2xs'],
+                        fontWeight: 700,
+                        color: avail.color,
+                        bgcolor: avail.bg,
+                        border: 'none',
+                        '& .MuiChip-label': { px: 1 },
+                      }}
+                    />
+                  )}
+                </Stack>
 
-      <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
-        <ListFiltersBar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Buscar por nome, e-mail ou grupo"
-          filteredCount={filteredUsers.length}
-          totalCount={users.length}
-          countLabel={
-            filteredUsers.length === 1 ? 'usuário cadastrado' : 'usuários cadastrados'
-          }
-        >
-          <TextField
-            select
-            size="small"
-            label="Grupo"
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            sx={FILTER_FIELD_SX}
-          >
-            <MenuItem value="ALL">Todos</MenuItem>
-            {roleOptions.map((name) => (
-              <MenuItem key={name} value={name}>
-                {name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            size="small"
-            label="Atendimentos"
-            value={appointmentsFilter}
-            onChange={(e) => setAppointmentsFilter(e.target.value as typeof appointmentsFilter)}
-            sx={FILTER_FIELD_SX}
-          >
-            <MenuItem value="ALL">Todos</MenuItem>
-            <MenuItem value="YES">Realiza</MenuItem>
-            <MenuItem value="NO">Não realiza</MenuItem>
-          </TextField>
-          <ActiveFilterSelect value={activeFilter} onChange={setActiveFilter} />
-        </ListFiltersBar>
-        <AppDataGrid
-          rows={filteredUsers}
-          columns={columns}
-          loading={isLoading}
-          localeText={{
-            noRowsLabel:
-              users.length === 0
-                ? 'Nenhum profissional cadastrado'
-                : 'Nenhum profissional encontrado com os filtros',
-          }}
-        />
-      </Card>
+                {tags.length > 0 && (
+                  <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                    {tags.map((t) => (
+                      <Chip
+                        key={t}
+                        size="small"
+                        label={t}
+                        sx={{ height: 22, fontSize: fontSizes['2xs'], fontWeight: 600, bgcolor: 'grey.100' }}
+                      />
+                    ))}
+                  </Stack>
+                )}
 
-      <ProfessionalFormDialog
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        user={editing}
-      />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="User"
-        title="Profissionais"
-      />
+                <Divider sx={{ mt: 'auto' }} />
+
+                <Stack direction="row" divider={<Divider orientation="vertical" flexItem />} spacing={1}>
+                  <Stat value={p.appointmentsCount ?? 0} label="total" />
+                  <Stat value={p.appointmentsCountMonth ?? 0} label="último mês" />
+                  <Stat value={p.appointmentsCountWeek ?? 0} label="última semana" />
+                </Stack>
+              </Card>
+            );
+          })}
+        </Box>
+      )}
+
+      <UserFormDialog open={formOpen} onClose={() => setFormOpen(false)} user={null} presetProfessional />
     </Box>
   );
 }

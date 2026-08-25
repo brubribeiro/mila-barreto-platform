@@ -1,4 +1,4 @@
-import { IsBoolean, IsEmail, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsArray, IsBoolean, IsEmail, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
@@ -21,4 +21,26 @@ export class CreateUserDto {
   @IsOptional()
   @IsBoolean()
   isPrimary?: boolean;
+
+  // Perfil de profissional
+  @IsOptional()
+  @IsString()
+  specialty?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  specialties?: string[];
+
+  @IsOptional()
+  @IsString()
+  councilRegister?: string;
+
+  @IsOptional()
+  @IsString()
+  calendarColor?: string;
+
+  @IsOptional()
+  @IsString()
+  bio?: string;
 }
