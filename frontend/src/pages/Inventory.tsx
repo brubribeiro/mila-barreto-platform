@@ -29,6 +29,7 @@ import { PageHeader } from '../components/PageHeader';
 import { ListFiltersBar } from '../components/ListFiltersBar';
 import { AppDataGrid } from '../components/AppDataGrid';
 import { FILTER_FIELD_SX, matchFields, type StockFilter } from '../utils/listFilters';
+import { INVENTORY_CATEGORY_OPTIONS, inventoryCategoryLabel } from '../utils/inventoryCategory';
 import { inventoryApi } from '../api/inventory';
 import { InventoryFormDialog } from '../components/inventory/InventoryFormDialog';
 import { MovementDialog } from '../components/inventory/MovementDialog';
@@ -38,7 +39,7 @@ import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
-import type { InventoryItem } from '../types';
+import type { InventoryItem, InventoryCategory } from '../types';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -54,6 +55,7 @@ export function Inventory() {
 
   const [search, setSearch] = useState('');
   const [stockFilter, setStockFilter] = useState<StockFilter>('ALL');
+  const [categoryFilter, setCategoryFilter] = useState<'ALL' | InventoryCategory>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [movementItem, setMovementItem] = useState<InventoryItem | null>(null);
@@ -73,9 +75,10 @@ export function Inventory() {
     () =>
       items.filter((i) => {
         if (stockFilter === 'LOW' && !isLowStock(i)) return false;
+        if (categoryFilter !== 'ALL' && i.category !== categoryFilter) return false;
         return matchFields(search, i.name, i.sku, i.description);
       }),
-    [items, search, stockFilter],
+    [items, search, stockFilter, categoryFilter],
   );
 
   const deleteMutation = useMutation({
@@ -95,12 +98,13 @@ export function Inventory() {
       items.map((i) => ({
         Nome: i.name,
         SKU: i.sku ?? '',
+        Categoria: i.category ? inventoryCategoryLabel(i.category) : '',
         Quantidade: String(i.quantity),
         'Qtd Mínima': String(i.minQuantity),
         Unidade: i.unit ?? '',
         'Custo Unitário': i.costPrice != null ? Number(i.costPrice).toFixed(2) : '',
       })),
-      ['Nome', 'SKU', 'Quantidade', 'Qtd Mínima', 'Unidade', 'Custo Unitário'],
+      ['Nome', 'SKU', 'Categoria', 'Quantidade', 'Qtd Mínima', 'Unidade', 'Custo Unitário'],
     );
     if (!ok) {
       await alert({
@@ -120,6 +124,20 @@ export function Inventory() {
         flex: 0.5,
         minWidth: 100,
         valueGetter: (params) => params.row.sku ?? '—',
+      },
+      {
+        field: 'category',
+        headerName: 'Categoria',
+        flex: 0.6,
+        minWidth: 120,
+        renderCell: (params) =>
+          params.row.category ? (
+            <Chip size="small" variant="outlined" label={inventoryCategoryLabel(params.row.category)} />
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              —
+            </Typography>
+          ),
       },
       {
         field: 'quantity',
@@ -348,6 +366,21 @@ export function Inventory() {
           >
             <MenuItem value="ALL">Todos</MenuItem>
             <MenuItem value="LOW">Abaixo do mínimo</MenuItem>
+          </TextField>
+          <TextField
+            select
+            size="small"
+            label="Categoria"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value as 'ALL' | InventoryCategory)}
+            sx={FILTER_FIELD_SX}
+          >
+            <MenuItem value="ALL">Todas</MenuItem>
+            {INVENTORY_CATEGORY_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
           </TextField>
         </ListFiltersBar>
 

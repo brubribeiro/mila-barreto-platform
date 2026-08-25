@@ -4,6 +4,30 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ---
 
+## v0.1.12 — 25 ago 2026
+
+### Novidades
+
+**Estoque — categorias**
+- Itens de estoque podem ser classificados como **Insumo** ou **Produto**.
+- Filtro por categoria na listagem, coluna na tabela e campo nos formulários de item e compra em lote.
+- Exportação CSV inclui a categoria.
+
+### Correções
+
+- Scroll do calendário na agenda (Page Up / Page Down) funciona de forma mais confiável.
+- Busca de CEP retorna endereço com campos normalizados.
+
+### Deploy em produção
+
+Esta versão inclui uma migration **somente aditiva** (nova coluna opcional). O Render aplica com `prisma migrate deploy` — **não** zera nem recria o banco. Itens existentes permanecem sem categoria até você editar.
+
+### Onde ver a versão
+
+Menu lateral (rodapé) e tela de login exibem **v0.1.12**.
+
+---
+
 ## v0.1.11 — 30 jul 2026
 
 ### Correções

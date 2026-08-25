@@ -318,6 +318,7 @@ export class InventoryService {
               name: p.newItem.name,
               sku: p.newItem.sku,
               description: p.newItem.description,
+              category: p.newItem.category,
               minQuantity: p.newItem.minQuantity ?? 0,
               unit: p.newItem.unit,
             },

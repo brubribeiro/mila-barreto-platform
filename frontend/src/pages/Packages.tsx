@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactElement } from 'react';
 import { Box, Button, Card, Chip, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
@@ -154,7 +154,7 @@ export function Packages() {
         headerName: 'Ações',
         width: 140,
         getActions: (params) => {
-          const actions = [];
+          const actions: ReactElement[] = [];
           if (!canManage) return actions;
           actions.push(
             <GridActionsCellItem

@@ -2,14 +2,12 @@ import { Box, Paper, Stack, Typography } from '@mui/material';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import dayjs from 'dayjs';
 
-import type { Procedure } from '../../types';
-
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 interface WhatsAppPreviewProps {
   content: string;
   category?: string;
-  procedure?: Procedure | null;
+  procedure?: { name: string; price?: number | string } | null;
 }
 
 export function WhatsAppPreview({ content, category, procedure }: WhatsAppPreviewProps) {

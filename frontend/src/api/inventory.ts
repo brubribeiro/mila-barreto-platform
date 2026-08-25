@@ -1,10 +1,11 @@
 import { api } from './client';
-import type { InventoryItem } from '../types';
+import type { InventoryItem, InventoryCategory } from '../types';
 
 export interface InventoryItemPayload {
   name: string;
   sku?: string;
   description?: string;
+  category?: InventoryCategory | null;
   minQuantity?: number;
   unit?: string;
   costPrice?: number;

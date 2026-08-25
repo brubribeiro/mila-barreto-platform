@@ -4,6 +4,19 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-08-25
+
+### Added
+
+- Estoque: categoria **Insumo** ou **Produto** no cadastro, listagem, filtro, exportação CSV e detalhe do item.
+- Migration `20260825000000_add_inventory_category`: adiciona coluna nullable `category` em `inventory_items` (segura para produção via `prisma migrate deploy` — não apaga dados).
+
+### Fixed
+
+- Agenda: scroll do calendário com Page Up/Down passa a usar o container correto do FullCalendar.
+- ViaCEP: resposta sanitizada com campos tipados como string.
+- Pacotes: tipagem das ações na grid corrigida.
+
 ## [0.1.11] - 2026-07-30
 
 ### Fixed

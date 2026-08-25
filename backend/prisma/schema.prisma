@@ -625,6 +625,7 @@ model InventoryItem {
   name                   String
   sku                    String?   @unique
   description            String?
+  category               InventoryCategory?
   // Quantidades agora aceitam fracionados (ex: 5.5 ml restantes de um pote de 100ml)
   quantity               Decimal   @default(0) @db.Decimal(12, 3)
   minQuantity            Decimal   @default(0) @db.Decimal(12, 3)
@@ -672,6 +673,11 @@ model AuditLog {
   @@index([userId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+enum InventoryCategory {
+  INSUMO
+  PRODUTO
 }
 
 enum MovementType {

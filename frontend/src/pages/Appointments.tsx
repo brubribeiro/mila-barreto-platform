@@ -8,7 +8,8 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import ptBrLocale from '@fullcalendar/core/locales/pt-br';
-import type { EventInput, DatesSetArg, DateSelectArg, EventClickArg, DateClickArg } from '@fullcalendar/core';
+import type { EventInput, DatesSetArg, DateSelectArg, EventClickArg } from '@fullcalendar/core';
+import type { DateClickArg } from '@fullcalendar/interaction';
 import { useQueries, useQuery } from '@tanstack/react-query';
 
 import { PageHeader } from '../components/PageHeader';
@@ -61,6 +62,7 @@ export function Appointments() {
   const canCreate = has('appointments:create');
   const [historyOpen, setHistoryOpen] = useState(false);
   const calendarRef = useRef<FullCalendar | null>(null);
+  const calendarRootRef = useRef<HTMLDivElement | null>(null);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
@@ -212,7 +214,7 @@ export function Appointments() {
   };
 
   const scrollActiveCalendarView = useCallback((direction: 'up' | 'down' | 'pageUp' | 'pageDown') => {
-    const root = calendarRef.current?.getApi().el as HTMLElement | undefined;
+    const root = calendarRootRef.current ?? undefined;
     if (!root) return;
     const scroller = root.querySelector('.fc-view-harness-active .fc-scroller') as HTMLElement | null;
     if (!scroller) return;
@@ -393,6 +395,7 @@ export function Appointments() {
       )}
 
       <Card
+        ref={calendarRootRef}
         tabIndex={0}
         role="region"
         aria-label="Calendário de agendamentos"

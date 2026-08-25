@@ -28,7 +28,8 @@ import { inventoryApi, InventoryItemPayload } from '../../api/inventory';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
-import type { InventoryItem } from '../../types';
+import type { InventoryItem, InventoryCategory } from '../../types';
+import { INVENTORY_CATEGORY_OPTIONS } from '../../utils/inventoryCategory';
 
 interface InventoryFormDialogProps {
   open: boolean;
@@ -39,6 +40,7 @@ interface InventoryFormDialogProps {
 interface FormValues {
   name: string;
   sku: string;
+  category: string;
   description: string;
   minQuantity: number;
   unit: string;
@@ -49,6 +51,7 @@ interface FormValues {
 const empty: FormValues = {
   name: '',
   sku: '',
+  category: '',
   description: '',
   minQuantity: 0,
   unit: '',
@@ -134,6 +137,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
       reset({
         name: item.name,
         sku: item.sku ?? '',
+        category: item.category ?? '',
         description: item.description ?? '',
         minQuantity: item.minQuantity,
         unit: item.unit ?? '',
@@ -151,6 +155,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
       const payload: InventoryItemPayload = {
         name: values.name,
         minQuantity: Number(values.minQuantity),
+        category: (values.category || null) as InventoryCategory | null,
         ...(values.sku ? { sku: values.sku } : {}),
         ...(values.description ? { description: values.description } : {}),
         ...(values.unit ? { unit: values.unit } : {}),
@@ -256,6 +261,28 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                     name="sku"
                     control={control}
                     render={({ field }) => <TextField {...field} label="SKU / Código" fullWidth />}
+                  />
+                  <Controller
+                    name="category"
+                    control={control}
+                    rules={{ required: 'Categoria é obrigatória' }}
+                    render={({ field, fieldState }) => (
+                      <TextField
+                        {...field}
+                        select
+                        label="Categoria"
+                        fullWidth
+                        required
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                      >
+                        {INVENTORY_CATEGORY_OPTIONS.map((opt) => (
+                          <MenuItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    )}
                   />
                   <Controller
                     name="description"

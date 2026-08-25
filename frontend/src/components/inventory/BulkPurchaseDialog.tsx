@@ -38,7 +38,8 @@ import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { dateOnlyToApiIso, formatDateOnlyFromApi } from '../../utils/dateOnly';
-import type { InventoryItem } from '../../types';
+import type { InventoryItem, InventoryCategory } from '../../types';
+import { INVENTORY_CATEGORY_OPTIONS } from '../../utils/inventoryCategory';
 
 interface BulkPurchaseDialogProps {
   open: boolean;
@@ -52,6 +53,7 @@ interface LineForm {
   item: InventoryItem | null;
   newName: string;
   newSku: string;
+  newCategory: string;
   newUnit: string;
   newMinQuantity: number;
   quantity: number;
@@ -125,6 +127,7 @@ const emptyLine = (): LineForm => ({
   item: null,
   newName: '',
   newSku: '',
+  newCategory: 'INSUMO',
   newUnit: 'un',
   newMinQuantity: 0,
   quantity: 1,
@@ -325,6 +328,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
           newItem: {
             name: line.newName.trim(),
             ...(line.newSku.trim() ? { sku: line.newSku.trim() } : {}),
+            ...(line.newCategory ? { category: line.newCategory as InventoryCategory } : {}),
             minQuantity: Number(line.newMinQuantity) || 0,
             unit: line.newUnit || undefined,
           },
@@ -718,6 +722,29 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
                                         InputLabelProps={MATERIAL_LABEL_PROPS}
                                         placeholder="Opcional"
                                       />
+                                    )}
+                                  />
+                                </Grid>
+                                <Grid item xs={12} sm={4}>
+                                  <Controller
+                                    name={`lines.${formIndex}.newCategory`}
+                                    control={control}
+                                    render={({ field: f }) => (
+                                      <TextField
+                                        {...f}
+                                        select
+                                        label="Categoria"
+                                        fullWidth
+                                        size="medium"
+                                        sx={MATERIAL_FIELD_SX}
+                                        InputLabelProps={MATERIAL_LABEL_PROPS}
+                                      >
+                                        {INVENTORY_CATEGORY_OPTIONS.map((opt) => (
+                                          <MenuItem key={opt.value} value={opt.value}>
+                                            {opt.label}
+                                          </MenuItem>
+                                        ))}
+                                      </TextField>
                                     )}
                                   />
                                 </Grid>

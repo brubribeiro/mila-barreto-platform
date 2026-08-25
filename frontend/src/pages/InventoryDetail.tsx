@@ -30,6 +30,7 @@ import { dayjsFromDateOnlyApi, formatDateOnlyFromApi } from '../utils/dateOnly';
 
 import { PageHeader } from '../components/PageHeader';
 import { inventoryApi, InventoryMovement } from '../api/inventory';
+import { inventoryCategoryLabel } from '../utils/inventoryCategory';
 import { InventoryFormDialog } from '../components/inventory/InventoryFormDialog';
 import { MovementDialog } from '../components/inventory/MovementDialog';
 import { usePermissions } from '../contexts/usePermissions';
@@ -180,6 +181,10 @@ export function InventoryDetail() {
             <Grid item xs={6} sm={3}>
               <Typography variant="caption" color="text.secondary">SKU</Typography>
               <Typography variant="body2">{item.sku || '—'}</Typography>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Typography variant="caption" color="text.secondary">Categoria</Typography>
+              <Typography variant="body2">{inventoryCategoryLabel(item.category)}</Typography>
             </Grid>
             <Grid item xs={6} sm={3}>
               <Typography variant="caption" color="text.secondary">Unidade</Typography>

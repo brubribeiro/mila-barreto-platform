@@ -44,5 +44,13 @@ export async function fetchViaCepDigits(
   const uf = String(body.uf ?? '').trim();
   if (!localidade && !uf) return null;
 
-  return body as ViaCepOk;
+  return {
+    cep: String(body.cep ?? ''),
+    logradouro: String(body.logradouro ?? ''),
+    complemento: String(body.complemento ?? ''),
+    unidade: body.unidade != null ? String(body.unidade) : undefined,
+    bairro: String(body.bairro ?? ''),
+    localidade,
+    uf,
+  };
 }

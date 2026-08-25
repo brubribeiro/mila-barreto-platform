@@ -306,11 +306,14 @@ export interface DocumentFile {
   equipment?: { id: string; name: string };
 }
 
+export type InventoryCategory = 'INSUMO' | 'PRODUTO';
+
 export interface InventoryItem {
   id: string;
   name: string;
   sku?: string;
   description?: string;
+  category?: InventoryCategory;
   quantity: number;
   minQuantity: number;
   unit?: string;
