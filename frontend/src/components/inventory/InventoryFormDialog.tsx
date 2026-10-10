@@ -1,7 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import {
   Alert,
-  alpha,
   Box,
   Button,
   Dialog,
@@ -10,7 +9,6 @@ import {
   Grid,
   InputAdornment,
   MenuItem,
-  Paper,
   Stack,
   TextField,
   Typography,
@@ -19,17 +17,15 @@ import {
 } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
-import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
-import WarehouseOutlinedIcon from '@mui/icons-material/WarehouseOutlined';
 import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { inventoryApi, InventoryItemPayload } from '../../api/inventory';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
+import { FormSection } from '../FormSection';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { InventoryItem } from '../../types';
-import { fontSizes } from '../../theme/fontSizes';
 
 interface InventoryFormDialogProps {
   open: boolean;
@@ -60,15 +56,6 @@ const empty: FormValues = {
 const DIALOG_MAX_WIDTH = 900;
 const DIALOG_HEIGHT_DESKTOP = 650;
 
-const FORM_CARD_SX = {
-  p: { xs: 1.5, sm: 1.75 },
-  borderRadius: 2,
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-  height: '100%',
-} as const;
-
 const unitOptions = [
   { value: 'un', label: 'Unidade (un)' },
   { value: 'ml', label: 'Mililitro (ml)' },
@@ -82,44 +69,6 @@ const unitOptions = [
   { value: 'tb', label: 'Tubo (tb)' },
   { value: 'amp', label: 'Ampola (amp)' },
 ] as const;
-
-function SectionIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
-  return (
-    <Typography
-      sx={{
-        display: 'block',
-        mb: 1.75,
-        fontSize: fontSizes.xs,
-        fontWeight: 800,
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-        color: 'text.disabled',
-      }}
-    >
-      {title}
-    </Typography>
-  );
-}
 
 function SubsectionLabel({ children }: { children: ReactNode }) {
   return (
@@ -241,8 +190,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
         >
           <Grid container spacing={2.5} alignItems="stretch">
             <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<LabelOutlinedIcon fontSize="small" />} title="Identificação" />
+              <FormSection title="Identificação" sx={{ height: '100%' }}>
                 <Stack spacing={2}>
                   <Controller
                     name="name"
@@ -273,12 +221,11 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                     )}
                   />
                 </Stack>
-              </Paper>
+              </FormSection>
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<WarehouseOutlinedIcon fontSize="small" />} title="Estoque e custo" />
+              <FormSection title="Estoque e custo" sx={{ height: '100%' }}>
                 <Stack spacing={2}>
                   <Box>
                     <SubsectionLabel>Unidade de medida</SubsectionLabel>
@@ -363,7 +310,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                       : 'O estoque inicial é zero. Após criar, registre uma entrada para adicionar quantidade.'}
                   </Alert>
                 </Stack>
-              </Paper>
+              </FormSection>
             </Grid>
 
             {mutation.isError && (
