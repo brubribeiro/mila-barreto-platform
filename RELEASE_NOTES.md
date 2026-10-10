@@ -87,6 +87,12 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Administradores podem **personificar** outro usuário ativo direto da lista (com confirmação).
 - Histórico de alterações disponível para administradores.
 
+**Despesas recorrentes**
+- Tela redesenhada no estilo Aurora: cards de resumo com **total mensal** (e projeção anual), divisão entre **fixas e variáveis**, **contas ativas** e despesas que **vencem nos próximos 7 dias**.
+- Painel **Custo por hora operacional** mostra carga horária do mês, custo fixo, base de cálculo e o valor por hora; pode ser **minimizado** e mantém o interruptor **Incluir custos variáveis**.
+- Lista em tabela com tipo, categoria, valor, lançamentos gerados, **próximo vencimento** e status; filtros por tipo e status, busca e paginação.
+- Modal de cadastro reorganizada em coluna única, com interruptor **Despesa ativa**.
+
 **Profissionais**
 - Tela redesenhada no estilo Aurora: grade de cards com **foto**, função, registro profissional e **áreas de atuação** (Toxina, Preenchimento, etc.).
 - Badge de **disponibilidade em tempo real**: Disponível, Em atendimento, Folga ou Fora do horário (com base no expediente e indisponibilidades).
