@@ -81,6 +81,12 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Data comemorativa selecionável (Dia das Mães, Black Friday, etc.).
 - Paginação na lista (8 campanhas por página) e interruptor em cada card para **ativar ou desativar** sem abrir o cadastro.
 
+**Formas de pagamento**
+- Tela redesenhada no estilo Aurora: grade de cards por forma de pagamento, com inicial colorida, **taxa** em destaque (verde quando não há taxa) e o **valor líquido** recebido a cada R$ 100.
+- Cada card mostra em quantos **lançamentos** a forma já foi usada; formas inativas aparecem esmaecidas com a etiqueta **Inativa**.
+- Clique no card para editar; ações rápidas de editar e excluir, busca, filtro de status e histórico de alterações.
+- Modal de cadastro reorganizada em seções **Identificação** e **Taxa da maquininha**, com prévia da taxa e do valor líquido.
+
 **Usuários**
 - Nova tela **Usuários** no menu Equipe: lista com busca, filtros por **grupo**, **profissional** e **status**, e ações de editar e excluir.
 - Formulário unificado para criar ou editar conta: grupo de permissão, vínculo como **profissional**, marcação **Principal** e dados de perfil quando aplicável.
