@@ -1,27 +1,19 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
   Alert,
-  Autocomplete,
   Box,
   Button,
-  ButtonGroup,
   Card,
-  Checkbox,
   Chip,
   Dialog,
   DialogActions,
   DialogContent,
   CircularProgress,
-  Divider,
-  FormControlLabel,
-  Grid,
   IconButton,
-  List,
-  ListItem,
-  ListItemText,
-  Paper,
+  MenuItem,
   Skeleton,
   Stack,
+  Switch,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -33,21 +25,25 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
-import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
-import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import dayjs from 'dayjs';
+import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
+import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import dayjs, { type Dayjs } from 'dayjs';
+import 'dayjs/locale/pt-br';
 
-import { PageHeader } from '../components/PageHeader';
+import { AuroraIcon } from '../components/AuroraIcon';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../components/DialogCloseButton';
+import { LabeledField } from '../components/LabeledField';
 import { availabilityApi } from '../api/availability';
 import { usersApi } from '../api/users';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
-import type { WorkingHours } from '../types';
+import { fontSizes } from '../theme/fontSizes';
+import type { Unavailability, WorkingHours } from '../types';
 
 const DAYS = [
   'Domingo',
@@ -59,6 +55,8 @@ const DAYS = [
   'Sábado',
 ];
 
+const DAY_ABBR = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
 
 type DayScheduleEdit = {
@@ -66,6 +64,8 @@ type DayScheduleEdit = {
   startTime: string;
   endTime: string;
 };
+
+type Professional = { id: string; name: string };
 
 const DEFAULT_DAY: DayScheduleEdit = { works: false, startTime: '08:00', endTime: '18:00' };
 
@@ -77,18 +77,16 @@ const UNAVAIL_REASON_SUGGESTIONS = [
   'Capacitação',
 ] as const;
 
-const UNAVAIL_PERIOD_FIELD_SX = {
-  flex: 1,
-  minWidth: 0,
-  width: '100%',
-} as const;
+const WEEK_PRESETS = [
+  { label: 'Seg–Sex', days: [1, 2, 3, 4, 5] },
+  { label: 'Seg–Sáb', days: [1, 2, 3, 4, 5, 6] },
+  { label: 'Nenhum dia', days: [] },
+];
+
+const PROFESSIONAL_COLORS = ['#15998B', '#5BA8DE', '#9B7BD4', '#E0915B', '#D46B8A', '#4FB3A8'];
 
 const UNAVAIL_DATETIME_FIELD_SX = {
-  ...UNAVAIL_PERIOD_FIELD_SX,
   '& .MuiInputBase-input': {
-    textAlign: 'left',
-  },
-  '& input[type="datetime-local"]': {
     textAlign: 'left',
   },
   '& input[type="datetime-local"]::-webkit-datetime-edit': {
@@ -99,46 +97,75 @@ const UNAVAIL_DATETIME_FIELD_SX = {
   },
 } as const;
 
-const UNAVAIL_DIALOG_MAX_WIDTH = 760;
-const UNAVAIL_DIALOG_HEIGHT = 760;
+const DIALOG_MAX_WIDTH = 640;
 
-const UNAVAIL_FORM_CARD_SX = {
-  p: { xs: 1.5, sm: 1.75 },
-  borderRadius: 2,
+const CARD_HEADER_SX = {
+  px: { xs: 2, sm: 2.75 },
+  py: 2.25,
+  borderBottom: 1,
   borderColor: 'divider',
-  bgcolor: 'background.paper',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
 } as const;
 
-function UnavailSectionIcon({ children }: { children: ReactNode }) {
+const CARD_ROW_SX = {
+  px: { xs: 2, sm: 2.75 },
+  borderBottom: 1,
+  borderColor: 'grey.100',
+  '&:last-of-type': { borderBottom: 0 },
+} as const;
+
+const SMALL_CHIP_SX = { height: 21, fontSize: fontSizes['2xs'], fontWeight: 700 } as const;
+
+const ROW_ACTION_SX = {
+  width: 30,
+  height: 30,
+  flexShrink: 0,
+  borderRadius: '9px',
+  border: 1,
+  borderColor: 'divider',
+  color: 'text.secondary',
+} as const;
+
+const EMPTY_HOURS: WorkingHours[] = [];
+
+function CardTitle({ title }: { title: string }) {
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
+    <Typography component="h3" sx={{ fontSize: fontSizes.xl, fontWeight: 700, lineHeight: 1.3 }}>
+      {title}
+    </Typography>
   );
 }
 
-function UnavailSectionTitle({ icon, title }: { icon: ReactNode; title: string }) {
+function PeriodNotice({ tone, visible, children }: { tone: 'primary' | 'error'; visible: boolean; children: ReactNode }) {
+  const Icon = tone === 'error' ? ReportProblemOutlinedIcon : EventAvailableOutlinedIcon;
   return (
-    <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 1.5 }}>
-      <UnavailSectionIcon>{icon}</UnavailSectionIcon>
-      <Typography variant="subtitle1" fontWeight={600} letterSpacing="-0.01em">
-        {title}
+    <Stack
+      direction="row"
+      alignItems="center"
+      spacing={1.375}
+      sx={{
+        px: 1.875,
+        py: 1.625,
+        borderRadius: '12px',
+        border: 1,
+        bgcolor: (t) => alpha(t.palette[tone].main, 0.08),
+        borderColor: (t) => alpha(t.palette[tone].main, 0.2),
+        visibility: visible ? 'visible' : 'hidden',
+      }}
+    >
+      <Icon sx={{ fontSize: 18, color: `${tone}.main`, flexShrink: 0 }} />
+      <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 500, lineHeight: 1.4 }}>
+        {children}
       </Typography>
     </Stack>
   );
+}
+
+function initialsOf(name: string): string {
+  // Ignora títulos como "Dra." / "Enf." ao montar as iniciais.
+  const words = name.split(/\s+/).filter((w) => w && !w.endsWith('.'));
+  if (words.length === 0) return '?';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
 }
 
 function buildWeekFromRemote(remote: WorkingHours[]): Record<number, DayScheduleEdit> {
@@ -150,6 +177,42 @@ function buildWeekFromRemote(remote: WorkingHours[]): Record<number, DaySchedule
       : { ...DEFAULT_DAY };
   }
   return result;
+}
+
+function toMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function formatMinutes(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
+}
+
+/** Resumo dos dias abertos (ex.: "Seg – Sex", "Seg, Qua, Sex"). */
+function summarizeDays(hours: WorkingHours[]): string {
+  const open = WEEK_ORDER.filter((d) => hours.some((h) => h.dayOfWeek === d));
+  if (open.length === 0) return 'Sem horário definido';
+  const idx = open.map((d) => WEEK_ORDER.indexOf(d));
+  const contiguous = idx.every((v, i) => i === 0 || v === idx[i - 1] + 1);
+  if (contiguous && open.length >= 3) {
+    return `${DAY_ABBR[open[0]]} – ${DAY_ABBR[open[open.length - 1]]}`;
+  }
+  return open.map((d) => DAY_ABBR[d]).join(', ');
+}
+
+/** Faixa de horário da semana e uma nota (carga semanal ou "varia por dia"). */
+function summarizeHours(hours: WorkingHours[]): { range: string; note: string } | null {
+  if (hours.length === 0) return null;
+  const starts = hours.map((h) => h.startTime).sort();
+  const ends = hours.map((h) => h.endTime).sort();
+  const uniform = starts[0] === starts[starts.length - 1] && ends[0] === ends[ends.length - 1];
+  const weekly = hours.reduce((sum, h) => sum + toMinutes(h.endTime) - toMinutes(h.startTime), 0);
+  return {
+    range: `${starts[0]} – ${ends[ends.length - 1]}`,
+    note: uniform ? `${formatMinutes(weekly)} por semana` : 'varia por dia',
+  };
 }
 
 function isFullDayRange(startAt: string, endAt: string): boolean {
@@ -173,6 +236,22 @@ function formatUnavailabilityPeriod(startAt: string, endAt: string): string {
   return `${start.format('DD/MM/YYYY HH:mm')} → ${end.format('DD/MM/YYYY HH:mm')}`;
 }
 
+/** Formato curto da lista de bloqueios (ex.: "25 – 27 jun", "19 jun · 12:00 – 14:00"). */
+function formatBlockPeriod(startAt: string, endAt: string): string {
+  const start = dayjs(startAt).locale('pt-br');
+  const end = dayjs(endAt).locale('pt-br');
+  const day = (d: Dayjs) => d.format(d.isSame(dayjs(), 'year') ? 'D MMM' : 'D MMM YYYY');
+  if (isFullDayRange(startAt, endAt)) {
+    if (start.isSame(end, 'day')) return day(start);
+    if (start.isSame(end, 'month')) return `${start.format('D')} – ${day(end)}`;
+    return `${day(start)} – ${day(end)}`;
+  }
+  if (start.isSame(end, 'day')) {
+    return `${day(start)} · ${start.format('HH:mm')} – ${end.format('HH:mm')}`;
+  }
+  return `${day(start)} ${start.format('HH:mm')} – ${day(end)} ${end.format('HH:mm')}`;
+}
+
 export function Availability() {
   const queryClient = useQueryClient();
   const toast = useAppToast();
@@ -180,32 +259,57 @@ export function Availability() {
   const { has } = usePermissions();
   const canEditOthers = has('availability:edit');
 
-  const [selectedUserId, setSelectedUserId] = useState<string>(me?.id ?? '');
+  const [editing, setEditing] = useState<Professional | null>(null);
   const [unavailDialogOpen, setUnavailDialogOpen] = useState(false);
 
-  const { data: users = [] } = useQuery({
+  const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ['users', 'appointment-providers'],
     queryFn: () => usersApi.listAppointmentProviders(),
     enabled: canEditOthers,
   });
 
-  const userId = selectedUserId || me?.id || '';
+  // Quem pode editar outros vê toda a equipe; os demais só a própria agenda.
+  const professionals = useMemo<Professional[]>(() => {
+    const list: Professional[] = canEditOthers ? users.map((u) => ({ id: u.id, name: u.name })) : [];
+    if (me && !list.some((p) => p.id === me.id)) list.unshift({ id: me.id, name: me.name });
+    return list;
+  }, [canEditOthers, users, me]);
 
-  const { data: workingHours = [], isLoading: hoursLoading } = useQuery({
-    queryKey: ['working-hours', userId],
-    queryFn: () => availabilityApi.listWorkingHours(userId),
-    enabled: !!userId,
+  const colorOf = useMemo(() => {
+    const map = new Map(professionals.map((p, i) => [p.id, PROFESSIONAL_COLORS[i % PROFESSIONAL_COLORS.length]]));
+    return (id: string) => map.get(id) ?? PROFESSIONAL_COLORS[0];
+  }, [professionals]);
+
+  const hoursQueries = useQueries({
+    queries: professionals.map((p) => ({
+      queryKey: ['working-hours', p.id],
+      queryFn: () => availabilityApi.listWorkingHours(p.id),
+    })),
   });
 
-  const { data: unavailability = [], isLoading: unavailLoading } = useQuery({
-    queryKey: ['unavailability', userId],
-    queryFn: () => availabilityApi.listUnavailability(userId),
-    enabled: !!userId,
+  const unavailQueries = useQueries({
+    queries: professionals.map((p) => ({
+      queryKey: ['unavailability', p.id],
+      queryFn: () => availabilityApi.listUnavailability(p.id),
+    })),
   });
+
+  const unavailLoading = (canEditOthers && usersLoading) || unavailQueries.some((q) => q.isLoading);
+
+  const blocks = useMemo(
+    () =>
+      professionals
+        .flatMap((p, i) =>
+          (unavailQueries[i]?.data ?? []).map((u: Unavailability) => ({ ...u, professional: p })),
+        )
+        .sort((a, b) => a.startAt.localeCompare(b.startAt)),
+    [professionals, unavailQueries],
+  );
 
   const removeUnavailMutation = useMutation({
-    mutationFn: (id: string) => availabilityApi.removeUnavailability(userId, id),
-    onSuccess: () => {
+    mutationFn: ({ userId, id }: { userId: string; id: string }) =>
+      availabilityApi.removeUnavailability(userId, id),
+    onSuccess: (_, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ['unavailability', userId] });
       queryClient.invalidateQueries({ queryKey: ['unavailability-range'] });
       queryClient.invalidateQueries({ queryKey: ['available-professionals'] });
@@ -216,20 +320,229 @@ export function Availability() {
     },
   });
 
+  return (
+    <Box sx={{ maxWidth: 1320, mx: 'auto' }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: '1.25fr 1fr' },
+          gap: 2.25,
+          alignItems: 'start',
+        }}
+      >
+        {/* Disponibilidade da equipe */}
+        <Card sx={{ overflow: 'hidden' }}>
+          <Box sx={CARD_HEADER_SX}>
+            <CardTitle title={canEditOthers ? 'Disponibilidade da equipe' : 'Minha disponibilidade'} />
+          </Box>
+
+          {canEditOthers && usersLoading ? (
+            <Stack spacing={1} sx={{ p: 2 }}>
+              {[1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={48} />)}
+            </Stack>
+          ) : (
+            professionals.map((p, i) => {
+              const query = hoursQueries[i];
+              const hours = query?.data ?? EMPTY_HOURS;
+              const summary = summarizeHours(hours);
+              return (
+                <Stack
+                  key={p.id}
+                  direction="row"
+                  alignItems="center"
+                  spacing={1.75}
+                  sx={{ ...CARD_ROW_SX, py: 1.875 }}
+                >
+                  <Box
+                    sx={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: '12px',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: fontSizes.sm,
+                      fontWeight: 700,
+                      color: '#fff',
+                      bgcolor: colorOf(p.id),
+                    }}
+                  >
+                    {initialsOf(p.name)}
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: 0, lineHeight: 1.3 }}>
+                    <Typography noWrap sx={{ fontSize: fontSizes.md, fontWeight: 700, lineHeight: 'inherit' }}>
+                      {p.name}
+                    </Typography>
+                    <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.secondary', lineHeight: 'inherit' }}>
+                      {query?.isLoading ? <Skeleton width={90} /> : summarizeDays(hours)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ textAlign: 'right', lineHeight: 1.3, flexShrink: 0 }}>
+                    {query?.isLoading ? (
+                      <Skeleton width={90} />
+                    ) : summary ? (
+                      <>
+                        <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 700, lineHeight: 'inherit' }}>
+                          {summary.range}
+                        </Typography>
+                        <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', lineHeight: 'inherit' }}>
+                          {summary.note}
+                        </Typography>
+                      </>
+                    ) : (
+                      <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 600, color: 'text.disabled' }}>
+                        —
+                      </Typography>
+                    )}
+                  </Box>
+                  <Tooltip title="Editar horários">
+                    <IconButton onClick={() => setEditing(p)} sx={ROW_ACTION_SX} aria-label={`Editar horários de ${p.name}`}>
+                      <EditIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+              );
+            })
+          )}
+        </Card>
+
+        {/* Bloqueios de agenda */}
+        <Card sx={{ overflow: 'hidden' }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1.5} sx={CARD_HEADER_SX}>
+            <CardTitle title="Bloqueios de agenda" />
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setUnavailDialogOpen(true)}
+              sx={{
+                flexShrink: 0,
+                minHeight: 36,
+                height: 36,
+                px: 1.75,
+                my: -0.5,
+                borderRadius: '10px',
+                fontSize: fontSizes.sm,
+                fontWeight: 700,
+              }}
+            >
+              Bloquear
+            </Button>
+          </Stack>
+
+          {unavailLoading ? (
+            <Stack spacing={1} sx={{ p: 2 }}>
+              {[1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={48} />)}
+            </Stack>
+          ) : blocks.length === 0 ? (
+            <Box sx={{ px: 3, py: 5, textAlign: 'center' }}>
+              <EventBusyOutlinedIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
+              <Typography sx={{ fontWeight: 700, fontSize: fontSizes.md }}>Nenhum bloqueio cadastrado</Typography>
+              <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', mt: 0.5 }}>
+                Registre folgas, férias e compromissos para fechar a agenda.
+              </Typography>
+            </Box>
+          ) : (
+            blocks.map((b) => {
+              const fullDay = isFullDayRange(b.startAt, b.endAt);
+              return (
+                <Stack
+                  key={b.id}
+                  direction="row"
+                  alignItems="center"
+                  spacing={1.625}
+                  sx={{ ...CARD_ROW_SX, py: 1.75 }}
+                >
+                  <Box
+                    sx={{
+                      width: 3,
+                      height: 38,
+                      borderRadius: '3px',
+                      flexShrink: 0,
+                      bgcolor: colorOf(b.professional.id),
+                    }}
+                  />
+                  <Box sx={{ flex: 1, minWidth: 0, lineHeight: 1.3 }}>
+                    <Typography noWrap sx={{ fontSize: fontSizes.md, fontWeight: 700, lineHeight: 'inherit' }}>
+                      {b.reason || 'Sem motivo informado'}
+                    </Typography>
+                    <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.secondary', lineHeight: 'inherit' }}>
+                      {b.professional.name} · {formatBlockPeriod(b.startAt, b.endAt)}
+                    </Typography>
+                  </Box>
+                  <Chip
+                    size="small"
+                    label={fullDay ? 'Dia inteiro' : 'Por horário'}
+                    sx={
+                      fullDay
+                        ? { ...SMALL_CHIP_SX, bgcolor: alpha('#5BA8DE', 0.16), color: '#2F6FA0' }
+                        : { ...SMALL_CHIP_SX, bgcolor: 'grey.100', color: 'text.secondary' }
+                    }
+                  />
+                  <Tooltip title="Remover">
+                    <IconButton
+                      onClick={() => removeUnavailMutation.mutate({ userId: b.professional.id, id: b.id })}
+                      sx={{ ...ROW_ACTION_SX, '&:hover': { color: 'error.main', borderColor: 'error.light' } }}
+                      aria-label="Remover bloqueio"
+                    >
+                      <DeleteIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+              );
+            })
+          )}
+        </Card>
+      </Box>
+
+      <WorkingHoursDialog professional={editing} onClose={() => setEditing(null)} />
+
+      <UnavailabilityDialog
+        open={unavailDialogOpen}
+        onClose={() => setUnavailDialogOpen(false)}
+        professionals={professionals}
+        defaultUserId={me?.id ?? professionals[0]?.id ?? ''}
+        canChooseProfessional={canEditOthers}
+      />
+    </Box>
+  );
+}
+
+function WorkingHoursDialog({
+  professional,
+  onClose,
+}: {
+  professional: Professional | null;
+  onClose: () => void;
+}) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const queryClient = useQueryClient();
+  const toast = useAppToast();
+  const open = !!professional;
+  const userId = professional?.id ?? '';
+
+  const { data: workingHours, isLoading: hoursLoading } = useQuery({
+    queryKey: ['working-hours', userId],
+    queryFn: () => availabilityApi.listWorkingHours(userId),
+    enabled: !!userId,
+  });
+
   const [weekSchedule, setWeekSchedule] = useState<Record<number, DayScheduleEdit>>(() =>
     buildWeekFromRemote([]),
   );
 
   useEffect(() => {
-    setWeekSchedule(buildWeekFromRemote(workingHours));
-  }, [workingHours, userId]);
+    if (open) setWeekSchedule(buildWeekFromRemote(workingHours ?? EMPTY_HOURS));
+  }, [open, workingHours]);
 
   const saveWeekMutation = useMutation({
     mutationFn: async () => {
+      const remoteHours = workingHours ?? EMPTY_HOURS;
       const ops: Promise<unknown>[] = [];
       for (let day = 0; day < 7; day++) {
         const state = weekSchedule[day] ?? DEFAULT_DAY;
-        const remote = workingHours.find((w) => w.dayOfWeek === day);
+        const remote = remoteHours.find((w) => w.dayOfWeek === day);
         if (state.works) {
           if (
             !remote ||
@@ -253,11 +566,17 @@ export function Availability() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['working-hours', userId] });
       toast.success('Horários salvos.');
+      onClose();
     },
     onError: (err) => {
       toast.error(getApiErrorMessage(err, 'Não foi possível salvar os horários.'));
     },
   });
+
+  useEffect(() => {
+    if (open) saveWeekMutation.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const updateDay = (day: number, patch: Partial<DayScheduleEdit>) => {
     setWeekSchedule((prev) => ({
@@ -280,292 +599,218 @@ export function Availability() {
     });
   };
 
-  const openDaysCount = useMemo(
-    () => WEEK_ORDER.filter((day) => weekSchedule[day]?.works).length,
-    [weekSchedule],
-  );
+  const openDaysCount = WEEK_ORDER.filter((day) => weekSchedule[day]?.works).length;
 
-  const selectedUser = useMemo(
-    () => users.find((u) => u.id === userId) ?? null,
-    [users, userId],
-  );
-
-  const weekHasInvalidHours = useMemo(
-    () =>
-      WEEK_ORDER.some((day) => {
-        const s = weekSchedule[day];
-        return s?.works && s.startTime >= s.endTime;
-      }),
-    [weekSchedule],
-  );
+  const weekHasInvalidHours = WEEK_ORDER.some((day) => {
+    const s = weekSchedule[day];
+    return s?.works && s.startTime >= s.endTime;
+  });
 
   return (
-    <Box>
-      <PageHeader
-        title="Horários e indisponibilidade"
-        subtitle="Defina horário semanal de atendimento e bloqueios pontuais (folga, férias)"
-        action={
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setUnavailDialogOpen(true)}
-          >
-            Nova indisponibilidade
-          </Button>
-        }
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth={false}
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{
+        sx: {
+          ...dialogPaperSx(isMobile),
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          ...(isMobile
+            ? { height: '100%', maxHeight: '100dvh' }
+            : { maxWidth: DIALOG_MAX_WIDTH, maxHeight: '94dvh' }),
+        },
+      }}
+    >
+      <DialogHeader
+        onClose={onClose}
+        isMobile={isMobile}
+        title="Horário semanal"
+        subtitle={professional ? `Expediente de ${professional.name}` : undefined}
+        icon={<AuroraIcon name="clock" size={20} />}
       />
+      <DialogContent
+        sx={{
+          px: { xs: 2, sm: 3 },
+          pb: { xs: 2, sm: 2.5 },
+          flex: 1,
+          minHeight: 0,
+          overflow: 'auto',
+          bgcolor: 'background.paper',
+          '&.MuiDialogContent-root': { pt: { xs: 2.75, sm: 3 } },
+        }}
+      >
+        <Stack spacing={2}>
+          <LabeledField label="Atalhos">
+            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+              {WEEK_PRESETS.map((preset) => (
+                <Chip
+                  key={preset.label}
+                  label={preset.label}
+                  size="small"
+                  variant="outlined"
+                  clickable
+                  onClick={() => applyPreset(preset.days)}
+                  sx={{ fontWeight: 600 }}
+                />
+              ))}
+            </Stack>
+          </LabeledField>
 
-      <Card sx={{ mb: 3, p: { xs: 1.5, sm: 2 } }}>
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={2}
-          alignItems={{ sm: 'center' }}
-          justifyContent="space-between"
-        >
-          {canEditOthers ? (
-            <Autocomplete
-              options={users}
-              getOptionLabel={(u) => u.name}
-              value={selectedUser}
-              onChange={(_, val) => setSelectedUserId(val?.id ?? me?.id ?? '')}
-              renderInput={(params) => (
-                <TextField {...params} label="Profissional" size="small" />
-              )}
-              sx={{ width: { xs: '100%', sm: 320 } }}
-            />
-          ) : (
-            <Typography variant="body2" color="text.secondary" fontWeight={500}>
-              Seus horários de atendimento
-            </Typography>
-          )}
-          <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0 }}>
-            {openDaysCount} dia{openDaysCount === 1 ? '' : 's'} com atendimento ·{' '}
-            {unavailability.length}{' '}
-            {unavailability.length === 1 ? 'bloqueio' : 'bloqueios'}
-          </Typography>
-        </Stack>
-      </Card>
-
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={7}>
-          <Card sx={{ p: { xs: 1.5, sm: 2 }, position: 'relative' }}>
-              {hoursLoading && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    bgcolor: 'rgba(255,255,255,0.7)',
-                    zIndex: 5,
-                    borderRadius: 'inherit',
-                  }}
-                >
-                  <CircularProgress size={32} />
-                </Box>
-              )}
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                justifyContent="space-between"
-                alignItems={{ sm: 'center' }}
-                spacing={1.5}
-                sx={{ mb: 2, px: 0.5 }}
-              >
-                <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                  Horário semanal — marque os dias abertos e o expediente
-                </Typography>
-                <ButtonGroup size="small" variant="outlined">
-                  <Button onClick={() => applyPreset([1, 2, 3, 4, 5])}>Seg–Sex</Button>
-                  <Button onClick={() => applyPreset([1, 2, 3, 4, 5, 6])}>Seg–Sáb</Button>
-                  <Button onClick={() => applyPreset([])}>Nenhum dia</Button>
-                </ButtonGroup>
-              </Stack>
-
+          <Box
+            sx={{
+              position: 'relative',
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: '14px',
+              overflow: 'hidden',
+            }}
+          >
+            {hoursLoading && (
               <Box
                 sx={{
-                  display: { xs: 'none', sm: 'grid' },
-                  gridTemplateColumns: 'minmax(140px, 1.2fr) 72px 120px 120px',
-                  gap: 1,
-                  px: 1,
-                  pb: 1,
-                  color: 'text.secondary',
-                  typography: 'caption',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: (t) => alpha(t.palette.background.paper, 0.7),
+                  zIndex: 5,
                 }}
               >
-                <span>Dia</span>
-                <span>Aberto</span>
-                <span>Das</span>
-                <span>Até</span>
+                <CircularProgress size={32} />
               </Box>
-
-              <Stack divider={<Divider />} spacing={0}>
-                {WEEK_ORDER.map((day) => {
-                  const state = weekSchedule[day] ?? DEFAULT_DAY;
-                  const invalidHours = state.works && state.startTime >= state.endTime;
-                  return (
-                    <Box
-                      key={day}
+            )}
+            {WEEK_ORDER.map((day) => {
+              const state = weekSchedule[day] ?? DEFAULT_DAY;
+              const invalidHours = state.works && state.startTime >= state.endTime;
+              return (
+                <Stack
+                  key={day}
+                  direction="row"
+                  alignItems="center"
+                  flexWrap={{ xs: 'wrap', sm: 'nowrap' }}
+                  useFlexGap
+                  sx={{
+                    ...CARD_ROW_SX,
+                    px: { xs: 1.5, sm: 2 },
+                    py: 1.25,
+                    columnGap: 1.5,
+                    rowGap: 1,
+                    bgcolor: state.works ? 'transparent' : 'grey.50',
+                  }}
+                >
+                  <Box sx={{ flex: 1, minWidth: 72, lineHeight: 1.3 }}>
+                    <Typography
                       sx={{
-                        display: 'grid',
-                        gridTemplateColumns: {
-                          xs: '1fr',
-                          sm: 'minmax(140px, 1.2fr) 72px 120px 120px',
-                        },
-                        gap: { xs: 1, sm: 1.5 },
-                        alignItems: 'center',
-                        py: 1.25,
-                        px: 1,
-                        bgcolor: state.works ? 'transparent' : 'action.hover',
-                        borderRadius: 1,
+                        fontSize: fontSizes.md,
+                        fontWeight: 700,
+                        lineHeight: 'inherit',
+                        color: state.works ? 'text.primary' : 'text.secondary',
                       }}
                     >
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <Typography fontWeight={500}>{DAYS[day]}</Typography>
-                        {!state.works && (
-                          <Chip label="Fechado" size="small" variant="outlined" sx={{ display: { sm: 'none' } }} />
-                        )}
-                      </Stack>
-
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={state.works}
-                            onChange={(e) => updateDay(day, { works: e.target.checked })}
-                          />
-                        }
-                        label={state.works ? 'Sim' : 'Não'}
-                        sx={{ m: 0 }}
-                      />
-
-                      {state.works ? (
-                        <>
-                          <TextField
-                            size="small"
-                            type="time"
-                            label="Das"
-                            value={state.startTime}
-                            onChange={(e) => updateDay(day, { startTime: e.target.value })}
-                            InputLabelProps={{ shrink: true }}
-                            error={invalidHours}
-                          />
-                          <TextField
-                            size="small"
-                            type="time"
-                            label="Até"
-                            value={state.endTime}
-                            onChange={(e) => updateDay(day, { endTime: e.target.value })}
-                            InputLabelProps={{ shrink: true }}
-                            error={invalidHours}
-                          />
-                        </>
-                      ) : (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ gridColumn: { sm: 'span 2' }, display: { xs: 'none', sm: 'block' } }}
-                        >
-                          Sem atendimento
-                        </Typography>
-                      )}
-                    </Box>
-                  );
-                })}
-              </Stack>
-
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }} sx={{ mt: 2 }}>
-                <Button
-                  variant="contained"
-                  disabled={saveWeekMutation.isPending || weekHasInvalidHours}
-                  onClick={() => saveWeekMutation.mutate()}
-                >
-                  {saveWeekMutation.isPending ? 'Salvando...' : 'Salvar horário semanal'}
-                </Button>
-                <Typography variant="body2" color="text.secondary">
-                  {openDaysCount} dia{openDaysCount === 1 ? '' : 's'} com atendimento
-                </Typography>
-              </Stack>
-
-              {weekHasInvalidHours && (
-                <Alert severity="warning" sx={{ mt: 2 }}>
-                  O horário de início deve ser anterior ao de término em cada dia aberto.
-                </Alert>
-              )}
-              {saveWeekMutation.isError && (
-                <Alert severity="error" sx={{ mt: 2 }}>
-                  {(saveWeekMutation.error as any)?.response?.data?.message ??
-                    'Erro ao salvar horário semanal'}
-                </Alert>
-              )}
-              <Alert severity="info" sx={{ mt: 2 }}>
-                Use os atalhos <strong>Seg–Sex</strong> ou <strong>Seg–Sáb</strong> e ajuste os horários.
-                Dias desmarcados ficam fechados para agendamento.
-              </Alert>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={5}>
-          <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                fontWeight={500}
-                sx={{ mb: 2, px: 0.5 }}
-              >
-                Indisponibilidades cadastradas
-              </Typography>
-
-              {unavailLoading ? (
-                <Stack spacing={1} py={1}>
-                  {[1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={48} />)}
-                </Stack>
-              ) : unavailability.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" textAlign="center" py={3}>
-                  Nenhuma indisponibilidade cadastrada
-                </Typography>
-              ) : (
-                <List dense disablePadding>
-                  {unavailability.map((u) => (
-                    <ListItem
-                      key={u.id}
-                      sx={{ borderBottom: '1px solid', borderColor: 'divider', py: 1 }}
-                      secondaryAction={
-                        <Tooltip title="Remover">
-                          <IconButton
-                            size="small"
-                            onClick={() => removeUnavailMutation.mutate(u.id)}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      }
+                      {DAYS[day]}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: fontSizes.xs,
+                        lineHeight: 'inherit',
+                        color: invalidHours ? 'error.main' : 'text.secondary',
+                      }}
                     >
-                      <ListItemText
-                        primary={
-                          <Typography variant="body2" fontWeight={500}>
-                            {formatUnavailabilityPeriod(u.startAt, u.endAt)}
-                          </Typography>
-                        }
-                        secondary={u.reason ?? 'Sem motivo informado'}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-          </Card>
-        </Grid>
-      </Grid>
+                      {!state.works
+                        ? 'Sem atendimento'
+                        : invalidHours
+                          ? 'Início deve ser antes do término'
+                          : `${formatMinutes(toMinutes(state.endTime) - toMinutes(state.startTime))} de atendimento`}
+                    </Typography>
+                  </Box>
+                  <Switch
+                    size="small"
+                    checked={state.works}
+                    onChange={(e) => updateDay(day, { works: e.target.checked })}
+                    inputProps={{ 'aria-label': `Atende ${DAYS[day].toLowerCase()}` }}
+                  />
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={0.75}
+                    sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '0 1 272px' }, minWidth: { sm: 210 } }}
+                  >
+                    {state.works ? (
+                      <>
+                        <TextField
+                          type="time"
+                          value={state.startTime}
+                          onChange={(e) => updateDay(day, { startTime: e.target.value })}
+                          inputProps={{ 'aria-label': `${DAYS[day]} das` }}
+                          error={invalidHours}
+                          fullWidth
+                        />
+                        <Typography sx={{ fontSize: fontSizes.sm, color: 'text.disabled' }}>–</Typography>
+                        <TextField
+                          type="time"
+                          value={state.endTime}
+                          onChange={(e) => updateDay(day, { endTime: e.target.value })}
+                          inputProps={{ 'aria-label': `${DAYS[day]} até` }}
+                          error={invalidHours}
+                          fullWidth
+                        />
+                      </>
+                    ) : (
+                      <Typography
+                        sx={{
+                          display: { xs: 'none', sm: 'block' },
+                          width: '100%',
+                          textAlign: 'center',
+                          fontSize: fontSizes.sm,
+                          fontWeight: 600,
+                          color: 'text.disabled',
+                        }}
+                      >
+                        Fechado
+                      </Typography>
+                    )}
+                  </Stack>
+                </Stack>
+              );
+            })}
+          </Box>
 
-      <UnavailabilityDialog
-        open={unavailDialogOpen}
-        onClose={() => setUnavailDialogOpen(false)}
-        userId={userId}
-        professionalName={canEditOthers ? selectedUser?.name : undefined}
-      />
-    </Box>
+          <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
+            {openDaysCount} {openDaysCount === 1 ? 'dia' : 'dias'} com atendimento · dias desligados ficam
+            fechados para agendamento.
+          </Typography>
+
+          {weekHasInvalidHours && (
+            <Alert severity="warning">
+              O horário de início deve ser anterior ao de término em cada dia aberto.
+            </Alert>
+          )}
+          {saveWeekMutation.isError && (
+            <Alert severity="error" variant="outlined">
+              {(saveWeekMutation.error as { response?: { data?: { message?: string } } })?.response?.data
+                ?.message ?? 'Erro ao salvar horário semanal'}
+            </Alert>
+          )}
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
+        <Button onClick={onClose} type="button" disabled={saveWeekMutation.isPending}>
+          Cancelar
+        </Button>
+        <Button
+          variant="contained"
+          disabled={saveWeekMutation.isPending || weekHasInvalidHours || hoursLoading}
+          onClick={() => saveWeekMutation.mutate()}
+        >
+          {saveWeekMutation.isPending ? 'Salvando...' : 'Salvar horário semanal'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 
@@ -585,13 +830,15 @@ function nextWeekdayRange(weekdayStart: number, weekdayEnd: number) {
 function UnavailabilityDialog({
   open,
   onClose,
-  userId,
-  professionalName,
+  professionals,
+  defaultUserId,
+  canChooseProfessional,
 }: {
   open: boolean;
   onClose: () => void;
-  userId: string;
-  professionalName?: string;
+  professionals: Professional[];
+  defaultUserId: string;
+  canChooseProfessional: boolean;
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -603,16 +850,20 @@ function UnavailabilityDialog({
   const [startDate, setStartDate] = useState(dayjs().format('YYYY-MM-DD'));
   const [endDate, setEndDate] = useState(dayjs().format('YYYY-MM-DD'));
   const [reason, setReason] = useState('');
+  const [userId, setUserId] = useState(defaultUserId);
+  const professionalName = professionals.find((p) => p.id === userId)?.name;
 
   useEffect(() => {
     if (!open) return;
     const now = dayjs();
+    setUserId(defaultUserId);
     setAllDay(false);
     setStartAt(now.format('YYYY-MM-DDTHH:mm'));
     setEndAt(now.add(1, 'hour').format('YYYY-MM-DDTHH:mm'));
     setStartDate(now.format('YYYY-MM-DD'));
     setEndDate(now.format('YYYY-MM-DD'));
     setReason('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const dateRangeInvalid = useMemo(
@@ -643,21 +894,11 @@ function UnavailabilityDialog({
 
   const formInvalid = dateRangeInvalid || datetimeRangeInvalid;
 
-  const periodHelperMessage = useMemo(() => {
-    if (dateRangeInvalid) {
-      return { text: 'A data final deve ser igual ou posterior à inicial', color: 'error.main' as const };
-    }
-    if (datetimeRangeInvalid) {
-      return { text: 'O término deve ser posterior ao início', color: 'error.main' as const };
-    }
-    if (allDay) {
-      return {
-        text: 'Use a mesma data nos dois campos para bloquear um único dia',
-        color: 'text.secondary' as const,
-      };
-    }
-    return { text: '\u00A0', color: 'text.secondary' as const };
-  }, [allDay, dateRangeInvalid, datetimeRangeInvalid]);
+  const periodError = dateRangeInvalid
+    ? 'A data final deve ser igual ou posterior à inicial'
+    : datetimeRangeInvalid
+      ? 'O término deve ser posterior ao início'
+      : null;
 
   const switchMode = (nextAllDay: boolean) => {
     if (nextAllDay === allDay) return;
@@ -706,10 +947,64 @@ function UnavailabilityDialog({
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!formInvalid && !mutation.isPending) {
+    if (!formInvalid && !!userId && !mutation.isPending) {
       mutation.mutate();
     }
   };
+
+  const presets = allDay
+    ? [
+        {
+          label: 'Hoje',
+          onClick: () => {
+            const d = dayjs().format('YYYY-MM-DD');
+            setStartDate(d);
+            setEndDate(d);
+          },
+        },
+        {
+          label: 'Amanhã',
+          onClick: () => {
+            const d = dayjs().add(1, 'day').format('YYYY-MM-DD');
+            setStartDate(d);
+            setEndDate(d);
+          },
+        },
+        {
+          label: 'Seg–Sex (próx.)',
+          onClick: () => {
+            const range = nextWeekdayRange(1, 5);
+            setStartDate(range.start);
+            setEndDate(range.end);
+          },
+        },
+      ]
+    : [
+        {
+          label: 'Próxima hora',
+          onClick: () => {
+            const now = dayjs();
+            setStartAt(now.format('YYYY-MM-DDTHH:mm'));
+            setEndAt(now.add(1, 'hour').format('YYYY-MM-DDTHH:mm'));
+          },
+        },
+        {
+          label: 'Manhã (hoje)',
+          onClick: () => {
+            const start = dayjs().hour(8).minute(0).second(0);
+            setStartAt(start.format('YYYY-MM-DDTHH:mm'));
+            setEndAt(start.hour(12).format('YYYY-MM-DDTHH:mm'));
+          },
+        },
+        {
+          label: 'Tarde (hoje)',
+          onClick: () => {
+            const start = dayjs().hour(13).minute(0).second(0);
+            setStartAt(start.format('YYYY-MM-DDTHH:mm'));
+            setEndAt(start.hour(18).format('YYYY-MM-DDTHH:mm'));
+          },
+        },
+      ];
 
   return (
     <Dialog
@@ -726,30 +1021,19 @@ function UnavailabilityDialog({
           width: '100%',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
-            : {
-                maxWidth: UNAVAIL_DIALOG_MAX_WIDTH,
-                height: UNAVAIL_DIALOG_HEIGHT,
-                maxHeight: '94dvh',
-                overflow: 'hidden',
-              }),
+            : { maxWidth: DIALOG_MAX_WIDTH, maxHeight: '94dvh' }),
         },
       }}
     >
       <Box
         component="form"
         onSubmit={handleSubmit}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          minHeight: 0,
-          ...(isMobile ? { height: '100%' } : {}),
-        }}
+        sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
       >
         <DialogHeader
           onClose={onClose}
           isMobile={isMobile}
-          title="Nova indisponibilidade"
+          title="Novo bloqueio"
           subtitle={
             professionalName
               ? `Bloqueio na agenda de ${professionalName}`
@@ -758,176 +1042,45 @@ function UnavailabilityDialog({
           icon={<EventBusyOutlinedIcon fontSize="small" />}
         />
         <DialogContent
-          dividers
           sx={{
             px: { xs: 2, sm: 3 },
-            py: { xs: 2, sm: 2.5 },
+            pb: { xs: 2, sm: 2.5 },
             flex: 1,
             minHeight: 0,
             overflow: 'auto',
-            bgcolor: (t) => t.palette.background.default,
+            bgcolor: 'background.paper',
+            // MUI zera o padding-top quando o content segue o DialogTitle; força o espaçamento
+            '&.MuiDialogContent-root': { pt: { xs: 2.75, sm: 3 } },
           }}
         >
-          <Stack spacing={2.5}>
-            <Paper variant="outlined" sx={UNAVAIL_FORM_CARD_SX}>
-              <UnavailSectionTitle icon={<EventOutlinedIcon fontSize="small" />} title="Período" />
-              <Stack spacing={1.5}>
-                <ToggleButtonGroup
-                  exclusive
+          <Stack spacing={2}>
+            {canChooseProfessional && professionals.length > 1 && (
+              <LabeledField label="Profissional">
+                <TextField
+                  select
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  inputProps={{ 'aria-label': 'Profissional' }}
                   fullWidth
-                  size="small"
-                  color="primary"
-                  value={allDay ? 'allDay' : 'partial'}
-                  onChange={(_, val) => {
-                    if (val === 'allDay') switchMode(true);
-                    if (val === 'partial') switchMode(false);
-                  }}
                 >
-                  <ToggleButton value="partial">Horário específico</ToggleButton>
-                  <ToggleButton value="allDay">Dia(s) inteiro(s)</ToggleButton>
-                </ToggleButtonGroup>
-
-                <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 0.75, mx: 0 }}>
-                  {(allDay
-                    ? [
-                        { label: 'Hoje', onClick: () => {
-                          const d = dayjs().format('YYYY-MM-DD');
-                          setStartDate(d);
-                          setEndDate(d);
-                        }},
-                        { label: 'Amanhã', onClick: () => {
-                          const d = dayjs().add(1, 'day').format('YYYY-MM-DD');
-                          setStartDate(d);
-                          setEndDate(d);
-                        }},
-                        { label: 'Seg–Sex (próx.)', onClick: () => {
-                          const range = nextWeekdayRange(1, 5);
-                          setStartDate(range.start);
-                          setEndDate(range.end);
-                        }},
-                      ]
-                    : [
-                        { label: 'Próxima hora', onClick: () => {
-                          const now = dayjs();
-                          setStartAt(now.format('YYYY-MM-DDTHH:mm'));
-                          setEndAt(now.add(1, 'hour').format('YYYY-MM-DDTHH:mm'));
-                        }},
-                        { label: 'Manhã (hoje)', onClick: () => {
-                          const start = dayjs().hour(8).minute(0).second(0);
-                          setStartAt(start.format('YYYY-MM-DDTHH:mm'));
-                          setEndAt(start.hour(12).format('YYYY-MM-DDTHH:mm'));
-                        }},
-                        { label: 'Tarde (hoje)', onClick: () => {
-                          const start = dayjs().hour(13).minute(0).second(0);
-                          setStartAt(start.format('YYYY-MM-DDTHH:mm'));
-                          setEndAt(start.hour(18).format('YYYY-MM-DDTHH:mm'));
-                        }},
-                      ]
-                  ).map((preset) => (
-                    <Chip
-                      key={preset.label}
-                      label={preset.label}
-                      size="small"
-                      clickable
-                      variant="outlined"
-                      onClick={preset.onClick}
-                    />
+                  {professionals.map((p) => (
+                    <MenuItem key={p.id} value={p.id}>
+                      {p.name}
+                    </MenuItem>
                   ))}
-                </Stack>
+                </TextField>
+              </LabeledField>
+            )}
 
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={2}
-                  sx={{ width: '100%' }}
-                >
-                  {allDay ? (
-                    <>
-                      <TextField
-                        type="date"
-                        label="De"
-                        value={startDate}
-                        onChange={(e) => {
-                          setStartDate(e.target.value);
-                          if (dayjs(endDate).isBefore(dayjs(e.target.value), 'day')) {
-                            setEndDate(e.target.value);
-                          }
-                        }}
-                        InputLabelProps={{ shrink: true }}
-                        fullWidth
-                        error={dateRangeInvalid}
-                        sx={UNAVAIL_PERIOD_FIELD_SX}
-                      />
-                      <TextField
-                        type="date"
-                        label="Até"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        fullWidth
-                        error={dateRangeInvalid}
-                        sx={UNAVAIL_PERIOD_FIELD_SX}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <TextField
-                        type="datetime-local"
-                        label="Início"
-                        value={startAt}
-                        onChange={(e) => {
-                          const newStart = e.target.value;
-                          setStartAt(newStart);
-                          if (
-                            !dayjs(endAt).isAfter(dayjs(newStart)) &&
-                            dayjs(newStart).isValid()
-                          ) {
-                            setEndAt(dayjs(newStart).add(1, 'hour').format('YYYY-MM-DDTHH:mm'));
-                          }
-                        }}
-                        InputLabelProps={{ shrink: true }}
-                        fullWidth
-                        error={datetimeRangeInvalid}
-                        sx={UNAVAIL_DATETIME_FIELD_SX}
-                      />
-                      <TextField
-                        type="datetime-local"
-                        label="Término"
-                        value={endAt}
-                        onChange={(e) => setEndAt(e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        fullWidth
-                        error={datetimeRangeInvalid}
-                        sx={UNAVAIL_DATETIME_FIELD_SX}
-                      />
-                    </>
-                  )}
-                </Stack>
-
-                <Typography variant="caption" color={periodHelperMessage.color} sx={{ display: 'block' }}>
-                  {periodHelperMessage.text}
-                </Typography>
-
-                <Alert
-                  severity="info"
-                  icon={false}
-                  sx={{
-                    py: 0.75,
-                    visibility: periodPreview ? 'visible' : 'hidden',
-                  }}
-                >
-                  <Typography variant="body2">
-                    Será bloqueado: <strong>{periodPreview ?? '—'}</strong>
-                  </Typography>
-                </Alert>
-              </Stack>
-            </Paper>
-
-            <Paper variant="outlined" sx={UNAVAIL_FORM_CARD_SX}>
-              <UnavailSectionTitle icon={<LabelOutlinedIcon fontSize="small" />} title="Motivo" />
-              <Stack spacing={1.5}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -0.5 }}>
-                  Opcional — ajuda a identificar o bloqueio na agenda
-                </Typography>
+            <LabeledField label="Motivo">
+              <Stack spacing={1}>
+                <TextField
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Ex.: Congresso, férias, almoço estendido..."
+                  inputProps={{ 'aria-label': 'Motivo' }}
+                  fullWidth
+                />
                 <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 0.75 }}>
                   {UNAVAIL_REASON_SUGGESTIONS.map((suggestion) => (
                     <Chip
@@ -938,20 +1091,127 @@ function UnavailabilityDialog({
                       color={reason === suggestion ? 'primary' : 'default'}
                       variant={reason === suggestion ? 'filled' : 'outlined'}
                       onClick={() => setReason(suggestion)}
+                      sx={{ fontWeight: 600 }}
                     />
                   ))}
                 </Stack>
-                <TextField
-                  label="Descreva o motivo"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="Ou digite outro motivo..."
-                  fullWidth
-                  multiline
-                  minRows={2}
-                />
               </Stack>
-            </Paper>
+            </LabeledField>
+
+            <LabeledField label="Período">
+              <Stack spacing={1}>
+                <ToggleButtonGroup
+                  exclusive
+                  fullWidth
+                  color="primary"
+                  value={allDay ? 'allDay' : 'partial'}
+                  onChange={(_, val) => {
+                    if (val === 'allDay') switchMode(true);
+                    if (val === 'partial') switchMode(false);
+                  }}
+                  sx={{ '& .MuiToggleButton-root': { textTransform: 'none', fontWeight: 700, py: 1.1 } }}
+                >
+                  <ToggleButton value="partial">Horário específico</ToggleButton>
+                  <ToggleButton value="allDay">Dia(s) inteiro(s)</ToggleButton>
+                </ToggleButtonGroup>
+                <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 0.75 }}>
+                  {presets.map((preset) => (
+                    <Chip
+                      key={preset.label}
+                      label={preset.label}
+                      size="small"
+                      clickable
+                      variant="outlined"
+                      onClick={preset.onClick}
+                      sx={{ fontWeight: 600 }}
+                    />
+                  ))}
+                </Stack>
+              </Stack>
+            </LabeledField>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.75 }}>
+              {allDay ? (
+                <>
+                  <LabeledField label="Início">
+                    <TextField
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        if (dayjs(endDate).isBefore(dayjs(e.target.value), 'day')) {
+                          setEndDate(e.target.value);
+                        }
+                      }}
+                      inputProps={{ 'aria-label': 'Início' }}
+                      fullWidth
+                      error={dateRangeInvalid}
+                    />
+                  </LabeledField>
+                  <LabeledField label="Fim">
+                    <TextField
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      inputProps={{ 'aria-label': 'Fim' }}
+                      fullWidth
+                      error={dateRangeInvalid}
+                    />
+                  </LabeledField>
+                </>
+              ) : (
+                <>
+                  <LabeledField label="Início">
+                    <TextField
+                      type="datetime-local"
+                      value={startAt}
+                      onChange={(e) => {
+                        const newStart = e.target.value;
+                        setStartAt(newStart);
+                        if (
+                          !dayjs(endAt).isAfter(dayjs(newStart)) &&
+                          dayjs(newStart).isValid()
+                        ) {
+                          setEndAt(dayjs(newStart).add(1, 'hour').format('YYYY-MM-DDTHH:mm'));
+                        }
+                      }}
+                      inputProps={{ 'aria-label': 'Início' }}
+                      fullWidth
+                      error={datetimeRangeInvalid}
+                      sx={UNAVAIL_DATETIME_FIELD_SX}
+                    />
+                  </LabeledField>
+                  <LabeledField label="Fim">
+                    <TextField
+                      type="datetime-local"
+                      value={endAt}
+                      onChange={(e) => setEndAt(e.target.value)}
+                      inputProps={{ 'aria-label': 'Fim' }}
+                      fullWidth
+                      error={datetimeRangeInvalid}
+                      sx={UNAVAIL_DATETIME_FIELD_SX}
+                    />
+                  </LabeledField>
+                </>
+              )}
+            </Box>
+
+            <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', mt: '6px !important' }}>
+              {allDay ? 'Use a mesma data nos dois campos para bloquear um único dia' : ' '}
+            </Typography>
+
+            {periodError ? (
+              <PeriodNotice tone="error" visible>
+                {periodError}
+              </PeriodNotice>
+            ) : (
+              <PeriodNotice tone="primary" visible={!!periodPreview}>
+                Será bloqueado:{' '}
+                <Box component="strong" sx={{ color: 'text.primary' }}>
+                  {periodPreview ?? '—'}
+                </Box>
+              </PeriodNotice>
+            )}
 
             {mutation.isError && (
               <Alert severity="error" variant="outlined">
