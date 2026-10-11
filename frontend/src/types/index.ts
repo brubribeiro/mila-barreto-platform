@@ -449,3 +449,34 @@ export interface NotificationPreference {
   type: NotificationType;
   enabled: boolean;
 }
+
+export type GoalMetric =
+  | 'REVENUE'
+  | 'NEW_PATIENTS'
+  | 'PROCEDURES'
+  | 'AVERAGE_TICKET'
+  | 'OCCUPANCY'
+  | 'RETURN_RATE'
+  | 'MANUAL';
+export type GoalFormat = 'CURRENCY' | 'NUMBER' | 'PERCENT';
+export type GoalPeriodType = 'MONTH' | 'QUARTER' | 'YEAR';
+
+export interface Goal {
+  id: string;
+  name: string;
+  metric: GoalMetric;
+  format: GoalFormat;
+  target: number;
+  manualValue: number | null;
+  periodType: GoalPeriodType;
+  /** Primeiro dia do período (YYYY-MM-DD). */
+  periodStart: string;
+  /** Último dia do período (YYYY-MM-DD). */
+  periodEnd: string;
+  color: string;
+  currentValue: number;
+  /** Percentual do objetivo (pode passar de 100). */
+  progress: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
