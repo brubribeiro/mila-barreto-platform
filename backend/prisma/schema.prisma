@@ -149,23 +149,52 @@ model Equipment {
 model Document {
   id           String   @id @default(uuid())
   name         String
-  category     String? // "contrato", "vigilancia", "certificado", "livre"
+  category     String? // ver DOCUMENT_CATEGORIES no frontend (consentimento, anamnese, contrato, ...)
+  status       DocumentStatus @default(PENDING)
+  signedAt     DateTime?
   storageKey   String? @map("driveFileId") // chave no Cloudflare R2
   fileUrl      String? @map("driveViewUrl") // URL pública do arquivo
   mimeType     String?
   size         Int? // bytes
   notes        String?
+  // Texto gerado a partir de um modelo (placeholders já substituídos)
+  content      String?
+  templateId   String?
   // Vínculo opcional com paciente ou equipamento
   patientId    String?
   equipmentId  String?
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
 
-  patient   Patient?   @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  equipment Equipment? @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+  patient   Patient?          @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  equipment Equipment?        @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+  template  DocumentTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
 
   @@index([patientId])
   @@index([equipmentId])
+  @@index([status])
   @@map("documents")
+}
+
+enum DocumentStatus {
+  PENDING // aguardando assinatura
+  SENT // enviado ao paciente
+  SIGNED // assinado / arquivo final
+}
+
+// Modelos de documento (termos, fichas, contratos) com placeholders {{paciente}}, {{cpf}}...
+model DocumentTemplate {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  category  String?
+  content   String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents Document[]
+
+  @@map("document_templates")
 }
 
 // =========================
