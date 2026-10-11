@@ -167,7 +167,8 @@ export function GoalFormDialog({ open, onClose, editing, canDelete }: Props) {
     const prevOption = metricOption(getValues('metric'));
     const nextOption = metricOption(next);
     setValue('metric', next);
-    if (nextOption.format) setValue('format', nextOption.format);
+    // Métricas automáticas têm formato fixo; ao voltar para manual, número é o padrão mais neutro.
+    setValue('format', nextOption.format ?? 'NUMBER');
     // Troca o nome só se ainda for o sugerido pelo indicador anterior.
     const currentName = getValues('name').trim();
     if (!currentName || currentName === prevOption.defaultName) {
@@ -349,7 +350,7 @@ export function GoalFormDialog({ open, onClose, editing, canDelete }: Props) {
 
             <FormSection title="Objetivo e período" sx={{ height: '100%' }}>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75 }}>
-                <Box sx={{ display: 'grid', gridTemplateColumns: periodType === 'YEAR' ? '1fr 1fr' : '1fr 1.3fr 1fr', gap: 1.25 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: periodType === 'YEAR' ? '1fr 1fr' : '1.25fr 1.25fr 0.9fr', gap: 1.25 }}>
                   <LabeledField label="Período">
                     <TextField
                       select
