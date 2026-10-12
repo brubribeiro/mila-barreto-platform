@@ -19,6 +19,7 @@ const RESOURCES = [
   'metrics',
   'promotions',
   'payment-methods',
+  'goals',
 ];
 const ACTIONS = ['view', 'create', 'edit', 'delete'];
 const ALL_PERMISSIONS = RESOURCES.flatMap((r) => ACTIONS.map((a) => `${r}:${a}`));
@@ -336,6 +337,61 @@ function demoProcedureStatus(startAt: Date, slotIndex: number): AppointmentStatu
   return 'SCHEDULED';
 }
 
+const defaultDocumentTemplates = [
+  {
+    name: 'Modelo padrão — Consentimento Toxina',
+    category: 'consentimento',
+    content: `TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO — TOXINA BOTULÍNICA
+
+Eu, {{paciente}}, CPF {{cpf}}, nascido(a) em {{nascimento}}, declaro que fui informado(a) pelo(a) profissional {{profissional}} sobre o procedimento de aplicação de toxina botulínica, seus objetivos, benefícios esperados, riscos e possíveis efeitos adversos (como dor no local, hematomas, assimetrias temporárias e cefaleia).
+
+Declaro que informei corretamente meu histórico de saúde, uso de medicamentos e alergias, e que tive a oportunidade de esclarecer todas as minhas dúvidas.
+
+Autorizo a realização do procedimento.
+
+Data: {{data}}
+
+______________________________________
+{{paciente}}`,
+  },
+  {
+    name: 'Modelo padrão — Anamnese facial',
+    category: 'anamnese',
+    content: `FICHA DE ANAMNESE FACIAL
+
+Paciente: {{paciente}}
+CPF: {{cpf}}    Nascimento: {{nascimento}}
+Telefone: {{telefone}}    E-mail: {{email}}
+
+1. Possui alergias? ( ) Não ( ) Sim: ______________________
+2. Faz uso de medicamentos? ( ) Não ( ) Sim: ______________
+3. Está gestante ou amamentando? ( ) Não ( ) Sim
+4. Já realizou procedimentos estéticos na face? ( ) Não ( ) Sim: ____
+5. Tem histórico de herpes, queloides ou doenças autoimunes? ( ) Não ( ) Sim
+
+Declaro que as informações acima são verdadeiras.
+
+Data: {{data}}
+
+______________________________________
+{{paciente}}`,
+  },
+  {
+    name: 'Modelo padrão — Autorização de imagem',
+    category: 'autorizacao_imagem',
+    content: `TERMO DE AUTORIZAÇÃO DE USO DE IMAGEM
+
+Eu, {{paciente}}, CPF {{cpf}}, autorizo a clínica a registrar e utilizar fotografias do antes e depois dos meus procedimentos para fins de prontuário e, de forma anônima, para divulgação científica e institucional.
+
+Esta autorização pode ser revogada a qualquer momento mediante solicitação por escrito.
+
+Data: {{data}}
+
+______________________________________
+{{paciente}}`,
+  },
+];
+
 async function main() {
   console.log('\n→ Garantindo grupos (roles)...');
   for (const r of defaultRoles) {
@@ -457,6 +513,15 @@ async function main() {
     if (!exists) {
       await prisma.messageTemplate.create({ data: t });
       console.log(`  ✓ Template criado: ${t.name}`);
+    }
+  }
+
+  console.log('\n→ Garantindo modelos de documento...');
+  for (const t of defaultDocumentTemplates) {
+    const exists = await prisma.documentTemplate.findUnique({ where: { name: t.name } });
+    if (!exists) {
+      await prisma.documentTemplate.create({ data: t });
+      console.log(`  ✓ Modelo criado: ${t.name}`);
     }
   }
 

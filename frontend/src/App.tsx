@@ -21,6 +21,7 @@ import { Documents } from './pages/Documents';
 import { RecurringExpensesPage } from './pages/RecurringExpenses';
 import { Packages } from './pages/Packages';
 import { Metrics } from './pages/Metrics';
+import { Goals } from './pages/Goals';
 import { Promotions } from './pages/Promotions';
 import { PaymentMethods } from './pages/PaymentMethods';
 import { Layout } from './components/Layout';
@@ -167,6 +168,14 @@ export default function App() {
           element={
             <PermissionRoute permission="metrics:view">
               <Metrics />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="/metas"
+          element={
+            <PermissionRoute permission="goals:view">
+              <Goals />
             </PermissionRoute>
           }
         />
