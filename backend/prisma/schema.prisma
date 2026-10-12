@@ -32,6 +32,8 @@ model Role {
   id                        String   @id @default(uuid())
   name                      String   @unique
   description               String?
+  // Cor de identificação do grupo na tela de permissões (hex #RRGGBB).
+  color                     String?
   permissions               String[]
   isSystem                  Boolean  @default(false)
   // Quando true, usuários desse grupo só veem/editam os próprios agendamentos.

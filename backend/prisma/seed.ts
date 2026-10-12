@@ -26,6 +26,7 @@ const ALL_PERMISSIONS = RESOURCES.flatMap((r) => ACTIONS.map((a) => `${r}:${a}`)
 const defaultRoles = [
   {
     name: 'Administrador',
+    color: '#15998B',
     description: 'Acesso total à plataforma',
     permissions: ALL_PERMISSIONS,
     isSystem: true,
@@ -33,6 +34,7 @@ const defaultRoles = [
   },
   {
     name: 'Profissional',
+    color: '#9B7BD4',
     description: 'Vê apenas a própria agenda e edita pacientes',
     permissions: [
       'patients:view',
@@ -49,6 +51,7 @@ const defaultRoles = [
   },
   {
     name: 'Recepção',
+    color: '#E0915B',
     description: 'Gerencia pacientes, agenda, estoque e mensagens (sem financeiro nem profissionais)',
     permissions: [
       'patients:view',

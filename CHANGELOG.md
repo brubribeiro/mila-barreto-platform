@@ -23,6 +23,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Componente compartilhado `FormSection` para seções de modais.
 - Pacotes: campo **highlight** (Mais vendido / Recorrente), `GET /packages/stats/summary`, agregações na listagem (preço, economia, pacientes ativos).
 - Promoções: tipo de desconto **COMBO** no enum Prisma; migration `20260730140000_promotion_combo_discount_type`.
+- Grupos: campo `color` em `Role` (migration `20261012120000_role_color`, `#RRGGBB` validado no DTO, cores padrão no seed).
 
 ### Changed
 
@@ -40,6 +41,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Dashboard: scroll na lista de aniversariantes; botão WhatsApp desabilitado sem telefone.
 - `Packages.tsx`: substitui DataGrid por cards Aurora; `PackageFormDialog` reorganizada.
 - `Promotions.tsx`: substitui DataGrid por cards Aurora; `PromotionFormDialog` com tipo Combo e escopo (procedimentos/pacotes).
+- `Roles.tsx`: substitui DataGrid por layout Aurora (cards de grupo + matriz de permissões editável na página, com salvar/descartar); `RoleFormDialog` em coluna única (520px) com cor do grupo e "Copiar permissões de".
 
 ### Fixed
 

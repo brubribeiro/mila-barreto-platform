@@ -2,6 +2,7 @@ export interface Role {
   id: string;
   name: string;
   description?: string;
+  color?: string | null;
   permissions: string[];
   isSystem: boolean;
   restrictToOwnAppointments: boolean;

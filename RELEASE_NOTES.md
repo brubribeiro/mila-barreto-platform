@@ -81,6 +81,11 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Data comemorativa selecionável (Dia das Mães, Black Friday, etc.).
 - Paginação na lista (8 campanhas por página) e interruptor em cada card para **ativar ou desativar** sem abrir o cadastro.
 
+**Grupos e permissões**
+- Tela redesenhada no estilo Aurora: grupos em cards à esquerda (com cor e número de membros) e, ao lado, a matriz de permissões do grupo selecionado (**Ver**, **Criar**, **Editar**, **Excluir** por módulo).
+- As permissões são ajustadas direto na matriz: clique numa célula, no nome do módulo (linha inteira) ou no título da coluna; depois **Salvar permissões** ou **Descartar**.
+- Novo grupo em modal mais simples: nome, descrição, **copiar permissões de** um grupo existente, **cor do grupo** e restrição à própria agenda.
+
 **Usuários**
 - Nova tela **Usuários** no menu Equipe: lista com busca, filtros por **grupo**, **profissional** e **status**, e ações de editar e excluir.
 - Formulário unificado para criar ou editar conta: grupo de permissão, vínculo como **profissional**, marcação **Principal** e dados de perfil quando aplicável.
