@@ -87,6 +87,12 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Administradores podem **personificar** outro usuário ativo direto da lista (com confirmação).
 - Histórico de alterações disponível para administradores.
 
+**Mensagens**
+- Tela redesenhada no estilo Aurora: lista de **modelos de mensagem** à esquerda e, à direita, a prévia do modelo selecionado em um balão de conversa do WhatsApp, com as variáveis destacadas.
+- Cada modelo tem um **gatilho de envio** (Ao agendar, 1 dia antes, No dia do aniversário, Após o atendimento, 90 dias sem visita ou Envio manual) e pode ser **ativado ou desativado** com um clique.
+- Novo modal **Novo modelo de mensagem**: título, gatilho, mensagem com emojis e variáveis clicáveis (**{nome}**, {procedimento}, {data}, {hora}, {profissional}, {valor}).
+- Ao enviar pelo WhatsApp (Agenda, Pacientes, Dashboard), só aparecem modelos ativos e o modelo certo é sugerido pelo gatilho. Modelos antigos com {paciente_nome} continuam funcionando.
+
 **Profissionais**
 - Tela redesenhada no estilo Aurora: grade de cards com **foto**, função, registro profissional e **áreas de atuação** (Toxina, Preenchimento, etc.).
 - Badge de **disponibilidade em tempo real**: Disponível, Em atendimento, Folga ou Fora do horário (com base no expediente e indisponibilidades).
