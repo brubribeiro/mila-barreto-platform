@@ -14,6 +14,7 @@ export const RESOURCES = [
   { key: 'metrics', label: 'Métricas' },
   { key: 'promotions', label: 'Promoções' },
   { key: 'payment-methods', label: 'Formas de pagamento' },
+  { key: 'goals', label: 'Metas' },
 ] as const;
 
 export const ACTIONS = [

@@ -19,6 +19,7 @@ const RESOURCES = [
   'metrics',
   'promotions',
   'payment-methods',
+  'goals',
 ];
 const ACTIONS = ['view', 'create', 'edit', 'delete'];
 const ALL_PERMISSIONS = RESOURCES.flatMap((r) => ACTIONS.map((a) => `${r}:${a}`));
