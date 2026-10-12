@@ -4,6 +4,7 @@ import type { Role } from '../types';
 export interface RolePayload {
   name: string;
   description?: string;
+  color?: string;
   permissions: string[];
   restrictToOwnAppointments?: boolean;
 }

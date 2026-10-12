@@ -61,6 +61,7 @@ export class RolesService {
       data: {
         name: dto.name,
         description: dto.description,
+        color: dto.color,
         permissions: dto.permissions,
         restrictToOwnAppointments: dto.restrictToOwnAppointments ?? false,
         isSystem: false,
@@ -96,6 +97,7 @@ export class RolesService {
       data: {
         name: dto.name,
         description: dto.description,
+        color: dto.color,
         permissions: dto.permissions,
         restrictToOwnAppointments: dto.restrictToOwnAppointments,
       },
