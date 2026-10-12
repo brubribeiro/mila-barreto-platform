@@ -1,20 +1,16 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useFieldArray, useForm, Controller, useWatch } from 'react-hook-form';
 import {
   Alert,
   Autocomplete,
   Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
-  Divider,
-  Grid,
   IconButton,
   InputAdornment,
   MenuItem,
-  Paper,
   Stack,
   TextField,
   Tooltip,
@@ -24,20 +20,17 @@ import {
   useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import PostAddOutlinedIcon from '@mui/icons-material/PostAddOutlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
-import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
-import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
-import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
-import PlaylistAddCheckOutlinedIcon from '@mui/icons-material/PlaylistAddCheckOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { inventoryApi } from '../../api/inventory';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
-import { dateOnlyToApiIso, formatDateOnlyFromApi } from '../../utils/dateOnly';
+import { dateOnlyToApiIso } from '../../utils/dateOnly';
 import type { InventoryItem } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
 
@@ -56,7 +49,8 @@ interface LineForm {
   newUnit: string;
   newMinQuantity: number;
   quantity: number;
-  productTotal: number | '';
+  /** Valor unitário do produto (sem frete) */
+  unitPrice: number | '';
   expiresAt: string;
 }
 
@@ -66,46 +60,9 @@ interface FormValues {
   lines: LineForm[];
 }
 
-const DIALOG_HEIGHT_DESKTOP = 860;
-const DIALOG_MAX_WIDTH = 1280;
-
-const FORM_CARD_SX = {
-  p: { xs: 1.5, sm: 1.75 },
-  borderRadius: 2,
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-} as const;
-
-const FIELD_SX = {
-  '& .MuiOutlinedInput-root': { bgcolor: '#fff' },
-} as const;
-
-const MATERIAL_FIELD_SX = {
-  ...FIELD_SX,
-  '& .MuiInputLabel-root': {
-    color: 'text.primary',
-    fontWeight: 500,
-    fontSize: fontSizes.md,
-    backgroundColor: 'background.paper',
-    px: 0.5,
-    zIndex: 1,
-  },
-  '& .MuiInputLabel-root.MuiInputLabel-shrink': {
-    transform: 'translate(14px, -9px) scale(0.85)',
-  },
-  '& .MuiInputLabel-root.Mui-focused': {
-    color: 'primary.main',
-  },
-  '& .MuiFormHelperText-root': {
-    color: 'text.secondary',
-    fontSize: fontSizes.xs,
-    lineHeight: 1.45,
-    mt: 0.75,
-  },
-} as const;
-
-const MATERIAL_LABEL_PROPS = { shrink: true } as const;
+const DIALOG_MAX_WIDTH = 1180;
+const DIALOG_HEIGHT_DESKTOP = 820;
+const LINE_COLUMNS = '2.3fr 1.15fr .8fr .6fr .75fr .95fr .85fr .95fr 30px';
 
 const unitOptions = [
   { value: 'un', label: 'Unidade (un)' },
@@ -121,15 +78,15 @@ const unitOptions = [
   { value: 'amp', label: 'Ampola (amp)' },
 ];
 
-const emptyLine = (): LineForm => ({
-  mode: 'existing',
+const emptyLine = (mode: LineMode = 'existing'): LineForm => ({
+  mode,
   item: null,
   newName: '',
   newSku: '',
   newUnit: 'un',
   newMinQuantity: 0,
   quantity: 1,
-  productTotal: '',
+  unitPrice: '',
   expiresAt: '',
 });
 
@@ -141,91 +98,22 @@ const defaultValues: FormValues = {
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
-function SectionIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
+const LABEL_SX = { fontSize: fontSizes.sm, fontWeight: 700, mb: 0.9 } as const;
 
-function FormSection({
-  title,
-  subtitle,
-  icon,
-  action,
-  children,
-  fill,
-  sx,
-}: {
-  title: string;
-  subtitle?: string;
-  icon: ReactNode;
-  action?: ReactNode;
-  children: ReactNode;
-  fill?: boolean;
-  sx?: object;
-}) {
-  return (
-    <Paper
-      variant="outlined"
-      sx={{
-        ...FORM_CARD_SX,
-        display: 'flex',
-        flexDirection: 'column',
-        ...(fill ? { flex: 1, minHeight: 0, overflow: 'hidden' } : { flexShrink: 0 }),
-        ...sx,
-      }}
-    >
-      <Stack
-        direction="row"
-        alignItems="flex-start"
-        justifyContent="space-between"
-        spacing={1.5}
-        sx={{ mb: 1.5, flexShrink: 0 }}
-      >
-        <Stack direction="row" spacing={1.25} alignItems="flex-start" sx={{ minWidth: 0 }}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography
-              sx={{
-                fontSize: fontSizes.xs,
-                fontWeight: 800,
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                color: 'text.disabled',
-              }}
-            >
-              {title}
-            </Typography>
-            {subtitle && (
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
-                {subtitle}
-              </Typography>
-            )}
-          </Box>
-        </Stack>
-        {action}
-      </Stack>
-      {fill ? (
-        <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>{children}</Box>
-      ) : (
-        children
-      )}
-    </Paper>
-  );
-}
+const CELL_TEXT_SX = {
+  minHeight: 32,
+  display: 'flex',
+  alignItems: 'center',
+  fontSize: fontSizes.xs,
+  color: 'text.secondary',
+  fontWeight: 600,
+  minWidth: 0,
+} as const;
+
+const CELL_INPUT_SX = {
+  '& .MuiOutlinedInput-root': { bgcolor: 'background.paper', fontSize: fontSizes.xs },
+  '& input': { px: 1 },
+} as const;
 
 function parseNum(v: unknown): number {
   if (v === '' || v == null) return 0;
@@ -234,15 +122,11 @@ function parseNum(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function allocateFreight(
-  lines: { productTotal: number }[],
-  freight: number,
-): number[] {
+/** Mesmo rateio do backend: proporcional ao valor de cada produto, sobra de centavos no último. */
+function allocateFreight(lines: { productTotal: number }[], freight: number): number[] {
   const sum = lines.reduce((s, l) => s + l.productTotal, 0);
   if (sum <= 0 || freight <= 0) return lines.map(() => 0);
-  const shares = lines.map((l) =>
-    Math.round(freight * (l.productTotal / sum) * 100) / 100,
-  );
+  const shares = lines.map((l) => Math.round(freight * (l.productTotal / sum) * 100) / 100);
   const allocated = shares.reduce((s, v) => s + v, 0);
   const diff = Math.round((freight - allocated) * 100) / 100;
   if (diff !== 0 && shares.length > 0) {
@@ -251,16 +135,8 @@ function allocateFreight(
   return shares;
 }
 
-function getLineLabel(line: LineForm): string {
-  if (line.mode === 'existing') return line.item?.name ?? 'Selecione o produto';
-  return line.newName.trim() || 'Novo item (sem nome)';
-}
-
-function isLineFilled(line: LineForm, unitCost: number): boolean {
-  const qty = Number(line.quantity) > 0;
-  const price = Number(line.productTotal) > 0;
-  const itemOk = line.mode === 'existing' ? !!line.item : line.newName.trim().length > 0;
-  return qty && price && itemOk && !!line.expiresAt && unitCost > 0;
+function lineProductTotal(line: Pick<LineForm, 'quantity' | 'unitPrice'>) {
+  return Math.round(parseNum(line.quantity) * parseNum(line.unitPrice) * 100) / 100;
 }
 
 export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
@@ -271,7 +147,6 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
   const { control, handleSubmit, reset } = useForm<FormValues>({ defaultValues });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'lines' });
-  const [activeLineIndex, setActiveLineIndex] = useState(0);
 
   const { data: items = [] } = useQuery({
     queryKey: ['inventory'],
@@ -282,14 +157,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
   useEffect(() => {
     if (!open) return;
     reset(defaultValues);
-    setActiveLineIndex(0);
   }, [open, reset]);
-
-  useEffect(() => {
-    if (fields.length > 0 && activeLineIndex >= fields.length) {
-      setActiveLineIndex(fields.length - 1);
-    }
-  }, [activeLineIndex, fields.length]);
 
   const watchedLines = (useWatch({ control, name: 'lines' }) ?? defaultValues.lines) as LineForm[];
   const watchedFreight = useWatch({ control, name: 'freight' });
@@ -297,20 +165,14 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
 
   const lineTotals = useMemo(() => {
     const parsed = watchedLines.map((l) => ({
-      productTotal: parseNum(l.productTotal),
+      productTotal: lineProductTotal(l),
       quantity: parseNum(l.quantity),
-      label:
-        l.mode === 'existing'
-          ? l.item?.name ?? '—'
-          : l.newName.trim() || 'Novo item',
     }));
-    const sumProducts = parsed.reduce((s, l) => s + l.productTotal, 0);
     const freightShares = allocateFreight(parsed, freight);
     return parsed.map((l, i) => {
       const freightShare = freightShares[i] ?? 0;
       const total = Math.round((l.productTotal + freightShare) * 100) / 100;
-      const unitCost =
-        l.quantity > 0 ? Math.round((total / l.quantity) * 100) / 100 : 0;
+      const unitCost = l.quantity > 0 ? Math.round((total / l.quantity) * 100) / 100 : 0;
       return { ...l, freightShare, total, unitCost };
     });
   }, [watchedLines, freight]);
@@ -323,7 +185,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
       const payloadLines = values.lines.map((line) => {
         const base = {
           quantity: Number(line.quantity),
-          productTotal: Number(line.productTotal),
+          productTotal: lineProductTotal(line),
           expiresAt: dateOnlyToApiIso(line.expiresAt),
         };
         if (line.mode === 'existing') {
@@ -361,30 +223,10 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
     productsTotal > 0 &&
     watchedLines.every((l, i) => {
       const qty = parseNum(l.quantity) > 0;
-      const price = parseNum(l.productTotal) > 0;
-      const itemOk =
-        l.mode === 'existing' ? !!l.item : l.newName.trim().length > 0;
+      const price = lineTotals[i].productTotal > 0;
+      const itemOk = l.mode === 'existing' ? !!l.item : l.newName.trim().length > 0;
       return qty && price && itemOk && !!l.expiresAt && lineTotals[i].unitCost > 0;
     });
-
-  const formIndex = fields.length > 0 ? Math.min(activeLineIndex, fields.length - 1) : 0;
-  const currentLineTotals = lineTotals[formIndex];
-  const currentUnitCost = currentLineTotals?.unitCost ?? 0;
-
-  const handleAddLine = () => {
-    append(emptyLine());
-    setActiveLineIndex(fields.length);
-  };
-
-  const handleRemoveLine = (idx: number) => {
-    if (fields.length <= 1) return;
-    remove(idx);
-    setActiveLineIndex((prev) => {
-      if (prev > idx) return prev - 1;
-      if (prev >= idx) return Math.max(0, prev - 1);
-      return prev;
-    });
-  };
 
   return (
     <Dialog
@@ -402,11 +244,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
           flexDirection: 'column',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
-            : {
-                maxWidth: DIALOG_MAX_WIDTH,
-                height: DIALOG_HEIGHT_DESKTOP,
-                maxHeight: '96dvh',
-              }),
+            : { maxWidth: DIALOG_MAX_WIDTH, height: DIALOG_HEIGHT_DESKTOP, maxHeight: '96dvh' }),
         },
       }}
     >
@@ -421,27 +259,6 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
           title="Compra em lote"
           subtitle="Vários materiais, validade por item e frete rateado no custo"
           icon={<ShoppingCartOutlinedIcon fontSize="small" />}
-          trailing={
-            <Stack direction="row" spacing={0.75} flexWrap="wrap" justifyContent="flex-end">
-              <Chip
-                size="small"
-                icon={<Inventory2OutlinedIcon sx={{ fontSize: '16px !important' }} />}
-                label={`${fields.length} ${fields.length === 1 ? 'material' : 'materiais'}`}
-                variant="outlined"
-              />
-              {grandTotal > 0 && (
-                <Chip size="small" label={brl.format(grandTotal)} color="primary" variant="outlined" />
-              )}
-              {freight > 0 && (
-                <Chip
-                  size="small"
-                  icon={<LocalShippingOutlinedIcon sx={{ fontSize: '16px !important' }} />}
-                  label={`Frete ${brl.format(freight)}`}
-                  variant="outlined"
-                />
-              )}
-            </Stack>
-          }
         />
 
         <DialogContent
@@ -452,650 +269,438 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
             overflow: 'auto',
             px: { xs: 2, sm: 3 },
             py: { xs: 2, sm: 2.5 },
-            bgcolor: (t) => t.palette.background.default,
-            display: 'flex',
-            flexDirection: 'column',
           }}
         >
-          <Box
-            sx={{
-              flex: 1,
-              minHeight: 0,
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: { xs: 'column', lg: 'row' },
-              gap: 2,
-              alignItems: 'stretch',
-            }}
-          >
-            <Box
-              sx={{
-                flex: { xs: '0 0 auto', lg: '0 0 60%' },
-                maxWidth: { lg: '60%' },
-                width: { xs: '100%', lg: '60%' },
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: 0,
-                overflow: 'hidden',
-              }}
-            >
-              <Stack
-                spacing={2}
-                sx={{
-                  flex: 1,
-                  minHeight: 0,
-                  overflow: 'hidden',
-                  display: 'flex',
-                }}
-              >
-            <FormSection
-              title="Dados da compra"
-              subtitle="Frete diluído proporcionalmente ao valor de cada produto"
-              icon={<LocalShippingOutlinedIcon fontSize="small" />}
-            >
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="freight"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        type="number"
-                        size="small"
-                        inputProps={{ step: '0.01', min: 0 }}
-                        label="Frete (opcional)"
-                        fullWidth
-                        sx={FIELD_SX}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                        }}
-                      />
-                    )}
+          <Stack spacing={2.25}>
+            <Box>
+              <Typography sx={LABEL_SX}>Descrição da compra</Typography>
+              <Controller
+                name="reason"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    placeholder="Opcional — ex.: fornecedor, nº da nota fiscal"
+                    inputProps={{ 'aria-label': 'Descrição da compra' }}
+                    sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'grey.50' } }}
                   />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="reason"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        size="small"
-                        label="Motivo (opcional)"
-                        fullWidth
-                        placeholder="Compra fornecedor X..."
-                        sx={FIELD_SX}
-                      />
-                    )}
-                  />
-                </Grid>
-              </Grid>
-            </FormSection>
+                )}
+              />
+            </Box>
 
-            <FormSection
-              fill
-              title="Materiais"
-              subtitle="Preencha o formulário e adicione à lista ao lado"
-              icon={<Inventory2OutlinedIcon fontSize="small" />}
-              sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-            >
-                  <Paper
+            <Box>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                justifyContent="space-between"
+                spacing={1}
+                sx={{ mb: 1.25 }}
+              >
+                <Typography
+                  sx={{ fontSize: fontSizes.sm, fontWeight: 800, color: 'text.disabled', letterSpacing: '0.6px' }}
+                >
+                  ITENS DA COMPRA · {fields.length}
+                </Typography>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    size="small"
                     variant="outlined"
+                    startIcon={<PostAddOutlinedIcon />}
+                    onClick={() => append(emptyLine('new'))}
+                    sx={{ height: 34, borderRadius: '10px', borderColor: 'divider', color: 'text.primary', fontSize: fontSizes.xs }}
+                  >
+                    Cadastrar produto
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={() => append(emptyLine())}
                     sx={{
-                      ...FORM_CARD_SX,
-                      flex: 1,
-                      minHeight: 0,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      overflow: 'hidden',
-                      height: '100%',
+                      height: 34,
+                      borderRadius: '10px',
+                      fontSize: fontSizes.xs,
+                      bgcolor: (t) => alpha(t.palette.primary.main, 0.08),
                     }}
                   >
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      sx={{ mb: 1.5, flexShrink: 0 }}
-                    >
-                      <Typography variant="subtitle2" fontWeight={600}>
-                        {fields.length > 1
-                          ? `Editando material ${formIndex + 1}`
-                          : 'Adicionar material'}
-                      </Typography>
-                      {fields.length > 1 && (
-                        <Tooltip title="Remover este material">
-                          <IconButton
-                            size="small"
-                            aria-label="Remover material"
-                            onClick={() => handleRemoveLine(formIndex)}
-                          >
-                            <DeleteOutlineIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </Stack>
+                    Adicionar linha
+                  </Button>
+                </Stack>
+              </Stack>
 
-                    <Box
-                      sx={{
-                        flex: 1,
-                        minHeight: 0,
-                        overflowY: 'auto',
-                        overflowX: 'hidden',
-                        pt: 2.5,
-                        pr: 0.5,
-                        pb: 1.5,
-                        scrollPaddingTop: 20,
-                      }}
-                    >
-                      <Grid container spacing={2} sx={{ alignContent: 'flex-start' }}>
-                        <Grid item xs={12} sm={4}>
-                          <Controller
-                            name={`lines.${formIndex}.mode`}
-                            control={control}
-                            render={({ field: modeField }) => (
-                              <TextField
-                                select
-                                label="Tipo"
-                                fullWidth
-                                size="medium"
-                                sx={MATERIAL_FIELD_SX}
-                                InputLabelProps={MATERIAL_LABEL_PROPS}
-                                value={modeField.value}
-                                onChange={(e) => modeField.onChange(e.target.value as LineMode)}
+              <Box sx={{ border: 1, borderColor: 'divider', borderRadius: '14px', overflowX: 'auto' }}>
+                <Box sx={{ minWidth: 980 }}>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: LINE_COLUMNS,
+                      gap: 0.9,
+                      px: 1.5,
+                      py: 1.25,
+                      bgcolor: 'grey.50',
+                      borderBottom: 1,
+                      borderColor: 'divider',
+                      fontSize: fontSizes['3xs'],
+                      fontWeight: 700,
+                      color: 'text.disabled',
+                      letterSpacing: '0.3px',
+                      textTransform: 'uppercase',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span>Produto</span>
+                    <span>Validade do lote</span>
+                    <span>Unidade</span>
+                    <Box component="span" sx={{ textAlign: 'center' }}>Qtd</Box>
+                    <Box component="span" sx={{ textAlign: 'center' }}>Est. mín</Box>
+                    <Box component="span" sx={{ textAlign: 'right' }}>Valor un.</Box>
+                    <Box component="span" sx={{ textAlign: 'right' }}>Frete rat.</Box>
+                    <Box component="span" sx={{ textAlign: 'right' }}>Custo final</Box>
+                    <span />
+                  </Box>
+
+                  {fields.map((f, index) => {
+                    const line = watchedLines[index] ?? f;
+                    // useWatch lags one render behind append(); the new row has no totals yet
+                    const totals = lineTotals[index] ?? { freightShare: 0, unitCost: 0 };
+                    const isNew = line.mode === 'new';
+                    return (
+                      <Box
+                        key={f.id}
+                        sx={{
+                          px: 1.5,
+                          py: 1.1,
+                          borderBottom: index < fields.length - 1 ? 1 : 0,
+                          borderColor: 'grey.100',
+                          bgcolor: isNew ? (t) => alpha(t.palette.primary.main, 0.03) : undefined,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: 'grid',
+                            gridTemplateColumns: LINE_COLUMNS,
+                            gap: 0.9,
+                            alignItems: 'center',
+                          }}
+                        >
+                          {/* Produto */}
+                          <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
+                            {isNew ? (
+                              <Controller
+                                name={`lines.${index}.newName`}
+                                control={control}
+                                rules={{ validate: (v) => v.trim().length > 0 }}
+                                render={({ field }) => (
+                                  <TextField
+                                    {...field}
+                                    size="small"
+                                    fullWidth
+                                    placeholder="Nome do novo produto"
+                                    inputProps={{ 'aria-label': 'Nome do novo produto' }}
+                                    sx={CELL_INPUT_SX}
+                                  />
+                                )}
+                              />
+                            ) : (
+                              <Controller
+                                name={`lines.${index}.item`}
+                                control={control}
+                                rules={{ required: true }}
+                                render={({ field }) => (
+                                  <Autocomplete
+                                    options={items}
+                                    size="small"
+                                    fullWidth
+                                    getOptionLabel={(o) => (o.sku ? `${o.name} (${o.sku})` : o.name)}
+                                    isOptionEqualToValue={(a, b) => a.id === b.id}
+                                    value={field.value}
+                                    onChange={(_, v) => field.onChange(v)}
+                                    noOptionsText="Nenhum produto"
+                                    renderInput={(params) => (
+                                      <TextField
+                                        {...params}
+                                        placeholder="Selecione o produto"
+                                        inputProps={{ ...params.inputProps, 'aria-label': 'Produto' }}
+                                        sx={CELL_INPUT_SX}
+                                      />
+                                    )}
+                                  />
+                                )}
+                              />
+                            )}
+                            {isNew && (
+                              <Box
+                                component="span"
+                                sx={{
+                                  flexShrink: 0,
+                                  px: 0.9,
+                                  py: 0.25,
+                                  borderRadius: '6px',
+                                  fontSize: fontSizes['3xs'],
+                                  fontWeight: 800,
+                                  textTransform: 'uppercase',
+                                  color: 'primary.dark',
+                                  bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
+                                }}
                               >
-                                <MenuItem value="existing">Item existente</MenuItem>
-                                <MenuItem value="new">Cadastrar novo</MenuItem>
-                              </TextField>
+                                novo
+                              </Box>
+                            )}
+                          </Stack>
+
+                          {/* Validade */}
+                          <Controller
+                            name={`lines.${index}.expiresAt`}
+                            control={control}
+                            rules={{ required: true }}
+                            render={({ field }) => (
+                              <TextField
+                                {...field}
+                                type="date"
+                                size="small"
+                                fullWidth
+                                inputProps={{ 'aria-label': 'Validade do lote' }}
+                                sx={CELL_INPUT_SX}
+                              />
                             )}
                           />
-                        </Grid>
 
-                        {watchedLines[formIndex]?.mode === 'existing' ? (
-                          <Grid item xs={12} sm={8}>
+                          {/* Unidade */}
+                          {isNew ? (
                             <Controller
-                              name={`lines.${formIndex}.item`}
+                              name={`lines.${index}.newUnit`}
                               control={control}
-                              rules={{ required: 'Selecione um item' }}
-                              render={({ field: itemField, fieldState }) => (
-                                <Autocomplete
-                                  options={items}
-                                  getOptionLabel={(o) =>
-                                    o.sku ? `${o.name} (${o.sku})` : o.name
-                                  }
-                                  isOptionEqualToValue={(a, b) => a.id === b.id}
-                                  value={itemField.value}
-                                  onChange={(_, v) => itemField.onChange(v)}
-                                  renderInput={(params) => (
-                                    <TextField
-                                      {...params}
-                                      label="Produto"
-                                      size="medium"
-                                      required
-                                      sx={MATERIAL_FIELD_SX}
-                                      InputLabelProps={MATERIAL_LABEL_PROPS}
-                                      error={!!fieldState.error}
-                                      helperText={fieldState.error?.message}
-                                    />
-                                  )}
+                              render={({ field }) => (
+                                <TextField
+                                  {...field}
+                                  select
+                                  size="small"
+                                  fullWidth
+                                  inputProps={{ 'aria-label': 'Unidade' }}
+                                  SelectProps={{ renderValue: (v) => String(v || '—') }}
+                                  sx={CELL_INPUT_SX}
+                                >
+                                  {unitOptions.map((opt) => (
+                                    <MenuItem key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </MenuItem>
+                                  ))}
+                                </TextField>
+                              )}
+                            />
+                          ) : (
+                            <Box sx={CELL_TEXT_SX}>{line.item?.unit || '—'}</Box>
+                          )}
+
+                          {/* Quantidade */}
+                          <Controller
+                            name={`lines.${index}.quantity`}
+                            control={control}
+                            rules={{ required: true, min: 0.001 }}
+                            render={({ field }) => (
+                              <TextField
+                                {...field}
+                                type="number"
+                                size="small"
+                                inputProps={{ min: 0.001, step: 'any', 'aria-label': 'Quantidade', style: { textAlign: 'center' } }}
+                                sx={CELL_INPUT_SX}
+                              />
+                            )}
+                          />
+
+                          {/* Estoque mínimo */}
+                          {isNew ? (
+                            <Controller
+                              name={`lines.${index}.newMinQuantity`}
+                              control={control}
+                              render={({ field }) => (
+                                <TextField
+                                  {...field}
+                                  type="number"
+                                  size="small"
+                                  inputProps={{ min: 0, step: 1, 'aria-label': 'Estoque mínimo', style: { textAlign: 'center' } }}
+                                  sx={CELL_INPUT_SX}
                                 />
                               )}
                             />
-                          </Grid>
-                        ) : (
-                          <Grid item xs={12} sm={8}>
-                            <Box
-                              sx={{
-                                height: '100%',
-                                minHeight: 40,
-                                display: 'flex',
-                                alignItems: 'center',
-                                px: 1.5,
-                                py: 1,
-                                borderRadius: 2,
-                                border: '1px dashed',
-                                borderColor: 'primary.light',
-                                bgcolor: (t) => alpha(t.palette.primary.main, 0.04),
-                              }}
-                            >
-                              <Stack direction="row" spacing={1} alignItems="center">
-                                <AddBoxOutlinedIcon fontSize="small" color="primary" />
-                                <Typography variant="body2" color="text.secondary">
-                                  Preencha o cadastro do item abaixo — será criado ao confirmar a compra
-                                </Typography>
-                              </Stack>
+                          ) : (
+                            <Box sx={{ ...CELL_TEXT_SX, justifyContent: 'center' }}>
+                              {line.item ? Number(line.item.minQuantity) : '—'}
                             </Box>
-                          </Grid>
-                        )}
+                          )}
 
-                        {watchedLines[formIndex]?.mode === 'new' && (
-                          <Grid item xs={12}>
-                            <Box
-                              sx={{
-                                p: { xs: 1.5, sm: 2 },
-                                borderRadius: 2,
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                bgcolor: (t) => t.palette.background.default,
-                                '& .MuiInputLabel-root': {
-                                  backgroundColor: (t) => t.palette.background.default,
-                                },
-                              }}
-                            >
-                              <Typography
-                                variant="subtitle2"
-                                fontWeight={600}
-                                color="text.primary"
-                                sx={{ display: 'block', mb: 2 }}
-                              >
-                                Cadastro do novo item
-                              </Typography>
-                              <Grid container spacing={2}>
-                                <Grid item xs={12}>
-                                  <Controller
-                                    name={`lines.${formIndex}.newName`}
-                                    control={control}
-                                    rules={{ required: 'Nome obrigatório' }}
-                                    render={({ field: f, fieldState }) => (
-                                      <TextField
-                                        {...f}
-                                        label="Nome do produto"
-                                        fullWidth
-                                        size="medium"
-                                        required
-                                        sx={MATERIAL_FIELD_SX}
-                                        InputLabelProps={MATERIAL_LABEL_PROPS}
-                                        error={!!fieldState.error}
-                                        helperText={fieldState.error?.message}
-                                        placeholder="Ex.: Agulha descartável 30G"
-                                      />
-                                    )}
-                                  />
-                                </Grid>
-                                <Grid item xs={12} sm={4}>
-                                  <Controller
-                                    name={`lines.${formIndex}.newSku`}
-                                    control={control}
-                                    render={({ field: f }) => (
-                                      <TextField
-                                        {...f}
-                                        label="SKU / Código"
-                                        fullWidth
-                                        size="medium"
-                                        sx={MATERIAL_FIELD_SX}
-                                        InputLabelProps={MATERIAL_LABEL_PROPS}
-                                        placeholder="Opcional"
-                                      />
-                                    )}
-                                  />
-                                </Grid>
-                                <Grid item xs={12} sm={4}>
-                                  <Controller
-                                    name={`lines.${formIndex}.newUnit`}
-                                    control={control}
-                                    render={({ field: f }) => (
-                                      <TextField
-                                        {...f}
-                                        select
-                                        label="Unidade de medida"
-                                        fullWidth
-                                        size="medium"
-                                        sx={MATERIAL_FIELD_SX}
-                                        InputLabelProps={MATERIAL_LABEL_PROPS}
-                                      >
-                                        {unitOptions.map((u) => (
-                                          <MenuItem key={u.value} value={u.value}>
-                                            {u.label}
-                                          </MenuItem>
-                                        ))}
-                                      </TextField>
-                                    )}
-                                  />
-                                </Grid>
-                                <Grid item xs={12} sm={4}>
-                                  <Controller
-                                    name={`lines.${formIndex}.newMinQuantity`}
-                                    control={control}
-                                    render={({ field: f }) => (
-                                      <TextField
-                                        {...f}
-                                        type="number"
-                                        label="Estoque mínimo"
-                                        fullWidth
-                                        size="medium"
-                                        sx={MATERIAL_FIELD_SX}
-                                        InputLabelProps={MATERIAL_LABEL_PROPS}
-                                        inputProps={{ min: 0, step: '0.001' }}
-                                      />
-                                    )}
-                                  />
-                                </Grid>
-                              </Grid>
-                            </Box>
-                          </Grid>
-                        )}
-
-                        <Grid item xs={12}>
-                          <Divider sx={{ my: 1 }}>
-                            <Chip
-                              label="Entrada na compra"
-                              size="small"
-                              variant="outlined"
-                              sx={{ bgcolor: 'background.paper', fontWeight: 600 }}
-                            />
-                          </Divider>
-                        </Grid>
-
-                        <Grid item xs={12} sm={6}>
+                          {/* Valor unitário */}
                           <Controller
-                            name={`lines.${formIndex}.quantity`}
+                            name={`lines.${index}.unitPrice`}
                             control={control}
-                            rules={{ required: true, min: 0.001 }}
-                            render={({ field: f }) => (
+                            rules={{ required: true, min: 0.01 }}
+                            render={({ field }) => (
                               <TextField
-                                {...f}
+                                {...field}
                                 type="number"
-                                label="Quantidade"
-                                fullWidth
-                                size="medium"
-                                required
-                                sx={MATERIAL_FIELD_SX}
-                                InputLabelProps={MATERIAL_LABEL_PROPS}
-                                inputProps={{ min: 0.001, step: '0.001' }}
+                                size="small"
+                                placeholder="0,00"
+                                inputProps={{ min: 0, step: '0.01', 'aria-label': 'Valor unitário', style: { textAlign: 'right' } }}
+                                sx={CELL_INPUT_SX}
                               />
                             )}
                           />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <Controller
-                            name={`lines.${formIndex}.expiresAt`}
-                            control={control}
-                            rules={{ required: 'Validade obrigatória' }}
-                            render={({ field: f, fieldState }) => (
-                              <TextField
-                                {...f}
-                                type="date"
-                                label="Validade do lote"
-                                fullWidth
-                                size="medium"
-                                required
-                                sx={MATERIAL_FIELD_SX}
-                                InputLabelProps={MATERIAL_LABEL_PROPS}
-                                error={!!fieldState.error}
-                                helperText={fieldState.error?.message}
-                              />
-                            )}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <Controller
-                            name={`lines.${formIndex}.productTotal`}
-                            control={control}
-                            rules={{
-                              required: 'Valor obrigatório',
-                              min: { value: 0.01, message: 'Mínimo R$ 0,01' },
-                            }}
-                            render={({ field: f, fieldState }) => (
-                              <TextField
-                                {...f}
-                                type="number"
-                                label="Valor do produto (sem frete)"
-                                fullWidth
-                                size="medium"
-                                required
-                                sx={MATERIAL_FIELD_SX}
-                                InputLabelProps={MATERIAL_LABEL_PROPS}
-                                inputProps={{ step: '0.01', min: 0.01 }}
-                                error={!!fieldState.error}
-                                helperText={fieldState.error?.message}
-                                InputProps={{
-                                  startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+
+                          <Box sx={{ ...CELL_TEXT_SX, justifyContent: 'flex-end' }}>
+                            {totals.freightShare > 0 ? brl.format(totals.freightShare) : '—'}
+                          </Box>
+                          <Box
+                            sx={{ ...CELL_TEXT_SX, justifyContent: 'flex-end', fontSize: fontSizes.sm, fontWeight: 800, color: 'primary.main' }}
+                            title="Custo unitário com frete"
+                          >
+                            {totals.unitCost > 0 ? brl.format(totals.unitCost) : '—'}
+                          </Box>
+
+                          <Tooltip title={fields.length <= 1 ? 'A compra precisa de ao menos um item' : 'Remover linha'}>
+                            <span>
+                              <IconButton
+                                size="small"
+                                aria-label="Remover linha"
+                                disabled={fields.length <= 1}
+                                onClick={() => remove(index)}
+                                sx={{
+                                  width: 28,
+                                  height: 32,
+                                  borderRadius: '8px',
+                                  color: 'text.disabled',
+                                  '&:hover': { bgcolor: (t) => alpha(t.palette.error.main, 0.14), color: 'error.main' },
                                 }}
-                              />
-                            )}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            key={`unit-cost-${formIndex}-${currentUnitCost}`}
-                            label="Valor unitário"
-                            type="text"
-                            value={currentUnitCost > 0 ? brl.format(currentUnitCost) : ''}
-                            placeholder="—"
-                            fullWidth
-                            size="medium"
-                            InputLabelProps={MATERIAL_LABEL_PROPS}
-                            inputProps={{ readOnly: true }}
-                            helperText={
-                              currentUnitCost > 0 && currentLineTotals
-                                ? `Total da linha: ${brl.format(currentLineTotals.total)}${
-                                    currentLineTotals.freightShare > 0
-                                      ? ` (frete ${brl.format(currentLineTotals.freightShare)})`
-                                      : ''
-                                  }`
-                                : 'Preencha quantidade e valor do produto'
-                            }
-                            sx={{
-                              ...MATERIAL_FIELD_SX,
-                              '& .MuiOutlinedInput-root': {
-                                bgcolor: (t) => alpha(t.palette.primary.main, 0.06),
-                              },
-                              '& .MuiInputBase-input': {
-                                color: 'primary.main',
-                                fontWeight: 600,
-                                WebkitTextFillColor: (t) => t.palette.primary.main,
-                              },
-                            }}
-                          />
-                        </Grid>
-                      </Grid>
-                    </Box>
+                              >
+                                <DeleteOutlineIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </Box>
 
-                    <Box
-                      sx={{
-                        flexShrink: 0,
-                        pt: 1.5,
-                        mt: 1.5,
-                        borderTop: 1,
-                        borderColor: 'divider',
-                      }}
-                    >
-                      <Button
-                        type="button"
-                        variant="contained"
-                        fullWidth
-                        startIcon={<AddIcon />}
-                        onClick={handleAddLine}
-                      >
-                        Adicionar à lista
-                      </Button>
-                    </Box>
-                  </Paper>
-            </FormSection>
+                        {isNew && (
+                          <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.9, maxWidth: 420 }}>
+                            <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', fontWeight: 600, flexShrink: 0 }}>
+                              SKU / Código
+                            </Typography>
+                            <Controller
+                              name={`lines.${index}.newSku`}
+                              control={control}
+                              render={({ field }) => (
+                                <TextField
+                                  {...field}
+                                  size="small"
+                                  fullWidth
+                                  placeholder="Opcional"
+                                  inputProps={{ 'aria-label': 'SKU do novo produto' }}
+                                  sx={CELL_INPUT_SX}
+                                />
+                              )}
+                            />
+                          </Stack>
+                        )}
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Box>
+
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{
+                  mt: 1.25,
+                  px: 1.75,
+                  py: 1.4,
+                  bgcolor: 'grey.50',
+                  border: 1,
+                  borderColor: 'grey.100',
+                  borderRadius: '11px',
+                }}
+              >
+                <InfoOutlinedIcon sx={{ fontSize: 16, color: 'primary.main', flexShrink: 0 }} />
+                <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', lineHeight: 1.4 }}>
+                  Selecione um produto cadastrado em cada linha — a compra gera uma{' '}
+                  <Box component="b" sx={{ color: 'success.main' }}>movimentação de entrada</Box> no item. Para um
+                  produto que ainda não existe, use{' '}
+                  <Box component="b" sx={{ color: 'text.primary' }}>Cadastrar produto</Box>: ele é criado ao
+                  confirmar a compra.
+                </Typography>
               </Stack>
             </Box>
 
             <Box
               sx={{
-                flex: { xs: '0 0 auto', lg: '0 0 40%' },
-                maxWidth: { lg: '40%' },
-                width: { xs: '100%', lg: '40%' },
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: 0,
-                overflow: 'hidden',
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                gap: 2,
+                alignItems: 'start',
               }}
             >
-              <FormSection
-                fill
-                title="Itens na compra"
-                subtitle="Clique em um item para editar"
-                icon={<PlaylistAddCheckOutlinedIcon fontSize="small" />}
-                sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+              <Box>
+                <Typography sx={LABEL_SX}>Frete da compra</Typography>
+                <Controller
+                  name="freight"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      type="number"
+                      fullWidth
+                      placeholder="0,00"
+                      inputProps={{ min: 0, step: '0.01', 'aria-label': 'Frete da compra' }}
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                      }}
+                      sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'grey.50', fontWeight: 700 } }}
+                    />
+                  )}
+                />
+                <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', mt: 0.75 }}>
+                  Opcional. Diluído proporcionalmente ao valor de cada item.
+                </Typography>
+              </Box>
+
+              <Stack
+                spacing={1.4}
+                sx={{ bgcolor: 'grey.50', border: 1, borderColor: 'divider', borderRadius: '14px', px: 2.25, py: 2 }}
               >
-                <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                  <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.25 }}>
-                      {fields.map((field, i) => {
-                        const line = watchedLines[i];
-                        if (!line) return null;
-                        const totals = lineTotals[i];
-                        const label = getLineLabel(line);
-                        const filled = isLineFilled(line, totals?.unitCost ?? 0);
-                        const selected = i === formIndex;
-                        const unit =
-                          line.mode === 'existing'
-                            ? line.item?.unit
-                            : line.newUnit;
-
-                        return (
-                          <Box
-                            key={field.id}
-                            component="button"
-                            type="button"
-                            onClick={() => setActiveLineIndex(i)}
-                            sx={{
-                              display: 'block',
-                              width: '100%',
-                              mb: 1,
-                              p: 1.25,
-                              textAlign: 'left',
-                              cursor: 'pointer',
-                              borderRadius: 2,
-                              border: '1px solid',
-                              borderColor: selected ? 'primary.main' : 'divider',
-                              bgcolor: selected
-                                ? alpha(theme.palette.primary.main, 0.08)
-                                : 'background.paper',
-                              boxShadow: selected ? 1 : 0,
-                              transition: 'border-color 0.15s, background-color 0.15s',
-                              '&:hover': {
-                                borderColor: selected ? 'primary.main' : 'text.disabled',
-                                bgcolor: selected
-                                  ? alpha(theme.palette.primary.main, 0.1)
-                                  : 'background.paper',
-                              },
-                            }}
-                          >
-                            <Stack direction="row" spacing={0.75} alignItems="flex-start">
-                              <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Stack
-                                  direction="row"
-                                  spacing={0.5}
-                                  alignItems="center"
-                                  sx={{ mb: 0.25 }}
-                                >
-                                  <Typography variant="body2" fontWeight={600} noWrap>
-                                    {i + 1}. {label}
-                                  </Typography>
-                                  {!filled && (
-                                    <Chip
-                                      label="Incompleto"
-                                      size="small"
-                                      color="warning"
-                                      variant="outlined"
-                                      sx={{ height: 20, fontSize: fontSizes['3xs'] }}
-                                    />
-                                  )}
-                                </Stack>
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                  {Number(line.quantity) > 0 ? (
-                                    <>
-                                      {line.quantity}
-                                      {unit ? ` ${unit}` : ' un'}
-                                    </>
-                                  ) : (
-                                    'Qtd —'
-                                  )}
-                                  {' · '}
-                                  {totals?.unitCost > 0
-                                    ? `${brl.format(totals.unitCost)}/un`
-                                    : 'Unit. —'}
-                                  {' · Val. '}
-                                  {formatDateOnlyFromApi(line.expiresAt) || '—'}
-                                </Typography>
-                                {totals?.total > 0 && (
-                                  <Typography
-                                    variant="caption"
-                                    fontWeight={600}
-                                    color="primary.main"
-                                    display="block"
-                                    sx={{ mt: 0.25 }}
-                                  >
-                                    Linha: {brl.format(totals.total)}
-                                  </Typography>
-                                )}
-                              </Box>
-                              {fields.length > 1 && (
-                                <Tooltip title="Remover da lista">
-                                  <IconButton
-                                    size="small"
-                                    aria-label="Remover"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRemoveLine(i);
-                                    }}
-                                    sx={{ mt: -0.25 }}
-                                  >
-                                    <DeleteOutlineIcon sx={{ fontSize: 18 }} />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                            </Stack>
-                          </Box>
-                        );
-                      })}
-                    </Box>
-
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ pt: 1, flexShrink: 0, display: 'block', borderTop: 1, borderColor: 'divider' }}
-                    >
-                      Use o botão à esquerda para incluir outro material.
-                    </Typography>
-                  </Box>
-              </FormSection>
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}>
+                    Subtotal produtos
+                  </Typography>
+                  <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700 }}>{brl.format(productsTotal)}</Typography>
+                </Stack>
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}>
+                    Frete (rateado)
+                  </Typography>
+                  <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700 }}>{brl.format(freight)}</Typography>
+                </Stack>
+                <Box sx={{ height: '1px', bgcolor: 'divider' }} />
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography sx={{ fontSize: fontSizes.md, fontWeight: 800 }}>Total da compra</Typography>
+                  <Typography
+                    sx={{ fontSize: fontSizes['2xl'], fontWeight: 800, color: 'primary.main', letterSpacing: '-0.4px' }}
+                  >
+                    {brl.format(grandTotal)}
+                  </Typography>
+                </Stack>
+                <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary' }}>
+                  Uma despesa será lançada no financeiro ao confirmar.
+                </Typography>
+              </Stack>
             </Box>
-          </Box>
 
-          {mutation.isError && (
-            <Alert severity="error" variant="outlined" sx={{ mt: 2, flexShrink: 0 }}>
-              {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
-                ?.message ?? 'Erro ao registrar compra em lote'}
-            </Alert>
-          )}
-        </DialogContent>
-
-        <Box
-          sx={{
-            flexShrink: 0,
-            px: { xs: 2, sm: 3 },
-            py: 1.5,
-            borderTop: 1,
-            borderColor: 'divider',
-            bgcolor: (t) => t.palette.background.default,
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: { xs: 0.5, sm: 2 },
-          }}
-        >
-          <Typography variant="body2" color="text.secondary">
-            Produtos: <strong>{brl.format(productsTotal)}</strong>
-            {freight > 0 && (
-              <>
-                {' '}
-                · Frete: <strong>{brl.format(freight)}</strong>
-              </>
+            {mutation.isError && (
+              <Alert severity="error" variant="outlined">
+                {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
+                  ?.message ?? 'Erro ao registrar compra em lote'}
+              </Alert>
             )}
-          </Typography>
-          <Typography variant="subtitle1" fontWeight={700} sx={{ ml: { sm: 'auto' } }}>
-            Total: {brl.format(grandTotal)}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ width: '100%' }}>
-            Uma despesa será lançada no financeiro ao confirmar.
-          </Typography>
-        </Box>
+          </Stack>
+        </DialogContent>
 
         <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
           <Button onClick={onClose} type="button" disabled={mutation.isPending}>

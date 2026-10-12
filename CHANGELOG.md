@@ -41,6 +41,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - `Packages.tsx`: substitui DataGrid por cards Aurora; `PackageFormDialog` reorganizada.
 - `Promotions.tsx`: substitui DataGrid por cards Aurora; `PromotionFormDialog` com tipo Combo e escopo (procedimentos/pacotes).
 - `RecurringExpenses.tsx`: substitui DataGrid por layout Aurora (cards de resumo com divisão fixo/variável e vencimentos em 7 dias, painel de custo por hora minimizável, tabela paginada com próximo vencimento); `RecurringExpenseFormDialog` em coluna única com `LabeledField`. API e cálculo de custo/hora inalterados.
+- `Equipment.tsx`: substitui DataGrid por cards Aurora (stats, ciclo de manutenção, paginação); `EquipmentFormDialog` em coluna única com `LabeledField`.
 
 ### Fixed
 
