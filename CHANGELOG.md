@@ -40,6 +40,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Dashboard: scroll na lista de aniversariantes; botão WhatsApp desabilitado sem telefone.
 - `Packages.tsx`: substitui DataGrid por cards Aurora; `PackageFormDialog` reorganizada.
 - `Promotions.tsx`: substitui DataGrid por cards Aurora; `PromotionFormDialog` com tipo Combo e escopo (procedimentos/pacotes).
+- `Equipment.tsx`: substitui DataGrid por cards Aurora (stats, ciclo de manutenção, paginação); `EquipmentFormDialog` em coluna única com `LabeledField`.
 
 ### Fixed
 
