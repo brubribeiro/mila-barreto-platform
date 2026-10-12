@@ -24,6 +24,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Pacotes: campo **highlight** (Mais vendido / Recorrente), `GET /packages/stats/summary`, agregações na listagem (preço, economia, pacientes ativos).
 - Promoções: tipo de desconto **COMBO** no enum Prisma; migration `20260730140000_promotion_combo_discount_type`.
 - Grupos: campo `color` em `Role` (migration `20261012120000_role_color`, `#RRGGBB` validado no DTO, cores padrão no seed).
+- Mensagens: enum Prisma `MessageTrigger` e campos `trigger`/`active` em `MessageTemplate` (migration `20261012120000_message_template_trigger`, que deriva o gatilho da categoria dos modelos existentes); DTOs aceitam `trigger`, `active` e `category: null`; seed com modelos Lembrete 24h e Pós-procedimento.
+- Frontend: tela Mensagens no layout Aurora (lista de modelos + detalhe com prévia do WhatsApp), modal `MessageTemplateFormDialog` com gatilho e status, `VariableChip`; variável `{nome}` (alias de `{paciente_nome}`, que segue aceita); `SendWhatsAppDialog` lista só modelos ativos e sugere pelo gatilho.
 - Metas: modelo Prisma `Goal` (enums `GoalMetric`, `GoalFormat`, `GoalPeriodType`), migration `20261011120000_goals`, módulo `goals/` com CRUD, `GET /goals?scope=current|upcoming|past|all&at=` e `GET /goals/preview`; valor atual calculado (faturamento, novos pacientes, procedimentos, ticket médio, ocupação da agenda, taxa de retorno) ou manual; permissões `goals:*`.
 - Frontend: página `/metas` (`Goals.tsx`, `GoalFormDialog`, `goalUtils`) no menu Análise; card `GoalsCard` no Dashboard com metas reais.
 

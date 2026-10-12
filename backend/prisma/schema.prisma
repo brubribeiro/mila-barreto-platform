@@ -205,14 +205,26 @@ model DocumentTemplate {
 
 // Templates reutilizáveis para envio de mensagens.
 // Suporta variáveis no formato {paciente_nome}, {data}, {hora}, {procedimento}, {profissional}.
+/// Momento em que o modelo é usado (sugerido no envio pelo WhatsApp).
+enum MessageTrigger {
+  ON_BOOKING
+  DAY_BEFORE
+  BIRTHDAY
+  AFTER_APPOINTMENT
+  INACTIVE_90_DAYS
+  MANUAL
+}
+
 model MessageTemplate {
-  id          String   @id @default(uuid())
-  name        String   @unique
+  id          String         @id @default(uuid())
+  name        String         @unique
   category    String? // "confirmacao", "lembrete", "retorno", "aniversario", "livre"
+  trigger     MessageTrigger @default(MANUAL)
+  active      Boolean        @default(true)
   content     String
   procedureId String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   procedure Procedure? @relation(fields: [procedureId], references: [id], onDelete: SetNull)
 

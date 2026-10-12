@@ -89,19 +89,36 @@ const defaultTemplates = [
   {
     name: 'Confirmação de agendamento',
     category: 'confirmacao',
+    trigger: 'ON_BOOKING' as const,
     content:
-      'Olá, {paciente_nome}! Confirmando seu agendamento de {procedimento} no dia {data} às {hora} com {profissional}. Pode confirmar respondendo essa mensagem? 💆',
+      'Olá, {nome}! Seu horário para {procedimento} está confirmado para {data} às {hora} com {profissional}. Até breve! 💚',
   },
   {
-    name: 'Lembrete de retorno',
-    category: 'retorno',
+    name: 'Lembrete 24h',
+    category: 'lembrete',
+    trigger: 'DAY_BEFORE' as const,
     content:
-      'Oi, {paciente_nome}! Já faz um tempinho da nossa última sessão de {procedimento}. Que tal agendarmos seu retorno? 💚',
+      'Oi, {nome}! Passando para lembrar do seu {procedimento} amanhã às {hora}. Pode confirmar a presença? Responda SIM 😊',
   },
   {
     name: 'Aniversário',
     category: 'aniversario',
-    content: 'Feliz aniversário, {paciente_nome}! 🎉 Que esse novo ciclo traga muito bem-estar.',
+    trigger: 'BIRTHDAY' as const,
+    content: 'Feliz aniversário, {nome}! 🎉 Que esse novo ciclo traga muito bem-estar.',
+  },
+  {
+    name: 'Pós-procedimento',
+    category: 'retorno',
+    trigger: 'AFTER_APPOINTMENT' as const,
+    content:
+      '{nome}, foi um prazer te atender! Lembre dos cuidados pós {procedimento}. Qualquer dúvida, estamos por aqui. 💧',
+  },
+  {
+    name: 'Lembrete de retorno',
+    category: 'retorno',
+    trigger: 'INACTIVE_90_DAYS' as const,
+    content:
+      'Oi, {nome}! Já faz um tempinho da nossa última sessão de {procedimento}. Que tal agendarmos seu retorno? 💚',
   },
 ];
 
