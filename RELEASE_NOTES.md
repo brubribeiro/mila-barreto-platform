@@ -87,6 +87,11 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Clique no card para editar; ações rápidas de editar e excluir, busca, filtro de status e histórico de alterações.
 - Modal de cadastro reorganizada em seções **Identificação** e **Taxa da maquininha**, com prévia da taxa e do valor líquido.
 
+**Grupos e permissões**
+- Tela redesenhada no estilo Aurora: grupos em cards à esquerda (com cor e número de membros) e, ao lado, a matriz de permissões do grupo selecionado (**Ver**, **Criar**, **Editar**, **Excluir** por módulo).
+- As permissões são ajustadas direto na matriz: clique numa célula, no nome do módulo (linha inteira) ou no título da coluna; depois **Salvar permissões** ou **Descartar**.
+- Novo grupo em modal mais simples: nome, descrição, **copiar permissões de** um grupo existente, **cor do grupo** e restrição à própria agenda.
+
 **Documentos**
 - Tela redesenhada no estilo Aurora: resumo com total de documentos, **assinados**, **pendentes** e **modelos ativos**.
 - Cada documento agora tem **status** — Pendente, Enviado ou Assinado — exibido na lista e alterável pelo menu da linha.
