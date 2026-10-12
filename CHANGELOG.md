@@ -23,6 +23,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Componente compartilhado `FormSection` para seções de modais.
 - Pacotes: campo **highlight** (Mais vendido / Recorrente), `GET /packages/stats/summary`, agregações na listagem (preço, economia, pacientes ativos).
 - Promoções: tipo de desconto **COMBO** no enum Prisma; migration `20260730140000_promotion_combo_discount_type`.
+- Metas: modelo Prisma `Goal` (enums `GoalMetric`, `GoalFormat`, `GoalPeriodType`), migration `20261011120000_goals`, módulo `goals/` com CRUD, `GET /goals?scope=current|upcoming|past|all&at=` e `GET /goals/preview`; valor atual calculado (faturamento, novos pacientes, procedimentos, ticket médio, ocupação da agenda, taxa de retorno) ou manual; permissões `goals:*`.
+- Frontend: página `/metas` (`Goals.tsx`, `GoalFormDialog`, `goalUtils`) no menu Análise; card `GoalsCard` no Dashboard com metas reais.
 
 ### Changed
 

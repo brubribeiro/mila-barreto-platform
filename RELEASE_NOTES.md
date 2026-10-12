@@ -93,6 +93,13 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Administradores podem **personificar** outro usuário ativo direto da lista (com confirmação).
 - Histórico de alterações disponível para administradores.
 
+**Metas**
+- Nova tela **Metas** no menu Análise: resumo com metas ativas, atingidas e progresso médio, e um card por meta com valor atual, objetivo, barra de progresso e status (**Atingida**, **Quase lá**, **No caminho** ou **Atenção**).
+- O valor atual é calculado sozinho para **faturamento**, **novos pacientes**, **procedimentos realizados**, **ticket médio**, **ocupação da agenda** e **taxa de retorno**; para outros objetivos, informe o valor manualmente.
+- Metas mensais, trimestrais ou anuais, com cor escolhida e filtro entre metas em andamento, próximas e encerradas.
+- O card **Metas do mês** do Dashboard agora mostra as metas reais do mês selecionado.
+- Acesso controlado pela nova permissão **Metas** nos grupos (administradores já têm acesso).
+
 **Profissionais**
 - Tela redesenhada no estilo Aurora: grade de cards com **foto**, função, registro profissional e **áreas de atuação** (Toxina, Preenchimento, etc.).
 - Badge de **disponibilidade em tempo real**: Disponível, Em atendimento, Folga ou Fora do horário (com base no expediente e indisponibilidades).
