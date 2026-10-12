@@ -323,10 +323,20 @@ export interface RecurringExpense {
   _count?: { generatedEntries: number };
 }
 
+export type MessageTrigger =
+  | 'ON_BOOKING'
+  | 'DAY_BEFORE'
+  | 'BIRTHDAY'
+  | 'AFTER_APPOINTMENT'
+  | 'INACTIVE_90_DAYS'
+  | 'MANUAL';
+
 export interface MessageTemplate {
   id: string;
   name: string;
-  category?: string;
+  category?: string | null;
+  trigger: MessageTrigger;
+  active: boolean;
   content: string;
   procedureId?: string | null;
   procedure?: { id: string; name: string; price: number | string } | null;
