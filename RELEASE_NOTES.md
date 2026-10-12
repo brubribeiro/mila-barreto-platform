@@ -89,6 +89,12 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Depois de assinado, use **Anexar versão assinada** para guardar o arquivo; o documento passa para Assinado.
 - Filtros de **status**, **tipo** e **vínculo**, busca, paginação e histórico de alterações.
 
+**Equipamentos**
+- Tela redesenhada no estilo Aurora: cards de resumo (**equipamentos**, **operacionais**, **manutenção atrasada** e **manutenção nos próximos 30 dias**) e grade de cards por equipamento.
+- Cada card mostra **status** (Operacional, Manut. atrasada, Inativo), barra do **ciclo de manutenção** com dias restantes, datas agendada/automática e valores da máquina e da manutenção.
+- Clique no card para editar; ações rápidas para **registrar manutenção**, editar e excluir. Filtros de manutenção e status, busca e paginação.
+- Modal de cadastro reorganizada em coluna única, com seções **Aquisição** e **Manutenção**.
+
 **Usuários**
 - Nova tela **Usuários** no menu Equipe: lista com busca, filtros por **grupo**, **profissional** e **status**, e ações de editar e excluir.
 - Formulário unificado para criar ou editar conta: grupo de permissão, vínculo como **profissional**, marcação **Principal** e dados de perfil quando aplicável.

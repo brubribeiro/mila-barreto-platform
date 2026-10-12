@@ -44,6 +44,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Backend Documentos: `POST /documents/from-template` (preenche `{{paciente}}`, `{{cpf}}`, `{{nascimento}}`, `{{telefone}}`, `{{email}}`, `{{endereco}}`, `{{data}}`, `{{profissional}}`), `GET /documents/:id`, `PATCH /documents/:id`, `POST /documents/:id/file` (anexa a versão assinada no R2 e marca `SIGNED`); upload aceita `status`. Listagem devolve `hasContent` sem o texto.
 - Backend: CRUD `/document-templates` (permissões `documents:*`, auditoria `DocumentTemplate`); seed com 3 modelos padrão (consentimento, anamnese, autorização de imagem).
 - `Documents.tsx`: layout Aurora com cards Total/Assinados/Pendentes/Modelos ativos, tabela paginada (documento, paciente, tipo, data, status) e menu por linha (abrir, visualizar/imprimir, anexar versão assinada, marcar status, editar, excluir); filtros de status/tipo/vínculo. `DocumentFormDialog` (substitui `DocumentUploadDialog`: modelo ou arquivo, status, observações, edição), `DocumentViewerDialog` (texto + impressão) e `DocumentTemplatesDialog` (CRUD de modelos com inserção de campos); remove `DocumentCard`.
+- `Equipment.tsx`: substitui DataGrid por cards Aurora (stats, ciclo de manutenção, paginação); `EquipmentFormDialog` em coluna única com `LabeledField`.
 
 ### Fixed
 
