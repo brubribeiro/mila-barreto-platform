@@ -81,6 +81,14 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Data comemorativa selecionável (Dia das Mães, Black Friday, etc.).
 - Paginação na lista (8 campanhas por página) e interruptor em cada card para **ativar ou desativar** sem abrir o cadastro.
 
+**Documentos**
+- Tela redesenhada no estilo Aurora: resumo com total de documentos, **assinados**, **pendentes** e **modelos ativos**.
+- Cada documento agora tem **status** — Pendente, Enviado ou Assinado — exibido na lista e alterável pelo menu da linha.
+- **Modelos de documento**: crie termos de consentimento, fichas de anamnese, autorizações etc. com campos como nome, CPF e data, preenchidos automaticamente com os dados do paciente. Já vêm 3 modelos padrão.
+- **Novo documento**: gere a partir de um modelo (abre pronto para imprimir) ou anexe um arquivo arrastando ou clicando; escolha tipo, paciente ou equipamento, status e observações.
+- Depois de assinado, use **Anexar versão assinada** para guardar o arquivo; o documento passa para Assinado.
+- Filtros de **status**, **tipo** e **vínculo**, busca, paginação e histórico de alterações.
+
 **Equipamentos**
 - Tela redesenhada no estilo Aurora: cards de resumo (**equipamentos**, **operacionais**, **manutenção atrasada** e **manutenção nos próximos 30 dias**) e grade de cards por equipamento.
 - Cada card mostra **status** (Operacional, Manut. atrasada, Inativo), barra do **ciclo de manutenção** com dias restantes, datas agendada/automática e valores da máquina e da manutenção.
