@@ -1,9 +1,11 @@
 import { api } from './client';
-import type { MessageTemplate } from '../types';
+import type { MessageTemplate, MessageTrigger } from '../types';
 
 export interface MessageTemplatePayload {
   name: string;
-  category?: string;
+  category?: string | null;
+  trigger?: MessageTrigger;
+  active?: boolean;
   content: string;
   procedureId?: string | null;
 }

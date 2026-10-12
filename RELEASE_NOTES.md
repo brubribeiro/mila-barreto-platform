@@ -107,6 +107,12 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Administradores podem **personificar** outro usuário ativo direto da lista (com confirmação).
 - Histórico de alterações disponível para administradores.
 
+**Mensagens**
+- Tela redesenhada no estilo Aurora: lista de **modelos de mensagem** à esquerda e, à direita, a prévia do modelo selecionado em um balão de conversa do WhatsApp, com as variáveis destacadas.
+- Cada modelo tem um **gatilho de envio** (Ao agendar, 1 dia antes, No dia do aniversário, Após o atendimento, 90 dias sem visita ou Envio manual) e pode ser **ativado ou desativado** com um clique.
+- Novo modal **Novo modelo de mensagem**: título, gatilho, mensagem com emojis e variáveis clicáveis (**{nome}**, {procedimento}, {data}, {hora}, {profissional}, {valor}).
+- Ao enviar pelo WhatsApp (Agenda, Pacientes, Dashboard), só aparecem modelos ativos e o modelo certo é sugerido pelo gatilho. Modelos antigos com {paciente_nome} continuam funcionando.
+
 **Metas**
 - Nova tela **Metas** no menu Análise: resumo com metas ativas, atingidas e progresso médio, e um card por meta com valor atual, objetivo, barra de progresso e status (**Atingida**, **Quase lá**, **No caminho** ou **Atenção**).
 - O valor atual é calculado sozinho para **faturamento**, **novos pacientes**, **procedimentos realizados**, **ticket médio**, **ocupação da agenda** e **taxa de retorno**; para outros objetivos, informe o valor manualmente.
