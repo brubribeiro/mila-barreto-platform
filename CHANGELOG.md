@@ -42,6 +42,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - `Packages.tsx`: substitui DataGrid por cards Aurora; `PackageFormDialog` reorganizada.
 - `Promotions.tsx`: substitui DataGrid por cards Aurora; `PromotionFormDialog` com tipo Combo e escopo (procedimentos/pacotes).
 - `Roles.tsx`: substitui DataGrid por layout Aurora (cards de grupo + matriz de permissões editável na página, com salvar/descartar); `RoleFormDialog` em coluna única (520px) com cor do grupo e "Copiar permissões de".
+- `Equipment.tsx`: substitui DataGrid por cards Aurora (stats, ciclo de manutenção, paginação); `EquipmentFormDialog` em coluna única com `LabeledField`.
 
 ### Fixed
 
