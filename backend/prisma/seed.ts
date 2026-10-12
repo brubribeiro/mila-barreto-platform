@@ -19,6 +19,7 @@ const RESOURCES = [
   'metrics',
   'promotions',
   'payment-methods',
+  'goals',
 ];
 const ACTIONS = ['view', 'create', 'edit', 'delete'];
 const ALL_PERMISSIONS = RESOURCES.flatMap((r) => ACTIONS.map((a) => `${r}:${a}`));
@@ -85,19 +86,36 @@ const defaultTemplates = [
   {
     name: 'Confirmação de agendamento',
     category: 'confirmacao',
+    trigger: 'ON_BOOKING' as const,
     content:
-      'Olá, {paciente_nome}! Confirmando seu agendamento de {procedimento} no dia {data} às {hora} com {profissional}. Pode confirmar respondendo essa mensagem? 💆',
+      'Olá, {nome}! Seu horário para {procedimento} está confirmado para {data} às {hora} com {profissional}. Até breve! 💚',
   },
   {
-    name: 'Lembrete de retorno',
-    category: 'retorno',
+    name: 'Lembrete 24h',
+    category: 'lembrete',
+    trigger: 'DAY_BEFORE' as const,
     content:
-      'Oi, {paciente_nome}! Já faz um tempinho da nossa última sessão de {procedimento}. Que tal agendarmos seu retorno? 💚',
+      'Oi, {nome}! Passando para lembrar do seu {procedimento} amanhã às {hora}. Pode confirmar a presença? Responda SIM 😊',
   },
   {
     name: 'Aniversário',
     category: 'aniversario',
-    content: 'Feliz aniversário, {paciente_nome}! 🎉 Que esse novo ciclo traga muito bem-estar.',
+    trigger: 'BIRTHDAY' as const,
+    content: 'Feliz aniversário, {nome}! 🎉 Que esse novo ciclo traga muito bem-estar.',
+  },
+  {
+    name: 'Pós-procedimento',
+    category: 'retorno',
+    trigger: 'AFTER_APPOINTMENT' as const,
+    content:
+      '{nome}, foi um prazer te atender! Lembre dos cuidados pós {procedimento}. Qualquer dúvida, estamos por aqui. 💧',
+  },
+  {
+    name: 'Lembrete de retorno',
+    category: 'retorno',
+    trigger: 'INACTIVE_90_DAYS' as const,
+    content:
+      'Oi, {nome}! Já faz um tempinho da nossa última sessão de {procedimento}. Que tal agendarmos seu retorno? 💚',
   },
 ];
 
@@ -319,6 +337,61 @@ function demoProcedureStatus(startAt: Date, slotIndex: number): AppointmentStatu
   return 'SCHEDULED';
 }
 
+const defaultDocumentTemplates = [
+  {
+    name: 'Modelo padrão — Consentimento Toxina',
+    category: 'consentimento',
+    content: `TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO — TOXINA BOTULÍNICA
+
+Eu, {{paciente}}, CPF {{cpf}}, nascido(a) em {{nascimento}}, declaro que fui informado(a) pelo(a) profissional {{profissional}} sobre o procedimento de aplicação de toxina botulínica, seus objetivos, benefícios esperados, riscos e possíveis efeitos adversos (como dor no local, hematomas, assimetrias temporárias e cefaleia).
+
+Declaro que informei corretamente meu histórico de saúde, uso de medicamentos e alergias, e que tive a oportunidade de esclarecer todas as minhas dúvidas.
+
+Autorizo a realização do procedimento.
+
+Data: {{data}}
+
+______________________________________
+{{paciente}}`,
+  },
+  {
+    name: 'Modelo padrão — Anamnese facial',
+    category: 'anamnese',
+    content: `FICHA DE ANAMNESE FACIAL
+
+Paciente: {{paciente}}
+CPF: {{cpf}}    Nascimento: {{nascimento}}
+Telefone: {{telefone}}    E-mail: {{email}}
+
+1. Possui alergias? ( ) Não ( ) Sim: ______________________
+2. Faz uso de medicamentos? ( ) Não ( ) Sim: ______________
+3. Está gestante ou amamentando? ( ) Não ( ) Sim
+4. Já realizou procedimentos estéticos na face? ( ) Não ( ) Sim: ____
+5. Tem histórico de herpes, queloides ou doenças autoimunes? ( ) Não ( ) Sim
+
+Declaro que as informações acima são verdadeiras.
+
+Data: {{data}}
+
+______________________________________
+{{paciente}}`,
+  },
+  {
+    name: 'Modelo padrão — Autorização de imagem',
+    category: 'autorizacao_imagem',
+    content: `TERMO DE AUTORIZAÇÃO DE USO DE IMAGEM
+
+Eu, {{paciente}}, CPF {{cpf}}, autorizo a clínica a registrar e utilizar fotografias do antes e depois dos meus procedimentos para fins de prontuário e, de forma anônima, para divulgação científica e institucional.
+
+Esta autorização pode ser revogada a qualquer momento mediante solicitação por escrito.
+
+Data: {{data}}
+
+______________________________________
+{{paciente}}`,
+  },
+];
+
 async function main() {
   console.log('\n→ Garantindo grupos (roles)...');
   for (const r of defaultRoles) {
@@ -440,6 +513,15 @@ async function main() {
     if (!exists) {
       await prisma.messageTemplate.create({ data: t });
       console.log(`  ✓ Template criado: ${t.name}`);
+    }
+  }
+
+  console.log('\n→ Garantindo modelos de documento...');
+  for (const t of defaultDocumentTemplates) {
+    const exists = await prisma.documentTemplate.findUnique({ where: { name: t.name } });
+    if (!exists) {
+      await prisma.documentTemplate.create({ data: t });
+      console.log(`  ✓ Modelo criado: ${t.name}`);
     }
   }
 
