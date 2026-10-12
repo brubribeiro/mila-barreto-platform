@@ -44,6 +44,7 @@ const ENTITY_OPTIONS: { value: string; label: string }[] = [
   { value: 'PatientPackage', label: 'Pacote do paciente' },
   { value: 'Procedure', label: 'Procedimento' },
   { value: 'Document', label: 'Documento' },
+  { value: 'DocumentTemplate', label: 'Modelo de documento' },
 ];
 
 const ACTION_OPTIONS: { value: string; label: string }[] = [
