@@ -4,21 +4,50 @@ import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutl
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import type { SvgIconComponent } from '@mui/icons-material';
+import type { DocumentStatus } from '../../types';
 
 export const DOCUMENT_CATEGORIES = [
+  { value: 'consentimento', label: 'Termo de consentimento', color: '#C27C6B' },
+  { value: 'anamnese', label: 'Ficha de anamnese', color: '#5BA8DE' },
+  { value: 'receita', label: 'Receita', color: '#4FA37A' },
   { value: 'contrato', label: 'Contrato', color: '#5C6BC0' },
+  { value: 'autorizacao_imagem', label: 'Autorização de imagem', color: '#9B7BD4' },
+  { value: 'orcamento', label: 'Orçamento', color: '#E0915B' },
+  { value: 'evolucao', label: 'Evolução clínica', color: '#D46B8A' },
   { value: 'vigilancia', label: 'Vigilância sanitária', color: '#00897B' },
   { value: 'certificado', label: 'Certificado', color: '#7B1FA2' },
   { value: 'recibo', label: 'Recibo', color: '#F57C00' },
   { value: 'livre', label: 'Outro', color: '#78909C' },
 ] as const;
 
-export function categoryMeta(category?: string) {
+export function categoryMeta(category?: string | null) {
   const found = DOCUMENT_CATEGORIES.find((c) => c.value === category);
   return found ?? { value: '', label: 'Sem categoria', color: '#90A4AE' };
 }
 
-export function fmtFileSize(bytes?: number) {
+export const DOCUMENT_STATUSES: { value: DocumentStatus; label: string; tone: 'success' | 'warning' | 'info' }[] = [
+  { value: 'PENDING', label: 'Pendente', tone: 'warning' },
+  { value: 'SENT', label: 'Enviado', tone: 'info' },
+  { value: 'SIGNED', label: 'Assinado', tone: 'success' },
+];
+
+export function statusMeta(status: DocumentStatus) {
+  return DOCUMENT_STATUSES.find((s) => s.value === status) ?? DOCUMENT_STATUSES[0];
+}
+
+/** Placeholders aceitos nos modelos (substituídos em documents.service.ts). */
+export const TEMPLATE_PLACEHOLDERS = [
+  { key: 'paciente', label: 'Nome do paciente' },
+  { key: 'cpf', label: 'CPF' },
+  { key: 'nascimento', label: 'Nascimento' },
+  { key: 'telefone', label: 'Telefone' },
+  { key: 'email', label: 'E-mail' },
+  { key: 'endereco', label: 'Endereço' },
+  { key: 'data', label: 'Data de hoje' },
+  { key: 'profissional', label: 'Profissional' },
+] as const;
+
+export function fmtFileSize(bytes?: number | null) {
   if (!bytes) return '—';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -35,11 +64,11 @@ export function fmtStorageTotal(bytes: number): string {
   return fmtFileSize(bytes);
 }
 
-export function canOpenDocument(doc: { storageKey?: string }): boolean {
+export function canOpenDocument(doc: { storageKey?: string | null }): boolean {
   return !!doc.storageKey;
 }
 
-export function documentFileIcon(mimeType?: string): { Icon: SvgIconComponent; color: string } {
+export function documentFileIcon(mimeType?: string | null): { Icon: SvgIconComponent; color: string } {
   const mime = mimeType?.toLowerCase() ?? '';
   if (mime.includes('pdf')) return { Icon: PictureAsPdfOutlinedIcon, color: '#D32F2F' };
   if (mime.startsWith('image/')) return { Icon: ImageOutlinedIcon, color: '#7B1FA2' };

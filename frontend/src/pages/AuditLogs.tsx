@@ -32,6 +32,7 @@ const ENTITY_OPTIONS: { value: string; label: string }[] = [
   { value: 'FinancialEntry', label: 'Financeiro' },
   { value: 'RecurringExpense', label: 'Despesa recorrente' },
   { value: 'PaymentMethod', label: 'Forma de pagamento' },
+  { value: 'Goal', label: 'Meta' },
   { value: 'Promotion', label: 'Promoção' },
   { value: 'InventoryItem', label: 'Estoque' },
   { value: 'InventoryMovement', label: 'Movimentação de estoque' },
@@ -43,6 +44,7 @@ const ENTITY_OPTIONS: { value: string; label: string }[] = [
   { value: 'PatientPackage', label: 'Pacote do paciente' },
   { value: 'Procedure', label: 'Procedimento' },
   { value: 'Document', label: 'Documento' },
+  { value: 'DocumentTemplate', label: 'Modelo de documento' },
 ];
 
 const ACTION_OPTIONS: { value: string; label: string }[] = [

@@ -93,6 +93,7 @@ const navGrouped: NavGroup[] = [
     title: 'Análise',
     items: [
       { label: 'Métricas', path: '/metricas', icon: <AuroraIcon name="relatorios" />, permission: 'metrics:view' },
+      { label: 'Metas', path: '/metas', icon: <AuroraIcon name="metas" />, permission: 'goals:view' },
       { label: 'Documentos', path: '/documentos', icon: <AuroraIcon name="documentos" />, permission: 'documents:view' },
     ],
   },
@@ -129,6 +130,7 @@ const PAGE_META: (PageMeta & { path: string; exact?: boolean })[] = [
   { path: '/documentos', title: 'Documentos', subtitle: 'Arquivos e modelos' },
   { path: '/equipamentos', title: 'Equipamentos', subtitle: 'Aparelhos e manutenção' },
   { path: '/metricas', title: 'Métricas', subtitle: 'Indicadores e relatórios' },
+  { path: '/metas', title: 'Metas', subtitle: 'Objetivos e progresso da clínica' },
 ];
 
 function getPageMeta(pathname: string): PageMeta {

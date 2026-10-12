@@ -23,6 +23,7 @@ import { PackagesModule } from './packages/packages.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
+import { GoalsModule } from './goals/goals.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { AppController } from './app.controller';
@@ -53,6 +54,7 @@ import { AppController } from './app.controller';
     MetricsModule,
     PromotionsModule,
     PaymentMethodsModule,
+    GoalsModule,
     SchedulerModule,
     AuditLogModule,
   ],

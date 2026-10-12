@@ -87,11 +87,32 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Clique no card para editar; ações rápidas de editar e excluir, busca, filtro de status e histórico de alterações.
 - Modal de cadastro reorganizada em seções **Identificação** e **Taxa da maquininha**, com prévia da taxa e do valor líquido.
 
+**Documentos**
+- Tela redesenhada no estilo Aurora: resumo com total de documentos, **assinados**, **pendentes** e **modelos ativos**.
+- Cada documento agora tem **status** — Pendente, Enviado ou Assinado — exibido na lista e alterável pelo menu da linha.
+- **Modelos de documento**: crie termos de consentimento, fichas de anamnese, autorizações etc. com campos como nome, CPF e data, preenchidos automaticamente com os dados do paciente. Já vêm 3 modelos padrão.
+- **Novo documento**: gere a partir de um modelo (abre pronto para imprimir) ou anexe um arquivo arrastando ou clicando; escolha tipo, paciente ou equipamento, status e observações.
+- Depois de assinado, use **Anexar versão assinada** para guardar o arquivo; o documento passa para Assinado.
+- Filtros de **status**, **tipo** e **vínculo**, busca, paginação e histórico de alterações.
+
+**Equipamentos**
+- Tela redesenhada no estilo Aurora: cards de resumo (**equipamentos**, **operacionais**, **manutenção atrasada** e **manutenção nos próximos 30 dias**) e grade de cards por equipamento.
+- Cada card mostra **status** (Operacional, Manut. atrasada, Inativo), barra do **ciclo de manutenção** com dias restantes, datas agendada/automática e valores da máquina e da manutenção.
+- Clique no card para editar; ações rápidas para **registrar manutenção**, editar e excluir. Filtros de manutenção e status, busca e paginação.
+- Modal de cadastro reorganizada em coluna única, com seções **Aquisição** e **Manutenção**.
+
 **Usuários**
 - Nova tela **Usuários** no menu Equipe: lista com busca, filtros por **grupo**, **profissional** e **status**, e ações de editar e excluir.
 - Formulário unificado para criar ou editar conta: grupo de permissão, vínculo como **profissional**, marcação **Principal** e dados de perfil quando aplicável.
 - Administradores podem **personificar** outro usuário ativo direto da lista (com confirmação).
 - Histórico de alterações disponível para administradores.
+
+**Metas**
+- Nova tela **Metas** no menu Análise: resumo com metas ativas, atingidas e progresso médio, e um card por meta com valor atual, objetivo, barra de progresso e status (**Atingida**, **Quase lá**, **No caminho** ou **Atenção**).
+- O valor atual é calculado sozinho para **faturamento**, **novos pacientes**, **procedimentos realizados**, **ticket médio**, **ocupação da agenda** e **taxa de retorno**; para outros objetivos, informe o valor manualmente.
+- Metas mensais, trimestrais ou anuais, com cor escolhida e filtro entre metas em andamento, próximas e encerradas.
+- O card **Metas do mês** do Dashboard agora mostra as metas reais do mês selecionado.
+- Acesso controlado pela nova permissão **Metas** nos grupos (administradores já têm acesso).
 
 **Profissionais**
 - Tela redesenhada no estilo Aurora: grade de cards com **foto**, função, registro profissional e **áreas de atuação** (Toxina, Preenchimento, etc.).
