@@ -374,20 +374,42 @@ export interface Equipment {
   createdAt?: string;
 }
 
+export type DocumentStatus = 'PENDING' | 'SENT' | 'SIGNED';
+
 export interface DocumentFile {
   id: string;
   name: string;
-  category?: string;
-  storageKey?: string;
-  fileUrl?: string;
-  mimeType?: string;
-  size?: number;
-  notes?: string;
-  patientId?: string;
-  equipmentId?: string;
+  category?: string | null;
+  status: DocumentStatus;
+  signedAt?: string | null;
+  storageKey?: string | null;
+  fileUrl?: string | null;
+  mimeType?: string | null;
+  size?: number | null;
+  notes?: string | null;
+  /** Texto gerado a partir de um modelo; só vem em GET /documents/:id */
+  content?: string | null;
+  /** Indica se há texto gerado (a listagem não traz `content`) */
+  hasContent?: boolean;
+  templateId?: string | null;
+  patientId?: string | null;
+  equipmentId?: string | null;
   createdAt: string;
-  patient?: { id: string; name: string };
-  equipment?: { id: string; name: string };
+  updatedAt?: string;
+  patient?: { id: string; name: string } | null;
+  equipment?: { id: string; name: string } | null;
+  template?: { id: string; name: string } | null;
+}
+
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  category?: string | null;
+  content: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { documents: number };
 }
 
 export interface InventoryItem {
@@ -449,4 +471,35 @@ export interface Notification {
 export interface NotificationPreference {
   type: NotificationType;
   enabled: boolean;
+}
+
+export type GoalMetric =
+  | 'REVENUE'
+  | 'NEW_PATIENTS'
+  | 'PROCEDURES'
+  | 'AVERAGE_TICKET'
+  | 'OCCUPANCY'
+  | 'RETURN_RATE'
+  | 'MANUAL';
+export type GoalFormat = 'CURRENCY' | 'NUMBER' | 'PERCENT';
+export type GoalPeriodType = 'MONTH' | 'QUARTER' | 'YEAR';
+
+export interface Goal {
+  id: string;
+  name: string;
+  metric: GoalMetric;
+  format: GoalFormat;
+  target: number;
+  manualValue: number | null;
+  periodType: GoalPeriodType;
+  /** Primeiro dia do período (YYYY-MM-DD). */
+  periodStart: string;
+  /** Último dia do período (YYYY-MM-DD). */
+  periodEnd: string;
+  color: string;
+  currentValue: number;
+  /** Percentual do objetivo (pode passar de 100). */
+  progress: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
