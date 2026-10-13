@@ -1215,7 +1215,7 @@ export function Metrics() {
         subtitle="Indicadores de agendamentos, pacientes, procedimentos, pacotes e financeiro"
       />
 
-      <Stack gap={2.25} sx={{ maxWidth: 1320, mx: 'auto' }}>
+      <Stack gap={2.25}>
         {/* Período */}
         <Stack
           direction={{ xs: 'column', md: 'row' }}

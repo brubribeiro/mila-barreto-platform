@@ -375,7 +375,7 @@ export function Documents() {
   const menuDoc = menu?.doc;
 
   return (
-    <Stack spacing={2.25} sx={{ maxWidth: 1320, mx: 'auto' }}>
+    <Stack spacing={2.25}>
       <Box
         sx={{
           display: 'grid',

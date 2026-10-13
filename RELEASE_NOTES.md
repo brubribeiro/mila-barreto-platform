@@ -124,6 +124,10 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Novo modal **Novo modelo de mensagem**: título, gatilho, mensagem com emojis e variáveis clicáveis (**{nome}**, {procedimento}, {data}, {hora}, {profissional}, {valor}).
 - Ao enviar pelo WhatsApp (Agenda, Pacientes, Dashboard), só aparecem modelos ativos e o modelo certo é sugerido pelo gatilho. Modelos antigos com {paciente_nome} continuam funcionando.
 
+**Login**
+- Tela de entrada redesenhada no estilo Aurora: painel verde-escuro com a marca e o resumo da plataforma, e ao lado o botão **Entrar com o Google**, o aviso de acesso exclusivo e o atalho **Fale com o administrador**.
+- Os links de **Termos de Uso** e **Política de Privacidade** continuam na tela; no celular o painel de marca é ocultado e o login ocupa a tela toda.
+
 **Metas**
 - Nova tela **Metas** no menu Análise: resumo com metas ativas, atingidas e progresso médio, e um card por meta com valor atual, objetivo, barra de progresso e status (**Atingida**, **Quase lá**, **No caminho** ou **Atenção**).
 - O valor atual é calculado sozinho para **faturamento**, **novos pacientes**, **procedimentos realizados**, **ticket médio**, **ocupação da agenda** e **taxa de retorno**; para outros objetivos, informe o valor manualmente.

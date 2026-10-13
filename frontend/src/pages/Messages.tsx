@@ -234,7 +234,7 @@ export function Messages() {
   };
 
   return (
-    <Box sx={{ maxWidth: 1320, mx: 'auto' }}>
+    <Box>
       <Box
         sx={{
           display: 'grid',

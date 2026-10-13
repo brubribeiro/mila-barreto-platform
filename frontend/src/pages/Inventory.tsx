@@ -239,7 +239,7 @@ export function Inventory() {
 
   return (
     <Box>
-      <Stack spacing={2.25} sx={{ maxWidth: 1320, mx: 'auto' }}>
+      <Stack spacing={2.25}>
         {/* Indicadores */}
         <Box
           sx={{
