@@ -224,7 +224,7 @@ export function Roles() {
   };
 
   return (
-    <Box sx={{ maxWidth: 1320, mx: 'auto' }}>
+    <Box>
       <PageHeader
         title="Grupos e permissões"
         subtitle="Defina o que cada grupo pode acessar, criar, editar e excluir"

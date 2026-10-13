@@ -88,7 +88,7 @@ export function Goals() {
   };
 
   return (
-    <Stack spacing={2.25} sx={{ maxWidth: 1320, mx: 'auto' }}>
+    <Stack spacing={2.25}>
       {/* Resumo + filtros + ações */}
       <Stack
         direction={{ xs: 'column', md: 'row' }}
