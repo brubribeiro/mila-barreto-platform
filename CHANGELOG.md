@@ -45,6 +45,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Dashboard: scroll na lista de aniversariantes; botão WhatsApp desabilitado sem telefone.
 - `Packages.tsx`: substitui DataGrid por cards Aurora; `PackageFormDialog` reorganizada.
 - `Promotions.tsx`: substitui DataGrid por cards Aurora; `PromotionFormDialog` com tipo Combo e escopo (procedimentos/pacotes).
+- `Metrics.tsx`: redesign Aurora sem Recharts (barras, divisão proporcional e donut em MUI); KPIs de topo (receita de procedimentos, ticket médio, taxa de retorno, no-show) com delta vs. período anterior de mesma duração (segunda chamada a `GET /metrics`); abas em pílulas; indicadores por aba em faixa única; aba Financeiro com resumo de receitas/despesas/saldo e receita por categoria.
 - `PaymentMethods.tsx`: substitui DataGrid por grade de cards Aurora (taxa, valor líquido a cada R$ 100, uso em lançamentos); `PaymentMethodFormDialog` com `FormSection`/`LabeledField` e status em select.
 - `RecurringExpenses.tsx`: substitui DataGrid por layout Aurora (cards de resumo com divisão fixo/variável e vencimentos em 7 dias, painel de custo por hora minimizável, tabela paginada com próximo vencimento); `RecurringExpenseFormDialog` em coluna única com `LabeledField`. API e cálculo de custo/hora inalterados.
 - `Roles.tsx`: substitui DataGrid por layout Aurora (cards de grupo + matriz de permissões editável na página, com salvar/descartar); `RoleFormDialog` em coluna única (520px) com cor do grupo e "Copiar permissões de".

@@ -138,6 +138,11 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Contagem no topo de profissionais cadastrados e quantos estão **disponíveis agora**; botão **Adicionar profissional** abre o cadastro já como profissional.
 - Perfil completo no cadastro de usuário: **cor no calendário**, **bio**, **foto** (upload) e registro no conselho.
 
+**Métricas**
+- Tela redesenhada no estilo Aurora, com quatro indicadores no topo: **receita de procedimentos**, **ticket médio**, **taxa de retorno** e **no-show**, cada um comparado ao período anterior.
+- Abas em formato de botões coloridos (Agendamentos, Pacientes, Procedimentos, Pacotes e Financeiro) e indicadores de cada aba reunidos numa faixa só.
+- Gráficos mais limpos: barras com valor visível, ranking de **receita por procedimento**, **retenção** de pacientes em anel, **margem** por procedimento e **receita por categoria** no financeiro.
+
 ### Correções
 
 **Agenda e disponibilidade**
