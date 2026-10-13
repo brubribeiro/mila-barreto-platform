@@ -558,7 +558,7 @@ const deleteMutation = useMutation({
 
   return (
     <Box>
-      <Stack spacing={2.25} sx={{ maxWidth: 1320, mx: 'auto' }}>
+      <Stack spacing={2.25}>
         {/* Resumo do período + ações */}
         <Stack
           direction={{ xs: 'column', lg: 'row' }}

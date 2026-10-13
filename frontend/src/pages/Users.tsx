@@ -183,7 +183,7 @@ export function Users() {
   };
 
   return (
-    <Box sx={{ maxWidth: 1320, mx: 'auto' }}>
+    <Box>
       {/* Contagem + filtros + busca + ações */}
       <Stack
         direction={{ xs: 'column', lg: 'row' }}
