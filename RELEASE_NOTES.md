@@ -135,6 +135,14 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - O card **Metas do mês** do Dashboard agora mostra as metas reais do mês selecionado.
 - Acesso controlado pela nova permissão **Metas** nos grupos (administradores já têm acesso).
 
+**Central de Pendências**
+- Nova tela **Pendências** no menu Principal, que reúne o que precisa de atenção na clínica: estoque abaixo do mínimo, produtos perto do vencimento, contas a vencer, agendamentos sem desfecho, manutenção de equipamentos, documentos sem assinatura e datas comemorativas sem promoção.
+- As pendências são separadas em **Urgentes**, **Atrasadas** e **Próximas**, com contadores, filtro por categoria e gráfico por categoria. O card **Foco de hoje** mostra as 3 mais importantes.
+- Cada pendência mostra prazo e **responsável** (clique para trocar), pode ser marcada como **resolvida** e tem o botão **Ver detalhes**, que abre a tela de origem. As resolvidas dos últimos 30 dias ficam no card **Resolvidas** e podem ser reabertas.
+- Em **Regras**, escolha o que gera pendência automaticamente, a antecedência de cada alerta e o responsável padrão.
+- Crie pendências manuais em **Nova pendência** e exporte a lista em **Relatório de pendências** (CSV).
+- Acesso controlado pela nova permissão **Pendências** nos grupos (Recepção e Profissional já recebem acesso).
+
 **Profissionais**
 - Tela redesenhada no estilo Aurora: grade de cards com **foto**, função, registro profissional e **áreas de atuação** (Toxina, Preenchimento, etc.).
 - Badge de **disponibilidade em tempo real**: Disponível, Em atendimento, Folga ou Fora do horário (com base no expediente e indisponibilidades).

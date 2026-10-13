@@ -72,6 +72,7 @@ model User {
   notificationPreferences NotificationPreference[]
   workingHours            WorkingHours[]
   unavailabilities        Unavailability[]
+  pendingTasks            PendingTask[]            @relation("PendingTaskAssignee")
 
   @@map("users")
 }
@@ -846,4 +847,60 @@ model Goal {
 
   @@index([periodStart])
   @@map("goals")
+}
+
+// =========================
+// CENTRAL DE PENDÊNCIAS
+// =========================
+
+/// Regras que geram pendências automaticamente a partir das outras telas.
+enum PendingRule {
+  LOW_STOCK
+  EXPIRING_STOCK
+  BILLS_DUE
+  APPOINTMENT_NO_OUTCOME
+  EQUIPMENT_MAINTENANCE
+  DOCUMENT_UNSIGNED
+  COMMEMORATIVE_DATE
+}
+
+enum PendingCategory {
+  ADMINISTRATIVE
+  FINANCE
+  INVENTORY
+  OPERATIONAL
+  MAINTENANCE
+  HEALTH_SURVEILLANCE
+  MARKETING
+  TEAM
+  PATIENTS
+  MANAGEMENT
+}
+
+/// Pendência manual, ou o estado (responsável/resolução) de uma pendência gerada por regra.
+model PendingTask {
+  id             String          @id @default(uuid())
+  // Null = pendência manual
+  rule           PendingRule?
+  // Identifica a ocorrência gerada pela regra (ex.: "DOCUMENT:<id>"); muda quando a situação se repete
+  sourceKey      String?         @unique
+  title          String
+  description    String?
+  category       PendingCategory
+  dueDate        DateTime?       @db.Date
+  urgent         Boolean         @default(false)
+  link           String?
+  assigneeId     String?
+  resolvedAt     DateTime?
+  resolvedById   String?
+  resolvedByName String?
+  createdById    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  assignee User? @relation("PendingTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([resolvedAt])
+  @@index([assigneeId])
+  @@map("pending_tasks")
 }
