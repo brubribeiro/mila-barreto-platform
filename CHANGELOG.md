@@ -56,6 +56,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - `Equipment.tsx`: substitui DataGrid por cards Aurora (stats, ciclo de manutenção, paginação); `EquipmentFormDialog` em coluna única com `LabeledField`.
 - `PrivacyPolicy.tsx`: layout Aurora (cabeçalho fixo com marca e botão "Voltar ao login", selo "Documento legal", conteúdo em card branco e rodapé com link para os Termos de Uso), responsivo; texto legal e rota `/privacidade` inalterados.
 - `Login.tsx`: layout Aurora (painel de marca verde-escuro com gradiente e orbes animados, painel claro com botão “Entrar com o Google”, caixa de acesso exclusivo, contato do administrador e links de Termos/Privacidade); o botão oficial do `GoogleLogin` fica invisível sobre o botão visual, mantendo o fluxo de ID token; painel de marca some abaixo de `md`. Novo ícone `lock` em `AuroraIcon`, token `fontSizes['8xl']` (38px) e variável opcional `VITE_ADMIN_CONTACT_EMAIL` (link `mailto:` de “Fale com o administrador”).
+- `TermsOfUse.tsx`: layout Aurora (cabeçalho fixo com marca e botão Voltar ao login, selo Documento legal, seções em card único, rodapé com link para `/privacidade`); texto legal e rota `/termos` inalterados.
 
 ### Fixed
 

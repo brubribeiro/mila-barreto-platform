@@ -150,6 +150,9 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 **Política de Privacidade**
 - Página redesenhada no estilo Aurora: cabeçalho fixo com botão **Voltar ao login**, texto em card com leitura mais confortável e link para os **Termos de Uso** no rodapé. O conteúdo da política não mudou.
 
+**Termos de Uso**
+- Página de Termos de Uso no estilo Aurora: cabeçalho fixo com botão **Voltar ao login**, texto em um card único mais legível e link para a **Política de Privacidade** no rodapé. O conteúdo dos termos não mudou.
+
 ### Correções
 
 **Agenda e disponibilidade**
