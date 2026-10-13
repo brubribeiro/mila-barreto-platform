@@ -26,6 +26,7 @@ export const fontSizes = {
   '5xl': '1.5rem', // 24px
   '6xl': '1.75rem', // 28px
   '7xl': '2.125rem', // 34px
+  '8xl': '2.375rem', // 38px
 } as const;
 
 export type FontSizeToken = keyof typeof fontSizes;
