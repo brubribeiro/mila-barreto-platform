@@ -1,15 +1,27 @@
 import { useMemo, useState } from 'react';
-import { Box, Button, Card, Chip, Stack, Tooltip, Typography } from '@mui/material';
-import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
+import {
+  Box,
+  Button,
+  Card,
+  Chip,
+  IconButton,
+  InputBase,
+  MenuItem,
+  Skeleton,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
+  alpha,
+} from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import HistoryIcon from '@mui/icons-material/History';
+import SearchIcon from '@mui/icons-material/Search';
+import CreditCardOutlinedIcon from '@mui/icons-material/CreditCardOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { PageHeader } from '../components/PageHeader';
-import { ListFiltersBar, ActiveFilterSelect } from '../components/ListFiltersBar';
-import { AppDataGrid } from '../components/AppDataGrid';
 import { matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
 import { paymentMethodsApi } from '../api/paymentMethods';
 import { PaymentMethodFormDialog } from '../components/payment-methods/PaymentMethodFormDialog';
@@ -19,6 +31,53 @@ import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { PaymentMethodEntry } from '../types';
+import { fontSizes } from '../theme/fontSizes';
+
+const ICON_COLORS = ['#15998B', '#E0915B', '#5BA8DE', '#D46B8A', '#9B7BD4', '#4FB3A8'];
+const CARD_GRID_SX = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(264px, 1fr))',
+  gap: 2.25,
+} as const;
+const EXAMPLE_AMOUNT = 100;
+
+const TOOLBAR_SELECT_SX = {
+  flexShrink: 0,
+  width: { xs: 'calc(50% - 5px)', sm: 'auto' },
+  minWidth: { sm: 150 },
+  '& .MuiOutlinedInput-root': {
+    height: 38,
+    borderRadius: '12px',
+    fontSize: fontSizes.sm,
+    bgcolor: 'background.paper',
+  },
+} as const;
+
+const ACTION_BUTTON_SX = {
+  width: 30,
+  height: 30,
+  borderRadius: '9px',
+  border: 1,
+  borderColor: 'divider',
+  color: 'text.secondary',
+} as const;
+
+const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+function colorFor(text: string) {
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  return ICON_COLORS[Math.abs(hash) % ICON_COLORS.length];
+}
+
+function formatFee(fee: number) {
+  return `${fee.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
+}
+
+function usageLabel(count: number) {
+  if (count === 0) return 'Ainda sem lançamentos';
+  return `Usada em ${count} ${count === 1 ? 'lançamento' : 'lançamentos'}`;
+}
 
 export function PaymentMethods() {
   const queryClient = useQueryClient();
@@ -59,164 +118,270 @@ export function PaymentMethods() {
     [methods, search, activeFilter],
   );
 
-  const columns = useMemo<GridColDef<PaymentMethodEntry>[]>(
-    () => [
-      { field: 'name', headerName: 'Nome', flex: 1.2, minWidth: 200 },
-      {
-        field: 'feePercent',
-        headerName: 'Taxa',
-        flex: 0.5,
-        minWidth: 110,
-        renderCell: (params) => {
-          const fee = Number(params.value);
-          if (fee === 0) {
-            return <Chip size="small" label="Sem taxa" color="success" variant="outlined" />;
-          }
-          return (
-            <Chip
-              size="small"
-              label={`${fee.toFixed(2)}%`}
-              color="warning"
-              variant="outlined"
-            />
-          );
-        },
-      },
-      {
-        field: 'active',
-        headerName: 'Status',
-        flex: 0.4,
-        minWidth: 100,
-        renderCell: (params) => (
-          <Chip
-            size="small"
-            label={params.row.active ? 'Ativa' : 'Inativa'}
-            color={params.row.active ? 'success' : 'default'}
-            variant="outlined"
-          />
-        ),
-      },
-      {
-        field: '_count',
-        headerName: 'Usos',
-        flex: 0.3,
-        minWidth: 80,
-        align: 'center',
-        headerAlign: 'center',
-        valueGetter: (params) => params.row._count?.financialEntries ?? 0,
-      },
-      {
-        field: 'actions',
-        type: 'actions',
-        headerName: 'Ações',
-        width: 140,
-        getActions: (params) => {
-          const actions = [];
-          if (canEdit) {
-            actions.push(
-              <GridActionsCellItem
-                key="edit"
-                icon={
-                  <Tooltip title="Editar">
-                    <EditIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Editar"
-                onClick={() => {
-                  setEditing(params.row);
-                  setFormOpen(true);
-                }}
-              />,
-            );
-          }
-          if (canDelete) {
-            actions.push(
-              <GridActionsCellItem
-                key="delete"
-                icon={
-                  <Tooltip title="Excluir">
-                    <DeleteIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Excluir"
-                onClick={async () => {
-                  const ok = await confirm({
-                    title: 'Excluir forma de pagamento',
-                    message: `Excluir a forma de pagamento "${params.row.name}"?`,
-                    confirmLabel: 'Excluir',
-                    confirmColor: 'error',
-                  });
-                  if (ok) deleteMutation.mutate(params.row.id);
-                }}
-              />,
-            );
-          }
-          return actions;
-        },
-      },
-    ],
-    [confirm, canEdit, canDelete, deleteMutation],
-  );
+  const activeCount = methods.filter((m) => m.active).length;
+
+  const handleEdit = (m: PaymentMethodEntry) => {
+    setEditing(m);
+    setFormOpen(true);
+  };
+
+  const handleDelete = async (m: PaymentMethodEntry) => {
+    const ok = await confirm({
+      title: 'Excluir forma de pagamento',
+      message: `Excluir a forma de pagamento "${m.name}"?`,
+      confirmLabel: 'Excluir',
+      confirmColor: 'error',
+    });
+    if (ok) deleteMutation.mutate(m.id);
+  };
 
   return (
-    <Box>
-      <PageHeader
-        title="Formas de pagamento"
-        subtitle="Cadastre as formas de pagamento e suas taxas de maquininha"
-        action={
-          <Stack direction="row" spacing={1}>
-            {isAdmin && (
-              <Button
-                variant="outlined"
-                startIcon={<HistoryIcon />}
+    <Stack spacing={2.25} sx={{ maxWidth: 1320, mx: 'auto' }}>
+      {/* Resumo + filtros + ações */}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+        justifyContent="space-between"
+        spacing={1.5}
+      >
+        <Typography sx={{ fontSize: fontSizes.md, fontWeight: 600, color: 'text.secondary' }}>
+          Taxas configuradas por método e maquininha
+          {!isLoading && methods.length > 0 && (
+            <Box component="span" sx={{ color: 'text.disabled', fontWeight: 500 }}>
+              {` · ${activeCount} de ${methods.length} ${methods.length === 1 ? 'ativa' : 'ativas'}`}
+            </Box>
+          )}
+        </Typography>
+
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={1.25}
+          flexWrap={{ xs: 'wrap', md: 'nowrap' }}
+          useFlexGap
+          justifyContent={{ md: 'flex-end' }}
+          sx={{ minWidth: 0 }}
+        >
+          <TextField
+            select
+            size="small"
+            value={activeFilter}
+            onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
+            sx={TOOLBAR_SELECT_SX}
+            inputProps={{ 'aria-label': 'Status' }}
+          >
+            <MenuItem value="ALL">Todos os status</MenuItem>
+            <MenuItem value="ACTIVE">Ativas</MenuItem>
+            <MenuItem value="INACTIVE">Inativas</MenuItem>
+          </TextField>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            sx={{
+              height: 38,
+              px: 1.75,
+              borderRadius: '12px',
+              border: 1,
+              borderColor: 'divider',
+              bgcolor: 'grey.50',
+              width: { xs: '100%', sm: 210 },
+              minWidth: 0,
+            }}
+          >
+            <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+            <InputBase
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar método..."
+              sx={{ fontSize: fontSizes.sm, flex: 1 }}
+            />
+          </Stack>
+          {isAdmin && (
+            <Tooltip title="Histórico de alterações">
+              <IconButton
                 onClick={() => setHistoryOpen(true)}
+                sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
               >
-                Histórico
-              </Button>
-            )}
-            {canCreate && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
+                <HistoryIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {canCreate && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+              sx={{ flexShrink: 0, whiteSpace: 'nowrap', height: 38, px: 2.25, borderRadius: '12px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+            >
+              Adicionar método
+            </Button>
+          )}
+        </Stack>
+      </Stack>
+
+      {/* Lista de cards */}
+      {isLoading ? (
+        <Box sx={CARD_GRID_SX}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={156} sx={{ borderRadius: '18px' }} />
+          ))}
+        </Box>
+      ) : filteredMethods.length === 0 ? (
+        <Card sx={{ p: 6, textAlign: 'center', borderRadius: '18px' }}>
+          <CreditCardOutlinedIcon sx={{ fontSize: 46, color: 'text.disabled', mb: 1 }} />
+          <Typography sx={{ fontWeight: 700 }}>
+            {methods.length === 0
+              ? 'Nenhuma forma de pagamento cadastrada'
+              : 'Nenhuma forma de pagamento encontrada'}
+          </Typography>
+          <Typography color="text.secondary" sx={{ fontSize: fontSizes.md, mt: 0.5 }}>
+            {methods.length === 0
+              ? 'Cadastre Pix, dinheiro e cartões com a taxa cobrada pela maquininha.'
+              : 'Tente ajustar a busca ou os filtros.'}
+          </Typography>
+        </Card>
+      ) : (
+        <Box sx={CARD_GRID_SX}>
+          {filteredMethods.map((m) => {
+            const color = colorFor(m.name);
+            const fee = Number(m.feePercent);
+            const usage = m._count?.financialEntries ?? 0;
+            return (
+              <Card
+                key={m.id}
+                onClick={canEdit ? () => handleEdit(m) : undefined}
+                sx={{
+                  p: 2.5,
+                  borderRadius: '18px',
+                  border: 1,
+                  borderColor: 'divider',
+                  boxShadow: '0 1px 2px rgba(16,40,37,0.03)',
+                  opacity: m.active ? 1 : 0.6,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1.75,
+                  cursor: canEdit ? 'pointer' : 'default',
+                  transition: 'box-shadow .15s, border-color .15s',
+                  '&:hover': { boxShadow: '0 12px 30px -20px rgba(16,40,37,0.45)', borderColor: alpha(color, 0.5) },
                 }}
               >
-                Nova forma de pagamento
-              </Button>
-            )}
-          </Stack>
-        }
-      />
+                <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <Box
+                    sx={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: '12px',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: alpha(color, 0.1),
+                      color,
+                      fontWeight: 800,
+                      fontSize: fontSizes.lg,
+                    }}
+                  >
+                    {m.name.charAt(0).toUpperCase()}
+                  </Box>
+                  <Box sx={{ minWidth: 0, flex: 1, lineHeight: 1.25 }}>
+                    <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
+                      <Typography
+                        title={m.name}
+                        sx={{
+                          fontSize: fontSizes.lg,
+                          fontWeight: 800,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {m.name}
+                      </Typography>
+                      {!m.active && (
+                        <Chip
+                          size="small"
+                          label="Inativa"
+                          sx={{ height: 20, fontSize: fontSizes['2xs'], fontWeight: 700, flexShrink: 0 }}
+                        />
+                      )}
+                    </Stack>
+                    <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.disabled' }}>
+                      {usageLabel(usage)}
+                    </Typography>
+                  </Box>
+                  {(canEdit || canDelete) && (
+                    <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0, alignSelf: 'flex-start' }}>
+                      {canEdit && (
+                        <Tooltip title="Editar">
+                          <IconButton
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              handleEdit(m);
+                            }}
+                            sx={ACTION_BUTTON_SX}
+                          >
+                            <EditIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {canDelete && (
+                        <Tooltip title="Excluir">
+                          <IconButton
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              handleDelete(m);
+                            }}
+                            sx={{ ...ACTION_BUTTON_SX, '&:hover': { color: 'error.main', borderColor: 'error.light' } }}
+                          >
+                            <DeleteIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Stack>
+                  )}
+                </Stack>
 
-      <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
-        <ListFiltersBar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Buscar por nome"
-          filteredCount={filteredMethods.length}
-          totalCount={methods.length}
-          countLabel={
-            filteredMethods.length === 1 ? 'forma de pagamento' : 'formas de pagamento'
-          }
-        >
-          <ActiveFilterSelect value={activeFilter} onChange={setActiveFilter} />
-        </ListFiltersBar>
-
-        <AppDataGrid
-          rows={filteredMethods}
-          columns={columns}
-          loading={isLoading}
-          localeText={{
-            noRowsLabel:
-              methods.length === 0
-                ? 'Nenhuma forma de pagamento cadastrada'
-                : 'Nenhuma forma de pagamento encontrada com os filtros',
-            footerRowSelected: (count) => `${count} selecionado(s)`,
-          }}
-        />
-      </Card>
+                <Stack
+                  direction="row"
+                  alignItems="flex-end"
+                  justifyContent="space-between"
+                  sx={{ pt: 1.6, borderTop: 1, borderColor: 'divider' }}
+                >
+                  <Box sx={{ lineHeight: 1 }}>
+                    <Typography
+                      sx={{
+                        fontSize: fontSizes['5xl'],
+                        fontWeight: 800,
+                        letterSpacing: '-0.5px',
+                        lineHeight: 1,
+                        color: fee === 0 ? 'success.main' : 'text.primary',
+                      }}
+                    >
+                      {formatFee(fee)}
+                    </Typography>
+                    <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', fontWeight: 600, mt: 0.6 }}>
+                      taxa
+                    </Typography>
+                  </Box>
+                  <Box sx={{ textAlign: 'right', lineHeight: 1.2 }}>
+                    <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 700 }}>
+                      {brl.format(EXAMPLE_AMOUNT * (1 - fee / 100))}
+                    </Typography>
+                    <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', fontWeight: 600 }}>
+                      líquido a cada {brl.format(EXAMPLE_AMOUNT)}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Card>
+            );
+          })}
+        </Box>
+      )}
 
       <PaymentMethodFormDialog
         open={formOpen}
@@ -232,6 +397,6 @@ export function PaymentMethods() {
         entity="PaymentMethod"
         title="Formas de pagamento"
       />
-    </Box>
+    </Stack>
   );
 }
