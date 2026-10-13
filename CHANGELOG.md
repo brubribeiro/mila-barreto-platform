@@ -54,6 +54,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Backend: CRUD `/document-templates` (permissões `documents:*`, auditoria `DocumentTemplate`); seed com 3 modelos padrão (consentimento, anamnese, autorização de imagem).
 - `Documents.tsx`: layout Aurora com cards Total/Assinados/Pendentes/Modelos ativos, tabela paginada (documento, paciente, tipo, data, status) e menu por linha (abrir, visualizar/imprimir, anexar versão assinada, marcar status, editar, excluir); filtros de status/tipo/vínculo. `DocumentFormDialog` (substitui `DocumentUploadDialog`: modelo ou arquivo, status, observações, edição), `DocumentViewerDialog` (texto + impressão) e `DocumentTemplatesDialog` (CRUD de modelos com inserção de campos); remove `DocumentCard`.
 - `Equipment.tsx`: substitui DataGrid por cards Aurora (stats, ciclo de manutenção, paginação); `EquipmentFormDialog` em coluna única com `LabeledField`.
+- `Login.tsx`: layout Aurora (painel de marca verde-escuro com gradiente e orbes animados, painel claro com botão “Entrar com o Google”, caixa de acesso exclusivo, contato do administrador e links de Termos/Privacidade); o botão oficial do `GoogleLogin` fica invisível sobre o botão visual, mantendo o fluxo de ID token; painel de marca some abaixo de `md`. Novo ícone `lock` em `AuroraIcon`, token `fontSizes['8xl']` (38px) e variável opcional `VITE_ADMIN_CONTACT_EMAIL` (link `mailto:` de “Fale com o administrador”).
 
 ### Fixed
 
