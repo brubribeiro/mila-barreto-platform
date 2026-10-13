@@ -143,6 +143,9 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Abas em formato de botões coloridos (Agendamentos, Pacientes, Procedimentos, Pacotes e Financeiro) e indicadores de cada aba reunidos numa faixa só.
 - Gráficos mais limpos: barras com valor visível, ranking de **receita por procedimento**, **retenção** de pacientes em anel, **margem** por procedimento e **receita por categoria** no financeiro.
 
+**Política de Privacidade**
+- Página redesenhada no estilo Aurora: cabeçalho fixo com botão **Voltar ao login**, texto em card com leitura mais confortável e link para os **Termos de Uso** no rodapé. O conteúdo da política não mudou.
+
 ### Correções
 
 **Agenda e disponibilidade**
