@@ -20,6 +20,7 @@ const RESOURCES = [
   'promotions',
   'payment-methods',
   'goals',
+  'pendencias',
 ];
 const ACTIONS = ['view', 'create', 'edit', 'delete'];
 const ALL_PERMISSIONS = RESOURCES.flatMap((r) => ACTIONS.map((a) => `${r}:${a}`));
@@ -46,6 +47,7 @@ const defaultRoles = [
       'packages:view',
       'inventory:view',
       'messages:view',
+      'pendencias:view',
     ],
     isSystem: true,
     restrictToOwnAppointments: true,
@@ -73,6 +75,9 @@ const defaultRoles = [
       'messages:create',
       'messages:edit',
       'availability:edit',
+      'pendencias:view',
+      'pendencias:create',
+      'pendencias:edit',
     ],
     isSystem: true,
     restrictToOwnAppointments: false,

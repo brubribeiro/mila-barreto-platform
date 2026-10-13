@@ -513,3 +513,74 @@ export interface Goal {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export type PendingRule =
+  | 'LOW_STOCK'
+  | 'EXPIRING_STOCK'
+  | 'BILLS_DUE'
+  | 'APPOINTMENT_NO_OUTCOME'
+  | 'EQUIPMENT_MAINTENANCE'
+  | 'DOCUMENT_UNSIGNED'
+  | 'COMMEMORATIVE_DATE';
+
+export type PendingCategory =
+  | 'ADMINISTRATIVE'
+  | 'FINANCE'
+  | 'INVENTORY'
+  | 'OPERATIONAL'
+  | 'MAINTENANCE'
+  | 'HEALTH_SURVEILLANCE'
+  | 'MARKETING'
+  | 'TEAM'
+  | 'PATIENTS'
+  | 'MANAGEMENT';
+
+export type PendingGroup = 'URGENT' | 'OVERDUE' | 'UPCOMING';
+
+export interface PendingItem {
+  /** `MANUAL:<id>` para pendências manuais; chave da origem para as geradas por regra. */
+  key: string;
+  taskId: string | null;
+  rule: PendingRule | null;
+  category: PendingCategory;
+  group: PendingGroup;
+  title: string;
+  subtitle: string;
+  description: string | null;
+  deadlineLabel: string;
+  dueDate: string | null;
+  urgent: boolean;
+  link: string | null;
+  assignee: { id: string; name: string } | null;
+}
+
+export interface PendingList {
+  items: PendingItem[];
+  resolvedCount: number;
+  activeRules: number;
+  totalRules: number;
+}
+
+export interface PendingTask {
+  id: string;
+  rule: PendingRule | null;
+  sourceKey: string | null;
+  title: string;
+  description: string | null;
+  category: PendingCategory;
+  dueDate: string | null;
+  urgent: boolean;
+  link: string | null;
+  assigneeId: string | null;
+  assignee: { id: string; name: string } | null;
+  resolvedAt: string | null;
+  resolvedByName: string | null;
+  createdAt: string;
+}
+
+export interface PendingRuleConfig {
+  rule: PendingRule;
+  enabled: boolean;
+  param: number | null;
+  assigneeId: string | null;
+}

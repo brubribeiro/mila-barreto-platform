@@ -59,6 +59,7 @@ const navGrouped: NavGroup[] = [
     title: 'Principal',
     items: [
       { label: 'Dashboard', path: '/', icon: <AuroraIcon name="dashboard" /> },
+      { label: 'Pendências', path: '/pendencias', icon: <AuroraIcon name="pendencias" />, permission: 'pendencias:view' },
       { label: 'Agenda', path: '/agenda', icon: <AuroraIcon name="agenda" />, permission: 'appointments:view' },
       { label: 'Pacientes', path: '/pacientes', icon: <AuroraIcon name="clientes" />, permission: 'patients:view' },
     ],
@@ -113,6 +114,7 @@ interface PageMeta {
 
 const PAGE_META: (PageMeta & { path: string; exact?: boolean })[] = [
   { path: '/', exact: true, title: 'Dashboard', subtitle: 'Visão geral da clínica' },
+  { path: '/pendencias', title: 'Central de Pendências', subtitle: 'O que precisa de atenção na clínica' },
   { path: '/agenda', title: 'Agenda', subtitle: 'Agendamentos e horários' },
   { path: '/pacientes', title: 'Pacientes', subtitle: 'Cadastro e histórico dos pacientes' },
   { path: '/horarios', title: 'Horários', subtitle: 'Disponibilidade da equipe' },

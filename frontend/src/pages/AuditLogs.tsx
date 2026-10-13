@@ -33,6 +33,8 @@ const ENTITY_OPTIONS: { value: string; label: string }[] = [
   { value: 'RecurringExpense', label: 'Despesa recorrente' },
   { value: 'PaymentMethod', label: 'Forma de pagamento' },
   { value: 'Goal', label: 'Meta' },
+  { value: 'PendingTask', label: 'Pendência' },
+  { value: 'PendingRules', label: 'Regras de pendência' },
   { value: 'Promotion', label: 'Promoção' },
   { value: 'InventoryItem', label: 'Estoque' },
   { value: 'InventoryMovement', label: 'Movimentação de estoque' },
