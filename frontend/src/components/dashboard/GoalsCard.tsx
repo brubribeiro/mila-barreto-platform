@@ -41,16 +41,16 @@ export function GoalsCard({ at, canCreate }: GoalsCardProps) {
             ))}
           </Stack>
         ) : visible.length === 0 ? (
-          <Stack spacing={1} alignItems="flex-start">
-            <Box sx={{ width: '100%' }}>
-              <DashboardEmptyState message="Nenhuma meta definida para este período" />
-            </Box>
-            {canCreate && (
-              <Button size="small" component={RouterLink} to="/metas" sx={{ fontWeight: 700, ml: -1 }}>
-                Definir metas
-              </Button>
-            )}
-          </Stack>
+          <DashboardEmptyState
+            message="Nenhuma meta definida para este período"
+            action={
+              canCreate && (
+                <Button size="small" component={RouterLink} to="/metas" sx={{ fontWeight: 700 }}>
+                  Definir metas
+                </Button>
+              )
+            }
+          />
         ) : (
           <Stack spacing={2}>
             {visible.map((g) => {
