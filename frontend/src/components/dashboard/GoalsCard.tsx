@@ -28,7 +28,7 @@ export function GoalsCard({ at, canCreate }: GoalsCardProps) {
   return (
     <Card sx={{ display: 'flex', flexDirection: 'column' }}>
       <CardContent sx={{ p: { xs: 2, sm: 2.75 } }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2.25 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
           <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>Metas do mês</Typography>
           <Button size="small" component={RouterLink} to="/metas" sx={{ fontWeight: 700 }}>
             {goals.length > MAX_GOALS ? `Ver todas (${goals.length})` : 'Ver metas'}
@@ -41,10 +41,12 @@ export function GoalsCard({ at, canCreate }: GoalsCardProps) {
             ))}
           </Stack>
         ) : visible.length === 0 ? (
-          <Stack spacing={1.5} alignItems="center">
-            <DashboardEmptyState message="Nenhuma meta definida para este período" />
+          <Stack spacing={1} alignItems="flex-start">
+            <Box sx={{ width: '100%' }}>
+              <DashboardEmptyState message="Nenhuma meta definida para este período" />
+            </Box>
             {canCreate && (
-              <Button size="small" variant="outlined" component={RouterLink} to="/metas" sx={{ fontWeight: 700 }}>
+              <Button size="small" component={RouterLink} to="/metas" sx={{ fontWeight: 700, ml: -1 }}>
                 Definir metas
               </Button>
             )}

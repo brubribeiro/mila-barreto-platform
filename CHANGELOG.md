@@ -66,6 +66,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Disponibilidade: dia/hora do expediente extraídos no fuso do Brasil, não UTC do servidor.
 - Formulário de agendamento: elimina requisição extra de profissionais disponíveis ao abrir.
 - Telas Usuários, Horários, Estoque, Financeiro, Metas, Documentos, Formas de pagamento, Mensagens, Grupos e permissões e Relatórios voltam a ocupar a largura total (removido `maxWidth: 1320` centralizado no wrapper raiz).
+- Dashboard: card **Metas do mês** alinhado ao card da Agenda (espaçamento do cabeçalho, estado vazio em largura total e botão "Definir metas" discreto).
 
 ## [0.2.0] - 2026-07-15
 

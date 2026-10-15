@@ -42,6 +42,7 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 **Dashboard**
 - **Agenda da semana** passa a considerar 7 dias a partir da data selecionada (antes fixava segunda a domingo).
 - Card **Contas a pagar** com skeleton de carregamento mais suave.
+- Card **Metas do mês** com o mesmo visual do card de Agenda; quando não há metas, o aviso ocupa a largura toda do card.
 
 **Visual geral**
 - Barras de rolagem finas e discretas em todo o painel (tema global).
