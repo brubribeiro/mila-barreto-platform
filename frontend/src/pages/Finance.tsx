@@ -17,7 +17,6 @@ import { alpha, useTheme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
 import SearchIcon from '@mui/icons-material/Search';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -31,33 +30,20 @@ import { financeApi } from '../api/finance';
 import { recurringExpensesApi } from '../api/recurring-expenses';
 import { appointmentsBackfillFinance } from '../api/appointments';
 import { FinanceFormDialog } from '../components/finance/FinanceFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import type { ExpenseType, FinancialEntry } from '../types';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
-import { usePermissions } from '../contexts/usePermissions';
 import { downloadCsv } from '../utils/csv';
 import { fontSizes } from '../theme/fontSizes';
+import { brl } from '../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const PAGE_SIZE = 10;
 
 const EXPENSE_TYPE_LABEL: Record<ExpenseType, string> = {
   FIXED: 'Fixa',
   VARIABLE: 'Variável',
 };
-
-const TOOLBAR_ICON_SX = {
-  flexShrink: 0,
-  width: 38,
-  height: 38,
-  borderRadius: '11px',
-  border: 1,
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-  color: 'text.secondary',
-} as const;
 
 const TOOLBAR_SELECT_SX = {
   height: 38,
@@ -380,7 +366,6 @@ export function Finance() {
   const queryClient = useQueryClient();
   const { confirm, alert } = useAppDialog();
   const toast = useAppToast();
-  const { isAdmin } = usePermissions();
   const theme = useTheme();
   const [from, setFrom] = useState(dayjs().startOf('month').format('YYYY-MM-DD'));
   const [to, setTo] = useState(dayjs().endOf('month').format('YYYY-MM-DD'));
@@ -390,7 +375,6 @@ export function Finance() {
   const [page, setPage] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialEntry | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const fromIso = useMemo(() => {
     const parsed = dayjs(from);
@@ -608,13 +592,6 @@ const deleteMutation = useMutation({
                 setPage(0);
               }}
             />
-            {isAdmin && (
-              <Tooltip title="Histórico de alterações">
-                <IconButton onClick={() => setHistoryOpen(true)} sx={TOOLBAR_ICON_SX}>
-                  <HistoryIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -897,12 +874,6 @@ const deleteMutation = useMutation({
       </Stack>
 
       <FinanceFormDialog open={formOpen} onClose={() => setFormOpen(false)} entry={editing} />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="FinancialEntry"
-        title="Financeiro"
-      />
     </Box>
   );
 }

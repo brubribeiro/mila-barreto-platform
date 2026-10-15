@@ -6,6 +6,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Added
 
+- Header Aurora: "Novo agendamento" preenchido, relógio global de histórico (`AuditHistoryDialog` pela rota, substitui os 16 botões por tela) e olho para ocultar valores (`utils/money.ts`).
 - Pacientes: lista Aurora com cards de estatísticas (`GET /patients/stats`), score de confiabilidade, última visita, total gasto e paginação.
 - Ficha do paciente redesenhada (abas Geral, Agendamentos, Pacotes, Anamnese, Fotos).
 - Fotos **antes/depois** por paciente vinculadas a agendamento (`PatientPhoto`, upload R2 comprimido).

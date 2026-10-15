@@ -14,7 +14,6 @@ import {
 import type { Theme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import HistoryIcon from '@mui/icons-material/History';
 import SearchIcon from '@mui/icons-material/Search';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -29,7 +28,6 @@ import {
 } from '../components/messages/messageTemplateConstants';
 import { matchFields } from '../utils/listFilters';
 import { messagesApi } from '../api/messages';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { proceduresApi } from '../api/procedures';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
@@ -128,7 +126,7 @@ export function Messages() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('messages:create');
   const canEdit = has('messages:edit');
   const canDelete = has('messages:delete');
@@ -137,7 +135,6 @@ export function Messages() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MessageTemplate | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ['message-templates'],
@@ -280,13 +277,6 @@ export function Messages() {
                   sx={{ fontSize: fontSizes.sm, flex: 1, minWidth: 0 }}
                 />
               </Stack>
-              {isAdmin && (
-                <Tooltip title="Histórico de alterações">
-                  <IconButton onClick={() => setHistoryOpen(true)} sx={ICON_BUTTON_SX}>
-                    <HistoryIcon sx={{ fontSize: 18 }} />
-                  </IconButton>
-                </Tooltip>
-              )}
               {canCreate && (
                 <Button
                   variant="contained"
@@ -494,12 +484,6 @@ export function Messages() {
         template={editing}
         procedures={procedures}
         onSaved={(saved) => setSelectedId(saved.id)}
-      />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="MessageTemplate"
-        title="Mensagens"
       />
     </Box>
   );

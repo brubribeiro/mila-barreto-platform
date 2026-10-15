@@ -21,7 +21,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SearchIcon from '@mui/icons-material/Search';
@@ -39,15 +38,13 @@ import 'dayjs/locale/pt-br';
 import { matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
 import { recurringExpensesApi, type HourlyCostSettings } from '../api/recurring-expenses';
 import { RecurringExpenseFormDialog } from '../components/finance/RecurringExpenseFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
-import { usePermissions } from '../contexts/usePermissions';
 import type { RecurringExpense } from '../types';
 import { fontSizes } from '../theme/fontSizes';
+import { brl } from '../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const hours = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
 
 const PAGE_SIZE = 8;
@@ -175,14 +172,12 @@ export function RecurringExpensesPage() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { isAdmin } = usePermissions();
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'FIXED' | 'VARIABLE'>('ALL');
   const [page, setPage] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RecurringExpense | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [hourlyCostCollapsed, setHourlyCostCollapsed] = useState(false);
 
   const { data: items = [], isLoading } = useQuery({
@@ -750,16 +745,6 @@ export function RecurringExpensesPage() {
                 sx={{ fontSize: fontSizes.sm, flex: 1 }}
               />
             </Stack>
-            {isAdmin && (
-              <Tooltip title="Histórico de alterações">
-                <IconButton
-                  onClick={() => setHistoryOpen(true)}
-                  sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
-                >
-                  <HistoryIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
             <Button
               variant="outlined"
               startIcon={<AutorenewIcon />}
@@ -1001,12 +986,6 @@ export function RecurringExpensesPage() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         expense={editing}
-      />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="RecurringExpense"
-        title="Despesas recorrentes"
       />
     </Box>
   );

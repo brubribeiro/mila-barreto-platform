@@ -25,8 +25,10 @@ import { usePermissions } from '../contexts/usePermissions';
 import { useAppointmentDialog } from '../contexts/AppointmentDialogContext';
 import type { Permission } from '../contexts/permissions';
 import { NotificationsBell } from './notifications/NotificationsBell';
+import { AuditHistoryDialog } from './audit/AuditHistoryDialog';
 import { AuroraIcon } from './AuroraIcon';
 import { fontSizes } from '../theme/fontSizes';
+import { isMoneyHidden, setMoneyHidden } from '../utils/money';
 
 const DRAWER_WIDTH = 258;
 const DRAWER_COLLAPSED_WIDTH = 68;
@@ -37,6 +39,18 @@ const SIDEBAR_TEXT = '#8FAAA4';
 const SIDEBAR_ACTIVE = '#15998B';
 const SIDEBAR_HOVER = 'rgba(255,255,255,0.05)';
 const SIDEBAR_BORDER = 'rgba(255,255,255,0.07)';
+
+// Mesmo visual do sino (NotificationsBell)
+const HEADER_ICON_BUTTON_SX = {
+  width: 38,
+  height: 38,
+  borderRadius: '12px',
+  border: '1px solid',
+  borderColor: 'divider',
+  bgcolor: 'grey.50',
+  color: 'text.secondary',
+  '&:hover': { bgcolor: 'grey.100' },
+} as const;
 
 function isNavPathActive(pathname: string, itemPath: string): boolean {
   return itemPath === '/' ? pathname === '/' : pathname.startsWith(itemPath);
@@ -110,29 +124,31 @@ const navGrouped: NavGroup[] = [
 interface PageMeta {
   title: string;
   subtitle: string;
+  /** Entidade do AuditHistoryDialog aberto pelo relógio do header. */
+  auditEntity?: string;
 }
 
 const PAGE_META: (PageMeta & { path: string; exact?: boolean })[] = [
   { path: '/', exact: true, title: 'Dashboard', subtitle: 'Visão geral da clínica' },
-  { path: '/pendencias', title: 'Central de Pendências', subtitle: 'O que precisa de atenção na clínica' },
-  { path: '/agenda', title: 'Agenda', subtitle: 'Agendamentos e horários' },
-  { path: '/pacientes', title: 'Pacientes', subtitle: 'Cadastro e histórico dos pacientes' },
+  { path: '/pendencias', title: 'Central de Pendências', subtitle: 'O que precisa de atenção na clínica', auditEntity: 'PendingTask' },
+  { path: '/agenda', title: 'Agenda', subtitle: 'Agendamentos e horários', auditEntity: 'Appointment' },
+  { path: '/pacientes', title: 'Pacientes', subtitle: 'Cadastro e histórico dos pacientes', auditEntity: 'Patient' },
   { path: '/horarios', title: 'Horários', subtitle: 'Disponibilidade da equipe' },
-  { path: '/procedimentos', title: 'Procedimentos', subtitle: 'Catálogo de procedimentos' },
-  { path: '/pacotes', title: 'Pacotes', subtitle: 'Combos de procedimentos e sessões' },
-  { path: '/promocoes', title: 'Promoções', subtitle: 'Campanhas e descontos sazonais' },
-  { path: '/financeiro', title: 'Financeiro', subtitle: 'Receitas e despesas' },
-  { path: '/despesas-recorrentes', title: 'Despesas recorrentes', subtitle: 'Custos fixos e periódicos' },
-  { path: '/formas-pagamento', title: 'Formas de pagamento', subtitle: 'Métodos de pagamento' },
-  { path: '/estoque', title: 'Estoque', subtitle: 'Produtos e insumos' },
+  { path: '/procedimentos', title: 'Procedimentos', subtitle: 'Catálogo de procedimentos', auditEntity: 'Procedure' },
+  { path: '/pacotes', title: 'Pacotes', subtitle: 'Combos de procedimentos e sessões', auditEntity: 'Package' },
+  { path: '/promocoes', title: 'Promoções', subtitle: 'Campanhas e descontos sazonais', auditEntity: 'Promotion' },
+  { path: '/financeiro', title: 'Financeiro', subtitle: 'Receitas e despesas', auditEntity: 'FinancialEntry' },
+  { path: '/despesas-recorrentes', title: 'Despesas recorrentes', subtitle: 'Custos fixos e periódicos', auditEntity: 'RecurringExpense' },
+  { path: '/formas-pagamento', title: 'Formas de pagamento', subtitle: 'Métodos de pagamento', auditEntity: 'PaymentMethod' },
+  { path: '/estoque', title: 'Estoque', subtitle: 'Produtos e insumos', auditEntity: 'InventoryItem' },
   { path: '/profissionais', title: 'Profissionais', subtitle: 'Equipe que realiza atendimentos' },
-  { path: '/usuarios', title: 'Usuários', subtitle: 'Contas e permissões' },
-  { path: '/grupos', title: 'Grupos', subtitle: 'Papéis e permissões' },
-  { path: '/mensagens', title: 'Mensagens', subtitle: 'Modelos e envios' },
-  { path: '/documentos', title: 'Documentos', subtitle: 'Arquivos e modelos' },
-  { path: '/equipamentos', title: 'Equipamentos', subtitle: 'Aparelhos e manutenção' },
+  { path: '/usuarios', title: 'Usuários', subtitle: 'Contas e permissões', auditEntity: 'User' },
+  { path: '/grupos', title: 'Grupos', subtitle: 'Papéis e permissões', auditEntity: 'Role' },
+  { path: '/mensagens', title: 'Mensagens', subtitle: 'Modelos e envios', auditEntity: 'MessageTemplate' },
+  { path: '/documentos', title: 'Documentos', subtitle: 'Arquivos e modelos', auditEntity: 'Document' },
+  { path: '/equipamentos', title: 'Equipamentos', subtitle: 'Aparelhos e manutenção', auditEntity: 'Equipment' },
   { path: '/metricas', title: 'Métricas', subtitle: 'Indicadores e relatórios' },
-  { path: '/metas', title: 'Metas', subtitle: 'Objetivos e progresso da clínica' },
+  { path: '/metas', title: 'Metas', subtitle: 'Objetivos e progresso da clínica', auditEntity: 'Goal' },
 ];
 
 function getPageMeta(pathname: string): PageMeta {
@@ -149,8 +165,15 @@ export function Layout() {
   const location = useLocation();
   const { user, logout, stopImpersonating } = useAuth();
   const isImpersonating = user?.impersonating === true;
-  const { has } = usePermissions();
+  const { has, isAdmin } = usePermissions();
   const { openAppointmentDialog } = useAppointmentDialog();
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [moneyHidden, setMoneyHiddenState] = useState(isMoneyHidden);
+
+  const toggleMoneyHidden = () => {
+    setMoneyHidden(!moneyHidden);
+    setMoneyHiddenState(!moneyHidden);
+  };
 
   const visibleGroups = useMemo(() => {
     return navGrouped
@@ -627,28 +650,49 @@ export function Layout() {
 
           <Box sx={{ flex: 1 }} />
 
-          <Stack direction="row" spacing={3} alignItems="center" sx={{ flexShrink: 0 }}>
+          <Stack direction="row" spacing={{ xs: 0.75, sm: 1 }} alignItems="center" sx={{ flexShrink: 0 }}>
+            {isAdmin && pageMeta.auditEntity && (
+              <Tooltip title="Histórico de alterações">
+                <IconButton onClick={() => setHistoryOpen(true)} sx={HEADER_ICON_BUTTON_SX}>
+                  <AuroraIcon name="clock" size={20} strokeWidth={1.8} />
+                </IconButton>
+              </Tooltip>
+            )}
+            <Tooltip title={moneyHidden ? 'Mostrar valores' : 'Ocultar valores'}>
+              <IconButton
+                onClick={toggleMoneyHidden}
+                aria-pressed={moneyHidden}
+                sx={{
+                  ...HEADER_ICON_BUTTON_SX,
+                  ...(moneyHidden && {
+                    bgcolor: 'primary.main',
+                    borderColor: 'primary.main',
+                    color: 'primary.contrastText',
+                    '&:hover': { bgcolor: 'primary.dark' },
+                  }),
+                }}
+              >
+                <AuroraIcon name={moneyHidden ? 'eyeOff' : 'eye'} size={20} strokeWidth={1.8} />
+              </IconButton>
+            </Tooltip>
             <NotificationsBell />
             {has('appointments:view') && (
               <>
-                <Box sx={{ width: '1px', height: 26, bgcolor: 'divider', mx: 2 }} />
+                <Box sx={{ display: { xs: 'none', sm: 'block' }, width: '1px', height: 26, bgcolor: 'divider', mx: 1 }} />
                 <Button
-                  variant="outlined"
+                  variant="contained"
                   color="primary"
                   startIcon={<AuroraIcon name="plus" size={18} strokeWidth={2.2} />}
                   onClick={() => openAppointmentDialog()}
                   sx={{
                     height: 38,
+                    minWidth: { xs: 38, sm: 64 },
                     px: { xs: 1.25, md: 2.25 },
                     borderRadius: '12px',
                     fontWeight: 700,
                     whiteSpace: 'nowrap',
-                    bgcolor: 'background.paper',
-                    borderColor: 'primary.main',
-                    color: 'primary.main',
-                    boxShadow: '0 1px 2px rgba(16,40,37,0.04)',
-                    '&:hover': { bgcolor: (t) => alpha(t.palette.primary.main, 0.06), borderColor: 'primary.main' },
-                    '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+                    boxShadow: '0 6px 16px -6px rgba(21,153,139,.8)',
+                    '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 }, ml: { xs: 0, sm: -0.5 } },
                   }}
                 >
                   <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
@@ -732,8 +776,21 @@ export function Layout() {
       >
         <Toolbar />
         {isImpersonating && <Box sx={{ height: 40 }} />}
-        <Outlet />
+        {/* Remonta a página ao alternar o olho para os formatadores de moeda relerem a preferência. */}
+        <Fragment key={moneyHidden ? 'money-hidden' : 'money-visible'}>
+          <Outlet />
+        </Fragment>
       </Box>
+
+      {pageMeta.auditEntity && (
+        <AuditHistoryDialog
+          key={pageMeta.auditEntity}
+          open={historyOpen}
+          onClose={() => setHistoryOpen(false)}
+          entity={pageMeta.auditEntity}
+          title={pageMeta.title}
+        />
+      )}
     </Box>
   );
 }

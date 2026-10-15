@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Box, Button, Card, Checkbox, Collapse, FormControl, IconButton, InputLabel, ListItemText, MenuItem, OutlinedInput, Select, Skeleton, Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
-import HistoryIcon from '@mui/icons-material/History';
 import { AuroraIcon } from '../components/AuroraIcon';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -16,7 +15,6 @@ import { appointmentsApi } from '../api/appointments';
 import { availabilityApi } from '../api/availability';
 import { usersApi } from '../api/users';
 import { AppointmentFormDialog } from '../components/appointments/AppointmentFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Appointment, AppointmentStatus, UnavailabilityCalendarItem } from '../types';
@@ -80,9 +78,8 @@ export function Appointments() {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useAuth();
-  const { has, restrictToOwnAppointments, isAdmin } = usePermissions();
+  const { has, restrictToOwnAppointments } = usePermissions();
   const canCreate = has('appointments:create');
-  const [historyOpen, setHistoryOpen] = useState(false);
   const calendarRef = useRef<FullCalendar | null>(null);
   const [currentView, setCurrentView] = useState<string>(isMobile ? 'timeGridDay' : 'timeGridWeek');
   const [periodLabel, setPeriodLabel] = useState('');
@@ -1078,12 +1075,6 @@ export function Appointments() {
         appointment={editing}
         defaultStart={defaultStart}
         defaultPatientId={defaultPatientId}
-      />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="Appointment"
-        title="Agendamentos"
       />
     </Box>
   );
