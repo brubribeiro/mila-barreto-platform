@@ -14,7 +14,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
 import SearchIcon from '@mui/icons-material/Search';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -22,15 +21,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { proceduresApi } from '../api/procedures';
 import { ProcedureFormDialog } from '../components/procedures/ProcedureFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Procedure } from '../types';
 import { fontSizes } from '../theme/fontSizes';
+import { brl } from '../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const PAGE_SIZE = 8;
 const AVATAR_COLORS = ['#15998B', '#5BA8DE', '#D46B8A', '#E0915B', '#9B7BD4', '#4FB3A8'];
 const GRID_COLS = '2fr 1fr 0.7fr 0.7fr 0.9fr 0.9fr 0.9fr 0.95fr 0.95fr 0.75fr 52px';
@@ -54,7 +52,7 @@ export function Procedures() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('procedures:create');
   const canEdit = has('procedures:edit');
   const canDelete = has('procedures:delete');
@@ -64,7 +62,6 @@ export function Procedures() {
   const [page, setPage] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Procedure | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: procedures = [], isLoading } = useQuery({
     queryKey: ['procedures'],
@@ -185,16 +182,6 @@ export function Procedures() {
               sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />
           </Stack>
-          {isAdmin && (
-            <Tooltip title="Histórico de alterações">
-              <IconButton
-                onClick={() => setHistoryOpen(true)}
-                sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
-              >
-                <HistoryIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
           {canCreate && (
             <Button
               variant="contained"
@@ -465,12 +452,6 @@ export function Procedures() {
       </Card>
 
       <ProcedureFormDialog open={formOpen} onClose={() => setFormOpen(false)} procedure={editing} />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="Procedure"
-        title="Procedimentos"
-      />
     </Box>
   );
 }

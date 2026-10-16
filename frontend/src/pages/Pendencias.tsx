@@ -15,14 +15,12 @@ import {
   Typography,
 } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
-import HistoryIcon from '@mui/icons-material/History';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
 import { pendenciasApi } from '../api/pendencias';
 import { usersApi } from '../api/users';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { PendingRulesDialog } from '../components/pendencias/PendingRulesDialog';
 import { PendingTaskDialog } from '../components/pendencias/PendingTaskDialog';
 import {
@@ -93,7 +91,7 @@ export function Pendencias() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('pendencias:create');
   const canEdit = has('pendencias:edit');
   const canDelete = has('pendencias:delete');
@@ -102,7 +100,6 @@ export function Pendencias() {
   const [category, setCategory] = useState<PendingCategory | ''>('');
   const [taskDialog, setTaskDialog] = useState<{ open: boolean; editing: PendingItem | null }>({ open: false, editing: null });
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [assignMenu, setAssignMenu] = useState<{ anchor: HTMLElement; item: PendingItem } | null>(null);
 
   const listKey = ['pendencias', 'list'];
@@ -617,16 +614,6 @@ export function Pendencias() {
           <Button startIcon={<SettingsOutlinedIcon sx={{ fontSize: '16px !important' }} />} onClick={() => setRulesOpen(true)} sx={TOOLBAR_BUTTON_SX}>
             Regras · {data?.activeRules ?? '–'}
           </Button>
-          {isAdmin && (
-            <Tooltip title="Histórico de alterações">
-              <IconButton
-                onClick={() => setHistoryOpen(true)}
-                sx={{ width: 40, height: 40, borderRadius: '11px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
-              >
-                <HistoryIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
         </Stack>
 
         {groupsToShow.map(renderGroup)}
@@ -818,7 +805,6 @@ export function Pendencias() {
         onClose={() => setTaskDialog({ open: false, editing: null })}
       />
       <PendingRulesDialog open={rulesOpen} onClose={() => setRulesOpen(false)} canEdit={canEdit} />
-      <AuditHistoryDialog open={historyOpen} onClose={() => setHistoryOpen(false)} entity="PendingTask" title="Pendências" />
     </Box>
   );
 }

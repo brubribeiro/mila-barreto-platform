@@ -26,11 +26,9 @@ import { PageHeader } from '../components/PageHeader';
 import { usePermissions } from '../contexts/usePermissions';
 import { fontSizes } from '../theme/fontSizes';
 import type { FinancialEntry } from '../types';
+import { brl, moneyFormatter } from '../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-const brlCompact = new Intl.NumberFormat('pt-BR', {
-  style: 'currency',
-  currency: 'BRL',
+const brlCompact = moneyFormatter({
   notation: 'compact',
   maximumFractionDigits: 1,
 });

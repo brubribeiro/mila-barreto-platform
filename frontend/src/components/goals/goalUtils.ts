@@ -4,6 +4,7 @@ import type { Theme } from '@mui/material';
 
 import type { AuroraIconName } from '../AuroraIcon';
 import type { Goal, GoalFormat, GoalMetric, GoalPeriodType } from '../../types';
+import { moneyFormatter } from '../../utils/money';
 
 export const GOAL_COLORS = ['#15998B', '#5BA8DE', '#C98A12', '#9B7BD4', '#D46B8A', '#E0915B'];
 
@@ -96,12 +97,10 @@ export function metricOption(metric: GoalMetric) {
 export function formatGoalValue(value: number, format: GoalFormat) {
   const fractionDigits = Number.isInteger(value) ? 0 : format === 'PERCENT' ? 1 : 2;
   if (format === 'CURRENCY') {
-    return value.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
+    return moneyFormatter({
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,
-    });
+    }).format(value);
   }
   const formatted = value.toLocaleString('pt-BR', { maximumFractionDigits: fractionDigits });
   return format === 'PERCENT' ? `${formatted}%` : formatted;
