@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Box, Button, Card, Checkbox, Collapse, FormControl, IconButton, InputLabel, ListItemText, MenuItem, OutlinedInput, Select, Skeleton, Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, Card, Checkbox, Collapse, FormControl, IconButton, InputLabel, ListItemText, MenuItem, OutlinedInput, Select, Skeleton, Stack, Typography, lighten, useMediaQuery, useTheme } from '@mui/material';
 import { AuroraIcon } from '../components/AuroraIcon';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -35,6 +35,12 @@ const statusColors: Record<AppointmentStatus, { bg: string; border: string; text
   CANCELLED: { bg: '#EDEDEB', border: '#A8A6A2', text: '#6E6B66' },
   NO_SHOW: { bg: '#D58A81', border: '#8A3F33', text: '#FFFFFF' },
 };
+
+// No tema escuro, eventos em tom pastel (feriados, bloqueios) viram uma tinta da cor da borda com texto claro.
+function toDarkEvent(e: EventInput): EventInput {
+  const c = e.borderColor as string;
+  return { ...e, backgroundColor: `${c}33`, textColor: lighten(c, 0.6) };
+}
 
 const kindLabel: Record<string, string> = {
   EVALUATION: 'AVAL',
@@ -191,15 +197,17 @@ export function Appointments() {
     [filteredAppointments, theme.palette.text.primary, theme.palette.primary.main],
   );
 
-  const holidayEvents = useMemo(
-    () => buildBrazilCaieirasHolidayEvents(range.from, range.to),
-    [range.from, range.to],
-  );
+  const isDark = theme.palette.mode === 'dark';
 
-  const unavailabilityEvents = useMemo(
-    () => buildUnavailabilityCalendarEvents(unavailabilityItems, !restrictToOwnAppointments),
-    [unavailabilityItems, restrictToOwnAppointments],
-  );
+  const holidayEvents = useMemo(() => {
+    const evs = buildBrazilCaieirasHolidayEvents(range.from, range.to);
+    return isDark ? evs.map(toDarkEvent) : evs;
+  }, [range.from, range.to, isDark]);
+
+  const unavailabilityEvents = useMemo(() => {
+    const evs = buildUnavailabilityCalendarEvents(unavailabilityItems, !restrictToOwnAppointments);
+    return isDark ? evs.map(toDarkEvent) : evs;
+  }, [unavailabilityItems, restrictToOwnAppointments, isDark]);
 
   const events = useMemo<EventInput[]>(
     () => [...holidayEvents, ...unavailabilityEvents, ...appointmentEvents],
@@ -699,7 +707,7 @@ export function Appointments() {
             fontSize: fontSizes.md,
           },
           '& .fc .fc-day-today': {
-            backgroundColor: '#EDF8F7 !important',
+            backgroundColor: `${theme.palette.mode === 'dark' ? theme.palette.primary.main + '14' : '#EDF8F7'} !important`,
           },
           '& .fc .fc-timegrid-slot': {
             height: '2.7em',
@@ -978,7 +986,8 @@ export function Appointments() {
                       height: 13,
                       borderRadius: '50%',
                       bgcolor: statusColor,
-                      border: '2px solid #fff',
+                      border: '2px solid',
+                      borderColor: 'background.paper',
                     }}
                   />
                   <Box sx={{ minWidth: 0, lineHeight: 1.25 }}>

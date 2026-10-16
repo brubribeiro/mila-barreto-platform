@@ -11,6 +11,7 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 **Visual Aurora**
 - Barra superior: botão **Novo agendamento** em destaque, **histórico de alterações** da tela no relógio do topo e **olho** para ocultar os valores em R$.
 - **Histórico de alterações** redesenhado no mesmo visual das listas: quem fez, quando e o que mudou (antes → depois), com filtros por tipo e período; nas telas sem histórico o relógio aparece desabilitado.
+- **Modo escuro**: o botão da **lua** no topo alterna entre tema claro e escuro em todas as telas; a escolha fica salva no navegador e, na primeira visita, segue o tema do sistema.
 - O painel ganhou um novo visual com cores verde-água, fonte **Plus Jakarta Sans** e ícones de traço mais leves.
 - O **menu lateral** ficou escuro, com seções organizadas (Principal, Catálogo, Financeiro, Equipe, Configurações) e destaque verde no item ativo.
 - Cards, botões e tabelas foram refinados para um layout mais limpo e moderno.

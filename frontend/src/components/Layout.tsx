@@ -22,6 +22,7 @@ import SwitchAccountIcon from '@mui/icons-material/SwitchAccount';
 
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/usePermissions';
+import { useColorMode } from '../contexts/ColorModeContext';
 import { useAppointmentDialog } from '../contexts/AppointmentDialogContext';
 import type { Permission } from '../contexts/permissions';
 import { NotificationsBell } from './notifications/NotificationsBell';
@@ -40,10 +41,10 @@ const SIDEBAR_ACTIVE = '#15998B';
 const SIDEBAR_HOVER = 'rgba(255,255,255,0.05)';
 const SIDEBAR_BORDER = 'rgba(255,255,255,0.07)';
 
-// Mesmo visual do sino (NotificationsBell)
+// Mesmo visual do sino (NotificationsBell); menores no celular para caber o título
 const HEADER_ICON_BUTTON_SX = {
-  width: 38,
-  height: 38,
+  width: { xs: 34, sm: 38 },
+  height: { xs: 34, sm: 38 },
   borderRadius: '12px',
   border: '1px solid',
   borderColor: 'divider',
@@ -170,6 +171,7 @@ export function Layout() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [moneyHidden, setMoneyHiddenState] = useState(isMoneyHidden);
 
+  const { mode: colorMode, toggleColorMode } = useColorMode();
   const toggleMoneyHidden = () => {
     setMoneyHidden(!moneyHidden);
     setMoneyHiddenState(!moneyHidden);
@@ -618,7 +620,7 @@ export function Layout() {
             <AuroraIcon name="menu" size={20} strokeWidth={1.9} />
           </IconButton>
 
-          <Box sx={{ minWidth: 0, mr: 1.5 }}>
+          <Box sx={{ minWidth: 0, mr: { xs: 1, md: 1.5 } }}>
             <Typography
               noWrap
               component="h1"
@@ -650,7 +652,12 @@ export function Layout() {
 
           <Box sx={{ flex: 1 }} />
 
-          <Stack direction="row" spacing={{ xs: 0.75, sm: 1 }} alignItems="center" sx={{ flexShrink: 0 }}>
+          <Stack direction="row" spacing={{ xs: 0.5, sm: 1 }} alignItems="center" sx={{ flexShrink: 0 }}>
+            <Tooltip title={colorMode === 'dark' ? 'Tema claro' : 'Tema escuro'}>
+              <IconButton onClick={toggleColorMode} aria-label="Alternar tema" sx={HEADER_ICON_BUTTON_SX}>
+                <AuroraIcon name={colorMode === 'dark' ? 'sun' : 'moon'} size={20} strokeWidth={1.8} />
+              </IconButton>
+            </Tooltip>
             {isAdmin && (
               <Tooltip title={pageMeta.auditEntity ? 'Histórico de alterações' : 'Sem histórico nesta tela'}>
                 <span>
@@ -692,9 +699,10 @@ export function Layout() {
                   startIcon={<AuroraIcon name="plus" size={18} strokeWidth={2.2} />}
                   onClick={() => openAppointmentDialog()}
                   sx={{
-                    height: 38,
-                    minWidth: { xs: 38, sm: 64 },
-                    px: { xs: 1.25, md: 2.25 },
+                    height: { xs: 34, sm: 38 },
+                    minHeight: { xs: 34, sm: 38 },
+                    minWidth: { xs: 34, sm: 64 },
+                    px: { xs: 1, md: 2.25 },
                     borderRadius: '12px',
                     fontWeight: 700,
                     whiteSpace: 'nowrap',
