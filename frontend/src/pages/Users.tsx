@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   IconButton,
-  InputBase,
   MenuItem,
   Skeleton,
   Stack,
@@ -17,14 +16,18 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
-import SearchIcon from '@mui/icons-material/Search';
 import SwitchAccountIcon from '@mui/icons-material/SwitchAccount';
 import StarIcon from '@mui/icons-material/Star';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { usersApi } from '../api/users';
 import { UserFormDialog } from '../components/users/UserFormDialog';
+import {
+  LIST_HEADER_ACTION_SX,
+  ListCardHeader,
+  ListHistoryButton,
+  ListSearchField,
+} from '../components/ListCardHeader';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppDialog } from '../contexts/AppDialogContext';
@@ -184,34 +187,27 @@ export function Users() {
 
   return (
     <Box>
-      {/* Contagem + filtros + busca + ações */}
-      <Stack
-        direction={{ xs: 'column', lg: 'row' }}
-        alignItems={{ xs: 'stretch', lg: 'center' }}
-        justifyContent="space-between"
-        spacing={1.5}
-      >
-        <Typography sx={{ fontSize: fontSizes.md, color: 'text.secondary', fontWeight: 600 }}>
-          {isLoading ? (
-            <Skeleton width={180} />
-          ) : (
-            <>
-              <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
-                {users.length}
-              </Box>{' '}
-              {users.length === 1 ? 'usuário com acesso' : 'usuários com acesso'}
-            </>
-          )}
-        </Typography>
+      <Typography sx={{ display: 'block', fontSize: fontSizes.xs, color: 'text.secondary', mt: 1, mb: 2.25 }}>
+        Todo profissional é um usuário, mas nem todo usuário é profissional — administrativos (recepção,
+        financeiro) acessam sem estar na agenda.
+      </Typography>
 
-        <Stack
-          direction="row"
-          alignItems="center"
-          spacing={1.25}
-          flexWrap={{ xs: 'wrap', lg: 'nowrap' }}
-          useFlexGap
-          justifyContent={{ lg: 'flex-end' }}
-          sx={{ minWidth: 0 }}
+      <Card sx={{ p: 0, overflow: 'hidden' }}>
+        <ListCardHeader
+          title={
+          <Typography sx={{ fontSize: fontSizes.md, color: 'text.secondary', fontWeight: 600 }}>
+            {isLoading ? (
+              <Skeleton width={180} />
+            ) : (
+              <>
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
+                  {users.length}
+                </Box>{' '}
+                {users.length === 1 ? 'usuário com acesso' : 'usuários com acesso'}
+              </>
+            )}
+          </Typography>
+          }
         >
           <TextField
             select
@@ -252,39 +248,8 @@ export function Users() {
             <MenuItem value="ACTIVE">Ativos</MenuItem>
             <MenuItem value="INACTIVE">Inativos</MenuItem>
           </TextField>
-          <Stack
-            direction="row"
-            alignItems="center"
-            spacing={1}
-            sx={{
-              height: 38,
-              px: 1.75,
-              borderRadius: '12px',
-              border: 1,
-              borderColor: 'divider',
-              bgcolor: 'grey.50',
-              width: { xs: '100%', sm: 230 },
-              minWidth: 0,
-            }}
-          >
-            <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-            <InputBase
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar usuário..."
-              sx={{ fontSize: fontSizes.sm, flex: 1 }}
-            />
-          </Stack>
-          {isAdmin && (
-            <Tooltip title="Histórico de alterações">
-              <IconButton
-                onClick={() => setHistoryOpen(true)}
-                sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
-              >
-                <HistoryIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
+          <ListSearchField value={search} onChange={setSearch} placeholder="Buscar usuário..." />
+          {isAdmin && <ListHistoryButton onClick={() => setHistoryOpen(true)} />}
           {canCreate && (
             <Button
               variant="contained"
@@ -293,20 +258,12 @@ export function Users() {
                 setEditing(null);
                 setFormOpen(true);
               }}
-              sx={{ flexShrink: 0, whiteSpace: 'nowrap', height: 38, px: 2.25, borderRadius: '12px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+              sx={LIST_HEADER_ACTION_SX}
             >
               Novo usuário
             </Button>
           )}
-        </Stack>
-      </Stack>
-
-      <Typography sx={{ display: 'block', fontSize: fontSizes.xs, color: 'text.disabled', mt: 1, mb: 2.25 }}>
-        Todo profissional é um usuário, mas nem todo usuário é profissional — administrativos (recepção,
-        financeiro) acessam sem estar na agenda.
-      </Typography>
-
-      <Card sx={{ p: 0, overflow: 'hidden' }}>
+        </ListCardHeader>
         <Box sx={{ overflowX: 'auto' }}>
         {/* Cabeçalho de colunas */}
         <Box
