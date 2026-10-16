@@ -9,6 +9,7 @@ import {
   Select,
   Skeleton,
   Stack,
+  TextField,
   Typography,
   alpha,
   useMediaQuery,
@@ -24,13 +25,29 @@ import { actionConfig, flattenAuditLogs, type AuditChangeRow } from './auditUtil
 import { fontSizes } from '../../theme/fontSizes';
 
 const ACTION_OPTIONS = [
-  { value: '', label: 'Todas' },
+  { value: '', label: 'Todas as ações' },
   { value: 'CREATE', label: 'Criação' },
   { value: 'UPDATE', label: 'Edição' },
   { value: 'DELETE', label: 'Exclusão' },
 ];
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
+
+const GRID_COLS = '128px minmax(0, 1.1fr) 96px minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1fr)';
+
+// Mesmo visual dos selects das barras de filtro das telas (ex.: Usuários)
+const TOOLBAR_SELECT_SX = {
+  flexShrink: 0,
+  '& .MuiOutlinedInput-root': {
+    height: 38,
+    borderRadius: '12px',
+    bgcolor: 'grey.50',
+    fontSize: fontSizes.sm,
+    fontWeight: 600,
+    color: 'text.secondary',
+  },
+  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+} as const;
 
 interface AuditHistoryDialogProps {
   open: boolean;
@@ -40,24 +57,6 @@ interface AuditHistoryDialogProps {
 }
 
 const AUDIT_DIALOG_HEIGHT = 720;
-
-type AuditEvent = Pick<AuditChangeRow, 'logId' | 'createdAt' | 'userName' | 'action'> & {
-  changes: AuditChangeRow[];
-};
-
-/** Agrupa as linhas por registro de log (um card por evento, na ordem da API). */
-function groupByLog(rows: AuditChangeRow[]): AuditEvent[] {
-  const events: AuditEvent[] = [];
-  for (const row of rows) {
-    const last = events[events.length - 1];
-    if (last?.logId === row.logId) {
-      last.changes.push(row);
-    } else {
-      events.push({ logId: row.logId, createdAt: row.createdAt, userName: row.userName, action: row.action, changes: [row] });
-    }
-  }
-  return events;
-}
 
 function initials(name: string) {
   return name
@@ -91,7 +90,7 @@ export function AuditHistoryDialog({ open, onClose, entity, title }: AuditHistor
     staleTime: 15_000,
   });
 
-  const events = useMemo(() => groupByLog(flattenAuditLogs(data?.data ?? [])), [data?.data]);
+  const rows = useMemo(() => flattenAuditLogs(data?.data ?? []), [data?.data]);
 
   const total = data?.total ?? 0;
   const { page, pageSize } = paginationModel;
@@ -158,111 +157,79 @@ export function AuditHistoryDialog({ open, onClose, entity, title }: AuditHistor
 
       {/* Filtros */}
       <Stack
-        direction={{ xs: 'column', md: 'row' }}
+        direction="row"
         spacing={1.25}
-        alignItems={{ xs: 'stretch', md: 'center' }}
+        useFlexGap
+        flexWrap={{ xs: 'wrap', md: 'nowrap' }}
+        alignItems="center"
         sx={{ px: { xs: 2, sm: 3 }, py: 1.75, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}
       >
-        <Stack
-          direction="row"
-          role="group"
-          aria-label="Ação"
-          sx={{
-            p: 0.5,
-            gap: 0.5,
-            borderRadius: '12px',
-            bgcolor: 'grey.50',
-            border: 1,
-            borderColor: 'divider',
-            overflowX: 'auto',
-            flexShrink: 0,
-          }}
+        <TextField
+          select
+          size="small"
+          value={filters.action ?? ''}
+          onChange={(e) => updateFilter({ action: e.target.value || undefined })}
+          inputProps={{ 'aria-label': 'Ação' }}
+          SelectProps={{ displayEmpty: true }}
+          sx={{ ...TOOLBAR_SELECT_SX, width: { xs: '100%', md: 180 } }}
         >
-          {ACTION_OPTIONS.map((o) => {
-            const active = (filters.action ?? '') === o.value;
-            return (
-              <Box
-                key={o.value}
-                component="button"
-                type="button"
-                aria-pressed={active}
-                onClick={() => updateFilter({ action: o.value || undefined })}
-                sx={{
-                  flex: { xs: 1, md: 'none' },
-                  height: 30,
-                  px: 1.5,
-                  border: 0,
-                  borderRadius: '9px',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  fontFamily: 'inherit',
-                  fontSize: fontSizes.sm,
-                  fontWeight: 700,
-                  bgcolor: active ? 'background.paper' : 'transparent',
-                  color: active ? 'primary.dark' : 'text.secondary',
-                  boxShadow: active ? '0 1px 3px rgba(16,40,37,.12)' : 'none',
-                  '&:hover': { color: 'primary.dark' },
-                }}
-              >
-                {o.label}
-              </Box>
-            );
-          })}
-        </Stack>
-
+          {ACTION_OPTIONS.map((o) => (
+            <MenuItem key={o.value} value={o.value}>
+              {o.label}
+            </MenuItem>
+          ))}
+        </TextField>
         <Box sx={{ flex: 1, display: { xs: 'none', md: 'block' } }} />
-
-        <Stack direction="row" spacing={1}>
-          <PeriodField label="De" value={filters.startDate ?? ''} onChange={(v) => updateFilter({ startDate: v || undefined })} />
-          <PeriodField label="Até" value={filters.endDate ?? ''} onChange={(v) => updateFilter({ endDate: v || undefined })} />
-        </Stack>
+        <PeriodField label="De" value={filters.startDate ?? ''} onChange={(v) => updateFilter({ startDate: v || undefined })} />
+        <PeriodField label="Até" value={filters.endDate ?? ''} onChange={(v) => updateFilter({ endDate: v || undefined })} />
       </Stack>
 
-      {/* Linha do tempo */}
-      <Box
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: 'auto',
-          px: { xs: 2, sm: 3 },
-          py: 2,
-          bgcolor: 'background.default',
-        }}
-      >
+      {/* Tabela */}
+      <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+        <Box
+          sx={{
+            display: { xs: 'none', md: 'grid' },
+            gridTemplateColumns: GRID_COLS,
+            gap: 1.5,
+            px: 3,
+            py: 1.5,
+            position: 'sticky',
+            top: 0,
+            zIndex: 1,
+            borderBottom: 1,
+            borderColor: 'divider',
+            bgcolor: 'grey.50',
+            fontSize: fontSizes['2xs'],
+            fontWeight: 800,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            color: 'text.disabled',
+          }}
+        >
+          <span>Data/hora</span>
+          <span>Usuário</span>
+          <span>Ação</span>
+          <span>Campo</span>
+          <span>Valor anterior</span>
+          <span>Valor novo</span>
+        </Box>
+
         {error ? (
-          <Alert severity="error">Erro ao carregar histórico</Alert>
+          <Box sx={{ p: { xs: 2, sm: 3 } }}>
+            <Alert severity="error">Erro ao carregar histórico</Alert>
+          </Box>
         ) : isLoading ? (
-          <Stack spacing={1.25}>
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} variant="rounded" height={104} sx={{ borderRadius: '16px' }} />
+          <Stack spacing={1.25} sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} variant="rounded" height={44} />
             ))}
           </Stack>
-        ) : events.length === 0 ? (
-          <Stack alignItems="center" justifyContent="center" spacing={1.25} sx={{ height: '100%', minHeight: 220, color: 'text.secondary' }}>
-            <Box
-              sx={{
-                width: 52,
-                height: 52,
-                borderRadius: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: 'background.paper',
-                border: 1,
-                borderColor: 'divider',
-                color: 'text.disabled',
-              }}
-            >
-              <AuroraIcon name="clock" size={24} />
-            </Box>
-            <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 700 }}>Nenhuma alteração registrada</Typography>
-          </Stack>
+        ) : rows.length === 0 ? (
+          <Box sx={{ px: 2.5, py: 6, textAlign: 'center' }}>
+            <Typography color="text.secondary">Nenhuma alteração registrada</Typography>
+          </Box>
         ) : (
-          <Stack spacing={1.25}>
-            {events.map((ev) => (
-              <AuditEventCard key={ev.logId} event={ev} isMobile={isMobile} />
-            ))}
-          </Stack>
+          rows.map((row) => <AuditRow key={row.id} row={row} />)
         )}
       </Box>
 
@@ -300,7 +267,7 @@ export function AuditHistoryDialog({ open, onClose, entity, title }: AuditHistor
         </Stack>
         <Stack direction="row" alignItems="center" spacing={1}>
           <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600 }}>
-            {total === 0 ? '0 de 0' : `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, total)} de ${total}`}
+            {total === 0 ? 'Nenhum registro' : `Mostrando ${page * pageSize + 1}–${Math.min((page + 1) * pageSize, total)} de ${total}`}
           </Typography>
           <IconButton
             size="small"
@@ -339,10 +306,10 @@ function PeriodField({ label, value, onChange }: { label: string; value: string;
         height: 38,
         pl: 1.5,
         pr: 1,
-        borderRadius: '11px',
+        borderRadius: '12px',
         border: 1,
         borderColor: 'divider',
-        bgcolor: 'background.paper',
+        bgcolor: 'grey.50',
       }}
     >
       <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700, color: 'text.disabled' }}>{label}</Typography>
@@ -357,107 +324,102 @@ function PeriodField({ label, value, onChange }: { label: string; value: string;
   );
 }
 
-function AuditEventCard({ event, isMobile }: { event: AuditEvent; isMobile: boolean }) {
-  const cfg = actionConfig[event.action];
+function AuditRow({ row }: { row: AuditChangeRow }) {
+  const cfg = actionConfig[row.action];
+  const date = dayjs(row.createdAt).format('DD/MM/YYYY HH:mm');
+  const pill = (
+    <Box
+      component="span"
+      sx={{
+        display: 'inline-block',
+        fontSize: fontSizes.xs,
+        fontWeight: 700,
+        px: 1,
+        py: 0.4,
+        borderRadius: '8px',
+        whiteSpace: 'nowrap',
+        color: `${cfg.color}.dark`,
+        bgcolor: (t) => alpha(t.palette[cfg.color].main, 0.12),
+      }}
+    >
+      {cfg.label}
+    </Box>
+  );
 
   return (
     <Box
       sx={{
-        bgcolor: 'background.paper',
-        borderRadius: '16px',
-        border: 1,
-        borderColor: 'divider',
-        boxShadow: '0 1px 2px rgba(16,40,37,.04)',
-        overflow: 'hidden',
+        display: 'grid',
+        gridTemplateColumns: { xs: 'minmax(0, 1fr) auto', md: GRID_COLS },
+        gap: { xs: 0.5, md: 1.5 },
+        px: { xs: 2, md: 3 },
+        py: 1.5,
+        borderBottom: 1,
+        borderColor: 'grey.100',
+        alignItems: 'center',
+        '&:hover': { bgcolor: 'grey.50' },
       }}
     >
-      <Stack direction="row" alignItems="center" spacing={1.25} sx={{ px: 2, pt: 1.5, pb: 1.25 }}>
+      {/* Desktop: uma coluna por campo */}
+      <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.sm, color: 'text.secondary' }}>{date}</Typography>
+      <Stack direction="row" alignItems="center" spacing={1.25} sx={{ display: { xs: 'none', md: 'flex' }, minWidth: 0 }}>
         <Box
           sx={{
-            width: 34,
-            height: 34,
-            borderRadius: '10px',
+            width: 30,
+            height: 30,
+            borderRadius: '9px',
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
-            color: 'primary.dark',
-            fontSize: fontSizes.xs,
-            fontWeight: 800,
-          }}
-        >
-          {initials(event.userName)}
-        </Box>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography noWrap sx={{ fontSize: fontSizes.sm, fontWeight: 700, lineHeight: 1.25 }}>
-            {event.userName}
-          </Typography>
-          <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', lineHeight: 1.25 }}>
-            {dayjs(event.createdAt).format('DD/MM/YYYY [às] HH:mm')}
-          </Typography>
-        </Box>
-        <Box
-          component="span"
-          sx={{
-            flexShrink: 0,
-            px: 1.1,
-            py: 0.35,
-            borderRadius: 999,
             fontSize: fontSizes['2xs'],
             fontWeight: 800,
-            bgcolor: (t) => alpha(t.palette[cfg.color].main, 0.12),
-            color: `${cfg.color}.dark`,
+            color: 'primary.main',
+            bgcolor: (t) => alpha(t.palette.primary.main, 0.09),
           }}
         >
-          {cfg.label}
+          {initials(row.userName)}
         </Box>
+        <Typography noWrap title={row.userName} sx={{ fontSize: fontSizes.sm, fontWeight: 600 }}>
+          {row.userName}
+        </Typography>
       </Stack>
-
-      <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
-        {event.changes.map((c, i) => (
-          <Stack
-            key={c.id}
-            direction={isMobile ? 'column' : 'row'}
-            spacing={isMobile ? 0.25 : 2}
-            alignItems={isMobile ? 'stretch' : 'baseline'}
-            sx={{
-              px: 2,
-              py: 0.9,
-              bgcolor: i % 2 ? 'grey.50' : 'transparent',
-            }}
-          >
-            <Typography
-              sx={{
-                width: isMobile ? 'auto' : 170,
-                flexShrink: 0,
-                fontSize: fontSizes.xs,
-                fontWeight: 700,
-                color: 'text.secondary',
-              }}
-            >
-              {c.fieldLabel}
-            </Typography>
-            <Stack direction="row" alignItems="baseline" spacing={1} sx={{ minWidth: 0, flex: 1, flexWrap: 'wrap' }}>
-              {c.oldValue != null && (
-                <ChangeValue value={c.oldValue} sx={{ color: 'error.main', textDecoration: 'line-through' }} />
-              )}
-              {c.oldValue != null && c.newValue != null && (
-                <Typography component="span" sx={{ color: 'text.disabled', fontSize: fontSizes.sm }}>
-                  →
-                </Typography>
-              )}
-              {c.newValue != null && <ChangeValue value={c.newValue} sx={{ color: 'success.dark', fontWeight: 600 }} />}
-            </Stack>
-          </Stack>
-        ))}
+      <Box sx={{ display: { xs: 'none', md: 'block' } }}>{pill}</Box>
+      <Typography noWrap title={row.fieldLabel} sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.sm, fontWeight: 700 }}>
+        {row.fieldLabel}
+      </Typography>
+      <Box sx={{ display: { xs: 'none', md: 'block' }, minWidth: 0 }}>
+        <ChangeValue value={row.oldValue} sx={{ color: 'error.main', textDecoration: 'line-through' }} />
       </Box>
+      <Box sx={{ display: { xs: 'none', md: 'block' }, minWidth: 0 }}>
+        <ChangeValue value={row.newValue} sx={{ color: 'success.dark', fontWeight: 600 }} />
+      </Box>
+
+      {/* Mobile: campo + ação, valores e autoria empilhados */}
+      <Box sx={{ display: { xs: 'block', md: 'none' }, minWidth: 0 }}>
+        <Typography noWrap sx={{ fontSize: fontSizes.sm, fontWeight: 700 }}>
+          {row.fieldLabel}
+        </Typography>
+        <Stack direction="row" alignItems="baseline" spacing={0.75} sx={{ minWidth: 0, flexWrap: 'wrap' }}>
+          {row.oldValue != null && <ChangeValue value={row.oldValue} sx={{ color: 'error.main', textDecoration: 'line-through' }} />}
+          {row.oldValue != null && row.newValue != null && (
+            <Typography component="span" sx={{ color: 'text.disabled', fontSize: fontSizes.sm }}>
+              →
+            </Typography>
+          )}
+          {row.newValue != null && <ChangeValue value={row.newValue} sx={{ color: 'success.dark', fontWeight: 600 }} />}
+        </Stack>
+        <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
+          {row.userName} · {date}
+        </Typography>
+      </Box>
+      <Box sx={{ display: { xs: 'block', md: 'none' }, alignSelf: 'start' }}>{pill}</Box>
     </Box>
   );
 }
 
-function ChangeValue({ value, sx }: { value: string; sx: object }) {
-  if (value === '—') {
+function ChangeValue({ value, sx }: { value: string | null; sx: object }) {
+  if (value == null || value === '—') {
     return (
       <Typography component="span" sx={{ fontSize: fontSizes.sm, color: 'text.disabled' }}>
         —
@@ -465,7 +427,7 @@ function ChangeValue({ value, sx }: { value: string; sx: object }) {
     );
   }
   return (
-    <Typography component="span" title={value} sx={{ fontSize: fontSizes.sm, wordBreak: 'break-word', minWidth: 0, ...sx }}>
+    <Typography component="span" title={value} sx={{ display: 'block', fontSize: fontSizes.sm, wordBreak: 'break-word', minWidth: 0, ...sx }}>
       {value}
     </Typography>
   );

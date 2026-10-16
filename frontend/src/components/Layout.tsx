@@ -651,11 +651,18 @@ export function Layout() {
           <Box sx={{ flex: 1 }} />
 
           <Stack direction="row" spacing={{ xs: 0.75, sm: 1 }} alignItems="center" sx={{ flexShrink: 0 }}>
-            {isAdmin && pageMeta.auditEntity && (
-              <Tooltip title="Histórico de alterações">
-                <IconButton onClick={() => setHistoryOpen(true)} sx={HEADER_ICON_BUTTON_SX}>
-                  <AuroraIcon name="clock" size={20} strokeWidth={1.8} />
-                </IconButton>
+            {isAdmin && (
+              <Tooltip title={pageMeta.auditEntity ? 'Histórico de alterações' : 'Sem histórico nesta tela'}>
+                <span>
+                  <IconButton
+                    onClick={() => setHistoryOpen(true)}
+                    disabled={!pageMeta.auditEntity}
+                    aria-label="Histórico de alterações"
+                    sx={{ ...HEADER_ICON_BUTTON_SX, '&.Mui-disabled': { bgcolor: 'grey.50', color: 'text.disabled', opacity: 0.55 } }}
+                  >
+                    <AuroraIcon name="clock" size={20} strokeWidth={1.8} />
+                  </IconButton>
+                </span>
               </Tooltip>
             )}
             <Tooltip title={moneyHidden ? 'Mostrar valores' : 'Ocultar valores'}>
