@@ -4,8 +4,10 @@ import {
   Button,
   Card,
   IconButton,
+  MenuItem,
   Skeleton,
   Stack,
+  TextField,
   Tooltip,
   Typography,
   alpha,
@@ -21,6 +23,7 @@ import { proceduresApi } from '../api/procedures';
 import { ProcedureFormDialog } from '../components/procedures/ProcedureFormDialog';
 import {
   LIST_HEADER_ACTION_SX,
+  LIST_HEADER_SELECT_SX,
   ListCardHeader,
   ListHistoryButton,
   ListSearchField,
@@ -123,36 +126,26 @@ export function Procedures() {
       <Card sx={{ p: 0, overflow: 'hidden' }}>
         <ListCardHeader
           title={
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            {categories.map((c) => {
-              const active = category === c;
-              return (
-                <Box
-                  key={c}
-                  component="button"
-                  type="button"
-                  onClick={() => setCategory(c)}
-                  sx={{
-                    border: 0,
-                    cursor: 'pointer',
-                    px: 2,
-                    height: 36,
-                    borderRadius: '10px',
-                    fontFamily: 'inherit',
-                    fontSize: fontSizes.sm,
-                    fontWeight: active ? 700 : 600,
-                    color: active ? '#fff' : 'text.secondary',
-                    bgcolor: active ? 'primary.main' : 'grey.50',
-                    '&:hover': { bgcolor: active ? 'primary.main' : 'grey.100' },
-                  }}
-                >
-                  {c}
-                </Box>
-              );
-            })}
-          </Box>
+            <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>
+              {category === 'Todos' ? 'Todos os procedimentos' : category}
+            </Typography>
           }
         >
+          <TextField
+            select
+            size="small"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            inputProps={{ 'aria-label': 'Categoria' }}
+            sx={{ ...LIST_HEADER_SELECT_SX, width: { xs: 'calc(50% - 5px)', sm: 196 } }}
+          >
+            <MenuItem value="Todos">Todas as categorias</MenuItem>
+            {categories.slice(1).map((c) => (
+              <MenuItem key={c} value={c}>
+                {c}
+              </MenuItem>
+            ))}
+          </TextField>
           <ListSearchField value={search} onChange={setSearch} placeholder="Buscar procedimento..." />
           {isAdmin && <ListHistoryButton onClick={() => setHistoryOpen(true)} />}
           {canCreate && (

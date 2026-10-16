@@ -167,6 +167,8 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 **Ajustes de layout**
 - **Horários:** os dois cards (Disponibilidade da equipe e Bloqueios de agenda) agora têm cabeçalhos da mesma altura, com as linhas divisórias alinhadas.
 - Textos de apoio (como "60h por semana" em Horários) ficaram mais escuros e legíveis em várias telas.
+- **Procedimentos:** as categorias agora são escolhidas em uma lista suspensa, no mesmo estilo dos filtros das outras telas.
+- **Usuários:** removido o texto explicativo que ficava solto acima da tabela.
 - **Procedimentos** e **Usuários**: busca, filtros e botões agora ficam dentro do card da tabela, igual às demais listagens.
 
 **Agenda e disponibilidade**

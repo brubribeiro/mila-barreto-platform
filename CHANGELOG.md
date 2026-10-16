@@ -69,6 +69,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Dashboard: card **Metas do mês** alinhado ao card da Agenda (espaçamento do cabeçalho, estado vazio em largura total e botão "Definir metas" dentro da caixa vazia).
 - Horários: cabeçalhos dos cards **Disponibilidade da equipe** e **Bloqueios de agenda** com a mesma altura (`minHeight` no `CARD_HEADER_SX`), divisores alinhados.
 - Contraste: textos auxiliares abaixo do valor principal (`60h por semana` em Horários e linhas equivalentes em Mensagens, Documentos, Formas de pagamento, Metas, Pendências, Grupos, Despesas recorrentes e nota de Usuários) passam de `text.disabled` para `text.secondary`; os de 11px sobem para 12px.
+- Procedimentos: filtro de categoria passa de pills para select no cabeçalho do card (`LIST_HEADER_SELECT_SX`, compartilhado com Usuários); título do card mostra a categoria selecionada.
+- Usuários: removido o texto explicativo que ficava fora do card.
 - Listagens: filtros/busca/ações de Procedimentos e Usuários movidos para dentro do card da tabela (como Pacientes, Documentos, Estoque, Financeiro, Despesas recorrentes e Mensagens), via novo `ListCardHeader` (`ListSearchField`, `ListHistoryButton`, `LIST_HEADER_ACTION_SX`); Pacientes passa a usá-lo.
 
 ## [0.2.0] - 2026-07-15

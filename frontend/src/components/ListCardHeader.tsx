@@ -97,6 +97,21 @@ export function ListHistoryButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+/** Select de filtro no cabeçalho de listagem (mesmo visual da busca). */
+export const LIST_HEADER_SELECT_SX = {
+  width: { xs: 'calc(50% - 5px)', sm: 168 },
+  flexShrink: 0,
+  '& .MuiOutlinedInput-root': {
+    height: LIST_HEADER_CONTROL_HEIGHT,
+    borderRadius: CONTROL_RADIUS,
+    bgcolor: 'grey.50',
+    fontSize: fontSizes.sm,
+    fontWeight: 600,
+    color: 'text.secondary',
+  },
+  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+} as const;
+
 /** Botão primário do cabeçalho de listagem. */
 export const LIST_HEADER_ACTION_SX = {
   flexShrink: 0,

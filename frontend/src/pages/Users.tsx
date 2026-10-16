@@ -24,6 +24,7 @@ import { usersApi } from '../api/users';
 import { UserFormDialog } from '../components/users/UserFormDialog';
 import {
   LIST_HEADER_ACTION_SX,
+  LIST_HEADER_SELECT_SX,
   ListCardHeader,
   ListHistoryButton,
   ListSearchField,
@@ -42,20 +43,6 @@ const PAGE_SIZE = 8;
 const GRID_COLS = 'minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 0.9fr) 112px';
 const GRID_MIN_WIDTH = 760;
 const INFO_COLOR = '#5BA8DE';
-
-const TOOLBAR_SELECT_SX = {
-  width: { xs: 'calc(50% - 5px)', sm: 168 },
-  flexShrink: 0,
-  '& .MuiOutlinedInput-root': {
-    height: 38,
-    borderRadius: '12px',
-    bgcolor: 'grey.50',
-    fontSize: fontSizes.sm,
-    fontWeight: 600,
-    color: 'text.secondary',
-  },
-  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
-} as const;
 
 const ROW_ACTION_SX = {
   width: 30,
@@ -187,11 +174,6 @@ export function Users() {
 
   return (
     <Box>
-      <Typography sx={{ display: 'block', fontSize: fontSizes.xs, color: 'text.secondary', mt: 1, mb: 2.25 }}>
-        Todo profissional é um usuário, mas nem todo usuário é profissional — administrativos (recepção,
-        financeiro) acessam sem estar na agenda.
-      </Typography>
-
       <Card sx={{ p: 0, overflow: 'hidden' }}>
         <ListCardHeader
           title={
@@ -215,7 +197,7 @@ export function Users() {
             value={professionalFilter}
             onChange={(e) => setProfessionalFilter(e.target.value as typeof professionalFilter)}
             inputProps={{ 'aria-label': 'Vínculo' }}
-            sx={TOOLBAR_SELECT_SX}
+            sx={LIST_HEADER_SELECT_SX}
           >
             <MenuItem value="ALL">Todos os vínculos</MenuItem>
             <MenuItem value="YES">Profissional</MenuItem>
@@ -227,7 +209,7 @@ export function Users() {
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
             inputProps={{ 'aria-label': 'Grupo de permissão' }}
-            sx={TOOLBAR_SELECT_SX}
+            sx={LIST_HEADER_SELECT_SX}
           >
             <MenuItem value="ALL">Todos os grupos</MenuItem>
             {roleOptions.map((name) => (
@@ -242,7 +224,7 @@ export function Users() {
             value={activeFilter}
             onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
             inputProps={{ 'aria-label': 'Status' }}
-            sx={TOOLBAR_SELECT_SX}
+            sx={LIST_HEADER_SELECT_SX}
           >
             <MenuItem value="ALL">Todos os status</MenuItem>
             <MenuItem value="ACTIVE">Ativos</MenuItem>
