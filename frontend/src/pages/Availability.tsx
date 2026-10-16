@@ -102,6 +102,9 @@ const DIALOG_MAX_WIDTH = 640;
 const CARD_HEADER_SX = {
   px: { xs: 2, sm: 2.75 },
   py: 2.25,
+  minHeight: 73,
+  display: 'flex',
+  alignItems: 'center',
   borderBottom: 1,
   borderColor: 'divider',
 } as const;
@@ -386,7 +389,7 @@ export function Availability() {
                         <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 700, lineHeight: 'inherit' }}>
                           {summary.range}
                         </Typography>
-                        <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', lineHeight: 'inherit' }}>
+                        <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', lineHeight: 'inherit' }}>
                           {summary.note}
                         </Typography>
                       </>
@@ -420,7 +423,6 @@ export function Availability() {
                 minHeight: 36,
                 height: 36,
                 px: 1.75,
-                my: -0.5,
                 borderRadius: '10px',
                 fontSize: fontSizes.sm,
                 fontWeight: 700,

@@ -310,7 +310,7 @@ export function PaymentMethods() {
                         />
                       )}
                     </Stack>
-                    <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.disabled' }}>
+                    <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                       {usageLabel(usage)}
                     </Typography>
                   </Box>
@@ -364,7 +364,7 @@ export function PaymentMethods() {
                     >
                       {formatFee(fee)}
                     </Typography>
-                    <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', fontWeight: 600, mt: 0.6 }}>
+                    <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600, mt: 0.6 }}>
                       taxa
                     </Typography>
                   </Box>
@@ -372,7 +372,7 @@ export function PaymentMethods() {
                     <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 700 }}>
                       {brl.format(EXAMPLE_AMOUNT * (1 - fee / 100))}
                     </Typography>
-                    <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', fontWeight: 600 }}>
+                    <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600 }}>
                       líquido a cada {brl.format(EXAMPLE_AMOUNT)}
                     </Typography>
                   </Box>

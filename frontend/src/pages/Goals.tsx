@@ -217,7 +217,7 @@ export function Goals() {
                     <Typography noWrap title={g.name} sx={{ fontSize: fontSizes.lg, fontWeight: 800 }}>
                       {g.name}
                     </Typography>
-                    <Typography noWrap sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', fontWeight: 600 }}>
+                    <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600 }}>
                       {formatGoalPeriod(g.periodStart, g.periodType)}
                       {g.metric === 'MANUAL' ? ' · manual' : ''}
                     </Typography>

@@ -623,7 +623,7 @@ export function Documents() {
                       <Typography
                         noWrap
                         title={doc.notes || undefined}
-                        sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled' }}
+                        sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}
                       >
                         <Box component="span" sx={{ display: { md: 'none' } }}>
                           {`${statusMeta(doc.status).label} · ${categoryMeta(doc.category).label} · ${dayjs(doc.createdAt).format('DD/MM/YY')}`}

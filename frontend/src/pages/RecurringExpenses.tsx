@@ -867,7 +867,7 @@ export function RecurringExpensesPage() {
                   <Typography noWrap title={d.name} sx={{ fontSize: fontSizes.md, fontWeight: 700 }}>
                     {d.name}
                   </Typography>
-                  <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.disabled' }}>
+                  <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                     {d.description || '—'}
                   </Typography>
                   <Stack direction="row" spacing={0.75} sx={{ display: { xs: 'flex', md: 'none' }, mt: 0.75 }}>

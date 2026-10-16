@@ -127,7 +127,7 @@ function RoleCard({
         <Typography noWrap sx={{ fontSize: fontSizes.sm, fontWeight: 800, color: 'text.primary' }}>
           {role.name}
         </Typography>
-        <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', fontWeight: 600 }}>
+        <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600 }}>
           {membersLabel(role._count?.users ?? 0)}
         </Typography>
       </Box>
