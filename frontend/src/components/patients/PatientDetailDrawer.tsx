@@ -43,6 +43,7 @@ import { packagesApi } from '../../api/packages';
 import { AnamnesisView, hasAnamnesisData } from './AnamnesisView';
 import { PatientPhotosGallery } from './PatientPhotosGallery';
 import { usePermissions } from '../../contexts/usePermissions';
+import { PatientSkinRoutinesCard } from '../skincare/PatientSkinRoutinesCard';
 import { useAppointmentDialog } from '../../contexts/AppointmentDialogContext';
 import { dayjsFromDateOnlyApi, formatDateOnlyFromApi } from '../../utils/dateOnly';
 import { formatPatientAddressDisplay } from '../../utils/patientAddress';
@@ -789,6 +790,9 @@ export function PatientDetailDrawer({
 
         {data && tab === 'anamnesis' && (
           <Stack spacing={2}>
+            {has('routines:view') && (
+              <PatientSkinRoutinesCard patient={{ id: data.id, name: data.name, phone: data.phone, email: data.email }} />
+            )}
             {onEditAnamnesis && (
               <Stack direction="row" justifyContent="flex-end">
                 <Button
