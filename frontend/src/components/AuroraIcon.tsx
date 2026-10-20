@@ -112,6 +112,12 @@ const ICONS: Record<string, ReactNode> = {
       <rect x="15.4" y="5.5" width="2.6" height="12" rx="0.6" />
     </>
   ),
+  rotinas: (
+    <>
+      <path d="M12 3.5c3 3.6 5.5 6.6 5.5 9.8a5.5 5.5 0 0 1-11 0c0-3.2 2.5-6.2 5.5-9.8z" />
+      <path d="M9.5 14a2.5 2.5 0 0 0 2.5 2.5" />
+    </>
+  ),
   pendencias: (
     <>
       <rect x="4.5" y="4" width="15" height="17" rx="2.5" />

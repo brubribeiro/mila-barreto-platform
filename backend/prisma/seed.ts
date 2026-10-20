@@ -1,6 +1,7 @@
 ﻿import { AppointmentStatus, Prisma, PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { demoAppointmentNotes } from './demo-appointment-notes';
+import { SKINCARE_DEMO_PRODUCTS, SKINCARE_DEMO_RULES } from './skincare-demo-data';
 
 const prisma = new PrismaClient();
 
@@ -21,6 +22,7 @@ const RESOURCES = [
   'payment-methods',
   'goals',
   'pendencias',
+  'routines',
 ];
 const ACTIONS = ['view', 'create', 'edit', 'delete'];
 const ALL_PERMISSIONS = RESOURCES.flatMap((r) => ACTIONS.map((a) => `${r}:${a}`));
@@ -48,6 +50,9 @@ const defaultRoles = [
       'inventory:view',
       'messages:view',
       'pendencias:view',
+      'routines:view',
+      'routines:create',
+      'routines:edit',
     ],
     isSystem: true,
     restrictToOwnAppointments: true,
@@ -78,6 +83,7 @@ const defaultRoles = [
       'pendencias:view',
       'pendencias:create',
       'pendencias:edit',
+      'routines:view',
     ],
     isSystem: true,
     restrictToOwnAppointments: false,
@@ -749,6 +755,26 @@ async function main() {
     } else {
       console.log(`  • Já existe: ${pm.name}`);
     }
+  }
+
+  console.log('\n→ Rotinas de skincare (produtos e regras da anamnese de pele)...');
+  if ((await prisma.skincareProduct.count()) === 0) {
+    const idByKey = new Map<string, string>();
+    for (const { key, ...product } of SKINCARE_DEMO_PRODUCTS) {
+      const created = await prisma.skincareProduct.create({ data: product });
+      idByKey.set(key, created.id);
+    }
+    if ((await prisma.skincareRule.count()) === 0) {
+      await prisma.skincareRule.createMany({
+        data: SKINCARE_DEMO_RULES.map(({ productKeys, ...rule }) => ({
+          ...rule,
+          productIds: productKeys.map((k) => idByKey.get(k)).filter((id): id is string => !!id),
+        })),
+      });
+    }
+    console.log(`  ✓ ${SKINCARE_DEMO_PRODUCTS.length} produtos e ${SKINCARE_DEMO_RULES.length} regras criados.`);
+  } else {
+    console.log('  • Produtos já existem, pulando.');
   }
 
   console.log('\nSeed concluído.\n');

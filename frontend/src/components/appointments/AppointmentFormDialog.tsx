@@ -4,6 +4,7 @@ import {
   Alert,
   Autocomplete,
   Box,
+  ButtonBase,
   Button,
   Chip,
   CircularProgress,
@@ -78,6 +79,8 @@ import {
 import { getApiErrorMessage } from '../../utils/apiError';
 import type { Appointment, AppointmentKind, AppointmentStatus, PatientPackage, Package, PaymentMethodEntry, Procedure } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
+import { SkinAnamnesisDialog } from '../skincare/SkinAnamnesisDialog';
+import { ICON as SKIN_ICON, Svg as SkinSvg } from '../skincare/skincareUi';
 
 function selectValueIfListed(value: string, options: { id: string }[]) {
   if (!value) return '';
@@ -309,6 +312,7 @@ export function AppointmentFormDialog({
 
   const { control, handleSubmit, reset, watch, setValue, getValues } = useForm<FormValues>({ defaultValues: empty });
   const [whatsappOpen, setWhatsappOpen] = useState(false);
+  const [skinOpen, setSkinOpen] = useState(false);
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [pendingReturn, setPendingReturn] = useState<Appointment | null>(null);
   const [returnDate, setReturnDate] = useState('');
@@ -1927,6 +1931,53 @@ export function AppointmentFormDialog({
                 sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
               >
                 <Stack spacing={1.5} sx={{ flex: 1, minHeight: 0 }}>
+                  {appointment && selectedPatient && has('routines:create') && (
+                    <ButtonBase
+                      onClick={() => setSkinOpen(true)}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 1.25,
+                        px: 1.9,
+                        py: 1.6,
+                        borderRadius: '13px',
+                        border: 1,
+                        borderColor: 'divider',
+                        bgcolor: 'grey.50',
+                        width: '100%',
+                        textAlign: 'left',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Stack direction="row" alignItems="center" spacing={1.4} sx={{ minWidth: 0 }}>
+                        <Box
+                          sx={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: '10px',
+                            bgcolor: 'background.paper',
+                            color: 'primary.main',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <SkinSvg d={SKIN_ICON.drop} size={18} stroke={1.8} />
+                        </Box>
+                        <Box sx={{ lineHeight: 1.25, minWidth: 0 }}>
+                          <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 800 }}>Anamnese de pele</Typography>
+                          <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary' }}>
+                            Gerar rotina de skincare personalizada
+                          </Typography>
+                        </Box>
+                      </Stack>
+                      <Box sx={{ color: 'primary.main', display: 'flex' }}>
+                        <SkinSvg d={SKIN_ICON.next} size={18} stroke={2.2} />
+                      </Box>
+                    </ButtonBase>
+                  )}
                   {appointment && !isMobile && (showSessionControls || isInProgress || hasStartedAt) && (
                     <Paper
                       variant="outlined"
@@ -2662,6 +2713,14 @@ export function AppointmentFormDialog({
           </DialogActions>
         </Box>
       </Dialog>
+
+      {appointment && selectedPatient && (
+        <SkinAnamnesisDialog
+          open={skinOpen}
+          onClose={() => setSkinOpen(false)}
+          patient={{ id: selectedPatient.id, name: selectedPatient.name, phone: selectedPatient.phone, email: selectedPatient.email }}
+        />
+      )}
 
       {appointment && (
         <SendWhatsAppDialog

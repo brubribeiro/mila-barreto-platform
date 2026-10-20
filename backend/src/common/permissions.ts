@@ -24,6 +24,7 @@ export const RESOURCES = [
   { key: 'payment-methods', label: 'Formas de pagamento' },
   { key: 'goals', label: 'Metas' },
   { key: 'pendencias', label: 'Pendências' },
+  { key: 'routines', label: 'Rotinas de skincare' },
 ] as const;
 
 export const ACTIONS = [

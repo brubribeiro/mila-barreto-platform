@@ -83,6 +83,7 @@ const navGrouped: NavGroup[] = [
     title: 'Catálogo',
     items: [
       { label: 'Procedimentos', path: '/procedimentos', icon: <AuroraIcon name="procedimentos" />, permission: 'procedures:view' },
+      { label: 'Rotinas de skincare', path: '/rotinas', icon: <AuroraIcon name="rotinas" />, permission: 'routines:view' },
       { label: 'Pacotes', path: '/pacotes', icon: <AuroraIcon name="pacotes" />, permission: 'packages:view' },
       { label: 'Promoções', path: '/promocoes', icon: <AuroraIcon name="promocoes" />, permission: 'promotions:view' },
     ],
@@ -136,6 +137,7 @@ const PAGE_META: (PageMeta & { path: string; exact?: boolean })[] = [
   { path: '/pacientes', title: 'Pacientes', subtitle: 'Cadastro e histórico dos pacientes', auditEntity: 'Patient' },
   { path: '/horarios', title: 'Horários', subtitle: 'Disponibilidade da equipe' },
   { path: '/procedimentos', title: 'Procedimentos', subtitle: 'Catálogo de procedimentos', auditEntity: 'Procedure' },
+  { path: '/rotinas', title: 'Rotinas de skincare', subtitle: 'Produtos e regras usados na anamnese de pele', auditEntity: 'SkincareProduct' },
   { path: '/pacotes', title: 'Pacotes', subtitle: 'Combos de procedimentos e sessões', auditEntity: 'Package' },
   { path: '/promocoes', title: 'Promoções', subtitle: 'Campanhas e descontos sazonais', auditEntity: 'Promotion' },
   { path: '/financeiro', title: 'Financeiro', subtitle: 'Receitas e despesas', auditEntity: 'FinancialEntry' },
