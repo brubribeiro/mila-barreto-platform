@@ -17,7 +17,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
 import SearchIcon from '@mui/icons-material/Search';
 import CreditCardOutlinedIcon from '@mui/icons-material/CreditCardOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -25,13 +24,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
 import { paymentMethodsApi } from '../api/paymentMethods';
 import { PaymentMethodFormDialog } from '../components/payment-methods/PaymentMethodFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { PaymentMethodEntry } from '../types';
 import { fontSizes } from '../theme/fontSizes';
+import { brl } from '../utils/money';
 
 const ICON_COLORS = ['#15998B', '#E0915B', '#5BA8DE', '#D46B8A', '#9B7BD4', '#4FB3A8'];
 const CARD_GRID_SX = {
@@ -62,7 +61,6 @@ const ACTION_BUTTON_SX = {
   color: 'text.secondary',
 } as const;
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 function colorFor(text: string) {
   let hash = 0;
@@ -83,7 +81,7 @@ export function PaymentMethods() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('payment-methods:create');
   const canEdit = has('payment-methods:edit');
   const canDelete = has('payment-methods:delete');
@@ -91,7 +89,6 @@ export function PaymentMethods() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<PaymentMethodEntry | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: methods = [], isLoading } = useQuery({
     queryKey: ['payment-methods'],
@@ -197,16 +194,6 @@ export function PaymentMethods() {
               sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />
           </Stack>
-          {isAdmin && (
-            <Tooltip title="Histórico de alterações">
-              <IconButton
-                onClick={() => setHistoryOpen(true)}
-                sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
-              >
-                <HistoryIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
           {canCreate && (
             <Button
               variant="contained"
@@ -390,12 +377,6 @@ export function PaymentMethods() {
           setEditing(null);
         }}
         editing={editing}
-      />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="PaymentMethod"
-        title="Formas de pagamento"
       />
     </Stack>
   );

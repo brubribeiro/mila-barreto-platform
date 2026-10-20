@@ -25,18 +25,16 @@ import {
   LIST_HEADER_ACTION_SX,
   LIST_HEADER_SELECT_SX,
   ListCardHeader,
-  ListHistoryButton,
   ListSearchField,
 } from '../components/ListCardHeader';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Procedure } from '../types';
 import { fontSizes } from '../theme/fontSizes';
+import { brl } from '../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const PAGE_SIZE = 8;
 const AVATAR_COLORS = ['#15998B', '#5BA8DE', '#D46B8A', '#E0915B', '#9B7BD4', '#4FB3A8'];
 const GRID_COLS = '2fr 1fr 0.7fr 0.7fr 0.9fr 0.9fr 0.9fr 0.95fr 0.95fr 0.75fr 52px';
@@ -60,7 +58,7 @@ export function Procedures() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('procedures:create');
   const canEdit = has('procedures:edit');
   const canDelete = has('procedures:delete');
@@ -70,7 +68,6 @@ export function Procedures() {
   const [page, setPage] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Procedure | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: procedures = [], isLoading } = useQuery({
     queryKey: ['procedures'],
@@ -147,7 +144,6 @@ export function Procedures() {
             ))}
           </TextField>
           <ListSearchField value={search} onChange={setSearch} placeholder="Buscar procedimento..." />
-          {isAdmin && <ListHistoryButton onClick={() => setHistoryOpen(true)} />}
           {canCreate && (
             <Button
               variant="contained"
@@ -415,12 +411,6 @@ export function Procedures() {
       </Card>
 
       <ProcedureFormDialog open={formOpen} onClose={() => setFormOpen(false)} procedure={editing} />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="Procedure"
-        title="Procedimentos"
-      />
     </Box>
   );
 }

@@ -6,6 +6,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Added
 
+- Header Aurora: "Novo agendamento" preenchido, relógio global de histórico (`AuditHistoryDialog` pela rota, substitui os 16 botões por tela) e olho para ocultar valores (`utils/money.ts`).
+- `AuditHistoryDialog` no padrão Aurora: tabela em grid e select de ação/período no estilo das listas (Usuários), paginação própria no rodapé, no lugar do DataGrid; relógio do header fica desabilitado nas telas sem histórico.
+- Modo escuro Aurora: `createAppTheme(mode)` em `theme/`, `ColorModeContext` (lua do header, salvo em `localStorage` `mila.colorMode`, 1ª visita segue `prefers-color-scheme`); paleta escura derivada do verde-água, escala de cinza invertida, FullCalendar/WhatsApp/badges com tokens do tema; botões do header 34px no mobile.
 - Pacientes: lista Aurora com cards de estatísticas (`GET /patients/stats`), score de confiabilidade, última visita, total gasto e paginação.
 - Ficha do paciente redesenhada (abas Geral, Agendamentos, Pacotes, Anamnese, Fotos).
 - Fotos **antes/depois** por paciente vinculadas a agendamento (`PatientPhoto`, upload R2 comprimido).

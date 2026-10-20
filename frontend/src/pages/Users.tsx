@@ -26,10 +26,8 @@ import {
   LIST_HEADER_ACTION_SX,
   LIST_HEADER_SELECT_SX,
   ListCardHeader,
-  ListHistoryButton,
   ListSearchField,
 } from '../components/ListCardHeader';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
@@ -94,7 +92,7 @@ export function Users() {
   const { user: me, impersonate } = useAuth();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('users:create');
   const canEdit = has('users:edit');
   const canDelete = has('users:delete');
@@ -106,7 +104,6 @@ export function Users() {
   const [professionalFilter, setProfessionalFilter] = useState<'ALL' | 'YES' | 'NO'>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<UserSummary | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users'],
@@ -231,7 +228,6 @@ export function Users() {
             <MenuItem value="INACTIVE">Inativos</MenuItem>
           </TextField>
           <ListSearchField value={search} onChange={setSearch} placeholder="Buscar usuário..." />
-          {isAdmin && <ListHistoryButton onClick={() => setHistoryOpen(true)} />}
           {canCreate && (
             <Button
               variant="contained"
@@ -454,12 +450,6 @@ export function Users() {
       </Card>
 
       <UserFormDialog open={formOpen} onClose={() => setFormOpen(false)} user={editing} />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="User"
-        title="Usuários"
-      />
     </Box>
   );
 }

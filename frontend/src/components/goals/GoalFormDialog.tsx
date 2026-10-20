@@ -487,7 +487,7 @@ export function GoalFormDialog({ open, onClose, editing, canDelete }: Props) {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          boxShadow: color === c ? `0 0 0 2px #fff, 0 0 0 4px ${c}` : 'none',
+                          boxShadow: (t) => (color === c ? `0 0 0 2px ${t.palette.background.paper}, 0 0 0 4px ${c}` : 'none'),
                         }}
                       >
                         {color === c && <CheckIcon sx={{ fontSize: 16 }} />}
