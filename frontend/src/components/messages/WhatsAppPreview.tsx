@@ -1,10 +1,16 @@
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, useTheme } from '@mui/material';
 import dayjs from 'dayjs';
 
 import type { MessageTemplate } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+// Cores do próprio WhatsApp (claro e escuro), para a prévia parecer a conversa real.
+const WA_COLORS = {
+  light: { chat: '#E5DDD3', dots: 'rgba(0,0,0,.04)', bubble: '#fff', text: '#0F1C1A', meta: '#9AA8A4' },
+  dark: { chat: '#0B141A', dots: 'rgba(255,255,255,.04)', bubble: '#202C33', text: '#E9EDEF', meta: '#8696A0' },
+};
 
 interface WhatsAppPreviewProps {
   content: string;
@@ -15,6 +21,7 @@ interface WhatsAppPreviewProps {
 /** Balão de conversa do WhatsApp; as variáveis ({nome}, {data}...) ficam destacadas. */
 export function WhatsAppPreview({ content, category, procedure }: WhatsAppPreviewProps) {
   const parts = content.split(/(\{\w+\})/g);
+  const wa = WA_COLORS[useTheme().palette.mode];
 
   return (
     <Box
@@ -22,8 +29,8 @@ export function WhatsAppPreview({ content, category, procedure }: WhatsAppPrevie
         borderRadius: '16px',
         px: 2.25,
         py: 2.75,
-        bgcolor: '#E5DDD3',
-        backgroundImage: 'radial-gradient(rgba(0,0,0,.04) 1px, transparent 1px)',
+        bgcolor: wa.chat,
+        backgroundImage: `radial-gradient(${wa.dots} 1px, transparent 1px)`,
         backgroundSize: '14px 14px',
         minHeight: 170,
         display: 'flex',
@@ -35,7 +42,7 @@ export function WhatsAppPreview({ content, category, procedure }: WhatsAppPrevie
         sx={{
           alignSelf: 'flex-start',
           maxWidth: '88%',
-          bgcolor: '#fff',
+          bgcolor: wa.bubble,
           borderRadius: '3px 14px 14px 14px',
           px: 1.875,
           py: 1.5,
@@ -63,7 +70,7 @@ export function WhatsAppPreview({ content, category, procedure }: WhatsAppPrevie
           sx={{
             fontSize: fontSizes.md,
             lineHeight: 1.5,
-            color: '#0F1C1A',
+            color: wa.text,
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
           }}
@@ -84,7 +91,7 @@ export function WhatsAppPreview({ content, category, procedure }: WhatsAppPrevie
             </Box>
           )}
         </Typography>
-        <Typography sx={{ textAlign: 'right', fontSize: fontSizes['3xs'], color: '#9AA8A4', mt: 0.625 }}>
+        <Typography sx={{ textAlign: 'right', fontSize: fontSizes['3xs'], color: wa.meta, mt: 0.625 }}>
           {dayjs().format('HH:mm')} ✓✓
         </Typography>
       </Box>

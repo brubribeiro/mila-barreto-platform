@@ -53,6 +53,7 @@ import { DashboardDetailItem } from '../components/dashboard/DashboardDetailItem
 import { DashboardEmptyState } from '../components/dashboard/DashboardEmptyState';
 import { AppGrid } from '../components/AppGrid';
 import { AuroraIcon } from '../components/AuroraIcon';
+import { brl } from '../utils/money';
 
 const UPCOMING_BIRTHDAY_WINDOW_DAYS = 30;
 
@@ -736,14 +737,8 @@ export function Dashboard() {
         {canSeeFinance ? (
           <SummaryCard
             label="Faturamento do mês"
-            value={new Intl.NumberFormat('pt-BR', {
-              style: 'currency',
-              currency: 'BRL',
-            }).format(summary?.totalIncome ?? 0)}
-            hint={`Saldo: ${new Intl.NumberFormat('pt-BR', {
-              style: 'currency',
-              currency: 'BRL',
-            }).format(summary?.balance ?? 0)}`}
+            value={brl.format(summary?.totalIncome ?? 0)}
+            hint={`Saldo: ${brl.format(summary?.balance ?? 0)}`}
             icon={<AuroraIcon name="money" size={19} />}
             color="success.main"
             to="/financeiro"

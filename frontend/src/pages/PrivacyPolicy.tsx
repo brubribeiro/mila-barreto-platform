@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Box, Typography, Link as MuiLink } from '@mui/material';
+import { Box, Typography, Link as MuiLink, alpha } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { AuroraIcon } from '../components/AuroraIcon';
 import { fontSizes } from '../theme/fontSizes';
@@ -44,7 +44,7 @@ export function PrivacyPolicy() {
           position: 'sticky',
           top: 0,
           zIndex: 10,
-          bgcolor: 'rgba(234,241,239,.85)',
+          bgcolor: (t) => alpha(t.palette.background.default, 0.85),
           backdropFilter: 'blur(12px)',
           borderBottom: 1,
           borderColor: 'divider',
@@ -119,8 +119,8 @@ export function PrivacyPolicy() {
             py: 0.75,
             borderRadius: '8px',
             border: 1,
-            borderColor: '#D8EFEB',
-            bgcolor: '#EAF6F4',
+            borderColor: (t) => alpha(t.palette.primary.main, 0.17),
+            bgcolor: (t) => alpha(t.palette.primary.main, 0.09),
             color: 'primary.main',
             fontSize: fontSizes.xs,
             fontWeight: 800,
