@@ -342,6 +342,7 @@ export function SkinModal({
       onClose={onClose}
       maxWidth={false}
       fullWidth
+      sx={{ zIndex: (t) => t.zIndex.modal + 3 }}
       PaperProps={{
         sx: {
           width: '100%',

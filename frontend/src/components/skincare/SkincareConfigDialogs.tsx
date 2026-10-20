@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Box, Button, MenuItem, Select } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { skincareApi, type SkincareProductPayload, type SkincareRulePayload } from '../../api/skincare';
@@ -15,6 +16,9 @@ const SELECT_SX = {
   '& .MuiSelect-select': { px: 1.5, py: 0, minHeight: '44px !important', display: 'flex', alignItems: 'center' },
   '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
 } as const;
+
+// O SkinModal fica acima da gaveta da paciente; o menu do select precisa ficar acima dele.
+const SELECT_MENU_PROPS = { sx: { zIndex: (t: Theme) => t.zIndex.modal + 4 } };
 
 const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
 
@@ -103,7 +107,7 @@ export function SkincareProductDialog({ open, onClose, editing }: { open: boolea
           <TextInput value={form.activeIngredient ?? ''} onChange={(e) => set('activeIngredient', e.target.value)} placeholder="Ex.: Ácido ascórbico" />
         </Field>
         <Field label="Etapa da rotina">
-          <Select value={form.step} onChange={(e) => set('step', e.target.value as SkincareProductPayload['step'])} sx={SELECT_SX}>
+          <Select value={form.step} onChange={(e) => set('step', e.target.value as SkincareProductPayload['step'])} sx={SELECT_SX} MenuProps={SELECT_MENU_PROPS}>
             {SKINCARE_STEPS.map(([v, label]) => (
               <MenuItem key={v} value={v}>
                 {label}
@@ -196,7 +200,7 @@ export function SkincareRuleDialog({
               const field = e.target.value as SkincareRuleField;
               setForm((f) => ({ ...f, field, value: ruleValueOptions(field)[0][0] }));
             }}
-            sx={SELECT_SX}
+            sx={SELECT_SX} MenuProps={SELECT_MENU_PROPS}
           >
             {RULE_FIELDS.map(([v, label]) => (
               <MenuItem key={v} value={v}>
@@ -206,7 +210,7 @@ export function SkincareRuleDialog({
           </Select>
         </Field>
         <Field label="Resposta">
-          <Select value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))} sx={SELECT_SX}>
+          <Select value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))} sx={SELECT_SX} MenuProps={SELECT_MENU_PROPS}>
             {ruleValueOptions(form.field).map(([v, label]) => (
               <MenuItem key={v} value={v}>
                 {label}

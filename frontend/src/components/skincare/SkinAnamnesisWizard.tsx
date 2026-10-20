@@ -567,6 +567,7 @@ export function SkinAnamnesisWizard({ patient, routine, onSaved }: SkinAnamnesis
                           displayEmpty
                           onChange={(e) => addItem(sec.key, String(e.target.value))}
                           renderValue={() => '+ Adicionar produto a esta etapa'}
+                          MenuProps={{ sx: { zIndex: (t) => t.zIndex.modal + 4 } }}
                           sx={{
                             height: 38,
                             maxWidth: 360,

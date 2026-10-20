@@ -42,6 +42,8 @@ export function SkinAnamnesisDialog({ open, onClose, patient, routine }: SkinAna
       open={open && !!patient}
       onClose={onClose}
       className="skin-dialog"
+      // Acima da gaveta da paciente (PatientDetailDrawer usa zIndex.modal + 1).
+      sx={{ zIndex: (t) => t.zIndex.modal + 2 }}
       maxWidth={false}
       fullWidth
       fullScreen={isMobile}
