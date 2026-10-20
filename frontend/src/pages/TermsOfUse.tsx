@@ -72,8 +72,7 @@ export function TermsOfUse() {
       >
         <Box
           sx={{
-            maxWidth: 820,
-            mx: 'auto',
+            width: '100%',
             px: { xs: 2, sm: 4 },
             py: 2,
             display: 'flex',
@@ -126,7 +125,15 @@ export function TermsOfUse() {
         </Box>
       </Box>
 
-      <Box component="main" sx={{ maxWidth: 820, mx: 'auto', px: { xs: 2, sm: 4 }, pt: { xs: 4, sm: 6 }, pb: { xs: 6, sm: 10 } }}>
+      <Box
+        component="main"
+        sx={{
+          width: '100%',
+          px: { xs: 2, sm: 4 },
+          pt: { xs: 4, sm: 6 },
+          pb: { xs: 6, sm: 10 },
+        }}
+      >
         <Box
           sx={{
             display: 'inline-flex',

@@ -176,6 +176,7 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 ### Correções
 
 **Ajustes de layout**
+- Todas as telas do painel (Usuários, Horários, Estoque, Financeiro, Métricas, Metas, Documentos, etc.) ocupam a **largura total** ao lado do menu, sem faixa centralizada; o mesmo padrão vale para **Termos de Uso** e **Política de Privacidade**.
 - **Horários:** os dois cards (Disponibilidade da equipe e Bloqueios de agenda) agora têm cabeçalhos da mesma altura, com as linhas divisórias alinhadas.
 - Textos de apoio (como "60h por semana" em Horários) ficaram mais escuros e legíveis em várias telas.
 - **Procedimentos:** as categorias agora são escolhidas em uma lista suspensa, no mesmo estilo dos filtros das outras telas.
