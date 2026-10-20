@@ -52,7 +52,7 @@ export function InventoryDetail() {
 
   if (isLoading) {
     return (
-      <Box sx={{ maxWidth: 880, mx: 'auto' }}>
+      <Box>
         <Skeleton variant="rounded" height={38} width={170} sx={{ mb: 2.25, borderRadius: '11px' }} />
         <Skeleton variant="rounded" height={480} sx={{ borderRadius: '18px' }} />
       </Box>
@@ -61,7 +61,7 @@ export function InventoryDetail() {
 
   if (isError || !item) {
     return (
-      <Box sx={{ maxWidth: 880, mx: 'auto' }}>
+      <Box>
         <Alert severity="error" sx={{ mb: 2 }}>Item não encontrado.</Alert>
         {backButton}
       </Box>
@@ -69,7 +69,7 @@ export function InventoryDetail() {
   }
 
   return (
-    <Box sx={{ maxWidth: 880, mx: 'auto' }}>
+    <Box>
       <Stack
         direction="row"
         alignItems="center"

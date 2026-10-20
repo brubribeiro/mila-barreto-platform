@@ -117,7 +117,7 @@ export function SkincareRoutines() {
   };
 
   return (
-    <Box sx={{ maxWidth: 1180, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 2.25 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.25 }}>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.25 }}>
         <Box sx={{ display: 'flex', gap: 0.5, p: 0.5, borderRadius: '12px', bgcolor: 'background.paper', border: 1, borderColor: 'divider', maxWidth: '100%', overflowX: 'auto' }}>
           {tabButton('produtos', `Produtos e ativos · ${products.length}`)}

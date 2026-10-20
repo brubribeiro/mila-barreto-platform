@@ -3,8 +3,7 @@ import { Box, Typography, Link as MuiLink, alpha } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { AuroraIcon } from '../components/AuroraIcon';
 import { fontSizes } from '../theme/fontSizes';
-
-const CONTENT_SX = { maxWidth: 820, mx: 'auto', px: { xs: 2.5, sm: 4 } };
+const CONTENT_SX = { width: '100%', px: { xs: 2.5, sm: 4 } };
 
 function SectionTitle({ children }: { children: ReactNode }) {
   return (

@@ -29,6 +29,7 @@ import { NotificationsBell } from './notifications/NotificationsBell';
 import { AuditHistoryDialog } from './audit/AuditHistoryDialog';
 import { AuroraIcon } from './AuroraIcon';
 import { fontSizes } from '../theme/fontSizes';
+import { PAGE_SHELL_SX } from '../theme/layout';
 import { isMoneyHidden, setMoneyHidden } from '../utils/money';
 
 const DRAWER_WIDTH = 258;
@@ -795,7 +796,9 @@ export function Layout() {
         {isImpersonating && <Box sx={{ height: 40 }} />}
         {/* Remonta a página ao alternar o olho para os formatadores de moeda relerem a preferência. */}
         <Fragment key={moneyHidden ? 'money-hidden' : 'money-visible'}>
-          <Outlet />
+          <Box sx={PAGE_SHELL_SX}>
+            <Outlet />
+          </Box>
         </Fragment>
       </Box>
 
