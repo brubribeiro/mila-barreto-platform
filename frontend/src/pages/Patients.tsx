@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   IconButton,
-  InputBase,
   Skeleton,
   Stack,
   Tooltip,
@@ -32,6 +31,11 @@ import { PatientFormDialog } from '../components/patients/PatientFormDialog';
 import { AnamnesisFormDialog } from '../components/patients/AnamnesisFormDialog';
 import { PatientDetailDrawer } from '../components/patients/PatientDetailDrawer';
 import { SendWhatsAppDialog } from '../components/messages/SendWhatsAppDialog';
+import {
+  LIST_HEADER_ACTION_SX,
+  ListCardHeader,
+  ListSearchField,
+} from '../components/ListCardHeader';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
@@ -233,52 +237,22 @@ export function Patients() {
       {/* Tabela */}
       <Card sx={{ p: 0, overflow: 'hidden' }}>
         {/* Cabeçalho da tabela */}
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          alignItems={{ xs: 'stretch', sm: 'center' }}
-          justifyContent="space-between"
-          spacing={1.5}
-          sx={{ px: { xs: 2, sm: 2.75 }, py: 2, borderBottom: 1, borderColor: 'divider' }}
-        >
-          <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>Todos os pacientes</Typography>
-          <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
-            <Stack
-              direction="row"
-              alignItems="center"
-              spacing={1}
-              sx={{
-                height: 38,
-                px: 1.5,
-                borderRadius: '11px',
-                border: 1,
-                borderColor: 'divider',
-                bgcolor: 'grey.50',
-                width: { xs: '100%', sm: 240 },
+        <ListCardHeader title={<Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>Todos os pacientes</Typography>}>
+          <ListSearchField value={searchInput} onChange={setSearchInput} placeholder="Buscar paciente, CPF..." />
+          {canCreate && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
               }}
+              sx={LIST_HEADER_ACTION_SX}
             >
-              <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-              <InputBase
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Buscar paciente, CPF..."
-                sx={{ fontSize: fontSizes.sm, flex: 1 }}
-              />
-            </Stack>
-            {canCreate && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
-                }}
-                sx={{ height: 38, borderRadius: '11px' }}
-              >
-                Adicionar paciente
-              </Button>
-            )}
-          </Stack>
-        </Stack>
+              Adicionar paciente
+            </Button>
+          )}
+        </ListCardHeader>
 
         {/* Cabeçalho de colunas */}
         <Box
