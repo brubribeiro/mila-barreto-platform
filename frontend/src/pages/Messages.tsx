@@ -370,7 +370,7 @@ export function Messages() {
                     >
                       {t.name}
                     </Typography>
-                    <Typography noWrap sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled' }}>
+                    <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                       Gatilho: {triggerLabel[t.trigger]}
                       {!t.active && ' · Inativa'}
                     </Typography>

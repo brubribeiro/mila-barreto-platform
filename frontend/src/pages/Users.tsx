@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   IconButton,
-  InputBase,
   MenuItem,
   Skeleton,
   Stack,
@@ -17,13 +16,18 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
 import SwitchAccountIcon from '@mui/icons-material/SwitchAccount';
 import StarIcon from '@mui/icons-material/Star';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { usersApi } from '../api/users';
 import { UserFormDialog } from '../components/users/UserFormDialog';
+import {
+  LIST_HEADER_ACTION_SX,
+  LIST_HEADER_SELECT_SX,
+  ListCardHeader,
+  ListSearchField,
+} from '../components/ListCardHeader';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
@@ -37,20 +41,6 @@ const PAGE_SIZE = 8;
 const GRID_COLS = 'minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 0.9fr) 112px';
 const GRID_MIN_WIDTH = 760;
 const INFO_COLOR = '#5BA8DE';
-
-const TOOLBAR_SELECT_SX = {
-  width: { xs: 'calc(50% - 5px)', sm: 168 },
-  flexShrink: 0,
-  '& .MuiOutlinedInput-root': {
-    height: 38,
-    borderRadius: '12px',
-    bgcolor: 'grey.50',
-    fontSize: fontSizes.sm,
-    fontWeight: 600,
-    color: 'text.secondary',
-  },
-  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
-} as const;
 
 const ROW_ACTION_SX = {
   width: 30,
@@ -181,34 +171,22 @@ export function Users() {
 
   return (
     <Box>
-      {/* Contagem + filtros + busca + ações */}
-      <Stack
-        direction={{ xs: 'column', lg: 'row' }}
-        alignItems={{ xs: 'stretch', lg: 'center' }}
-        justifyContent="space-between"
-        spacing={1.5}
-      >
-        <Typography sx={{ fontSize: fontSizes.md, color: 'text.secondary', fontWeight: 600 }}>
-          {isLoading ? (
-            <Skeleton width={180} />
-          ) : (
-            <>
-              <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
-                {users.length}
-              </Box>{' '}
-              {users.length === 1 ? 'usuário com acesso' : 'usuários com acesso'}
-            </>
-          )}
-        </Typography>
-
-        <Stack
-          direction="row"
-          alignItems="center"
-          spacing={1.25}
-          flexWrap={{ xs: 'wrap', lg: 'nowrap' }}
-          useFlexGap
-          justifyContent={{ lg: 'flex-end' }}
-          sx={{ minWidth: 0 }}
+      <Card sx={{ p: 0, overflow: 'hidden' }}>
+        <ListCardHeader
+          title={
+          <Typography sx={{ fontSize: fontSizes.md, color: 'text.secondary', fontWeight: 600 }}>
+            {isLoading ? (
+              <Skeleton width={180} />
+            ) : (
+              <>
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
+                  {users.length}
+                </Box>{' '}
+                {users.length === 1 ? 'usuário com acesso' : 'usuários com acesso'}
+              </>
+            )}
+          </Typography>
+          }
         >
           <TextField
             select
@@ -216,7 +194,7 @@ export function Users() {
             value={professionalFilter}
             onChange={(e) => setProfessionalFilter(e.target.value as typeof professionalFilter)}
             inputProps={{ 'aria-label': 'Vínculo' }}
-            sx={TOOLBAR_SELECT_SX}
+            sx={LIST_HEADER_SELECT_SX}
           >
             <MenuItem value="ALL">Todos os vínculos</MenuItem>
             <MenuItem value="YES">Profissional</MenuItem>
@@ -228,7 +206,7 @@ export function Users() {
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
             inputProps={{ 'aria-label': 'Grupo de permissão' }}
-            sx={TOOLBAR_SELECT_SX}
+            sx={LIST_HEADER_SELECT_SX}
           >
             <MenuItem value="ALL">Todos os grupos</MenuItem>
             {roleOptions.map((name) => (
@@ -243,35 +221,13 @@ export function Users() {
             value={activeFilter}
             onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
             inputProps={{ 'aria-label': 'Status' }}
-            sx={TOOLBAR_SELECT_SX}
+            sx={LIST_HEADER_SELECT_SX}
           >
             <MenuItem value="ALL">Todos os status</MenuItem>
             <MenuItem value="ACTIVE">Ativos</MenuItem>
             <MenuItem value="INACTIVE">Inativos</MenuItem>
           </TextField>
-          <Stack
-            direction="row"
-            alignItems="center"
-            spacing={1}
-            sx={{
-              height: 38,
-              px: 1.75,
-              borderRadius: '12px',
-              border: 1,
-              borderColor: 'divider',
-              bgcolor: 'grey.50',
-              width: { xs: '100%', sm: 230 },
-              minWidth: 0,
-            }}
-          >
-            <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-            <InputBase
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar usuário..."
-              sx={{ fontSize: fontSizes.sm, flex: 1 }}
-            />
-          </Stack>
+          <ListSearchField value={search} onChange={setSearch} placeholder="Buscar usuário..." />
           {canCreate && (
             <Button
               variant="contained"
@@ -280,20 +236,12 @@ export function Users() {
                 setEditing(null);
                 setFormOpen(true);
               }}
-              sx={{ flexShrink: 0, whiteSpace: 'nowrap', height: 38, px: 2.25, borderRadius: '12px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+              sx={LIST_HEADER_ACTION_SX}
             >
               Novo usuário
             </Button>
           )}
-        </Stack>
-      </Stack>
-
-      <Typography sx={{ display: 'block', fontSize: fontSizes.xs, color: 'text.disabled', mt: 1, mb: 2.25 }}>
-        Todo profissional é um usuário, mas nem todo usuário é profissional — administrativos (recepção,
-        financeiro) acessam sem estar na agenda.
-      </Typography>
-
-      <Card sx={{ p: 0, overflow: 'hidden' }}>
+        </ListCardHeader>
         <Box sx={{ overflowX: 'auto' }}>
         {/* Cabeçalho de colunas */}
         <Box

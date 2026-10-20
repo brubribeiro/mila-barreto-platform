@@ -275,7 +275,7 @@ export function Pendencias() {
         </Box>
         <Box sx={{ flex: '1 1 200px', minWidth: 0, lineHeight: 1.35 }}>
           <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700, lineHeight: 1.35 }}>{item.title}</Typography>
-          <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', fontWeight: 600, mt: '1px' }}>
+          <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600, mt: '1px' }}>
             {CATEGORY_META[item.category].label}
             {item.subtitle ? ` · ${item.subtitle}` : ''}
           </Typography>
@@ -672,7 +672,7 @@ export function Pendencias() {
                     <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700, color: 'text.secondary', textDecoration: 'line-through' }}>
                       {t.title}
                     </Typography>
-                    <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', fontWeight: 600 }}>
+                    <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600 }}>
                       {CATEGORY_META[t.category].label} · Resolvida em {dayjs(t.resolvedAt).format('DD/MM/YYYY [às] HH:mm')}
                       {t.resolvedByName ? ` por ${t.resolvedByName}` : ''}
                     </Typography>
