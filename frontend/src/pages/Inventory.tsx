@@ -17,7 +17,6 @@ import AddIcon from '@mui/icons-material/Add';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
-import HistoryIcon from '@mui/icons-material/History';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import PostAddOutlinedIcon from '@mui/icons-material/PostAddOutlined';
 import SearchIcon from '@mui/icons-material/Search';
@@ -38,7 +37,6 @@ import {
   daysToExpiry,
   isLowStock,
 } from '../components/inventory/inventoryStatus';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
@@ -46,11 +44,9 @@ import { usePermissions } from '../contexts/usePermissions';
 import { formatDateOnlyFromApi } from '../utils/dateOnly';
 import type { InventoryItem } from '../types';
 import { fontSizes } from '../theme/fontSizes';
+import { brl, moneyFormatter } from '../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-const brlRounded = new Intl.NumberFormat('pt-BR', {
-  style: 'currency',
-  currency: 'BRL',
+const brlRounded = moneyFormatter({
   maximumFractionDigits: 0,
 });
 const PAGE_SIZE = 10;
@@ -96,7 +92,7 @@ export function Inventory() {
   const navigate = useNavigate();
   const { confirm, alert } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('inventory:create');
   const canEdit = has('inventory:edit');
   const canDelete = has('inventory:delete');
@@ -108,7 +104,6 @@ export function Inventory() {
   const [movementOpen, setMovementOpen] = useState(false);
   const [movementItem, setMovementItem] = useState<InventoryItem | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
 
@@ -337,13 +332,6 @@ export function Inventory() {
                 <MenuItem value="ALL">Todo o estoque</MenuItem>
                 <MenuItem value="LOW">Abaixo do mínimo</MenuItem>
               </Select>
-              {isAdmin && (
-                <Tooltip title="Histórico de alterações">
-                  <IconButton onClick={() => setHistoryOpen(true)} sx={TOOLBAR_ICON_SX}>
-                    <HistoryIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
               <Tooltip title="Exportar CSV">
                 <IconButton onClick={exportCsv} aria-label="Exportar CSV" sx={TOOLBAR_ICON_SX}>
                   <FileDownloadOutlinedIcon fontSize="small" />
@@ -610,12 +598,6 @@ export function Inventory() {
         items={items}
       />
       <BulkPurchaseDialog open={bulkOpen} onClose={() => setBulkOpen(false)} />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="InventoryItem"
-        title="Estoque"
-      />
     </Box>
   );
 }

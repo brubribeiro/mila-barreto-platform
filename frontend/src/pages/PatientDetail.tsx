@@ -62,8 +62,8 @@ import { maskCEP, maskPhone, onlyDigits } from '../utils/masks';
 import { patientInitials } from '../utils/patientPhoto';
 import type { Appointment, AppointmentKind, FinancialEntry, DocumentFile } from '../types';
 import { fontSizes } from '../theme/fontSizes';
+import { brl } from '../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 function scoreTone(v: number) {
   if (v >= 90) return { main: '#15998B', label: 'Excelente' };

@@ -53,8 +53,8 @@ import { maskCEP, maskPhone, onlyDigits } from '../../utils/masks';
 import type { Appointment, AppointmentKind } from '../../types';
 import { patientInitials } from '../../utils/patientPhoto';
 import { fontSizes } from '../../theme/fontSizes';
+import { brl } from '../../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const packageStatusLabel: Record<string, string> = {
   ACTIVE: 'Ativo',
