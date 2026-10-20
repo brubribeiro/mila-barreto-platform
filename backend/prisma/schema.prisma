@@ -312,6 +312,7 @@ model Patient {
   documents        Document[]
   packages         PatientPackage[]
   photos           PatientPhoto[]
+  skincareRoutines SkincareRoutine[]
 
   @@map("patients")
 }
@@ -903,4 +904,68 @@ model PendingTask {
   @@index([resolvedAt])
   @@index([assigneeId])
   @@map("pending_tasks")
+}
+
+// =========================
+// ROTINAS DE SKINCARE (anamnese de pele)
+// =========================
+
+/// Produto do catálogo usado para montar as rotinas.
+model SkincareProduct {
+  id               String   @id @default(uuid())
+  name             String
+  brand            String?
+  activeIngredient String?
+  // manha | noite | semanal
+  moments          String[] @default([])
+  // limpeza | tratamento | hidratacao | protetor | olhos | esfoliacao | mascara
+  step             String
+  // Características usadas pelas restrições das regras (acido, acido-alto, retinoide, fragrancia, oleo)
+  tags             String[] @default([])
+  howTo            String?
+  note             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("skincare_products")
+}
+
+/// Regra: quando a resposta da anamnese bate com field/value, inclui produtos, evita características e soma uma orientação.
+model SkincareRule {
+  id         String   @id @default(uuid())
+  // pele | afeccao | olheira | idade
+  field      String
+  value      String
+  productIds String[] @default([])
+  avoidTags  String[] @default([])
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("skincare_rules")
+}
+
+/// Anamnese de pele salva na ficha da paciente, com a rotina gerada (produtos copiados no momento do salvamento).
+model SkincareRoutine {
+  id            String   @id @default(uuid())
+  patientId     String
+  consultDate   DateTime @db.Date
+  // { pele, afec[], afecOutra, olheira, olheiraTipo, idade }
+  answers       Json
+  // [{ moment, step, productId, name, brand, activeIngredient, howTo, note }]
+  items         Json     @default("[]")
+  // [{ productId, name, reason }]
+  avoided       Json     @default("[]")
+  // [{ text, source }]
+  guidelines    Json     @default("[]")
+  notes         String?
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, consultDate])
+  @@map("skincare_routines")
 }

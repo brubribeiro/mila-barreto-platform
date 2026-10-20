@@ -23,6 +23,7 @@ import { Packages } from './pages/Packages';
 import { Metrics } from './pages/Metrics';
 import { Goals } from './pages/Goals';
 import { Pendencias } from './pages/Pendencias';
+import { SkincareRoutines } from './pages/SkincareRoutines';
 import { Promotions } from './pages/Promotions';
 import { PaymentMethods } from './pages/PaymentMethods';
 import { Layout } from './components/Layout';
@@ -185,6 +186,14 @@ export default function App() {
           element={
             <PermissionRoute permission="pendencias:view">
               <Pendencias />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="/rotinas"
+          element={
+            <PermissionRoute permission="routines:view">
+              <SkincareRoutines />
             </PermissionRoute>
           }
         />

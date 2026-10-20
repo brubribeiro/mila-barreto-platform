@@ -144,6 +144,14 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Crie pendências manuais em **Nova pendência** e exporte a lista em **Relatório de pendências** (CSV).
 - Acesso controlado pela nova permissão **Pendências** nos grupos (Recepção e Profissional já recebem acesso).
 
+**Rotinas de skincare (anamnese de pele)**
+- Na ficha da paciente, aba **Anamnese**, o novo card **Anamnese de pele** guarda o histórico de rotinas. Em **Nova anamnese de pele**, responda 4 perguntas (tipo de pele, afecções, olheiras e faixa etária), revise e clique em **Gerar rotina**.
+- A rotina sai separada em **Manhã**, **Noite** e **Semanal**, com produto, marca, ativo e modo de uso, além das **Orientações** e dos produtos **evitados** (com o motivo). Dá para tirar ou acrescentar produtos em **Editar rotina** e escrever **Observações da profissional**.
+- **Salvar na ficha** guarda a rotina na paciente; **Imprimir / PDF** imprime só a rotina; **Enviar para paciente** abre o WhatsApp ou o e-mail com a mensagem e a rotina em texto.
+- O mesmo assistente abre pelo atalho **Anamnese de pele** no agendamento em edição.
+- Nova tela **Rotinas de skincare** no menu Catálogo, para cadastrar os **produtos** (momento, etapa, características) e as **regras** que montam a rotina a partir das respostas. Ela já vem com um catálogo de exemplo.
+- Acesso controlado pela nova permissão **Rotinas de skincare** nos grupos (Profissional cria e edita; Recepção só visualiza).
+
 **Profissionais**
 - Tela redesenhada no estilo Aurora: grade de cards com **foto**, função, registro profissional e **áreas de atuação** (Toxina, Preenchimento, etc.).
 - Badge de **disponibilidade em tempo real**: Disponível, Em atendimento, Folga ou Fora do horário (com base no expediente e indisponibilidades).

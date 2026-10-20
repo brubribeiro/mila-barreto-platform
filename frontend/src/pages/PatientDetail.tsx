@@ -47,6 +47,7 @@ import { AnamnesisView, hasAnamnesisData } from '../components/patients/Anamnesi
 import { ANAMNESIS_SECTIONS } from '../components/patients/anamnesisFields';
 import { AnamnesisFormDialog } from '../components/patients/AnamnesisFormDialog';
 import { PatientPhotosGallery } from '../components/patients/PatientPhotosGallery';
+import { PatientSkinRoutinesCard } from '../components/skincare/PatientSkinRoutinesCard';
 import { useAppointmentDialog } from '../contexts/AppointmentDialogContext';
 import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
@@ -1133,6 +1134,11 @@ export function PatientDetail() {
             {tab === 'packages' && <PackagesTab patientPackages={patientPackages} />}
             {tab === 'anamnesis' && (
               <Stack spacing={2}>
+                {has('routines:view') && (
+                  <PatientSkinRoutinesCard
+                    patient={{ id: data.id, name: data.name, phone: data.phone, email: data.email }}
+                  />
+                )}
                 {canEdit && (
                   <Stack direction="row" justifyContent="flex-end">
                     <Button
