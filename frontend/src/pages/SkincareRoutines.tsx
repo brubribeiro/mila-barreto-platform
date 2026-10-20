@@ -1,10 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Box, Button, IconButton, Skeleton, Tooltip, Typography } from '@mui/material';
-import HistoryIcon from '@mui/icons-material/History';
+import { Box, Button, Skeleton, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { skincareApi } from '../api/skincare';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { SkincareProductDialog, SkincareRuleDialog } from '../components/skincare/SkincareConfigDialogs';
 import {
   RULE_FIELDS,
@@ -43,14 +41,13 @@ export function SkincareRoutines() {
   const queryClient = useQueryClient();
   const toast = useAppToast();
   const { confirm } = useAppDialog();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canEdit = has('routines:edit');
   const canDelete = has('routines:delete');
 
   const [tab, setTab] = useState<Tab>('produtos');
   const [productDialog, setProductDialog] = useState<{ open: boolean; editing: SkincareProduct | null }>({ open: false, editing: null });
   const [ruleDialog, setRuleDialog] = useState<{ open: boolean; editing: SkincareRule | null }>({ open: false, editing: null });
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: products = [], isLoading: productsLoading } = useQuery({ queryKey: ['skincare', 'products'], queryFn: skincareApi.listProducts });
   const { data: rules = [], isLoading: rulesLoading } = useQuery({ queryKey: ['skincare', 'rules'], queryFn: skincareApi.listRules });
@@ -127,16 +124,6 @@ export function SkincareRoutines() {
           {tabButton('regras', `Regras · ${rules.length}`)}
         </Box>
         <Box sx={{ flex: 1 }} />
-        {isAdmin && (
-          <Tooltip title="Histórico de alterações">
-            <IconButton
-              onClick={() => setHistoryOpen(true)}
-              sx={{ width: 42, height: 42, borderRadius: '11px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
-            >
-              <HistoryIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        )}
         {canEdit && (
           <Button
             onClick={() => (tab === 'produtos' ? setProductDialog({ open: true, editing: null }) : setRuleDialog({ open: true, editing: null }))}
@@ -299,12 +286,6 @@ export function SkincareRoutines() {
 
       <SkincareProductDialog open={productDialog.open} editing={productDialog.editing} onClose={() => setProductDialog({ open: false, editing: null })} />
       <SkincareRuleDialog open={ruleDialog.open} editing={ruleDialog.editing} products={products} onClose={() => setRuleDialog({ open: false, editing: null })} />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity={tab === 'produtos' ? 'SkincareProduct' : 'SkincareRule'}
-        title={tab === 'produtos' ? 'Produtos de skincare' : 'Regras de skincare'}
-      />
     </Box>
   );
 }
