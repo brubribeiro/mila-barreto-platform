@@ -17,8 +17,8 @@ import {
   daysToExpiry,
   stockStatus,
 } from './inventoryStatus';
+import { brl } from '../../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const movementTypeLabel: Record<string, string> = {
   IN: 'Entrada',

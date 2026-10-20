@@ -17,7 +17,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
 import SearchIcon from '@mui/icons-material/Search';
 import SwitchAccountIcon from '@mui/icons-material/SwitchAccount';
 import StarIcon from '@mui/icons-material/Star';
@@ -25,7 +24,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { usersApi } from '../api/users';
 import { UserFormDialog } from '../components/users/UserFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
@@ -104,7 +102,7 @@ export function Users() {
   const { user: me, impersonate } = useAuth();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('users:create');
   const canEdit = has('users:edit');
   const canDelete = has('users:delete');
@@ -116,7 +114,6 @@ export function Users() {
   const [professionalFilter, setProfessionalFilter] = useState<'ALL' | 'YES' | 'NO'>('ALL');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<UserSummary | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users'],
@@ -275,16 +272,6 @@ export function Users() {
               sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />
           </Stack>
-          {isAdmin && (
-            <Tooltip title="Histórico de alterações">
-              <IconButton
-                onClick={() => setHistoryOpen(true)}
-                sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
-              >
-                <HistoryIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
           {canCreate && (
             <Button
               variant="contained"
@@ -515,12 +502,6 @@ export function Users() {
       </Card>
 
       <UserFormDialog open={formOpen} onClose={() => setFormOpen(false)} user={editing} />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="User"
-        title="Usuários"
-      />
     </Box>
   );
 }

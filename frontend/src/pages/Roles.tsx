@@ -15,7 +15,6 @@ import {
 } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import HistoryIcon from '@mui/icons-material/History';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -25,7 +24,6 @@ import { rolesApi } from '../api/roles';
 import { RoleFormDialog } from '../components/roles/RoleFormDialog';
 import { PermissionsMatrix } from '../components/roles/PermissionsMatrix';
 import { roleColor } from '../components/roles/roleColors';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
@@ -144,7 +142,7 @@ export function Roles() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('roles:create');
   const canEdit = has('roles:edit');
   const canDelete = has('roles:delete');
@@ -153,7 +151,6 @@ export function Roles() {
   const [draft, setDraft] = useState<{ roleId: string; permissions: string[] } | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Role | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: roles = [], isLoading } = useQuery({
     queryKey: ['roles'],
@@ -228,13 +225,6 @@ export function Roles() {
       <PageHeader
         title="Grupos e permissões"
         subtitle="Defina o que cada grupo pode acessar, criar, editar e excluir"
-        action={
-          isAdmin ? (
-            <Button variant="outlined" startIcon={<HistoryIcon />} onClick={() => setHistoryOpen(true)}>
-              Histórico
-            </Button>
-          ) : undefined
-        }
       />
 
       <Box
@@ -431,12 +421,6 @@ export function Roles() {
             setSelectedId(saved.id);
           }
         }}
-      />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="Role"
-        title="Grupos"
       />
     </Box>
   );

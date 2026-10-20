@@ -15,12 +15,10 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
-import HistoryIcon from '@mui/icons-material/History';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { goalsApi, type GoalScope } from '../api/goals';
 import { AuroraIcon } from '../components/AuroraIcon';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { GoalFormDialog } from '../components/goals/GoalFormDialog';
 import {
   clampProgress,
@@ -60,14 +58,13 @@ const SCOPE_OPTIONS: { value: GoalScope; label: string }[] = [
 
 export function Goals() {
   const theme = useTheme();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('goals:create');
   const canEdit = has('goals:edit');
   const canDelete = has('goals:delete');
   const [scope, setScope] = useState<GoalScope>('current');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Goal | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ['goals', 'list', scope],
@@ -128,16 +125,6 @@ export function Goals() {
               </MenuItem>
             ))}
           </TextField>
-          {isAdmin && (
-            <Tooltip title="Histórico de alterações">
-              <IconButton
-                onClick={() => setHistoryOpen(true)}
-                sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
-              >
-                <HistoryIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
           {canCreate && (
             <Button
               variant="contained"
@@ -298,7 +285,6 @@ export function Goals() {
         editing={editing}
         canDelete={canDelete}
       />
-      <AuditHistoryDialog open={historyOpen} onClose={() => setHistoryOpen(false)} entity="Goal" title="Metas" />
     </Stack>
   );
 }

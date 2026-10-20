@@ -16,7 +16,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
 import SearchIcon from '@mui/icons-material/Search';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
@@ -33,7 +32,6 @@ import { PatientFormDialog } from '../components/patients/PatientFormDialog';
 import { AnamnesisFormDialog } from '../components/patients/AnamnesisFormDialog';
 import { PatientDetailDrawer } from '../components/patients/PatientDetailDrawer';
 import { SendWhatsAppDialog } from '../components/messages/SendWhatsAppDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
@@ -42,10 +40,11 @@ import { maskPhone } from '../utils/masks';
 import { patientInitials } from '../utils/patientPhoto';
 import type { Patient } from '../types';
 import { fontSizes } from '../theme/fontSizes';
+import { moneyFormatter } from '../utils/money';
 
 const PAGE_SIZE = 8;
 const AVATAR_COLORS = ['#15998B', '#5BA8DE', '#D46B8A', '#E0915B', '#9B7BD4', '#4FB3A8'];
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+const brl = moneyFormatter({ maximumFractionDigits: 0 });
 
 function avatarColor(name: string) {
   let hash = 0;
@@ -88,7 +87,7 @@ export function Patients() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('patients:create');
   const canEdit = has('patients:edit');
   const canDelete = has('patients:delete');
@@ -126,7 +125,6 @@ export function Patients() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [anamnesisPatientId, setAnamnesisPatientId] = useState<string | null>(null);
   const [whatsappPatient, setWhatsappPatient] = useState<Patient | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: patients = [], isLoading } = useQuery({
     queryKey: ['patients', search],
@@ -266,24 +264,6 @@ export function Patients() {
                 sx={{ fontSize: fontSizes.sm, flex: 1 }}
               />
             </Stack>
-            {isAdmin && (
-              <Tooltip title="Histórico de alterações">
-                <IconButton
-                  onClick={() => setHistoryOpen(true)}
-                  sx={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: '11px',
-                    border: 1,
-                    borderColor: 'divider',
-                    bgcolor: 'grey.50',
-                    color: 'text.secondary',
-                  }}
-                >
-                  <HistoryIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
             {canCreate && (
               <Button
                 variant="contained"
@@ -675,12 +655,6 @@ export function Patients() {
         patientId={whatsappPatient?.id}
         vars={{ paciente_nome: whatsappPatient?.name?.split(' ')[0] }}
         title={`Enviar mensagem para ${whatsappPatient?.name ?? ''}`}
-      />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="Patient"
-        title="Pacientes"
       />
     </Box>
   );

@@ -26,7 +26,6 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
-import HistoryIcon from '@mui/icons-material/History';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
@@ -36,7 +35,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
 
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { DocumentFormDialog, MAX_FILE_BYTES, UPLOAD_ACCEPT } from '../components/documents/DocumentFormDialog';
 import { DocumentTemplatesDialog } from '../components/documents/DocumentTemplatesDialog';
 import { DocumentViewerDialog } from '../components/documents/DocumentViewerDialog';
@@ -167,7 +165,7 @@ export function Documents() {
   const queryClient = useQueryClient();
   const { confirm, alert } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('documents:create');
   const canEdit = has('documents:edit');
   const canDelete = has('documents:delete');
@@ -180,7 +178,6 @@ export function Documents() {
   const [editing, setEditing] = useState<DocumentFile | null>(null);
   const [viewing, setViewing] = useState<DocumentFile | null>(null);
   const [templatesOpen, setTemplatesOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [menu, setMenu] = useState<{ anchor: HTMLElement; doc: DocumentFile } | null>(null);
   const attachInputRef = useRef<HTMLInputElement>(null);
   const attachTarget = useRef<DocumentFile | null>(null);
@@ -496,13 +493,6 @@ export function Documents() {
                 <ArticleOutlinedIcon fontSize="small" />
               </IconButton>
             </Tooltip>
-            {isAdmin && (
-              <Tooltip title="Histórico de alterações">
-                <IconButton onClick={() => setHistoryOpen(true)} sx={TOOLBAR_ICON_BUTTON_SX}>
-                  <HistoryIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
             {canCreate && (
               <Button
                 variant="contained"
@@ -817,12 +807,6 @@ export function Documents() {
         onClose={() => setTemplatesOpen(false)}
         canEdit={canEdit}
         canDelete={canDelete}
-      />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="Document"
-        title="Documentos"
       />
     </Stack>
   );
