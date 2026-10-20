@@ -584,3 +584,86 @@ export interface PendingRuleConfig {
   param: number | null;
   assigneeId: string | null;
 }
+
+// =========================
+// ROTINAS DE SKINCARE (anamnese de pele)
+// =========================
+
+export type SkincareMoment = 'manha' | 'noite' | 'semanal';
+export type SkincareStep = 'limpeza' | 'tratamento' | 'hidratacao' | 'protetor' | 'olhos' | 'esfoliacao' | 'mascara';
+export type SkincareTag = 'acido' | 'acido-alto' | 'retinoide' | 'fragrancia' | 'oleo';
+export type SkincareRuleField = 'pele' | 'afeccao' | 'olheira' | 'idade';
+
+export interface SkincareProduct {
+  id: string;
+  name: string;
+  brand: string | null;
+  activeIngredient: string | null;
+  moments: SkincareMoment[];
+  step: SkincareStep;
+  tags: SkincareTag[];
+  howTo: string | null;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SkincareRule {
+  id: string;
+  field: SkincareRuleField;
+  value: string;
+  productIds: string[];
+  avoidTags: SkincareTag[];
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Respostas da anamnese de pele. */
+export interface SkinAnswers {
+  pele: string;
+  afec: string[];
+  afecOutra: string;
+  olheira: '' | 'sim' | 'nao';
+  olheiraTipo: string;
+  idade: string;
+}
+
+/** Produto na rotina, copiado do catálogo no momento em que a rotina foi gerada. */
+export interface SkincareRoutineItem {
+  moment: SkincareMoment;
+  step: SkincareStep;
+  productId: string | null;
+  name: string;
+  brand: string | null;
+  activeIngredient: string | null;
+  howTo: string | null;
+  note: string | null;
+}
+
+export interface SkincareAvoided {
+  productId: string | null;
+  name: string;
+  reason: string;
+}
+
+export interface SkincareGuideline {
+  text: string;
+  source: string;
+}
+
+export interface SkincareRoutine {
+  id: string;
+  patientId: string;
+  patient?: { id: string; name: string; phone?: string | null; email?: string | null };
+  consultDate: string;
+  answers: SkinAnswers;
+  items: SkincareRoutineItem[];
+  avoided: SkincareAvoided[];
+  guidelines: SkincareGuideline[];
+  notes: string | null;
+  createdById: string | null;
+  createdByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
