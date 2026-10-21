@@ -1,34 +1,29 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect } from 'react';
 import {
   Alert,
-  alpha,
   Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
-  Grid,
   InputAdornment,
-  Paper,
-  Stack,
+  MenuItem,
+  Switch,
   TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import EventRepeatOutlinedIcon from '@mui/icons-material/EventRepeatOutlined';
-import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
-import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
-import { useForm, Controller, type Control } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { recurringExpensesApi, RecurringExpensePayload } from '../../api/recurring-expenses';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { LabeledField } from '../LabeledField';
 import type { ExpenseType, RecurringExpense } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
 
@@ -58,95 +53,17 @@ const empty: FormValues = {
   active: true,
 };
 
-const DIALOG_MAX_WIDTH = 860;
-const DIALOG_HEIGHT_DESKTOP = 560;
+const DIALOG_MAX_WIDTH = 640;
 
-const FORM_CARD_SX = {
-  p: { xs: 1.5, sm: 1.75 },
-  borderRadius: 2,
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-  height: '100%',
+const TWO_COLUMNS_SX = {
+  display: 'grid',
+  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+  gap: 1.75,
 } as const;
-
-function SectionIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
-  return (
-    <Typography
-      sx={{
-        display: 'block',
-        mb: 1.75,
-        fontSize: fontSizes.xs,
-        fontWeight: 800,
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-        color: 'text.disabled',
-      }}
-    >
-      {title}
-    </Typography>
-  );
-}
-
-function RecurringExpenseActiveToggle({
-  control,
-  fullWidth = false,
-}: {
-  control: Control<FormValues>;
-  fullWidth?: boolean;
-}) {
-  return (
-    <Controller
-      name="active"
-      control={control}
-      render={({ field }) => (
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          color="primary"
-          fullWidth={fullWidth}
-          value={field.value ? 'active' : 'inactive'}
-          onChange={(_, val) => {
-            if (val === 'active') field.onChange(true);
-            if (val === 'inactive') field.onChange(false);
-          }}
-        >
-          <ToggleButton value="active" sx={{ px: fullWidth ? 2 : 1.75 }}>
-            Ativa
-          </ToggleButton>
-          <ToggleButton value="inactive" sx={{ px: fullWidth ? 2 : 1.75 }}>
-            Inativa
-          </ToggleButton>
-        </ToggleButtonGroup>
-      )}
-    />
-  );
-}
 
 export function RecurringExpenseFormDialog({ open, onClose, expense }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
   const toast = useAppToast();
   const { control, handleSubmit, reset } = useForm<FormValues>({ defaultValues: empty });
@@ -208,201 +125,180 @@ export function RecurringExpenseFormDialog({ open, onClose, expense }: Props) {
           width: '100%',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
-            : {
-                maxWidth: DIALOG_MAX_WIDTH,
-                height: DIALOG_HEIGHT_DESKTOP,
-                maxHeight: '94dvh',
-                overflow: 'hidden',
-              }),
+            : { maxWidth: DIALOG_MAX_WIDTH, maxHeight: '94dvh' }),
         },
       }}
     >
       <Box
         component="form"
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          minHeight: 0,
-          ...(isMobile ? { height: '100%' } : {}),
-        }}
+        sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
       >
         <DialogHeader
           onClose={onClose}
           isMobile={isMobile}
           title={expense ? 'Editar despesa recorrente' : 'Nova despesa recorrente'}
-          subtitle={
-            expense
-              ? expense.name
-              : 'Valor, vencimento e tipo fixo ou variável'
-          }
+          subtitle={expense ? expense.name : 'Valor, vencimento e tipo fixo ou variável'}
           icon={
             expense ? <EditOutlinedIcon fontSize="small" /> : <EventRepeatOutlinedIcon fontSize="small" />
-          }
-          trailing={!isCompact ? <RecurringExpenseActiveToggle control={control} /> : undefined}
-          bottom={
-            isCompact ? (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.75, display: 'block' }}>
-                  Status da despesa
-                </Typography>
-                <RecurringExpenseActiveToggle control={control} fullWidth />
-              </Box>
-            ) : undefined
           }
         />
 
         <DialogContent
-          dividers
           sx={{
             px: { xs: 2, sm: 3 },
-            py: { xs: 2, sm: 2.5 },
+            pb: { xs: 2, sm: 2.5 },
             flex: 1,
             minHeight: 0,
             overflow: 'auto',
+            bgcolor: 'background.paper',
             display: 'flex',
             flexDirection: 'column',
-            bgcolor: (t) => t.palette.background.default,
+            gap: 2.25,
+            '&.MuiDialogContent-root': { pt: { xs: 2.75, sm: 3 } },
           }}
         >
-          <Grid container spacing={2.5} alignItems="stretch">
-            <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<LabelOutlinedIcon fontSize="small" />} title="Identificação" />
-                <Stack spacing={2}>
-                  <Controller
-                    name="name"
-                    control={control}
-                    rules={{ required: 'Nome obrigatório' }}
-                    render={({ field, fieldState }) => (
-                      <TextField
-                        {...field}
-                        label="Nome"
-                        fullWidth
-                        required
-                        autoFocus={!expense}
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                        placeholder="Ex.: Aluguel, Internet, Seguro"
-                      />
-                    )}
-                  />
-
-                  <Controller
-                    name="category"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="Categoria"
-                        fullWidth
-                        placeholder="Ex.: Aluguel, Utilidades, Marketing"
-                      />
-                    )}
-                  />
-
-                  <Controller
-                    name="description"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="Descrição"
-                        fullWidth
-                        multiline
-                        minRows={2}
-                        placeholder="Detalhes adicionais (opcional)"
-                      />
-                    )}
-                  />
-                </Stack>
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<PaymentsOutlinedIcon fontSize="small" />} title="Valores e vencimento" />
-                <Stack spacing={2}>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                    <Controller
-                      name="amount"
-                      control={control}
-                      rules={{ required: true, min: 0.01 }}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          type="number"
-                          label="Valor mensal"
-                          fullWidth
-                          required
-                          inputProps={{ step: '0.01', min: 0 }}
-                          InputProps={{
-                            startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                          }}
-                          sx={{ flex: 1, minWidth: 0 }}
-                        />
-                      )}
-                    />
-
-                    <Controller
-                      name="dueDay"
-                      control={control}
-                      rules={{ required: true, min: 1, max: 31 }}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          type="number"
-                          label="Dia do vencimento"
-                          fullWidth
-                          required
-                          inputProps={{ min: 1, max: 31 }}
-                          helperText="Dia do mês (1–31)"
-                          sx={{ flex: 1, minWidth: 0 }}
-                        />
-                      )}
-                    />
-                  </Stack>
-
-                  <Box>
-                    <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
-                      Tipo de despesa
-                    </Typography>
-                    <Controller
-                      name="expenseType"
-                      control={control}
-                      render={({ field }) => (
-                        <ToggleButtonGroup
-                          exclusive
-                          fullWidth
-                          size="small"
-                          color="primary"
-                          value={field.value}
-                          onChange={(_, val) => val && field.onChange(val)}
-                        >
-                          <ToggleButton value="FIXED">Fixa</ToggleButton>
-                          <ToggleButton value="VARIABLE">Variável</ToggleButton>
-                        </ToggleButtonGroup>
-                      )}
-                    />
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                      Fixas entram no custo/hora mensal; variáveis podem ser incluídas no cálculo dos
-                      procedimentos.
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Paper>
-            </Grid>
-
-            {mutation.isError && (
-              <Grid item xs={12}>
-                <Alert severity="error" variant="outlined">
-                  {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
-                    ?.message ?? 'Erro ao salvar despesa'}
-                </Alert>
-              </Grid>
+          <Controller
+            name="name"
+            control={control}
+            rules={{ required: 'Nome obrigatório' }}
+            render={({ field, fieldState }) => (
+              <LabeledField label="Nome" required>
+                <TextField
+                  {...field}
+                  fullWidth
+                  autoFocus={!expense}
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message}
+                  placeholder="Ex.: Aluguel — Unidade Jardins"
+                />
+              </LabeledField>
             )}
-          </Grid>
+          />
+
+          <Box sx={TWO_COLUMNS_SX}>
+            <Controller
+              name="category"
+              control={control}
+              render={({ field }) => (
+                <LabeledField label="Categoria">
+                  <TextField {...field} fullWidth placeholder="Ex.: Instalações, Utilidades" />
+                </LabeledField>
+              )}
+            />
+            <Controller
+              name="amount"
+              control={control}
+              rules={{ required: true, min: 0.01 }}
+              render={({ field }) => (
+                <LabeledField label="Valor mensal" required>
+                  <TextField
+                    {...field}
+                    type="number"
+                    fullWidth
+                    placeholder="0,00"
+                    inputProps={{ step: '0.01', min: 0 }}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                    }}
+                  />
+                </LabeledField>
+              )}
+            />
+          </Box>
+
+          <Box sx={TWO_COLUMNS_SX}>
+            <Controller
+              name="expenseType"
+              control={control}
+              render={({ field }) => (
+                <LabeledField label="Tipo de despesa">
+                  <TextField select fullWidth {...field}>
+                    <MenuItem value="FIXED">Fixa</MenuItem>
+                    <MenuItem value="VARIABLE">Variável</MenuItem>
+                  </TextField>
+                </LabeledField>
+              )}
+            />
+            <Controller
+              name="dueDay"
+              control={control}
+              rules={{ required: true, min: 1, max: 31 }}
+              render={({ field }) => (
+                <LabeledField label="Dia do vencimento" required>
+                  <TextField
+                    {...field}
+                    type="number"
+                    fullWidth
+                    inputProps={{ min: 1, max: 31 }}
+                    helperText="Dia do mês (1–31)"
+                  />
+                </LabeledField>
+              )}
+            />
+          </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -0.75 }}>
+            Fixas entram no custo/hora mensal; variáveis podem ser incluídas no cálculo dos
+            procedimentos.
+          </Typography>
+
+          <Controller
+            name="description"
+            control={control}
+            render={({ field }) => (
+              <LabeledField label="Descrição">
+                <TextField
+                  {...field}
+                  fullWidth
+                  multiline
+                  minRows={2}
+                  placeholder="Detalhes adicionais (opcional)"
+                />
+              </LabeledField>
+            )}
+          />
+
+          <Controller
+            name="active"
+            control={control}
+            render={({ field }) => (
+              <Box
+                component="label"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 1.5,
+                  px: 1.875,
+                  py: 1.625,
+                  borderRadius: '12px',
+                  border: 1,
+                  borderColor: 'divider',
+                  bgcolor: 'grey.50',
+                  cursor: 'pointer',
+                }}
+              >
+                <Box sx={{ lineHeight: 1.3 }}>
+                  <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 700 }}>Despesa ativa</Typography>
+                  <Typography sx={{ fontSize: fontSizes.xs, color: 'text.disabled' }}>
+                    Entra no custo/hora e gera o lançamento a cada mês
+                  </Typography>
+                </Box>
+                <Switch
+                  checked={field.value}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                  inputProps={{ 'aria-label': 'Despesa ativa' }}
+                />
+              </Box>
+            )}
+          />
+
+          {mutation.isError && (
+            <Alert severity="error" variant="outlined">
+              {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
+                ?.message ?? 'Erro ao salvar despesa'}
+            </Alert>
+          )}
         </DialogContent>
 
         <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>

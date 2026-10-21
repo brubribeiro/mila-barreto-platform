@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { Box, Button, Card, Checkbox, Collapse, FormControl, IconButton, InputLabel, ListItemText, MenuItem, OutlinedInput, Select, Skeleton, Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
-import HistoryIcon from '@mui/icons-material/History';
+import { Box, Button, Card, Checkbox, Collapse, FormControl, IconButton, InputLabel, ListItemText, MenuItem, OutlinedInput, Select, Skeleton, Stack, Typography, lighten, useMediaQuery, useTheme } from '@mui/material';
 import { AuroraIcon } from '../components/AuroraIcon';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -18,7 +17,6 @@ import { appointmentsApi } from '../api/appointments';
 import { availabilityApi } from '../api/availability';
 import { usersApi } from '../api/users';
 import { AppointmentFormDialog } from '../components/appointments/AppointmentFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Appointment, AppointmentStatus, UnavailabilityCalendarItem } from '../types';
@@ -39,6 +37,12 @@ const statusColors: Record<AppointmentStatus, { bg: string; border: string; text
   CANCELLED: { bg: '#EDEDEB', border: '#A8A6A2', text: '#6E6B66' },
   NO_SHOW: { bg: '#D58A81', border: '#8A3F33', text: '#FFFFFF' },
 };
+
+// No tema escuro, eventos em tom pastel (feriados, bloqueios) viram uma tinta da cor da borda com texto claro.
+function toDarkEvent(e: EventInput): EventInput {
+  const c = e.borderColor as string;
+  return { ...e, backgroundColor: `${c}33`, textColor: lighten(c, 0.6) };
+}
 
 const kindLabel: Record<string, string> = {
   EVALUATION: 'AVAL',
@@ -83,9 +87,8 @@ export function Appointments() {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useAuth();
-  const { has, restrictToOwnAppointments, isAdmin } = usePermissions();
+  const { has, restrictToOwnAppointments } = usePermissions();
   const canCreate = has('appointments:create');
-  const [historyOpen, setHistoryOpen] = useState(false);
   const calendarRef = useRef<FullCalendar | null>(null);
   const [currentView, setCurrentView] = useUrlState(
     'visao',
@@ -202,15 +205,17 @@ export function Appointments() {
     [filteredAppointments, theme.palette.text.primary, theme.palette.primary.main],
   );
 
-  const holidayEvents = useMemo(
-    () => buildBrazilCaieirasHolidayEvents(range.from, range.to),
-    [range.from, range.to],
-  );
+  const isDark = theme.palette.mode === 'dark';
 
-  const unavailabilityEvents = useMemo(
-    () => buildUnavailabilityCalendarEvents(unavailabilityItems, !restrictToOwnAppointments),
-    [unavailabilityItems, restrictToOwnAppointments],
-  );
+  const holidayEvents = useMemo(() => {
+    const evs = buildBrazilCaieirasHolidayEvents(range.from, range.to);
+    return isDark ? evs.map(toDarkEvent) : evs;
+  }, [range.from, range.to, isDark]);
+
+  const unavailabilityEvents = useMemo(() => {
+    const evs = buildUnavailabilityCalendarEvents(unavailabilityItems, !restrictToOwnAppointments);
+    return isDark ? evs.map(toDarkEvent) : evs;
+  }, [unavailabilityItems, restrictToOwnAppointments, isDark]);
 
   const events = useMemo<EventInput[]>(
     () => [...holidayEvents, ...unavailabilityEvents, ...appointmentEvents],
@@ -711,7 +716,7 @@ export function Appointments() {
             fontSize: fontSizes.md,
           },
           '& .fc .fc-day-today': {
-            backgroundColor: '#EDF8F7 !important',
+            backgroundColor: `${theme.palette.mode === 'dark' ? theme.palette.primary.main + '14' : '#EDF8F7'} !important`,
           },
           '& .fc .fc-timegrid-slot': {
             height: '2.7em',
@@ -991,7 +996,8 @@ export function Appointments() {
                       height: 13,
                       borderRadius: '50%',
                       bgcolor: statusColor,
-                      border: '2px solid #fff',
+                      border: '2px solid',
+                      borderColor: 'background.paper',
                     }}
                   />
                   <Box sx={{ minWidth: 0, lineHeight: 1.25 }}>
@@ -1088,12 +1094,6 @@ export function Appointments() {
         appointment={editing}
         defaultStart={defaultStart}
         defaultPatientId={defaultPatientId}
-      />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="Appointment"
-        title="Agendamentos"
       />
     </Box>
   );

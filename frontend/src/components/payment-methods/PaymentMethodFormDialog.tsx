@@ -1,34 +1,29 @@
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   Alert,
-  alpha,
   Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
-  Grid,
   InputAdornment,
-  Paper,
-  Stack,
+  MenuItem,
   TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
 import PaymentIcon from '@mui/icons-material/Payment';
-import PercentOutlinedIcon from '@mui/icons-material/PercentOutlined';
-import { useForm, Controller, type Control } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { paymentMethodsApi, CreatePaymentMethodPayload } from '../../api/paymentMethods';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { FormSection } from '../FormSection';
+import { LabeledField } from '../LabeledField';
 import type { PaymentMethodEntry } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
 
@@ -45,96 +40,12 @@ interface FormValues {
 }
 
 const DIALOG_MAX_WIDTH = 760;
-const DIALOG_HEIGHT_DESKTOP = 480;
-
-const FORM_CARD_SX = {
-  p: { xs: 1.5, sm: 1.75 },
-  borderRadius: 2,
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-  height: '100%',
-} as const;
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-
-function SectionIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
-  return (
-    <Typography
-      sx={{
-        display: 'block',
-        mb: 1.75,
-        fontSize: fontSizes.xs,
-        fontWeight: 800,
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-        color: 'text.disabled',
-      }}
-    >
-      {title}
-    </Typography>
-  );
-}
-
-function PaymentMethodActiveToggle({
-  control,
-  fullWidth = false,
-}: {
-  control: Control<FormValues>;
-  fullWidth?: boolean;
-}) {
-  return (
-    <Controller
-      name="active"
-      control={control}
-      render={({ field }) => (
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          color="primary"
-          fullWidth={fullWidth}
-          value={field.value ? 'active' : 'inactive'}
-          onChange={(_, val) => {
-            if (val === 'active') field.onChange(true);
-            if (val === 'inactive') field.onChange(false);
-          }}
-        >
-          <ToggleButton value="active" sx={{ px: fullWidth ? 2 : 1.75 }}>
-            Ativa
-          </ToggleButton>
-          <ToggleButton value="inactive" sx={{ px: fullWidth ? 2 : 1.75 }}>
-            Inativa
-          </ToggleButton>
-        </ToggleButtonGroup>
-      )}
-    />
-  );
-}
 
 export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
   const toast = useAppToast();
 
@@ -143,6 +54,7 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
   });
 
   const watchedFee = watch('feePercent');
+  const isActive = watch('active');
 
   useEffect(() => {
     if (!open) return;
@@ -201,16 +113,15 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
 
   const feePreview = useMemo(() => {
     const fee = watchedFee === '' ? 0 : Number(watchedFee);
-    if (Number.isNaN(fee) || fee < 0) return null;
+    if (Number.isNaN(fee) || fee < 0 || fee > 100) return null;
 
-    const exampleAmount = 100;
-    const netAmount = exampleAmount * (1 - fee / 100);
-
-    if (fee === 0) {
-      return `Sem desconto de taxa — ${brl.format(exampleAmount)} líquidos em vendas de ${brl.format(exampleAmount)}.`;
-    }
-
-    return `Taxa de ${fee.toFixed(2).replace('.', ',')}% — em ${brl.format(exampleAmount)} você recebe ${brl.format(netAmount)}.`;
+    const amount = 100;
+    return {
+      fee,
+      feeLabel: `${fee.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`,
+      amount,
+      net: amount * (1 - fee / 100),
+    };
   }, [watchedFee]);
 
   const usageCount = editing?._count?.financialEntries ?? 0;
@@ -232,7 +143,6 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
             ? { height: '100%', maxHeight: '100dvh' }
             : {
                 maxWidth: DIALOG_MAX_WIDTH,
-                height: DIALOG_HEIGHT_DESKTOP,
                 maxHeight: '94dvh',
                 overflow: 'hidden',
               }),
@@ -260,72 +170,86 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
               : 'Nome, taxa da maquininha e disponibilidade no financeiro'
           }
           icon={editing ? <EditOutlinedIcon fontSize="small" /> : <PaymentIcon fontSize="small" />}
-          trailing={!isCompact ? <PaymentMethodActiveToggle control={control} /> : undefined}
-          bottom={
-            isCompact ? (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.75, display: 'block' }}>
-                  Disponível para lançamentos
-                </Typography>
-                <PaymentMethodActiveToggle control={control} fullWidth />
-              </Box>
-            ) : undefined
-          }
         />
 
         <DialogContent
-          dividers
           sx={{
             px: { xs: 2, sm: 3 },
-            py: { xs: 2, sm: 2.5 },
+            pb: { xs: 2, sm: 2.5 },
             flex: 1,
             minHeight: 0,
             overflow: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            bgcolor: (t) => t.palette.background.default,
+            bgcolor: 'background.default',
+            '&.MuiDialogContent-root': { pt: { xs: 2.75, sm: 3 } },
           }}
         >
-          <Grid container spacing={2.5} alignItems="stretch">
-            <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<LabelOutlinedIcon fontSize="small" />} title="Identificação" />
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gap: 2.25,
+              alignItems: 'stretch',
+            }}
+          >
+            <FormSection title="Identificação" sx={{ height: '100%' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75 }}>
                 <Controller
                   name="name"
                   control={control}
                   rules={{ required: 'Nome é obrigatório' }}
                   render={({ field, fieldState }) => (
-                    <TextField
-                      {...field}
-                      label="Nome da forma de pagamento"
-                      placeholder="Ex.: Crédito à vista"
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message ?? 'Como aparece na seleção de pagamentos'}
-                      fullWidth
-                      required
-                      autoFocus={!editing}
-                    />
-                  )}
-                />
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<PercentOutlinedIcon fontSize="small" />} title="Taxa da maquininha" />
-                <Stack spacing={2}>
-                  <Controller
-                    name="feePercent"
-                    control={control}
-                    rules={{
-                      min: { value: 0, message: 'Não pode ser negativo' },
-                      max: { value: 100, message: 'Máximo 100%' },
-                    }}
-                    render={({ field, fieldState }) => (
+                    <LabeledField label="Nome da forma de pagamento" required>
                       <TextField
                         {...field}
-                        label="Percentual da operadora"
+                        placeholder="Ex.: Crédito à vista"
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message ?? 'Como aparece na seleção de pagamentos'}
+                        fullWidth
+                        autoFocus={!editing}
+                      />
+                    </LabeledField>
+                  )}
+                />
+                <Controller
+                  name="active"
+                  control={control}
+                  render={({ field }) => (
+                    <LabeledField label="Status">
+                      <TextField
+                        select
+                        fullWidth
+                        value={field.value ? 'active' : 'inactive'}
+                        onChange={(e) => field.onChange(e.target.value === 'active')}
+                        helperText={
+                          isActive
+                            ? 'Disponível para novos lançamentos'
+                            : 'Fica oculta na seleção de novos lançamentos'
+                        }
+                      >
+                        <MenuItem value="active">Ativa</MenuItem>
+                        <MenuItem value="inactive">Inativa</MenuItem>
+                      </TextField>
+                    </LabeledField>
+                  )}
+                />
+              </Box>
+            </FormSection>
+
+            <FormSection title="Taxa da maquininha" sx={{ height: '100%' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75 }}>
+                <Controller
+                  name="feePercent"
+                  control={control}
+                  rules={{
+                    min: { value: 0, message: 'Não pode ser negativo' },
+                    max: { value: 100, message: 'Máximo 100%' },
+                  }}
+                  render={({ field, fieldState }) => (
+                    <LabeledField label="Percentual da operadora">
+                      <TextField
+                        {...field}
                         type="number"
+                        placeholder="0"
                         error={!!fieldState.error}
                         helperText={
                           fieldState.error?.message ??
@@ -334,35 +258,64 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
                         fullWidth
                         inputProps={{ step: 0.01, min: 0, max: 100 }}
                         InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <PercentOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                            </InputAdornment>
-                          ),
                           endAdornment: <InputAdornment position="end">%</InputAdornment>,
                         }}
                       />
-                    )}
-                  />
-
-                  {feePreview && (
-                    <Alert severity="info" sx={{ py: 0.75 }}>
-                      {feePreview}
-                    </Alert>
+                    </LabeledField>
                   )}
-                </Stack>
-              </Paper>
-            </Grid>
+                />
 
-            {mutationError && (
-              <Grid item xs={12}>
-                <Alert severity="error" variant="outlined">
-                  {(mutationError as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-                    'Erro ao salvar forma de pagamento'}
-                </Alert>
-              </Grid>
-            )}
-          </Grid>
+                {feePreview && (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      justifyContent: 'space-between',
+                      gap: 1.5,
+                      px: 1.75,
+                      py: 1.5,
+                      borderRadius: '12px',
+                      border: 1,
+                      borderColor: 'divider',
+                      bgcolor: 'grey.50',
+                    }}
+                  >
+                    <Box sx={{ lineHeight: 1 }}>
+                      <Typography
+                        sx={{
+                          fontSize: fontSizes['4xl'],
+                          fontWeight: 800,
+                          letterSpacing: '-0.5px',
+                          lineHeight: 1,
+                          color: feePreview.fee === 0 ? 'success.main' : 'text.primary',
+                        }}
+                      >
+                        {feePreview.feeLabel}
+                      </Typography>
+                      <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', fontWeight: 600, mt: 0.6 }}>
+                        taxa
+                      </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'right', lineHeight: 1.2 }}>
+                      <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 700 }}>
+                        {brl.format(feePreview.net)}
+                      </Typography>
+                      <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', fontWeight: 600 }}>
+                        líquido a cada {brl.format(feePreview.amount)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+            </FormSection>
+          </Box>
+
+          {mutationError && (
+            <Alert severity="error" variant="outlined" sx={{ mt: 2.25 }}>
+              {(mutationError as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+                'Erro ao salvar forma de pagamento'}
+            </Alert>
+          )}
         </DialogContent>
 
         <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>

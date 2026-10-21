@@ -4,9 +4,10 @@ import {
   Button,
   Card,
   IconButton,
-  InputBase,
+  MenuItem,
   Skeleton,
   Stack,
+  TextField,
   Tooltip,
   Typography,
   alpha,
@@ -14,8 +15,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
-import SearchIcon from '@mui/icons-material/Search';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -23,19 +22,25 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { urlPage, useUrlState } from '../hooks/useUrlState';
 import { proceduresApi } from '../api/procedures';
 import { ProcedureFormDialog } from '../components/procedures/ProcedureFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
+import {
+  LIST_HEADER_ACTION_SX,
+  LIST_HEADER_SELECT_SX,
+  ListCardHeader,
+  ListSearchField,
+} from '../components/ListCardHeader';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Procedure } from '../types';
 import { fontSizes } from '../theme/fontSizes';
+import { PAGE_MAX_WIDTH } from '../theme/layout';
+import { brl } from '../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const PAGE_SIZE = 8;
 const AVATAR_COLORS = ['#15998B', '#5BA8DE', '#D46B8A', '#E0915B', '#9B7BD4', '#4FB3A8'];
 const GRID_COLS = '2fr 1fr 0.7fr 0.7fr 0.9fr 0.9fr 0.9fr 0.95fr 0.95fr 0.75fr 52px';
-const GRID_MIN_WIDTH = 1180;
+const GRID_MIN_WIDTH = PAGE_MAX_WIDTH;
 const CATEGORY_SUGGESTIONS = ['Facial', 'Injetáveis', 'Laser', 'Corporal', 'Peeling', 'Depilação', 'Capilar'];
 
 function colorFor(text: string) {
@@ -55,7 +60,7 @@ export function Procedures() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('procedures:create');
   const canEdit = has('procedures:edit');
   const canDelete = has('procedures:delete');
@@ -65,7 +70,6 @@ export function Procedures() {
   const [page, setPage] = useUrlState('pagina', 0, urlPage);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Procedure | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: procedures = [], isLoading } = useQuery({
     queryKey: ['procedures'],
@@ -116,90 +120,37 @@ export function Procedures() {
 
   return (
     <Box>
-      {/* Cabeçalho: abas de categoria + busca + ações (acima do card) */}
-      <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        alignItems={{ xs: 'stretch', md: 'center' }}
-        justifyContent="space-between"
-        spacing={1.5}
-        sx={{ mb: 2.5 }}
-      >
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {categories.map((c) => {
-            const active = category === c;
-            return (
-              <Box
-                key={c}
-                component="button"
-                type="button"
-                onClick={() => {
-                  setCategory(c);
-                  setPage(0);
-                }}
-                sx={{
-                  border: 0,
-                  cursor: 'pointer',
-                  px: 2,
-                  height: 36,
-                  borderRadius: '10px',
-                  fontFamily: 'inherit',
-                  fontSize: fontSizes.sm,
-                  fontWeight: active ? 700 : 600,
-                  color: active ? '#fff' : 'text.secondary',
-                  bgcolor: active ? 'primary.main' : 'grey.50',
-                  '&:hover': { bgcolor: active ? 'primary.main' : 'grey.100' },
-                }}
-              >
-                {c}
-              </Box>
-            );
-          })}
-        </Box>
-        <Stack
-          direction="row"
-          alignItems="center"
-          spacing={1.25}
-          flexWrap={{ xs: 'wrap', md: 'nowrap' }}
-          useFlexGap
-          justifyContent={{ md: 'flex-end' }}
-          sx={{ minWidth: 0 }}
+      <Card sx={{ p: 0, overflow: 'hidden' }}>
+        <ListCardHeader
+          title={
+            <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>
+              {category === 'Todos' ? 'Todos os procedimentos' : category}
+            </Typography>
+          }
         >
-          <Stack
-            direction="row"
-            alignItems="center"
-            spacing={1}
-            sx={{
-              height: 38,
-              px: 1.75,
-              borderRadius: '12px',
-              border: 1,
-              borderColor: 'divider',
-              bgcolor: 'grey.50',
-              width: { xs: '100%', sm: 220 },
-              minWidth: 0,
+          <TextField
+            select
+            size="small"
+            value={category}
+            onChange={(e) => {
+              setCategory(e.target.value);
+              setPage(0);
             }}
+            inputProps={{ 'aria-label': 'Categoria' }}
+            sx={{ ...LIST_HEADER_SELECT_SX, width: { xs: 'calc(50% - 5px)', sm: 196 } }}
           >
-            <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-            <InputBase
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(0);
-              }}
-              placeholder="Buscar procedimento..."
-              sx={{ fontSize: fontSizes.sm, flex: 1 }}
-            />
-          </Stack>
-          {isAdmin && (
-            <Tooltip title="Histórico de alterações">
-              <IconButton
-                onClick={() => setHistoryOpen(true)}
-                sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
-              >
-                <HistoryIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
+            <MenuItem value="Todos">Todas as categorias</MenuItem>
+            {categories.slice(1).map((c) => (
+              <MenuItem key={c} value={c}>
+                {c}
+              </MenuItem>
+            ))}
+          </TextField>
+          <ListSearchField value={search} onChange={(v) => {
+              setSearch(v);
+              setPage(0);
+            }}
+            placeholder="Buscar procedimento..." />
           {canCreate && (
             <Button
               variant="contained"
@@ -208,15 +159,12 @@ export function Procedures() {
                 setEditing(null);
                 setFormOpen(true);
               }}
-              sx={{ flexShrink: 0, whiteSpace: 'nowrap', height: 38, px: 2.25, borderRadius: '12px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+              sx={LIST_HEADER_ACTION_SX}
             >
               Novo procedimento
             </Button>
           )}
-        </Stack>
-      </Stack>
-
-      <Card sx={{ p: 0, overflow: 'hidden' }}>
+        </ListCardHeader>
         <Box sx={{ overflowX: 'auto' }}>
         {/* Cabeçalho de colunas */}
         <Box
@@ -470,12 +418,6 @@ export function Procedures() {
       </Card>
 
       <ProcedureFormDialog open={formOpen} onClose={() => setFormOpen(false)} procedure={editing} />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="Procedure"
-        title="Procedimentos"
-      />
     </Box>
   );
 }

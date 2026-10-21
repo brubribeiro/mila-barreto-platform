@@ -8,6 +8,7 @@ import { PromotionsModule } from '../promotions/promotions.module';
 @Module({
   imports: [AvailabilityModule, PackagesModule, PromotionsModule],
   providers: [AppointmentsService],
+  exports: [AppointmentsService],
   controllers: [AppointmentsController],
 })
 export class AppointmentsModule {}
