@@ -40,6 +40,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Changed
 
+- Refatoração sem mudança visual ou de comportamento: `Dashboard.tsx`, `Appointments.tsx` e `Layout.tsx` divididos em subcomponentes e hooks (`components/dashboard/` — `SummaryCard`, `WeekAgendaCard`, `BirthdaysCard`, `useDashboardData`; `components/appointments/` — `AgendaToolbar`, `AgendaStatusLegend`, `PendingAppointmentsBanner`, `AgendaCalendarSkeleton`, `agendaCalendarContent`, `agendaCalendarSx`, `agendaConfig`, `useAgendaData`, `useCalendarKeyboardScroll`; `components/layout/` — `navConfig`, `pageMeta`, `layoutTheme`, `SidebarContent`, `HeaderActions`, `ImpersonationBanner`). Removido código morto: seletor de período oculto do Dashboard (`{false && …}`), `DashboardDetailItem` sem uso, helpers/imports sem uso e estilos de toolbar do FullCalendar que nunca renderizavam (`headerToolbar={false}`).
 - `Patients.tsx`: substitui DataGrid por lista customizada Aurora.
 - `PatientDetail.tsx`, `PatientDetailDrawer`, `PatientFormDialog`: alinhados ao visual Aurora.
 - `AnamnesisFormDialog` / `AnamnesisView`: seções em cards, campos com `LabeledField`.
