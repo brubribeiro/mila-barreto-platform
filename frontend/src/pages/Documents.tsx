@@ -1,553 +1,247 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import {
-  Alert,
-  Autocomplete,
   Box,
   Button,
   Card,
-  CardContent,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  Grid,
-  InputAdornment,
-  List,
-  ListItemButton,
+  Divider,
+  IconButton,
+  InputBase,
+  ListItemIcon,
   ListItemText,
+  Menu,
   MenuItem,
-  Paper,
+  Skeleton,
   Stack,
   TextField,
+  Tooltip,
   Typography,
-  useMediaQuery,
-  useTheme,
   alpha,
+  useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import HistoryIcon from '@mui/icons-material/History';
+import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
-import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
-import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
-import LinkOffOutlinedIcon from '@mui/icons-material/LinkOffOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
+import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
 import SearchIcon from '@mui/icons-material/Search';
-import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import dayjs from 'dayjs';
+import 'dayjs/locale/pt-br';
 
-import { PageHeader } from '../components/PageHeader';
-import { DialogHeader } from '../components/DialogCloseButton';
-import { AppGrid } from '../components/AppGrid';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
-import { DocumentCard } from '../components/documents/DocumentCard';
+import { DocumentFormDialog, MAX_FILE_BYTES, UPLOAD_ACCEPT } from '../components/documents/DocumentFormDialog';
+import { DocumentTemplatesDialog } from '../components/documents/DocumentTemplatesDialog';
+import { DocumentViewerDialog } from '../components/documents/DocumentViewerDialog';
 import {
   DOCUMENT_CATEGORIES,
+  DOCUMENT_STATUSES,
+  canOpenDocument,
+  categoryMeta,
   documentFileIcon,
   fmtFileSize,
   fmtStorageTotal,
+  statusMeta,
   sumDocumentBytes,
 } from '../components/documents/documentUtils';
 import { documentsApi } from '../api/documents';
-import { patientsApi } from '../api/patients';
-import { equipmentApi } from '../api/equipment';
+import { documentTemplatesApi } from '../api/documentTemplates';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import { matchFields } from '../utils/listFilters';
-import type { DocumentFile } from '../types';
-
-const uploadCategories = [{ value: '', label: '—' }, ...DOCUMENT_CATEGORIES.map((c) => ({ value: c.value, label: c.label }))];
-
-const UPLOAD_ACCEPT =
-  '.pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx,.xls,.xlsx,.txt,.csv,application/pdf,image/*,text/plain,text/csv';
+import type { DocumentFile, DocumentStatus } from '../types';
+import { fontSizes } from '../theme/fontSizes';
 
 type LinkFilter = 'ALL' | 'PATIENT' | 'EQUIPMENT' | 'NONE';
 
-function prependDocument(list: DocumentFile[] | undefined, created: DocumentFile): DocumentFile[] {
+const DOCS_KEY = ['documents'];
+const PAGE_SIZE = 8;
+const GRID_COLS =
+  'minmax(0, 2.6fr) minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 0.9fr) 44px';
+const GRID_MIN_WIDTH = 860;
+
+const TOOLBAR_SELECT_SX = {
+  width: { xs: 'calc(50% - 5px)', sm: 160 },
+  flexShrink: 0,
+  '& .MuiOutlinedInput-root': {
+    height: 38,
+    borderRadius: '12px',
+    bgcolor: 'grey.50',
+    fontSize: fontSizes.sm,
+    fontWeight: 600,
+    color: 'text.secondary',
+  },
+  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+} as const;
+
+const TOOLBAR_ICON_BUTTON_SX = {
+  flexShrink: 0,
+  width: 38,
+  height: 38,
+  borderRadius: '12px',
+  border: 1,
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+  color: 'text.secondary',
+} as const;
+
+function replaceDocument(list: DocumentFile[] | undefined, doc: DocumentFile): DocumentFile[] {
   const prev = list ?? [];
-  if (prev.some((d) => d.id === created.id)) return prev;
-  return [created, ...prev];
+  if (!prev.some((d) => d.id === doc.id)) return [doc, ...prev];
+  return prev.map((d) => (d.id === doc.id ? { ...d, ...doc } : d));
 }
 
-function UploadHeaderIcon({ children }: { children: ReactNode }) {
+function StatCard({ label, value, loading }: { label: string; value: string | number; loading?: boolean }) {
+  return (
+    <Card sx={{ p: { xs: 2, sm: '18px 20px' }, borderRadius: '16px' }}>
+      {loading ? (
+        <Skeleton variant="text" width={70} sx={{ fontSize: fontSizes['6xl'] }} />
+      ) : (
+        <Typography
+          sx={{ fontSize: { xs: '1.4rem', sm: '1.65rem' }, fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.3 }}
+        >
+          {value}
+        </Typography>
+      )}
+      <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600, mt: 0.25 }}>
+        {label}
+      </Typography>
+    </Card>
+  );
+}
+
+function StatusPill({ status }: { status: DocumentStatus }) {
+  const theme = useTheme();
+  const meta = statusMeta(status);
+  const color = theme.palette[meta.tone].main;
   return (
     <Box
+      component="span"
       sx={{
-        display: 'flex',
+        display: 'inline-flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        width: 40,
-        height: 40,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
+        gap: 0.6,
+        fontSize: fontSizes.xs,
+        fontWeight: 700,
+        px: 1,
+        py: 0.4,
+        borderRadius: '8px',
+        color: theme.palette[meta.tone].dark,
+        bgcolor: alpha(color, 0.13),
+        whiteSpace: 'nowrap',
       }}
     >
-      {children}
+      <FiberManualRecordIcon sx={{ fontSize: 8, color }} />
+      {meta.label}
     </Box>
   );
 }
 
-function UploadFormSection({
-  title,
-  subtitle,
-  icon,
-  action,
-  children,
-  fill,
-  sx,
-}: {
-  title: string;
-  subtitle?: string;
-  icon: ReactNode;
-  action?: ReactNode;
-  children: ReactNode;
-  fill?: boolean;
-  sx?: object;
-}) {
+function LinkCell({ doc }: { doc: DocumentFile }) {
+  const label = doc.patient?.name ?? doc.equipment?.name;
+  if (!label) {
+    return <Typography sx={{ fontSize: fontSizes.sm, color: 'text.disabled', fontWeight: 600 }}>Sem vínculo</Typography>;
+  }
+  const LinkIcon = doc.patient ? PersonOutlineIcon : BuildOutlinedIcon;
   return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: 2,
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
-        borderRadius: 2,
-        ...(fill
-          ? { width: '100%', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }
-          : {}),
-        ...sx,
-      }}
-    >
-      <Stack
-        direction="row"
-        alignItems="flex-start"
-        justifyContent="space-between"
-        spacing={1.5}
-        sx={{ mb: 2, flexShrink: 0 }}
-      >
-        <Stack direction="row" spacing={1.25} alignItems="flex-start" sx={{ minWidth: 0 }}>
-          <UploadHeaderIcon>{icon}</UploadHeaderIcon>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="subtitle2" fontWeight={600}>
-              {title}
-            </Typography>
-            {subtitle && (
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
-                {subtitle}
-              </Typography>
-            )}
-          </Box>
-        </Stack>
-        {action}
-      </Stack>
-      <Box sx={fill ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : undefined}>
-        {children}
-      </Box>
-    </Paper>
-  );
-}
-
-function UploadDialog({
-  file,
-  open,
-  onClose,
-  onChangeFile,
-  onDocumentCreated,
-}: {
-  file: File;
-  open: boolean;
-  onClose: () => void;
-  onChangeFile: () => void;
-  onDocumentCreated: (doc: DocumentFile) => void;
-}) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
-  const [patientId, setPatientId] = useState<string | null>(null);
-  const [equipmentId, setEquipmentId] = useState<string | null>(null);
-
-  const isImage = file.type.startsWith('image/');
-  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-  const { Icon, color } = documentFileIcon(file.type);
-  const toast = useAppToast();
-
-  const { data: patients = [] } = useQuery({
-    queryKey: ['patients', ''],
-    queryFn: () => patientsApi.list(),
-    enabled: open,
-  });
-  const { data: equipment = [] } = useQuery({
-    queryKey: ['equipment'],
-    queryFn: () => equipmentApi.list(),
-    enabled: open,
-  });
-
-  useEffect(() => {
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
-
-  useEffect(() => {
-    if (open) {
-      setName(file.name);
-      setCategory('');
-      setPatientId(null);
-      setEquipmentId(null);
-    }
-  }, [open, file]);
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      documentsApi.upload(file, {
-        name: name.trim() || file.name,
-        category: category || undefined,
-        patientId: patientId || undefined,
-        equipmentId: equipmentId || undefined,
-      }),
-    onSuccess: (created) => {
-      onDocumentCreated(created);
-      toast.success('Documento enviado.');
-      onClose();
-    },
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err, 'Não foi possível enviar o documento.'));
-    },
-  });
-
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="lg"
-      fullWidth
-      fullScreen={isMobile}
-      PaperProps={{
-        sx: {
-          borderRadius: isMobile ? 0 : 3,
-          overflow: 'hidden',
-          ...(isMobile
-            ? { height: '100%', maxHeight: '100dvh' }
-            : { height: 800, maxHeight: '94dvh' }),
-        },
-      }}
-    >
-      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-        <DialogHeader
-          onClose={onClose}
-          isMobile={isMobile}
-          title="Enviar documento"
-          subtitle={file.name}
-          subtitleTitle={file.name}
-          icon={<UploadFileIcon fontSize="small" />}
-          trailing={
-            <Chip size="small" label={fmtFileSize(file.size)} variant="outlined" sx={{ flexShrink: 0 }} />
-          }
-        />
-
-        <DialogContent
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            overflow: 'auto',
-            p: 2,
-            bgcolor: (t) => alpha(t.palette.primary.main, 0.02),
-            display: 'flex',
-            flexDirection: 'column',
-            '&.MuiDialogContent-root': { paddingTop: 2 },
-          }}
-        >
-          <Box
-            sx={{
-              flex: 1,
-              minHeight: 0,
-              height: '100%',
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
-              gap: 2,
-            }}
-          >
-            <Box sx={{ display: 'flex', minHeight: { xs: 320, md: 0 }, height: { md: '100%' }, minWidth: 0 }}>
-              <UploadFormSection
-                fill
-                title="Pré-visualização"
-                subtitle="Confira o arquivo antes de enviar"
-                icon={<VisibilityOutlinedIcon fontSize="small" />}
-                action={
-                  <Button size="small" variant="outlined" onClick={onChangeFile}>
-                    Trocar
-                  </Button>
-                }
-              >
-                <Box
-                  sx={{
-                    flex: 1,
-                    minHeight: 0,
-                    p: 1.5,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 1.5,
-                    overflow: 'hidden',
-                    bgcolor: 'grey.50',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                  }}
-                >
-                  {previewUrl && isImage ? (
-                    <Box
-                      component="img"
-                      src={previewUrl}
-                      alt={file.name}
-                      sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    />
-                  ) : previewUrl && isPdf ? (
-                    <Box
-                      component="iframe"
-                      src={previewUrl}
-                      title="Pré-visualização do PDF"
-                      sx={{ width: '100%', height: '100%', border: 0, display: 'block' }}
-                    />
-                  ) : (
-                    <Stack alignItems="center" spacing={1}>
-                      <Box
-                        sx={{
-                          width: 52,
-                          height: 52,
-                          borderRadius: 2,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          bgcolor: alpha(color, 0.12),
-                          color,
-                        }}
-                      >
-                        <Icon sx={{ fontSize: 28 }} />
-                      </Box>
-                      <Typography variant="body2" fontWeight={600} textAlign="center" noWrap title={file.name}>
-                        {file.name}
-                      </Typography>
-                    </Stack>
-                  )}
-                </Box>
-              </UploadFormSection>
-            </Box>
-
-            <Box sx={{ minHeight: 0, minWidth: 0, overflow: 'auto' }}>
-              <Stack spacing={2}>
-                <UploadFormSection
-                  title="Identificação"
-                  subtitle="Nome e categoria do documento"
-                  icon={<DriveFileRenameOutlineIcon fontSize="small" />}
-                >
-                  <Stack spacing={1.5}>
-                    <TextField
-                      label="Nome"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      fullWidth
-                      size="small"
-                      helperText="Preenchido com o nome do arquivo; você pode editar"
-                    />
-                    <TextField
-                      select
-                      label="Categoria"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      fullWidth
-                      size="small"
-                    >
-                      {uploadCategories.map((c) => (
-                        <MenuItem key={c.value || 'none'} value={c.value}>
-                          {c.label}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Stack>
-                </UploadFormSection>
-
-                <UploadFormSection
-                  title="Vínculo"
-                  subtitle="Opcional — associe a um paciente ou equipamento"
-                  icon={<LinkOutlinedIcon fontSize="small" />}
-                >
-                  <Grid container spacing={1.5}>
-                    <Grid item xs={12} sm={6}>
-                      <Autocomplete
-                        options={patients}
-                        getOptionLabel={(p) => p.name}
-                        value={patients.find((p) => p.id === patientId) ?? null}
-                        onChange={(_, v) => setPatientId(v?.id ?? null)}
-                        renderInput={(params) => (
-                          <TextField {...params} label="Paciente" size="small" placeholder="Nenhum" />
-                        )}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Autocomplete
-                        options={equipment}
-                        getOptionLabel={(e) => e.name}
-                        value={equipment.find((e) => e.id === equipmentId) ?? null}
-                        onChange={(_, v) => setEquipmentId(v?.id ?? null)}
-                        renderInput={(params) => (
-                          <TextField {...params} label="Equipamento" size="small" placeholder="Nenhum" />
-                        )}
-                      />
-                    </Grid>
-                  </Grid>
-                </UploadFormSection>
-
-                {mutation.isError && (
-                  <Alert severity="error">
-                    {(mutation.error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ??
-                      (mutation.error as Error)?.message ??
-                      'Erro no upload'}
-                  </Alert>
-                )}
-              </Stack>
-            </Box>
-          </Box>
-        </DialogContent>
-
-        <DialogActions
-          sx={{
-            px: { xs: 2, sm: 3 },
-            py: { xs: 1.5, sm: 2 },
-            borderTop: 1,
-            borderColor: 'divider',
-            flexShrink: 0,
-            gap: 1,
-          }}
-        >
-          {!isMobile && <Button onClick={onClose}>Cancelar</Button>}
-          <Button
-            variant="contained"
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate()}
-            fullWidth={isMobile}
-          >
-            {mutation.isPending ? 'Enviando...' : 'Enviar'}
-          </Button>
-        </DialogActions>
-      </Box>
-    </Dialog>
-  );
-}
-
-function StatMiniCard({
-  label,
-  value,
-  icon,
-  color,
-}: {
-  label: string;
-  value: React.ReactNode;
-  icon: React.ReactNode;
-  color: string;
-}) {
-  return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: 1.5,
-        borderRadius: 2,
-        borderLeft: '3px solid',
-        borderLeftColor: color,
-        height: '100%',
-      }}
-    >
-      <Stack direction="row" spacing={1.25} alignItems="center">
-        <Box
-          sx={{
-            width: 36,
-            height: 36,
-            borderRadius: 1.5,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            bgcolor: alpha(color, 0.1),
-            color,
-          }}
-        >
-          {icon}
-        </Box>
-        <Box>
-          <Typography variant="h6" fontWeight={700} lineHeight={1.1}>
-            {value}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {label}
-          </Typography>
-        </Box>
-      </Stack>
-    </Paper>
+    <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
+      <LinkIcon sx={{ fontSize: 16, color: 'text.disabled', flexShrink: 0 }} />
+      <Typography noWrap title={label} sx={{ fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}>
+        {label}
+      </Typography>
+    </Stack>
   );
 }
 
 export function Documents() {
+  const theme = useTheme();
   const queryClient = useQueryClient();
   const { confirm, alert } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('documents:create');
+  const canEdit = has('documents:edit');
   const canDelete = has('documents:delete');
 
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | DocumentStatus>('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [linkFilter, setLinkFilter] = useState<LinkFilter>('ALL');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploadOpen, setUploadOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
-
-  const triggerFilePicker = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0] ?? null;
-    e.target.value = '';
-    if (selected) {
-      setUploadFile(selected);
-      setUploadOpen(true);
-    }
-  }, []);
-
-  const handleUploadClose = useCallback(() => {
-    setUploadOpen(false);
-    setUploadFile(null);
-  }, []);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<DocumentFile | null>(null);
+  const [viewing, setViewing] = useState<DocumentFile | null>(null);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [menu, setMenu] = useState<{ anchor: HTMLElement; doc: DocumentFile } | null>(null);
+  const attachInputRef = useRef<HTMLInputElement>(null);
+  const attachTarget = useRef<DocumentFile | null>(null);
 
   const { data: docs = [], isLoading, isFetching } = useQuery({
-    queryKey: ['documents'],
+    queryKey: DOCS_KEY,
     queryFn: () => documentsApi.list(),
   });
+  const loading = isLoading || (isFetching && docs.length === 0);
 
-  const handleDocumentCreated = useCallback(
-    (created: DocumentFile) => {
-      queryClient.setQueryData<DocumentFile[]>(['documents'], (old) => prependDocument(old, created));
+  const { data: templates = [], isLoading: templatesLoading } = useQuery({
+    queryKey: ['document-templates'],
+    queryFn: documentTemplatesApi.list,
+  });
+
+  const handleSaved = (saved: DocumentFile, created: boolean) => {
+    queryClient.setQueryData<DocumentFile[]>(DOCS_KEY, (old) => replaceDocument(old, saved));
+    void queryClient.invalidateQueries({ queryKey: [...DOCS_KEY, saved.id], exact: true });
+    if (created) {
+      setStatusFilter('ALL');
       setCategoryFilter('ALL');
       setLinkFilter('ALL');
       setSearch('');
-      void queryClient.invalidateQueries({ queryKey: ['documents'] });
+      if (saved.templateId) void queryClient.invalidateQueries({ queryKey: ['document-templates'] });
+      // Documento gerado de modelo: abre o texto para conferir e imprimir
+      if (saved.hasContent && !saved.storageKey) setViewing(saved);
+    }
+  };
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: DocumentStatus }) => documentsApi.update(id, { status }),
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: DOCS_KEY, exact: true });
+      const previous = queryClient.getQueryData<DocumentFile[]>(DOCS_KEY);
+      queryClient.setQueryData<DocumentFile[]>(DOCS_KEY, (old = []) =>
+        old.map((d) => (d.id === id ? { ...d, status } : d)),
+      );
+      return { previous };
     },
-    [queryClient],
-  );
+    onSuccess: (saved) => {
+      queryClient.setQueryData<DocumentFile[]>(DOCS_KEY, (old) => replaceDocument(old, saved));
+      toast.success(`Documento marcado como ${statusMeta(saved.status).label.toLowerCase()}.`);
+    },
+    onError: (err, _vars, ctx) => {
+      queryClient.setQueryData(DOCS_KEY, ctx?.previous);
+      toast.error(getApiErrorMessage(err, 'Não foi possível alterar o status.'));
+    },
+  });
+
+  const attachMutation = useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) => documentsApi.attachFile(id, file),
+    onSuccess: (saved) => {
+      handleSaved(saved, false);
+      setViewing((v) => (v?.id === saved.id ? saved : v));
+      toast.success('Versão assinada anexada.');
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Não foi possível anexar o arquivo.')),
+  });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => documentsApi.remove(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents'] });
+    onSuccess: (_res, id) => {
+      queryClient.setQueryData<DocumentFile[]>(DOCS_KEY, (old = []) => old.filter((d) => d.id !== id));
+      void queryClient.invalidateQueries({ queryKey: ['document-templates'] });
       toast.success('Documento excluído.');
     },
     onError: (err) => {
@@ -560,6 +254,7 @@ export function Documents() {
     let equipment = 0;
     let unlinked = 0;
     const byCategory: Record<string, number> = {};
+    const byStatus: Record<DocumentStatus, number> = { PENDING: 0, SENT: 0, SIGNED: 0 };
 
     for (const d of docs) {
       if (d.patientId) patients += 1;
@@ -568,6 +263,7 @@ export function Documents() {
 
       const key = d.category || '__none__';
       byCategory[key] = (byCategory[key] ?? 0) + 1;
+      byStatus[d.status] += 1;
     }
 
     return {
@@ -576,13 +272,17 @@ export function Documents() {
       equipment,
       unlinked,
       byCategory,
+      byStatus,
       totalBytes: sumDocumentBytes(docs),
     };
   }, [docs]);
 
+  const activeTemplates = templates.filter((t) => t.active).length;
+
   const filteredDocs = useMemo(
     () =>
       docs.filter((d) => {
+        if (statusFilter !== 'ALL' && d.status !== statusFilter) return false;
         if (categoryFilter !== 'ALL') {
           if (categoryFilter === '__none__' && d.category) return false;
           if (categoryFilter !== '__none__' && (d.category ?? '') !== categoryFilter) return false;
@@ -590,10 +290,25 @@ export function Documents() {
         if (linkFilter === 'PATIENT' && !d.patientId) return false;
         if (linkFilter === 'EQUIPMENT' && !d.equipmentId) return false;
         if (linkFilter === 'NONE' && (d.patientId || d.equipmentId)) return false;
-        return matchFields(search, d.name, d.category, d.patient?.name, d.equipment?.name, d.notes);
+        return matchFields(
+          search,
+          d.name,
+          categoryMeta(d.category).label,
+          d.patient?.name,
+          d.equipment?.name,
+          d.notes,
+          d.template?.name,
+        );
       }),
-    [docs, search, categoryFilter, linkFilter],
+    [docs, search, statusFilter, categoryFilter, linkFilter],
   );
+
+  const [page, setPage] = useState(0);
+  useEffect(() => setPage(0), [search, statusFilter, categoryFilter, linkFilter]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredDocs.length / PAGE_SIZE));
+  const current = Math.min(page, pageCount - 1);
+  const rows = filteredDocs.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
 
   const handleDelete = async (doc: DocumentFile) => {
     const ok = await confirm({
@@ -617,291 +332,482 @@ export function Documents() {
     }
   };
 
-  const linkFilters: { value: LinkFilter; label: string; icon: React.ReactNode; count: number }[] = [
-    { value: 'ALL', label: 'Todos', icon: <FolderOpenOutlinedIcon fontSize="small" />, count: stats.total },
-    { value: 'PATIENT', label: 'Pacientes', icon: <PersonOutlineIcon fontSize="small" />, count: stats.patients },
-    { value: 'EQUIPMENT', label: 'Equipamentos', icon: <BuildOutlinedIcon fontSize="small" />, count: stats.equipment },
-    { value: 'NONE', label: 'Sem vínculo', icon: <LinkOffOutlinedIcon fontSize="small" />, count: stats.unlinked },
-  ];
+  const handleRowClick = (doc: DocumentFile) => {
+    if (canOpenDocument(doc)) void handleOpenDocument(doc);
+    else if (doc.hasContent) setViewing(doc);
+    else if (canEdit) {
+      setEditing(doc);
+      setFormOpen(true);
+    }
+  };
 
-  const filterCardSx = { borderRadius: 2 } as const;
+  const startAttach = (doc: DocumentFile) => {
+    attachTarget.current = doc;
+    attachInputRef.current?.click();
+  };
 
-  const categoryFiltersCard = (
-    <Card variant="outlined" sx={filterCardSx}>
-      <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-        <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: '0.06em' }}>
-          Categorias
-        </Typography>
-        <List dense disablePadding sx={{ mt: 0.5 }}>
-          <ListItemButton
-            selected={categoryFilter === 'ALL'}
-            onClick={() => setCategoryFilter('ALL')}
-            sx={{ borderRadius: 1.5, mb: 0.25 }}
-          >
-            <ListItemText primary="Todas" />
-            <Chip label={stats.total} size="small" variant="outlined" />
-          </ListItemButton>
-          {DOCUMENT_CATEGORIES.map((cat) => (
-            <ListItemButton
-              key={cat.value}
-              selected={categoryFilter === cat.value}
-              onClick={() => setCategoryFilter(cat.value)}
-              sx={{ borderRadius: 1.5, mb: 0.25 }}
-            >
-              <ListItemText primary={cat.label} />
-              <Chip
-                label={stats.byCategory[cat.value] ?? 0}
-                size="small"
-                variant="outlined"
-                sx={{ color: cat.color, borderColor: alpha(cat.color, 0.35) }}
-              />
-            </ListItemButton>
-          ))}
-          <ListItemButton
-            selected={categoryFilter === '__none__'}
-            onClick={() => setCategoryFilter('__none__')}
-            sx={{ borderRadius: 1.5 }}
-          >
-            <ListItemText primary="Sem categoria" />
-            <Chip label={stats.byCategory.__none__ ?? 0} size="small" variant="outlined" />
-          </ListItemButton>
-        </List>
-      </CardContent>
-    </Card>
-  );
+  const handleAttachSelected = (file: File | undefined) => {
+    const doc = attachTarget.current;
+    attachTarget.current = null;
+    if (!file || !doc) return;
+    if (file.size > MAX_FILE_BYTES) {
+      toast.error(`O arquivo tem ${fmtFileSize(file.size)}; o limite é 25 MB.`);
+      return;
+    }
+    attachMutation.mutate({ id: doc.id, file });
+  };
 
-  const linkFiltersCard = (
-    <Card variant="outlined" sx={filterCardSx}>
-      <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-        <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: '0.06em' }}>
-          Vínculo
-        </Typography>
-        <List dense disablePadding sx={{ mt: 0.5 }}>
-          {linkFilters.map((item) => (
-            <ListItemButton
-              key={item.value}
-              selected={linkFilter === item.value}
-              onClick={() => setLinkFilter(item.value)}
-              sx={{ borderRadius: 1.5, mb: 0.25 }}
-            >
-              <Box sx={{ mr: 1.25, display: 'flex', color: 'text.secondary' }}>{item.icon}</Box>
-              <ListItemText primary={item.label} />
-              <Chip label={item.count} size="small" variant="outlined" />
-            </ListItemButton>
-          ))}
-        </List>
-      </CardContent>
-    </Card>
-  );
+  const closeMenu = () => setMenu(null);
+  const menuAction = (fn: (doc: DocumentFile) => void) => () => {
+    const doc = menu?.doc;
+    closeMenu();
+    if (doc) fn(doc);
+  };
+
+  const openNew = () => {
+    setEditing(null);
+    setFormOpen(true);
+  };
+
+  const menuDoc = menu?.doc;
 
   return (
-    <Box>
-      <input
-        ref={fileInputRef}
-        type="file"
-        hidden
-        accept={UPLOAD_ACCEPT}
-        onChange={handleFileInputChange}
-      />
-
-      <PageHeader
-        title="Documentos"
-        subtitle="Contratos, certificados e arquivos da clínica"
-        action={
-          <Stack direction="row" spacing={1}>
-            {isAdmin && (
-              <Button
-                variant="outlined"
-                startIcon={<HistoryIcon />}
-                onClick={() => setHistoryOpen(true)}
-              >
-                Histórico
-              </Button>
-            )}
-            {canCreate && (
-              <Button variant="contained" startIcon={<UploadFileIcon />} onClick={triggerFilePicker}>
-                Enviar arquivo
-              </Button>
-            )}
-          </Stack>
-        }
-      />
-
-      <AppGrid columns={{ xs: 2, md: 4 }} gap={{ xs: 1.5, sm: 2 }} sx={{ mb: { xs: 2, sm: 3 } }}>
-        <StatMiniCard
-          label="Armazenamento total"
-          value={fmtStorageTotal(stats.totalBytes)}
-          icon={<StorageOutlinedIcon fontSize="small" />}
-          color="#00897B"
-        />
-        <StatMiniCard
-          label="Total de documentos"
-          value={stats.total}
-          icon={<DescriptionOutlinedIcon fontSize="small" />}
-          color="#0ABAB5"
-        />
-        <StatMiniCard
-          label="Vinculados a pacientes"
-          value={stats.patients}
-          icon={<PersonOutlineIcon fontSize="small" />}
-          color="#5C6BC0"
-        />
-        <StatMiniCard
-          label="Vinculados a equipamentos"
-          value={stats.equipment}
-          icon={<BuildOutlinedIcon fontSize="small" />}
-          color="#F57C00"
-        />
-      </AppGrid>
-
-      <Box sx={{ display: { xs: 'block', lg: 'none' }, mb: 2 }}>
-        <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 0.5, mb: 1 }}>
-          {linkFilters.map((item) => (
-            <Chip
-              key={item.value}
-              label={`${item.label} (${item.count})`}
-              onClick={() => setLinkFilter(item.value)}
-              color={linkFilter === item.value ? 'primary' : 'default'}
-              variant={linkFilter === item.value ? 'filled' : 'outlined'}
-              sx={{ flexShrink: 0 }}
-            />
-          ))}
-        </Stack>
-        <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 0.5 }}>
-          <Chip
-            label="Todas"
-            onClick={() => setCategoryFilter('ALL')}
-            color={categoryFilter === 'ALL' ? 'primary' : 'default'}
-            variant={categoryFilter === 'ALL' ? 'filled' : 'outlined'}
-            sx={{ flexShrink: 0 }}
-          />
-          {DOCUMENT_CATEGORIES.map((cat) => (
-            <Chip
-              key={cat.value}
-              label={cat.label}
-              onClick={() => setCategoryFilter(cat.value)}
-              color={categoryFilter === cat.value ? 'primary' : 'default'}
-              variant={categoryFilter === cat.value ? 'filled' : 'outlined'}
-              sx={{ flexShrink: 0 }}
-            />
-          ))}
-        </Stack>
-      </Box>
-
+    <Stack spacing={2.25}>
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: '280px 1fr' },
-          gap: { xs: 2, sm: 3 },
-          alignItems: 'start',
+          gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
+          gap: { xs: 1.5, sm: 2.25 },
         }}
       >
-        <Stack spacing={2} sx={{ display: { xs: 'none', lg: 'flex' } }}>
-          {categoryFiltersCard}
-          {linkFiltersCard}
-        </Stack>
-
-        <Card sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 2, minWidth: 0 }}>
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={1.5}
-              alignItems={{ sm: 'center' }}
-              justifyContent="space-between"
-              sx={{ mb: 2 }}
-            >
-              <TextField
-                size="small"
-                placeholder="Buscar por nome, categoria, vínculo ou observação"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                sx={{ width: { xs: '100%', sm: 360, md: 420 } }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" color="action" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0 }}>
-                {filteredDocs.length} de {docs.length}{' '}
-                {filteredDocs.length === 1 ? 'documento' : 'documentos'}
-              </Typography>
-            </Stack>
-
-            {isLoading || (isFetching && docs.length === 0) ? (
-              <Typography variant="body2" color="text.secondary" sx={{ py: 6, textAlign: 'center' }}>
-                Carregando documentos…
-              </Typography>
-            ) : filteredDocs.length === 0 ? (
-              <Paper
-                variant="outlined"
-                sx={{
-                  py: 6,
-                  px: 3,
-                  textAlign: 'center',
-                  borderStyle: 'dashed',
-                  borderRadius: 2,
-                  bgcolor: 'grey.50',
-                }}
-              >
-                <DescriptionOutlinedIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
-                <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                  {docs.length === 0 ? 'Nenhum documento cadastrado' : 'Nenhum documento encontrado'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: canCreate ? 2 : 0 }}>
-                  {docs.length === 0
-                    ? 'Envie arquivos para organizar os documentos da clínica.'
-                    : 'Ajuste os filtros ou a busca para ver outros resultados.'}
-                </Typography>
-                {canCreate && docs.length === 0 && (
-                  <Button variant="contained" startIcon={<AddIcon />} onClick={triggerFilePicker}>
-                    Enviar arquivo
-                  </Button>
-                )}
-              </Paper>
-            ) : (
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: '1fr',
-                    sm: 'repeat(2, minmax(0, 1fr))',
-                    md: 'repeat(3, minmax(0, 1fr))',
-                    xl: 'repeat(4, minmax(0, 1fr))',
-                  },
-                  gap: 1.5,
-                }}
-              >
-                {filteredDocs.map((doc) => (
-                  <DocumentCard
-                    key={doc.id}
-                    doc={doc}
-                    canDelete={canDelete}
-                    onOpen={() => void handleOpenDocument(doc)}
-                    onDelete={() => handleDelete(doc)}
-                  />
-                ))}
-              </Box>
-            )}
-        </Card>
+        <StatCard label="Total de documentos" value={stats.total} loading={loading} />
+        <StatCard label="Assinados" value={stats.byStatus.SIGNED} loading={loading} />
+        <StatCard label="Pendentes" value={stats.byStatus.PENDING} loading={loading} />
+        <StatCard label="Modelos ativos" value={activeTemplates} loading={templatesLoading} />
       </Box>
 
-      {uploadFile && (
-        <UploadDialog
-          file={uploadFile}
-          open={uploadOpen}
-          onClose={handleUploadClose}
-          onChangeFile={triggerFilePicker}
-          onDocumentCreated={handleDocumentCreated}
-        />
-      )}
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="Document"
-        title="Documentos"
+      <Card sx={{ p: 0, overflow: 'hidden', borderRadius: '18px' }}>
+        {/* Título + filtros + ações */}
+        <Stack
+          direction={{ xs: 'column', xl: 'row' }}
+          alignItems={{ xs: 'stretch', xl: 'center' }}
+          justifyContent="space-between"
+          spacing={1.5}
+          sx={{ px: { xs: 2, sm: 2.75 }, py: 2.25, borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Box sx={{ minWidth: 0 }}>
+            <Typography component="h3" sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>
+              Documentos
+              {!loading && docs.length > 0 && (
+                <Box component="span" sx={{ color: 'text.disabled', fontWeight: 500, fontSize: fontSizes.sm }}>
+                  {` · ${filteredDocs.length} de ${docs.length}`}
+                </Box>
+              )}
+            </Typography>
+            {!loading && stats.totalBytes > 0 && (
+              <Typography sx={{ fontSize: fontSizes.xs, color: 'text.disabled', fontWeight: 600 }}>
+                {fmtStorageTotal(stats.totalBytes)} em arquivos
+                {stats.byStatus.SENT > 0 && ` · ${stats.byStatus.SENT} aguardando assinatura`}
+              </Typography>
+            )}
+          </Box>
+
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1.25}
+            flexWrap={{ xs: 'wrap', lg: 'nowrap' }}
+            useFlexGap
+            justifyContent={{ xl: 'flex-end' }}
+            sx={{ minWidth: 0 }}
+          >
+            <TextField
+              select
+              size="small"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'ALL' | DocumentStatus)}
+              inputProps={{ 'aria-label': 'Status' }}
+              sx={TOOLBAR_SELECT_SX}
+            >
+              <MenuItem value="ALL">Todos os status</MenuItem>
+              {DOCUMENT_STATUSES.map((s) => (
+                <MenuItem key={s.value} value={s.value}>
+                  {s.label} ({stats.byStatus[s.value]})
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              inputProps={{ 'aria-label': 'Tipo' }}
+              sx={TOOLBAR_SELECT_SX}
+            >
+              <MenuItem value="ALL">Todos os tipos</MenuItem>
+              {DOCUMENT_CATEGORIES.map((cat) => (
+                <MenuItem key={cat.value} value={cat.value}>
+                  {cat.label} ({stats.byCategory[cat.value] ?? 0})
+                </MenuItem>
+              ))}
+              <MenuItem value="__none__">Sem tipo ({stats.byCategory.__none__ ?? 0})</MenuItem>
+            </TextField>
+            <TextField
+              select
+              size="small"
+              value={linkFilter}
+              onChange={(e) => setLinkFilter(e.target.value as LinkFilter)}
+              inputProps={{ 'aria-label': 'Vínculo' }}
+              sx={TOOLBAR_SELECT_SX}
+            >
+              <MenuItem value="ALL">Todos os vínculos</MenuItem>
+              <MenuItem value="PATIENT">Pacientes ({stats.patients})</MenuItem>
+              <MenuItem value="EQUIPMENT">Equipamentos ({stats.equipment})</MenuItem>
+              <MenuItem value="NONE">Sem vínculo ({stats.unlinked})</MenuItem>
+            </TextField>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1}
+              sx={{
+                height: 38,
+                px: 1.75,
+                borderRadius: '12px',
+                border: 1,
+                borderColor: 'divider',
+                bgcolor: 'grey.50',
+                width: { xs: '100%', sm: 230 },
+                minWidth: 0,
+              }}
+            >
+              <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+              <InputBase
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar documento, paciente..."
+                sx={{ fontSize: fontSizes.sm, flex: 1 }}
+              />
+            </Stack>
+            <Tooltip title="Modelos de documento">
+              <IconButton onClick={() => setTemplatesOpen(true)} sx={TOOLBAR_ICON_BUTTON_SX}>
+                <ArticleOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            {canCreate && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={openNew}
+                sx={{ flexShrink: 0, whiteSpace: 'nowrap', height: 38, px: 2.25, borderRadius: '12px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
+              >
+                Novo documento
+              </Button>
+            )}
+          </Stack>
+        </Stack>
+
+        <Box sx={{ overflowX: 'auto' }}>
+          {/* Cabeçalho de colunas */}
+          <Box
+            sx={{
+              display: { xs: 'none', md: 'grid' },
+              gridTemplateColumns: GRID_COLS,
+              minWidth: GRID_MIN_WIDTH,
+              gap: 1.5,
+              px: 2.75,
+              py: 1.6,
+              borderBottom: 1,
+              borderColor: 'divider',
+              bgcolor: 'grey.50',
+              fontSize: fontSizes['2xs'],
+              fontWeight: 800,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              color: 'text.disabled',
+            }}
+          >
+            <span>Documento</span>
+            <span>Paciente</span>
+            <span>Tipo</span>
+            <span>Data</span>
+            <span>Status</span>
+            <span />
+          </Box>
+
+          {loading ? (
+            <Box sx={{ px: 2.75, py: 2 }}>
+              <Stack spacing={1.25}>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} variant="rounded" height={48} />
+                ))}
+              </Stack>
+            </Box>
+          ) : filteredDocs.length === 0 ? (
+            <Box sx={{ px: 3, py: 6, textAlign: 'center' }}>
+              <DescriptionOutlinedIcon sx={{ fontSize: 46, color: 'text.disabled', mb: 1 }} />
+              <Typography sx={{ fontWeight: 700 }}>
+                {docs.length === 0 ? 'Nenhum documento cadastrado' : 'Nenhum documento encontrado'}
+              </Typography>
+              <Typography color="text.secondary" sx={{ fontSize: fontSizes.md, mt: 0.5 }}>
+                {docs.length === 0
+                  ? 'Gere termos a partir dos modelos ou envie contratos, certificados e arquivos da clínica.'
+                  : 'Tente ajustar a busca ou os filtros.'}
+              </Typography>
+              {canCreate && docs.length === 0 && (
+                <Button variant="contained" startIcon={<AddIcon />} onClick={openNew} sx={{ mt: 2 }}>
+                  Novo documento
+                </Button>
+              )}
+            </Box>
+          ) : (
+            rows.map((doc) => {
+              const hasFile = canOpenDocument(doc);
+              const { Icon, color } = hasFile
+                ? documentFileIcon(doc.mimeType)
+                : { Icon: ArticleOutlinedIcon, color: theme.palette.primary.main };
+              const clickable = hasFile || !!doc.hasContent || canEdit;
+              const subtitle = [
+                hasFile ? fmtFileSize(doc.size) : 'Texto gerado de modelo',
+                doc.notes,
+              ].filter(Boolean);
+              return (
+                <Box
+                  key={doc.id}
+                  onClick={clickable ? () => handleRowClick(doc) : undefined}
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: 'minmax(0, 1fr) auto', md: GRID_COLS },
+                    minWidth: { md: GRID_MIN_WIDTH },
+                    gap: 1.5,
+                    px: { xs: 2, md: 2.75 },
+                    py: 1.75,
+                    borderBottom: 1,
+                    borderColor: 'grey.100',
+                    alignItems: 'center',
+                    cursor: clickable ? 'pointer' : 'default',
+                    '&:hover': { bgcolor: 'grey.50' },
+                    '&:last-of-type': { borderBottom: 0 },
+                  }}
+                >
+                  {/* Documento */}
+                  <Stack direction="row" alignItems="center" spacing={1.6} sx={{ minWidth: 0 }}>
+                    <Box
+                      sx={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: '10px',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color,
+                        bgcolor: alpha(color, 0.1),
+                      }}
+                    >
+                      <Icon sx={{ fontSize: 19 }} />
+                    </Box>
+                    <Box sx={{ minWidth: 0, lineHeight: 1.3 }}>
+                      <Typography noWrap title={doc.name} sx={{ fontSize: fontSizes.md, fontWeight: 700 }}>
+                        {doc.name}
+                      </Typography>
+                      <Typography
+                        noWrap
+                        title={doc.notes || undefined}
+                        sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}
+                      >
+                        <Box component="span" sx={{ display: { md: 'none' } }}>
+                          {`${statusMeta(doc.status).label} · ${categoryMeta(doc.category).label} · ${dayjs(doc.createdAt).format('DD/MM/YY')}`}
+                          {(doc.patient?.name ?? doc.equipment?.name) && ` · ${doc.patient?.name ?? doc.equipment?.name}`}
+                          {' · '}
+                        </Box>
+                        {subtitle.join(' · ')}
+                      </Typography>
+                    </Box>
+                  </Stack>
+
+                  {/* Paciente / vínculo */}
+                  <Box sx={{ display: { xs: 'none', md: 'block' }, minWidth: 0 }}>
+                    <LinkCell doc={doc} />
+                  </Box>
+
+                  {/* Tipo */}
+                  <Typography
+                    noWrap
+                    title={categoryMeta(doc.category).label}
+                    sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}
+                  >
+                    {categoryMeta(doc.category).label}
+                  </Typography>
+
+                  {/* Data */}
+                  <Typography
+                    sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}
+                    noWrap
+                  >
+                    {dayjs(doc.createdAt).locale('pt-br').format('DD MMM YYYY')}
+                  </Typography>
+
+                  {/* Status */}
+                  <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                    <StatusPill status={doc.status} />
+                  </Box>
+
+                  {/* Ações */}
+                  <IconButton
+                    aria-label="Ações"
+                    onClick={(ev: MouseEvent<HTMLElement>) => {
+                      ev.stopPropagation();
+                      setMenu({ anchor: ev.currentTarget, doc });
+                    }}
+                    sx={{ width: 32, height: 32, borderRadius: '9px', color: 'text.disabled', justifySelf: 'end' }}
+                  >
+                    <MoreHorizIcon sx={{ fontSize: 19 }} />
+                  </IconButton>
+                </Box>
+              );
+            })
+          )}
+        </Box>
+
+        {/* Paginação */}
+        {!loading && pageCount > 1 && (
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            alignItems="center"
+            justifyContent="space-between"
+            spacing={1.5}
+            sx={{ px: 2.75, py: 1.75, borderTop: 1, borderColor: 'divider' }}
+          >
+            <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600 }}>
+              Mostrando {current * PAGE_SIZE + 1}–{Math.min((current + 1) * PAGE_SIZE, filteredDocs.length)} de{' '}
+              {filteredDocs.length}
+            </Typography>
+            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap justifyContent="center">
+              {Array.from({ length: pageCount }).map((_, i) => {
+                const activePage = i === current;
+                return (
+                  <Box
+                    key={i}
+                    component="button"
+                    type="button"
+                    onClick={() => setPage(i)}
+                    sx={{
+                      minWidth: 32,
+                      height: 32,
+                      px: 0.75,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      fontSize: fontSizes.sm,
+                      fontWeight: 700,
+                      borderRadius: '9px',
+                      border: 1,
+                      borderColor: activePage ? 'primary.main' : 'divider',
+                      color: activePage ? '#fff' : 'text.secondary',
+                      bgcolor: activePage ? 'primary.main' : 'background.paper',
+                      '&:hover': { bgcolor: activePage ? 'primary.main' : 'grey.50' },
+                    }}
+                  >
+                    {i + 1}
+                  </Box>
+                );
+              })}
+            </Stack>
+          </Stack>
+        )}
+      </Card>
+
+      <Menu
+        anchorEl={menu?.anchor}
+        open={!!menu}
+        onClose={closeMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{ paper: { sx: { minWidth: 230, borderRadius: '12px' } } }}
+        MenuListProps={{ dense: true }}
+      >
+        {menuDoc && canOpenDocument(menuDoc) && (
+          <MenuItem onClick={menuAction((d) => void handleOpenDocument(d))}>
+            <ListItemIcon><OpenInNewIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Abrir arquivo</ListItemText>
+          </MenuItem>
+        )}
+        {menuDoc?.hasContent && (
+          <MenuItem onClick={menuAction(setViewing)}>
+            <ListItemIcon><PrintOutlinedIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Visualizar e imprimir</ListItemText>
+          </MenuItem>
+        )}
+        {menuDoc && canEdit && (
+          <MenuItem onClick={menuAction(startAttach)} disabled={attachMutation.isPending}>
+            <ListItemIcon><AttachFileIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{menuDoc.storageKey ? 'Substituir arquivo' : 'Anexar versão assinada'}</ListItemText>
+          </MenuItem>
+        )}
+        {menuDoc && canEdit && <Divider />}
+        {menuDoc &&
+          canEdit &&
+          DOCUMENT_STATUSES.filter((s) => s.value !== menuDoc.status).map((s) => (
+            <MenuItem
+              key={s.value}
+              onClick={menuAction((d) => statusMutation.mutate({ id: d.id, status: s.value }))}
+            >
+              <ListItemIcon>
+                <FiberManualRecordIcon sx={{ fontSize: 12, color: theme.palette[s.tone].main }} />
+              </ListItemIcon>
+              <ListItemText>Marcar como {s.label.toLowerCase()}</ListItemText>
+            </MenuItem>
+          ))}
+        {menuDoc && canEdit && <Divider />}
+        {menuDoc && canEdit && (
+          <MenuItem
+            onClick={menuAction((d) => {
+              setEditing(d);
+              setFormOpen(true);
+            })}
+          >
+            <ListItemIcon><EditOutlinedIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Editar</ListItemText>
+          </MenuItem>
+        )}
+        {menuDoc && canDelete && (
+          <MenuItem onClick={menuAction((d) => void handleDelete(d))} sx={{ color: 'error.main' }}>
+            <ListItemIcon><DeleteOutlineIcon fontSize="small" color="error" /></ListItemIcon>
+            <ListItemText>Excluir</ListItemText>
+          </MenuItem>
+        )}
+      </Menu>
+
+      <input
+        ref={attachInputRef}
+        type="file"
+        hidden
+        accept={UPLOAD_ACCEPT}
+        onChange={(e) => {
+          handleAttachSelected(e.target.files?.[0]);
+          e.target.value = '';
+        }}
       />
-    </Box>
+
+      <DocumentFormDialog
+        open={formOpen}
+        onClose={() => {
+          setFormOpen(false);
+          setEditing(null);
+        }}
+        editing={editing}
+        onSaved={handleSaved}
+      />
+      <DocumentViewerDialog
+        doc={viewing}
+        onClose={() => setViewing(null)}
+        onAttach={canEdit ? startAttach : undefined}
+      />
+      <DocumentTemplatesDialog
+        open={templatesOpen}
+        onClose={() => setTemplatesOpen(false)}
+        canEdit={canEdit}
+        canDelete={canDelete}
+      />
+    </Stack>
   );
 }

@@ -1,36 +1,30 @@
-import { useEffect, type ReactNode } from 'react';
-import { useForm, Controller, type Control } from 'react-hook-form';
+import { useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import {
   Alert,
-  alpha,
   Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   Divider,
-  Grid,
   InputAdornment,
-  Paper,
+  MenuItem,
   Stack,
   TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import HandymanOutlinedIcon from '@mui/icons-material/HandymanOutlined';
-import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
-import ToggleOnOutlinedIcon from '@mui/icons-material/ToggleOnOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { equipmentApi, EquipmentPayload } from '../../api/equipment';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { LabeledField } from '../LabeledField';
 import { dateInputValueFromApi, dateOnlyToApiIso } from '../../utils/dateOnly';
 import type { Equipment } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
@@ -73,50 +67,18 @@ const empty: FormValues = {
   active: true,
 };
 
-const DIALOG_MAX_WIDTH = 1100;
-const DIALOG_HEIGHT_DESKTOP = 760;
+const DIALOG_MAX_WIDTH = 640;
 
-const FORM_CARD_SX = {
-  p: { xs: 1.5, sm: 1.75 },
-  borderRadius: 2,
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-  height: '100%',
+const TWO_COLUMNS_SX = {
+  display: 'grid',
+  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+  gap: 1.75,
 } as const;
 
-const SECTION_HINT_SX = {
-  display: 'block',
-  mt: -0.5,
-  mb: 0.5,
-} as const;
-
-function SectionIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
+function SectionLabel({ children }: { children: string }) {
   return (
     <Typography
       sx={{
-        display: 'block',
-        mb: 1.75,
         fontSize: fontSizes.xs,
         fontWeight: 800,
         letterSpacing: '0.06em',
@@ -124,51 +86,22 @@ function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
         color: 'text.disabled',
       }}
     >
-      {title}
+      {children}
     </Typography>
   );
 }
 
-function EquipmentActiveToggle({
-  control,
-  fullWidth = false,
-}: {
-  control: Control<FormValues>;
-  fullWidth?: boolean;
-}) {
+function Hint({ children }: { children: string }) {
   return (
-    <Controller
-      name="active"
-      control={control}
-      render={({ field }) => (
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          color="primary"
-          fullWidth={fullWidth}
-          value={field.value ? 'active' : 'inactive'}
-          onChange={(_, val) => {
-            if (val === 'active') field.onChange(true);
-            if (val === 'inactive') field.onChange(false);
-          }}
-          sx={{ flexShrink: 0 }}
-        >
-          <ToggleButton value="active" sx={{ px: fullWidth ? 2 : 1.75 }}>
-            Ativo
-          </ToggleButton>
-          <ToggleButton value="inactive" sx={{ px: fullWidth ? 2 : 1.75 }}>
-            Inativo
-          </ToggleButton>
-        </ToggleButtonGroup>
-      )}
-    />
+    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -0.75 }}>
+      {children}
+    </Typography>
   );
 }
 
 export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
   const toast = useAppToast();
   const { control, handleSubmit, reset, watch } = useForm<FormValues>({ defaultValues: empty });
@@ -250,25 +183,14 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
           width: '100%',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
-            : {
-                maxWidth: DIALOG_MAX_WIDTH,
-                height: DIALOG_HEIGHT_DESKTOP,
-                maxHeight: '94dvh',
-                overflow: 'hidden',
-              }),
+            : { maxWidth: DIALOG_MAX_WIDTH, maxHeight: '94dvh' }),
         },
       }}
     >
       <Box
         component="form"
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          minHeight: 0,
-          ...(isMobile ? { height: '100%' } : {}),
-        }}
+        sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
       >
         <DialogHeader
           onClose={onClose}
@@ -289,254 +211,236 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
         />
 
         <DialogContent
-          dividers
           sx={{
             px: { xs: 2, sm: 3 },
-            py: { xs: 2, sm: 2.5 },
+            pb: { xs: 2, sm: 2.5 },
             flex: 1,
             minHeight: 0,
             overflow: 'auto',
-            bgcolor: (t) => t.palette.background.default,
+            bgcolor: 'background.paper',
+            '&.MuiDialogContent-root': { pt: { xs: 2.75, sm: 3 } },
           }}
         >
-          <Grid container spacing={2.5} alignItems="stretch">
-            <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle
-                  icon={<HandymanOutlinedIcon fontSize="small" />}
-                  title="Identificação"
-                />
-                <Grid container spacing={2} alignItems="flex-start">
-                  <Grid item xs={12}>
-                  <Controller
-                    name="name"
-                    control={control}
-                    rules={{ required: 'Nome é obrigatório' }}
-                    render={({ field, fieldState }) => (
-                      <TextField
-                        {...field}
-                        label="Nome"
-                        fullWidth
-                        required
-                        autoFocus={!equipment}
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                      />
-                    )}
+          <Stack spacing={2.25}>
+            <Controller
+              name="name"
+              control={control}
+              rules={{ required: 'Nome é obrigatório' }}
+              render={({ field, fieldState }) => (
+                <LabeledField label="Nome do equipamento" required>
+                  <TextField
+                    {...field}
+                    fullWidth
+                    autoFocus={!equipment}
+                    placeholder="Ex.: Laser CO2 Fracionado"
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
                   />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="brand"
-                    control={control}
-                    render={({ field }) => <TextField {...field} label="Marca" fullWidth />}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="model"
-                    control={control}
-                    render={({ field }) => <TextField {...field} label="Modelo" fullWidth />}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Controller
-                    name="serialNumber"
-                    control={control}
-                    render={({ field }) => <TextField {...field} label="Nº de série" fullWidth />}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Controller
-                    name="notes"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField {...field} label="Observações" fullWidth multiline minRows={3} />
-                    )}
-                  />
-                </Grid>
-                </Grid>
+                </LabeledField>
+              )}
+            />
 
-                <Divider sx={{ my: 2 }} />
-                <SectionTitle icon={<ToggleOnOutlinedIcon fontSize="small" />} title="Status" />
-                <Stack
-                  direction={{ xs: 'column', sm: isCompact ? 'column' : 'row' }}
-                  spacing={2}
-                  alignItems={{ xs: 'stretch', sm: isCompact ? 'stretch' : 'center' }}
-                  justifyContent="space-between"
-                >
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography variant="body2" fontWeight={500}>
-                      {isActive ? 'Equipamento disponível para uso' : 'Equipamento indisponível'}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ display: 'block', mt: 0.25 }}
+            <Box sx={TWO_COLUMNS_SX}>
+              <Controller
+                name="brand"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Marca">
+                    <TextField {...field} fullWidth placeholder="Ex.: Lumenis" />
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="model"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Modelo">
+                    <TextField {...field} fullWidth placeholder="Ex.: UltraPulse" />
+                  </LabeledField>
+                )}
+              />
+            </Box>
+
+            <Box sx={TWO_COLUMNS_SX}>
+              <Controller
+                name="serialNumber"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Nº de série">
+                    <TextField {...field} fullWidth placeholder="Ex.: EQ-0042" />
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="active"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Status">
+                    <TextField
+                      select
+                      fullWidth
+                      value={field.value ? 'active' : 'inactive'}
+                      onChange={(e) => field.onChange(e.target.value === 'active')}
                     >
-                      Inativos permanecem no cadastro, mas ficam ocultos nas listagens e seleções do
-                      dia a dia.
-                    </Typography>
-                  </Box>
-                  <EquipmentActiveToggle control={control} fullWidth={isCompact} />
-                </Stack>
-              </Paper>
-            </Grid>
+                      <MenuItem value="active">Operacional</MenuItem>
+                      <MenuItem value="inactive">Inativo</MenuItem>
+                    </TextField>
+                  </LabeledField>
+                )}
+              />
+            </Box>
+            {!isActive && (
+              <Hint>
+                Inativos permanecem no cadastro, mas ficam ocultos nas listagens e seleções do dia a
+                dia.
+              </Hint>
+            )}
 
-            <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<PaymentsOutlinedIcon fontSize="small" />} title="Aquisição" />
-                <Grid container spacing={2} alignItems="flex-start">
-                <Grid item xs={12}>
-                  <Controller
-                    name="purchaseDate"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        type="date"
-                        label="Data de aquisição"
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="purchaseValue"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        type="number"
-                        label="Valor da máquina"
-                        fullWidth
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                        }}
-                        inputProps={{ step: '0.01', min: 0 }}
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="maintenanceValue"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        type="number"
-                        label="Valor da manutenção"
-                        fullWidth
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                        }}
-                        inputProps={{ step: '0.01', min: 0 }}
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="caption" color="text.secondary" sx={SECTION_HINT_SX}>
-                    O valor da manutenção é usado para gerar despesa automaticamente no financeiro.
-                  </Typography>
-                </Grid>
-                </Grid>
+            <Divider />
+            <SectionLabel>Aquisição</SectionLabel>
+            <Box sx={TWO_COLUMNS_SX}>
+              <Controller
+                name="purchaseDate"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Data de aquisição">
+                    <TextField {...field} type="date" fullWidth />
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="purchaseValue"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Valor da máquina">
+                    <TextField
+                      {...field}
+                      type="number"
+                      fullWidth
+                      placeholder="0,00"
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                      }}
+                      inputProps={{ step: '0.01', min: 0 }}
+                    />
+                  </LabeledField>
+                )}
+              />
+            </Box>
 
-                <Divider sx={{ my: 2 }} />
-                <SectionTitle icon={<BuildOutlinedIcon fontSize="small" />} title="Manutenção" />
-                <Grid container spacing={2} alignItems="flex-start">
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="lastMaintenanceAt"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        type="date"
-                        label="Última manutenção"
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                      />
-                    )}
+            <Divider />
+            <SectionLabel>Manutenção</SectionLabel>
+            <Box sx={TWO_COLUMNS_SX}>
+              <Controller
+                name="lastMaintenanceAt"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Última manutenção">
+                    <TextField {...field} type="date" fullWidth />
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="scheduledMaintenanceAt"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Próxima manutenção (agendada)">
+                    <TextField {...field} type="date" fullWidth />
+                  </LabeledField>
+                )}
+              />
+            </Box>
+            <Hint>Ao agendar a próxima manutenção, uma despesa será criada automaticamente.</Hint>
+
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+                gap: 1.75,
+              }}
+            >
+              <Controller
+                name="maintenanceIntervalMonths"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Periodicidade">
+                    <TextField
+                      {...field}
+                      type="number"
+                      fullWidth
+                      InputProps={{
+                        endAdornment: <InputAdornment position="end">meses</InputAdornment>,
+                      }}
+                      inputProps={{ min: 1 }}
+                    />
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="maintenanceNotifyDaysBefore"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Notificar antes">
+                    <TextField
+                      {...field}
+                      type="number"
+                      fullWidth
+                      InputProps={{
+                        endAdornment: <InputAdornment position="end">dias</InputAdornment>,
+                      }}
+                      inputProps={{ min: 0 }}
+                    />
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="maintenanceValue"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Valor da manutenção">
+                    <TextField
+                      {...field}
+                      type="number"
+                      fullWidth
+                      placeholder="0,00"
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                      }}
+                      inputProps={{ step: '0.01', min: 0 }}
+                    />
+                  </LabeledField>
+                )}
+              />
+            </Box>
+            <Hint>
+              Com periodicidade definida, a próxima manutenção é calculada automaticamente. O valor
+              da manutenção é usado para gerar despesa no financeiro.
+            </Hint>
+
+            <Divider />
+            <Controller
+              name="notes"
+              control={control}
+              render={({ field }) => (
+                <LabeledField label="Observações">
+                  <TextField
+                    {...field}
+                    fullWidth
+                    multiline
+                    minRows={3}
+                    placeholder="Fornecedor de assistência, contrato, notas de uso..."
                   />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="scheduledMaintenanceAt"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        type="date"
-                        label="Manutenção agendada para"
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="caption" color="text.secondary" sx={SECTION_HINT_SX}>
-                    Ao agendar a próxima manutenção, uma despesa será criada automaticamente.
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="maintenanceIntervalMonths"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        type="number"
-                        label="Intervalo"
-                        fullWidth
-                        InputProps={{
-                          endAdornment: <InputAdornment position="end">meses</InputAdornment>,
-                        }}
-                        inputProps={{ min: 1 }}
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="maintenanceNotifyDaysBefore"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        type="number"
-                        label="Notificar antes"
-                        fullWidth
-                        InputProps={{
-                          endAdornment: <InputAdornment position="end">dias</InputAdornment>,
-                        }}
-                        inputProps={{ min: 0 }}
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="caption" color="text.secondary" sx={SECTION_HINT_SX}>
-                    Com intervalo definido, a próxima manutenção é calculada automaticamente.
-                  </Typography>
-                </Grid>
-                </Grid>
-              </Paper>
-            </Grid>
+                </LabeledField>
+              )}
+            />
 
             {mutation.isError && (
-              <Grid item xs={12}>
-                <Alert severity="error" variant="outlined">
-                  {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
-                    ?.message ?? 'Erro ao salvar equipamento'}
-                </Alert>
-              </Grid>
+              <Alert severity="error" variant="outlined">
+                {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
+                  ?.message ?? 'Erro ao salvar equipamento'}
+              </Alert>
             )}
-          </Grid>
+          </Stack>
         </DialogContent>
 
         <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
