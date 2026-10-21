@@ -1,140 +1,26 @@
-import {
-  Avatar,
-  Box,
-  Button,
-  CircularProgress,
-  Drawer,
-  IconButton,
-  Paper,
-  Stack,
-  Typography,
-  alpha,
-} from '@mui/material';
+import { Box, Button, CircularProgress, Drawer, IconButton, Stack, alpha } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
-import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
-import CakeOutlinedIcon from '@mui/icons-material/CakeOutlined';
-import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
-import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
-import WcOutlinedIcon from '@mui/icons-material/WcOutlined';
 import AddIcon from '@mui/icons-material/Add';
-import dayjs from 'dayjs';
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { PatientPhotosGallery } from './PatientPhotosGallery';
-import { EmptyBlock } from './EmptyBlock';
 import { PatientAnamnesisSection } from './PatientAnamnesisSection';
+import { PatientDrawerAppointmentsTab } from './PatientDrawerAppointmentsTab';
+import { PatientDrawerHeader, type PatientDrawerTab } from './PatientDrawerHeader';
+import { PatientDrawerSummaryTab } from './PatientDrawerSummaryTab';
 import { PatientWhatsAppButton } from './PatientWhatsAppButton';
-import { ReliabilityBadge } from './ReliabilityBadge';
-import { appointmentKindLabel, appointmentStatusAccent, patientAgeLabel } from './patientChart';
 import { usePatientChart } from './usePatientChart';
 import { usePermissions } from '../../contexts/usePermissions';
 import { useAppointmentDialog } from '../../contexts/AppointmentDialogContext';
-import { formatDateOnlyFromApi } from '../../utils/dateOnly';
-import { formatPatientAddressDisplay } from '../../utils/patientAddress';
-import { patientSexLabel } from '../../utils/patientSex';
-import { patientReferralSourceLabel } from '../../utils/patientReferralSource';
-import { maskPhone } from '../../utils/masks';
-import type { Appointment } from '../../types';
-import { patientInitials } from '../../utils/patientPhoto';
-import { fontSizes } from '../../theme/fontSizes';
-import { brl } from '../../utils/money';
-
-
-type ChartTab = 'notes' | 'general' | 'appointments' | 'packages' | 'anamnesis' | 'fotos';
 
 interface PatientDetailDrawerProps {
   patientId: string | null;
   onClose: () => void;
-  defaultTab?: ChartTab;
+  defaultTab?: PatientDrawerTab;
   highlightAppointmentId?: string | null;
   onEditAnamnesis?: (patientId: string) => void;
-}
-
-function InfoLine({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
-  if (value == null || value === '' || value === '—') return null;
-  return (
-    <Stack direction="row" spacing={1.25} alignItems="flex-start">
-      <Box
-        sx={{
-          width: 32,
-          height: 32,
-          borderRadius: '9px',
-          bgcolor: 'grey.100',
-          color: 'text.secondary',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >
-        {icon}
-      </Box>
-      <Box sx={{ minWidth: 0, lineHeight: 1.3 }}>
-        <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', fontWeight: 600 }}>
-          {label}
-        </Typography>
-        <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-          {value}
-        </Typography>
-      </Box>
-    </Stack>
-  );
-}
-
-function AppointmentRowCard({ appt }: { appt: Appointment }) {
-  const accent = appointmentStatusAccent[appt.status] ?? 'primary.main';
-  const obs = appt.clinicalNotes?.trim() || appt.notes?.trim();
-
-  return (
-    <Paper
-      variant="outlined"
-      sx={{ p: '16px 18px', borderRadius: '14px', bgcolor: 'grey.50', borderColor: 'divider' }}
-    >
-      <Stack direction="row" spacing={1.5} alignItems="stretch">
-        <Box sx={{ width: 3, borderRadius: '3px', bgcolor: accent, flexShrink: 0, alignSelf: 'stretch' }} />
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontSize: fontSizes.md, fontWeight: 800 }} noWrap>
-                {appt.procedure?.name ?? appointmentKindLabel[appt.kind] ?? 'Atendimento'}
-              </Typography>
-              <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
-                {dayjs(appt.startAt).format('DD/MM/YYYY [às] HH:mm')}
-                {appt.professional?.name ? ` · ${appt.professional.name}` : ''}
-              </Typography>
-            </Box>
-            {appt.procedure?.price != null && (
-              <Typography sx={{ fontSize: fontSizes.md, fontWeight: 800, flexShrink: 0 }}>
-                {brl.format(Number(appt.procedure.price))}
-              </Typography>
-            )}
-          </Stack>
-          {obs && (
-            <Box
-              sx={{
-                mt: 1.25,
-                pt: 1.25,
-                borderTop: 1,
-                borderColor: 'divider',
-                fontSize: fontSizes.xs,
-                color: 'text.secondary',
-                lineHeight: 1.5,
-              }}
-            >
-              <Box component="b" sx={{ color: 'text.disabled', fontSize: fontSizes['2xs'], letterSpacing: '0.3px' }}>
-                OBSERVAÇÃO:{' '}
-              </Box>
-              {obs}
-            </Box>
-          )}
-        </Box>
-      </Stack>
-    </Paper>
-  );
 }
 
 export function PatientDetailDrawer({
@@ -143,16 +29,13 @@ export function PatientDetailDrawer({
   defaultTab = 'general',
   onEditAnamnesis,
 }: PatientDetailDrawerProps) {
-  const [tab, setTab] = useState<ChartTab>(defaultTab);
+  const [tab, setTab] = useState<PatientDrawerTab>(defaultTab);
   const navigate = useNavigate();
   const { has } = usePermissions();
   const canEdit = has('patients:edit');
   const { openAppointmentDialog } = useAppointmentDialog();
 
   const { data, isLoading, reliability } = usePatientChart(patientId);
-
-  const ageLabel = data ? patientAgeLabel(data.birthDate) : null;
-  const addressLine = data ? formatPatientAddressDisplay(data) : '';
 
   useEffect(() => {
     if (patientId) setTab(defaultTab);
@@ -210,109 +93,7 @@ export function PatientDetailDrawer({
         )}
 
         {data && (
-          <>
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ pr: 6 }}>
-              <Avatar
-                src={data.photoUrl ?? undefined}
-                alt={data.name}
-                variant="rounded"
-                sx={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: '18px',
-                  fontSize: fontSizes['4xl'],
-                  fontWeight: 800,
-                  bgcolor: 'primary.main',
-                  color: '#fff',
-                  boxShadow: '0 8px 20px -6px rgba(16,40,37,.35)',
-                  flexShrink: 0,
-                }}
-              >
-                {patientInitials(data.name)}
-              </Avatar>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography
-                  sx={{
-                    fontSize: fontSizes['2xs'],
-                    fontWeight: 700,
-                    color: 'primary.main',
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Ficha do paciente
-                </Typography>
-                <Typography sx={{ fontSize: fontSizes['3xl'], fontWeight: 800, letterSpacing: '-0.02em' }} noWrap>
-                  {data.name}
-                </Typography>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
-                  {data.phone && (
-                    <Typography variant="body2" color="text.secondary" noWrap>
-                      {maskPhone(data.phone) || data.phone}
-                    </Typography>
-                  )}
-                  {reliability != null && (
-                    <ReliabilityBadge value={reliability.reliabilityPercent} variant="drawer" />
-                  )}
-                </Stack>
-              </Box>
-            </Stack>
-
-            {/* Abas em pílulas segmentadas */}
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 0.75,
-                mt: 2.25,
-                p: 0.5,
-                borderRadius: '12px',
-                bgcolor: 'grey.100',
-              }}
-            >
-              {(
-                [
-                  { id: 'general', label: 'Resumo' },
-                  { id: 'anamnesis', label: 'Anamnese' },
-                  { id: 'appointments', label: 'Atendimentos' },
-                  { id: 'fotos', label: 'Fotos' },
-                ] as { id: ChartTab; label: string }[]
-              ).map((t) => {
-                const active = tab === t.id;
-                return (
-                  <Box
-                    key={t.id}
-                    component="button"
-                    type="button"
-                    onClick={() => setTab(t.id)}
-                    sx={{
-                      flex: 1,
-                      minWidth: 0,
-                      height: 38,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: 0,
-                      cursor: 'pointer',
-                      px: 1,
-                      borderRadius: '9px',
-                      fontFamily: 'inherit',
-                      fontSize: fontSizes.xs,
-                      fontWeight: 700,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      color: active ? 'primary.main' : 'text.secondary',
-                      bgcolor: active ? 'background.paper' : 'transparent',
-                      boxShadow: active ? '0 1px 3px rgba(16,40,37,0.12)' : 'none',
-                      transition: 'all 0.12s',
-                    }}
-                  >
-                    {t.label}
-                  </Box>
-                );
-              })}
-            </Box>
-          </>
+          <PatientDrawerHeader patient={data} reliability={reliability} tab={tab} onTabChange={setTab} />
         )}
       </Box>
 
@@ -331,107 +112,7 @@ export function PatientDetailDrawer({
           </Box>
         )}
 
-        {data && tab === 'general' && (
-          <Stack spacing={2}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
-              {[
-                { value: String(data.visits ?? 0), label: 'visitas', tone: 'text.primary' },
-                { value: brl.format(data.totalSpent ?? 0), label: 'total gasto', tone: 'primary.main' },
-                {
-                  value: data.lastVisit ? dayjs(data.lastVisit).format('DD MMM YYYY') : '—',
-                  label: 'última visita',
-                  tone: 'text.primary',
-                },
-              ].map((stat) => (
-                <Box
-                  key={stat.label}
-                  sx={{
-                    textAlign: 'center',
-                    p: 1.75,
-                    borderRadius: '14px',
-                    border: 1,
-                    borderColor: 'divider',
-                    bgcolor: 'grey.50',
-                  }}
-                >
-                  <Typography sx={{ fontSize: stat.label === 'última visita' ? '0.9rem' : '1.25rem', fontWeight: 800, color: stat.tone }}>
-                    {stat.value}
-                  </Typography>
-                  <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', fontWeight: 600, mt: 0.25 }}>
-                    {stat.label}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-
-            <Stack spacing={1.5}>
-              <InfoLine
-                icon={<BadgeOutlinedIcon sx={{ fontSize: 17 }} />}
-                label="CPF"
-                value={data.document || null}
-              />
-              <InfoLine
-                icon={<PhoneOutlinedIcon sx={{ fontSize: 17 }} />}
-                label="Telefone"
-                value={data.phone ? maskPhone(data.phone) || data.phone : null}
-              />
-              <InfoLine
-                icon={<EmailOutlinedIcon sx={{ fontSize: 17 }} />}
-                label="E-mail"
-                value={data.email || null}
-              />
-              <InfoLine
-                icon={<CakeOutlinedIcon sx={{ fontSize: 17 }} />}
-                label="Nascimento"
-                value={
-                  data.birthDate
-                    ? `${formatDateOnlyFromApi(data.birthDate)}${ageLabel ? ` (${ageLabel})` : ''}`
-                    : null
-                }
-              />
-              <InfoLine
-                icon={<WcOutlinedIcon sx={{ fontSize: 17 }} />}
-                label="Sexo"
-                value={data.sex ? patientSexLabel(data.sex) : null}
-              />
-              <InfoLine
-                icon={<PersonOutlineIcon sx={{ fontSize: 17 }} />}
-                label="Como conheceu"
-                value={
-                  data.referralSource
-                    ? patientReferralSourceLabel(data.referralSource, data.referralSourceOther)
-                    : null
-                }
-              />
-              <InfoLine
-                icon={<LocationOnOutlinedIcon sx={{ fontSize: 17 }} />}
-                label="Endereço"
-                value={addressLine || null}
-              />
-            </Stack>
-
-            {data.notes?.trim() && (
-              <Box
-                sx={{
-                  p: 1.75,
-                  borderRadius: '14px',
-                  border: 1,
-                  borderColor: 'divider',
-                  bgcolor: 'grey.50',
-                }}
-              >
-                <Typography
-                  sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', mb: 0.75 }}
-                >
-                  Observações
-                </Typography>
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                  {data.notes.trim()}
-                </Typography>
-              </Box>
-            )}
-          </Stack>
-        )}
+        {data && tab === 'general' && <PatientDrawerSummaryTab patient={data} />}
 
         {data && tab === 'anamnesis' && (
           <PatientAnamnesisSection
@@ -441,15 +122,7 @@ export function PatientDetailDrawer({
           />
         )}
 
-        {data && tab === 'appointments' && (
-          <Stack spacing={1.5}>
-            {data.appointments && data.appointments.length > 0 ? (
-              data.appointments.map((appt) => <AppointmentRowCard key={appt.id} appt={appt} />)
-            ) : (
-              <EmptyBlock message="Nenhum agendamento registrado." />
-            )}
-          </Stack>
-        )}
+        {data && tab === 'appointments' && <PatientDrawerAppointmentsTab appointments={data.appointments} />}
 
         {data && tab === 'fotos' && (
           <PatientPhotosGallery
