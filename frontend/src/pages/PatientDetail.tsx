@@ -47,6 +47,7 @@ import { AnamnesisView, hasAnamnesisData } from '../components/patients/Anamnesi
 import { ANAMNESIS_SECTIONS } from '../components/patients/anamnesisFields';
 import { AnamnesisFormDialog } from '../components/patients/AnamnesisFormDialog';
 import { PatientPhotosGallery } from '../components/patients/PatientPhotosGallery';
+import { PatientSkinRoutinesCard } from '../components/skincare/PatientSkinRoutinesCard';
 import { useAppointmentDialog } from '../contexts/AppointmentDialogContext';
 import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
@@ -61,8 +62,8 @@ import { maskCEP, maskPhone, onlyDigits } from '../utils/masks';
 import { patientInitials } from '../utils/patientPhoto';
 import type { Appointment, AppointmentKind, FinancialEntry, DocumentFile } from '../types';
 import { fontSizes } from '../theme/fontSizes';
+import { brl } from '../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 function scoreTone(v: number) {
   if (v >= 90) return { main: '#15998B', label: 'Excelente' };
@@ -1133,6 +1134,11 @@ export function PatientDetail() {
             {tab === 'packages' && <PackagesTab patientPackages={patientPackages} />}
             {tab === 'anamnesis' && (
               <Stack spacing={2}>
+                {has('routines:view') && (
+                  <PatientSkinRoutinesCard
+                    patient={{ id: data.id, name: data.name, phone: data.phone, email: data.email }}
+                  />
+                )}
                 {canEdit && (
                   <Stack direction="row" justifyContent="flex-end">
                     <Button

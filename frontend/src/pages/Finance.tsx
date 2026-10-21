@@ -1,110 +1,343 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   Box,
   Button,
   Card,
-  CardContent,
   Checkbox,
-  Chip,
-  Grid,
+  IconButton,
+  InputBase,
   MenuItem,
+  Select,
   Skeleton,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
-import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
+import { alpha, useTheme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-import ReceiptIcon from '@mui/icons-material/Receipt';
-import ShowChartOutlinedIcon from '@mui/icons-material/ShowChartOutlined';
+import SearchIcon from '@mui/icons-material/Search';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { formatDateOnlyFromApi } from '../utils/dateOnly';
 
-import { PageHeader } from '../components/PageHeader';
-import { ListFiltersBar } from '../components/ListFiltersBar';
-import { AppDataGrid } from '../components/AppDataGrid';
 import { matchFields } from '../utils/listFilters';
 import { financeApi } from '../api/finance';
 import { recurringExpensesApi } from '../api/recurring-expenses';
 import { appointmentsBackfillFinance } from '../api/appointments';
 import { FinanceFormDialog } from '../components/finance/FinanceFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import type { ExpenseType, FinancialEntry } from '../types';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
-import { usePermissions } from '../contexts/usePermissions';
 import { downloadCsv } from '../utils/csv';
 import { fontSizes } from '../theme/fontSizes';
+import { brl } from '../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const PAGE_SIZE = 10;
 
 const EXPENSE_TYPE_LABEL: Record<ExpenseType, string> = {
   FIXED: 'Fixa',
   VARIABLE: 'Variável',
 };
 
-function FinanceTypeCell({ row }: { row: FinancialEntry }) {
-  const isIncome = row.type === 'INCOME';
-  const palette = isIncome ? 'success' : 'error';
-  const Icon = isIncome ? TrendingUpIcon : TrendingDownIcon;
-  const label = isIncome ? 'Receita' : 'Despesa';
+const TOOLBAR_SELECT_SX = {
+  height: 38,
+  minWidth: 150,
+  borderRadius: '11px',
+  bgcolor: 'grey.50',
+  fontSize: fontSizes.sm,
+  fontWeight: 600,
+  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+} as const;
+
+const ROW_ICON_SX = {
+  width: 30,
+  height: 30,
+  borderRadius: '9px',
+  border: 1,
+  borderColor: 'divider',
+} as const;
+
+/** Números das páginas com reticências quando há muitas (ex.: 1 … 4 5 6 … 12). */
+function pageWindow(current: number, count: number): (number | null)[] {
+  if (count <= 7) return Array.from({ length: count }, (_, i) => i);
+  const pages = new Set([0, count - 1, current - 1, current, current + 1]);
+  const sorted = [...pages].filter((p) => p >= 0 && p < count).sort((a, b) => a - b);
+  return sorted.flatMap((p, i) => (i > 0 && p - sorted[i - 1] > 1 ? [null, p] : [p]));
+}
+
+function Pill({ tone, children }: { tone: string; children: ReactNode }) {
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: 'inline-block',
+        fontSize: fontSizes.xs,
+        fontWeight: 700,
+        color: tone,
+        bgcolor: alpha(tone, 0.13),
+        px: 1,
+        py: '2px',
+        borderRadius: '7px',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
+
+interface KpiCardProps {
+  label: string;
+  tone: string;
+  loading?: boolean;
+  value: ReactNode;
+  valueColor?: string;
+  footer?: ReactNode;
+  active?: boolean;
+  onClick?: () => void;
+}
+
+function KpiCard({ label, tone, loading, value, valueColor, footer, active, onClick }: KpiCardProps) {
+  return (
+    <Card
+      onClick={onClick}
+      sx={{
+        position: 'relative',
+        overflow: 'hidden',
+        p: 2.5,
+        borderRadius: '18px',
+        border: 1,
+        borderColor: active ? tone : 'divider',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'border-color .15s, box-shadow .15s',
+        ...(onClick && { '&:hover': { borderColor: alpha(tone, 0.6) } }),
+      }}
+    >
+      <Box sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, bgcolor: tone }} />
+      <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 600, color: 'text.secondary', mb: 1.5 }}>
+        {label}
+      </Typography>
+      {loading ? (
+        <Skeleton width={140} height={36} sx={{ mb: 1 }} />
+      ) : (
+        <Typography
+          sx={{
+            fontSize: fontSizes['6xl'],
+            fontWeight: 800,
+            letterSpacing: '-0.8px',
+            lineHeight: 1.15,
+            color: valueColor ?? 'text.primary',
+            mb: 1.25,
+          }}
+        >
+          {value}
+        </Typography>
+      )}
+      <Box sx={{ minHeight: 22 }}>{!loading && footer}</Box>
+    </Card>
+  );
+}
+
+interface TransactionRowProps {
+  entry: FinancialEntry;
+  onEdit: () => void;
+  onDelete: () => void;
+  onToggleInvoice: (issued: boolean) => void;
+}
+
+function TransactionRow({ entry, onEdit, onDelete, onToggleInvoice }: TransactionRowProps) {
+  const theme = useTheme();
+  const isIncome = entry.type === 'INCOME';
+  const tone = isIncome ? theme.palette.success.main : theme.palette.error.main;
+  const typeLabel = isIncome ? 'Receita' : 'Despesa';
 
   const details: string[] = [];
   if (!isIncome) {
-    if (row.expenseType) details.push(EXPENSE_TYPE_LABEL[row.expenseType]);
-    if (row.recurringExpenseId) details.push('Recorrente');
-  } else if (row.appointmentId) {
+    if (entry.expenseType) details.push(EXPENSE_TYPE_LABEL[entry.expenseType]);
+  } else if (entry.appointmentId) {
     details.push('Agendamento');
   }
 
+  const refDate = entry.paidAt ?? entry.dueDate;
+  const dateLabel = refDate
+    ? `${!entry.paidAt ? 'vence ' : ''}${formatDateOnlyFromApi(refDate)}`
+    : null;
+  const meta = [entry.category || typeLabel, ...details, dateLabel].filter(Boolean).join(' · ');
+
   const tooltip = [
-    label,
-    details.length > 0 ? details.join(' · ') : null,
-    row.appointment?.procedure?.name ? `Procedimento: ${row.appointment.procedure.name}` : null,
+    typeLabel,
+    [...details, entry.recurringExpenseId ? 'Recorrente' : null].filter(Boolean).join(' · ') || null,
+    entry.appointment?.procedure?.name ? `Procedimento: ${entry.appointment.procedure.name}` : null,
   ]
     .filter(Boolean)
     .join('\n');
 
+  const margin = isIncome ? entry.profitMargin : null;
+  const marginLow = margin != null && margin < 50;
+  const marginTone = marginLow ? theme.palette.error.main : theme.palette.success.main;
+  const net = isIncome && entry.netAmount != null ? Number(entry.netAmount) : null;
+  const fee = entry.feePercent ? `${Number(entry.feePercent)}%` : '';
+  const materialCost = isIncome ? entry.materialCost : null;
+
   return (
-    <Tooltip title={tooltip} placement="top" arrow>
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, py: 0.25 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 28,
-            height: 28,
-            borderRadius: 1.5,
-            flexShrink: 0,
-            bgcolor: (theme) => alpha(theme.palette[palette].main, 0.12),
-            color: `${palette}.main`,
-          }}
-        >
-          <Icon sx={{ fontSize: 16 }} />
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="body2" fontWeight={600} color={`${palette}.main`} noWrap>
-            {label}
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: { xs: 'wrap', md: 'nowrap' },
+        columnGap: 1.75,
+        rowGap: 1,
+        minHeight: 68,
+        px: { xs: 2, sm: 2.75 },
+        py: 1.5,
+        borderBottom: 1,
+        borderColor: 'grey.100',
+        transition: 'background .12s',
+        '&:hover': { bgcolor: 'grey.50' },
+      }}
+    >
+      <Box sx={{ flex: { xs: '1 1 100%', md: 1 }, minWidth: 0, lineHeight: 1.3 }}>
+        <Tooltip title={tooltip} placement="top-start" arrow>
+          <Typography noWrap sx={{ fontSize: fontSizes.md, fontWeight: 700, lineHeight: 1.35 }}>
+            {entry.description}
           </Typography>
-          {details.length > 0 && (
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {details.join(' · ')}
-            </Typography>
-          )}
-        </Box>
+        </Tooltip>
+        <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.disabled', lineHeight: 1.35 }}>
+          {meta}
+        </Typography>
+      </Box>
+
+      <Stack direction="row" spacing={0.75} sx={{ flexShrink: 0, width: { md: 190 } }}>
+        {entry.recurringExpenseId && <Pill tone={theme.palette.warning.main}>Recorrente</Pill>}
+        {entry.paymentMethod?.name && (
+          <Box
+            component="span"
+            sx={{
+              fontSize: fontSizes['2xs'],
+              fontWeight: 700,
+              px: 1.1,
+              py: '3px',
+              borderRadius: '7px',
+              color: 'text.secondary',
+              bgcolor: 'grey.100',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {entry.paymentMethod.name}
+          </Box>
+        )}
       </Stack>
-    </Tooltip>
+
+      <Box sx={{ width: { md: 64 }, flexShrink: 0, textAlign: { md: 'right' } }}>
+        {margin != null && (
+          <Tooltip
+            title={
+              marginLow
+                ? 'Margem abaixo de 50% — considere revisar o preço ou os custos. Calculada com a maior taxa de pagamento.'
+                : 'Margem de lucro (materiais + despesas fixas + maior taxa de pagamento)'
+            }
+          >
+            <Box component="span">
+              <Pill tone={marginTone}>{margin.toFixed(1)}%</Pill>
+            </Box>
+          </Tooltip>
+        )}
+      </Box>
+
+      <Box sx={{ width: { md: 62 }, flexShrink: 0 }}>
+        {isIncome && (
+          <Tooltip title={entry.invoiceIssued ? 'Nota emitida. Click para reabrir.' : 'Marcar nota como emitida'}>
+            <Stack
+              component="label"
+              direction="row"
+              alignItems="center"
+              sx={{ cursor: 'pointer', color: entry.invoiceIssued ? 'success.main' : 'text.disabled' }}
+            >
+              <Checkbox
+                size="small"
+                checked={!!entry.invoiceIssued}
+                onChange={(e) => onToggleInvoice(e.target.checked)}
+                sx={{ p: 0.5 }}
+              />
+              <Typography sx={{ fontSize: fontSizes['2xs'], fontWeight: 700, color: 'inherit' }}>NF</Typography>
+            </Stack>
+          </Tooltip>
+        )}
+      </Box>
+
+      <Box sx={{ width: { md: 190 }, flexShrink: 0, textAlign: 'right', ml: { xs: 'auto', md: 0 } }}>
+        <Typography sx={{ fontSize: fontSizes.md, fontWeight: 800, color: tone, whiteSpace: 'nowrap' }}>
+          {isIncome ? '+' : '−'} {brl.format(Number(entry.amount))}
+        </Typography>
+        {(net != null || materialCost != null) && (
+          <Stack direction="row" spacing={0.75} justifyContent="flex-end">
+            {net != null && (
+              <Tooltip title={fee ? `Taxa: ${fee}` : ''}>
+                <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', whiteSpace: 'nowrap' }}>
+                  líq. {brl.format(net)}
+                </Typography>
+              </Tooltip>
+            )}
+            {materialCost != null && (
+              <Tooltip title="Custo de materiais do procedimento">
+                <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.disabled', whiteSpace: 'nowrap' }}>
+                  mat. {brl.format(materialCost)}
+                </Typography>
+              </Tooltip>
+            )}
+          </Stack>
+        )}
+      </Box>
+
+      <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+        <Tooltip title="Editar">
+          <IconButton aria-label="Editar" onClick={onEdit} sx={{ ...ROW_ICON_SX, color: 'text.secondary' }}>
+            <EditIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Excluir">
+          <IconButton aria-label="Excluir" onClick={onDelete} sx={{ ...ROW_ICON_SX, color: 'error.main' }}>
+            <DeleteIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+    </Box>
+  );
+}
+
+function PeriodField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <Stack
+      component="label"
+      direction="row"
+      alignItems="center"
+      spacing={1}
+      sx={{
+        height: 38,
+        pl: 1.5,
+        pr: 1,
+        borderRadius: '11px',
+        border: 1,
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        flexShrink: 0,
+      }}
+    >
+      <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700, color: 'text.disabled' }}>{label}</Typography>
+      <InputBase
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        inputProps={{ 'aria-label': label }}
+        sx={{ fontSize: fontSizes.sm, fontWeight: 600, width: 128 }}
+      />
+    </Stack>
   );
 }
 
@@ -133,15 +366,15 @@ export function Finance() {
   const queryClient = useQueryClient();
   const { confirm, alert } = useAppDialog();
   const toast = useAppToast();
-  const { isAdmin } = usePermissions();
+  const theme = useTheme();
   const [from, setFrom] = useState(dayjs().startOf('month').format('YYYY-MM-DD'));
   const [to, setTo] = useState(dayjs().endOf('month').format('YYYY-MM-DD'));
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
   const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('ALL');
+  const [page, setPage] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialEntry | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const fromIso = useMemo(() => {
     const parsed = dayjs(from);
@@ -218,7 +451,7 @@ export function Finance() {
     return (profit / income) * 100;
   }, [summary?.totalIncome, profit]);
 
-  const deleteMutation = useMutation({
+const deleteMutation = useMutation({
     mutationFn: (id: string) => financeApi.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['finance'] });
@@ -242,208 +475,26 @@ export function Finance() {
     },
   });
 
-  const columns = useMemo<GridColDef<FinancialEntry>[]>(
-    () => [
-      {
-        field: 'paidAt',
-        headerName: 'Data',
-        flex: 0.55,
-        minWidth: 130,
-        renderCell: (params) => {
-          const date = params.row.paidAt ?? params.row.dueDate;
-          if (!date) return '—';
-          return (
-            <Stack spacing={0.25}>
-              <Typography variant="body2">{formatDateOnlyFromApi(date)}</Typography>
-              {!params.row.paidAt && params.row.dueDate && (
-                <Typography variant="caption" color="text.secondary">
-                  vencimento
-                </Typography>
-              )}
-            </Stack>
-          );
-        },
-      },
-      {
-        field: 'type',
-        headerName: 'Tipo',
-        flex: 0.65,
-        minWidth: 132,
-        renderCell: (params) => <FinanceTypeCell row={params.row} />,
-      },
-      { field: 'description', headerName: 'Descrição', flex: 1.3, minWidth: 200 },
-      {
-        field: 'category',
-        headerName: 'Categoria',
-        flex: 0.7,
-        minWidth: 120,
-        valueGetter: (params) => params.row.category ?? '—',
-      },
-      {
-        field: 'paymentMethod',
-        headerName: 'Forma',
-        flex: 0.6,
-        minWidth: 110,
-        valueGetter: (params) =>
-          params.row.paymentMethod?.name ?? '—',
-      },
-      {
-        field: 'amount',
-        headerName: 'Bruto',
-        flex: 0.55,
-        minWidth: 110,
-        align: 'right',
-        headerAlign: 'right',
-        renderCell: (params) => (
-          <Typography
-            variant="body2"
-            fontWeight={600}
-            color={params.row.type === 'INCOME' ? 'success.main' : 'error.main'}
-          >
-            {params.row.type === 'INCOME' ? '+' : '-'} {brl.format(Number(params.row.amount))}
-          </Typography>
-        ),
-      },
-      {
-        field: 'materialCost',
-        headerName: 'Custo Mat.',
-        flex: 0.55,
-        minWidth: 110,
-        align: 'right',
-        headerAlign: 'right',
-        renderCell: (params) => {
-          const cost = params.row.materialCost;
-          if (cost == null || params.row.type !== 'INCOME') return '—';
-          return (
-            <Tooltip title="Custo de materiais do procedimento">
-              <Typography variant="body2" fontWeight={500} color="text.secondary">
-                {brl.format(cost)}
-              </Typography>
-            </Tooltip>
-          );
-        },
-      },
-      {
-        field: 'profitMargin',
-        headerName: 'Margem',
-        flex: 0.5,
-        minWidth: 100,
-        align: 'right',
-        headerAlign: 'right',
-        renderCell: (params) => {
-          const margin = params.row.profitMargin;
-          if (margin == null || params.row.type !== 'INCOME') return '—';
-          const isLow = margin < 50;
-          return (
-            <Tooltip
-              title={
-                isLow
-                  ? 'Margem abaixo de 50% — considere revisar o preço ou os custos. Calculada com a maior taxa de pagamento.'
-                  : 'Margem de lucro (materiais + despesas fixas + maior taxa de pagamento)'
-              }
-            >
-              <Chip
-                size="small"
-                label={`${margin.toFixed(1)}%`}
-                color={isLow ? 'error' : 'success'}
-                variant="outlined"
-                sx={{ fontWeight: 600 }}
-              />
-            </Tooltip>
-          );
-        },
-      },
-      {
-        field: 'netAmount',
-        headerName: 'Líquido',
-        flex: 0.55,
-        minWidth: 110,
-        align: 'right',
-        headerAlign: 'right',
-        renderCell: (params) => {
-          if (params.row.type !== 'INCOME' || params.row.netAmount == null) return '—';
-          const fee = params.row.feePercent ? `${Number(params.row.feePercent)}%` : '';
-          return (
-            <Tooltip title={fee ? `Taxa: ${fee}` : ''}>
-              <Typography variant="body2" fontWeight={500} color="text.secondary">
-                {brl.format(Number(params.row.netAmount))}
-              </Typography>
-            </Tooltip>
-          );
-        },
-      },
-      {
-        field: 'invoiceIssued',
-        headerName: 'Nota',
-        flex: 0.5,
-        minWidth: 110,
-        renderCell: (params) => {
-          if (params.row.type !== 'INCOME') return <span>—</span>;
-          return (
-            <Tooltip
-              title={
-                params.row.invoiceIssued
-                  ? 'Nota emitida. Click para reabrir.'
-                  : 'Marcar nota como emitida'
-              }
-            >
-              <Checkbox
-                size="small"
-                checked={!!params.row.invoiceIssued}
-                onChange={(e) =>
-                  invoiceMutation.mutate({ id: params.row.id, issued: e.target.checked })
-                }
-              />
-            </Tooltip>
-          );
-        },
-      },
-      {
-        field: 'actions',
-        type: 'actions',
-        headerName: '',
-        width: 120,
-        getActions: (params) => {
-          const actions = [];
-          actions.push(
-          <GridActionsCellItem
-            key="edit"
-            icon={
-              <Tooltip title="Editar">
-                <EditIcon fontSize="small" />
-              </Tooltip>
-            }
-            label="Editar"
-            onClick={() => {
-              setEditing(params.row);
-              setFormOpen(true);
-            }}
-          />,
-          <GridActionsCellItem
-            key="delete"
-            icon={
-              <Tooltip title="Excluir">
-                <DeleteIcon fontSize="small" />
-              </Tooltip>
-            }
-            label="Excluir"
-            onClick={async () => {
-              const ok = await confirm({
-                title: 'Excluir lançamento',
-                message: 'Excluir este lançamento?',
-                confirmLabel: 'Excluir',
-                confirmColor: 'error',
-              });
-              if (ok) deleteMutation.mutate(params.row.id);
-            }}
-          />,
-          );
-          return actions;
-        },
-      },
-    ],
-    [confirm, deleteMutation, invoiceMutation],
-  );
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const current = Math.min(page, pageCount - 1);
+  const rows = filtered.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
+
+  const expenseCount = useMemo(() => entries.filter((e) => e.type === 'EXPENSE').length, [entries]);
+
+  const handleEdit = (entry: FinancialEntry) => {
+    setEditing(entry);
+    setFormOpen(true);
+  };
+
+  const handleDelete = async (entry: FinancialEntry) => {
+    const ok = await confirm({
+      title: 'Excluir lançamento',
+      message: 'Excluir este lançamento?',
+      confirmLabel: 'Excluir',
+      confirmColor: 'error',
+    });
+    if (ok) deleteMutation.mutate(entry.id);
+  };
 
   const exportPeriodCsv = async () => {
     if (entries.length === 0) {
@@ -491,23 +542,56 @@ export function Finance() {
 
   return (
     <Box>
-      <PageHeader
-        title="Financeiro"
-        subtitle="Receitas, despesas, fluxo de caixa e notas de serviço"
-        action={
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            {isAdmin && (
-              <Button
-                variant="outlined"
-                startIcon={<HistoryIcon />}
-                onClick={() => setHistoryOpen(true)}
-              >
-                Histórico
-              </Button>
+      <Stack spacing={2.25}>
+        {/* Resumo do período + ações */}
+        <Stack
+          direction={{ xs: 'column', lg: 'row' }}
+          alignItems={{ xs: 'stretch', lg: 'center' }}
+          justifyContent="space-between"
+          spacing={1.5}
+        >
+          <Typography sx={{ fontSize: fontSizes.md, color: 'text.secondary', fontWeight: 600 }}>
+            {isLoading ? (
+              <Skeleton width={260} />
+            ) : (
+              <>
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
+                  {entries.length}
+                </Box>{' '}
+                {entries.length === 1 ? 'lançamento no período' : 'lançamentos no período'}
+                {'  ·  '}
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
+                  {pendingInvoices}
+                </Box>{' '}
+                {pendingInvoices === 1 ? 'nota pendente' : 'notas pendentes'}
+              </>
             )}
-            <Button variant="outlined" startIcon={<FileDownloadIcon />} onClick={exportPeriodCsv}>
-              Exportar período
-            </Button>
+          </Typography>
+
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1.25}
+            flexWrap="wrap"
+            useFlexGap
+            justifyContent={{ lg: 'flex-end' }}
+          >
+            <PeriodField
+              label="De"
+              value={from}
+              onChange={(v) => {
+                setFrom(v);
+                setPage(0);
+              }}
+            />
+            <PeriodField
+              label="Até"
+              value={to}
+              onChange={(v) => {
+                setTo(v);
+                setPage(0);
+              }}
+            />
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -515,185 +599,281 @@ export function Finance() {
                 setEditing(null);
                 setFormOpen(true);
               }}
+              sx={{
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
+                height: 38,
+                px: 2.25,
+                borderRadius: '12px',
+                boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}`,
+              }}
             >
               Novo lançamento
             </Button>
           </Stack>
-        }
-      />
+        </Stack>
 
-      <Grid container spacing={{ xs: 1.5, sm: 3 }} sx={{ mb: 1 }} alignItems="stretch">
-        <Grid item xs={6} sm={6} md={3}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                  Receitas
-                </Typography>
-                <TrendingUpIcon sx={{ color: 'success.main' }} />
-              </Stack>
-              {summaryLoading ? (
-                <Skeleton variant="text" width={120} sx={{ fontSize: fontSizes['7xl'] }} />
-              ) : (
-                <Typography variant="h4" fontWeight={700} color="success.main">
-                  {brl.format(summary?.totalIncome ?? 0)}
-                </Typography>
-              )}
-              {!summaryLoading && summary?.totalFees != null && summary.totalFees > 0 && (
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                  Líquido: {brl.format(summary.totalNetIncome ?? 0)} · Taxas: {brl.format(summary.totalFees)}
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={6} md={3}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                  Despesas
-                </Typography>
-                <TrendingDownIcon sx={{ color: 'error.main' }} />
-              </Stack>
-              {summaryLoading ? (
-                <Skeleton variant="text" width={120} sx={{ fontSize: fontSizes['7xl'] }} />
-              ) : (
-                <Typography variant="h4" fontWeight={700} color="error.main">
-                  {brl.format(summary?.totalExpense ?? 0)}
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={6} md={3}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                  Lucro
-                </Typography>
-                <ShowChartOutlinedIcon sx={{ color: profit >= 0 ? 'success.main' : 'error.main' }} />
-              </Stack>
-              {summaryLoading ? (
-                <Skeleton variant="text" width={120} sx={{ fontSize: fontSizes['7xl'] }} />
-              ) : (
-                <>
-                  <Typography
-                    variant="h4"
-                    fontWeight={700}
-                    color={profit >= 0 ? 'success.main' : 'error.main'}
-                  >
-                    {brl.format(profit)}
+        {/* Indicadores */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+            gap: { xs: 1.5, md: 2.25 },
+          }}
+        >
+          <KpiCard
+            label="Receitas"
+            tone={theme.palette.success.main}
+            loading={summaryLoading}
+            value={brl.format(summary?.totalIncome ?? 0)}
+            footer={
+              summary?.totalFees != null && summary.totalFees > 0 ? (
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <Pill tone={theme.palette.success.main}>
+                    Líquido {brl.format(summary.totalNetIncome ?? 0)}
+                  </Pill>
+                  <Typography sx={{ fontSize: fontSizes.xs, color: 'text.disabled', fontWeight: 600 }}>
+                    Taxas {brl.format(summary.totalFees)}
                   </Typography>
-                  {profitMarginPct != null && (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                      Margem: {profitMarginPct.toFixed(1)}%
-                    </Typography>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={6} md={3}>
+                </Stack>
+              ) : null
+            }
+          />
+          <KpiCard
+            label="Despesas"
+            tone={theme.palette.error.main}
+            loading={summaryLoading}
+            value={brl.format(summary?.totalExpense ?? 0)}
+            footer={
+              <Pill tone={theme.palette.error.main}>
+                {expenseCount} {expenseCount === 1 ? 'lançamento' : 'lançamentos'}
+              </Pill>
+            }
+          />
+          <KpiCard
+            label="Lucro"
+            tone={profit >= 0 ? theme.palette.success.main : theme.palette.error.main}
+            loading={summaryLoading}
+            value={brl.format(profit)}
+            valueColor={profit < 0 ? 'error.main' : undefined}
+            footer={
+              profitMarginPct != null ? (
+                <Pill tone={profitMarginPct >= 0 ? theme.palette.success.main : theme.palette.error.main}>
+                  Margem {profitMarginPct.toFixed(1)}%
+                </Pill>
+              ) : null
+            }
+          />
           <Tooltip title="Click para filtrar notas pendentes" arrow>
-            <Box sx={{ height: '100%' }}>
-              <Card
-                sx={{ height: '100%', cursor: 'pointer' }}
-                onClick={() => setInvoiceFilter('PENDING')}
-              >
-                <CardContent>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                      Notas pendentes
-                    </Typography>
-                    <ReceiptIcon sx={{ color: 'warning.main' }} />
-                  </Stack>
-                  <Typography variant="h4" fontWeight={700} color="warning.main">
-                    {pendingInvoices}
-                  </Typography>
-                </CardContent>
-              </Card>
+            <Box>
+              <KpiCard
+                label="Notas pendentes"
+                tone={theme.palette.warning.main}
+                loading={isLoading}
+                value={pendingInvoices}
+                active={invoiceFilter === 'PENDING'}
+                onClick={() => {
+                  setInvoiceFilter('PENDING');
+                  setPage(0);
+                }}
+                footer={
+                  <Pill tone={theme.palette.warning.main}>
+                    {invoiceFilter === 'PENDING' ? 'Filtro aplicado' : 'Ver pendentes'}
+                  </Pill>
+                }
+              />
             </Box>
           </Tooltip>
-        </Grid>
-      </Grid>
+        </Box>
 
-      <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
-        <ListFiltersBar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Buscar por descrição, categoria ou forma de pagamento"
-          filteredCount={filtered.length}
-          totalCount={entries.length}
-          countLabel={filtered.length === 1 ? 'lançamento' : 'lançamentos'}
-        >
-          <TextField
-            size="small"
-            type="date"
-            label="De"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' }, minWidth: { sm: 150 } }}
-          />
-          <TextField
-            size="small"
-            type="date"
-            label="Até"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' }, minWidth: { sm: 150 } }}
-          />
-          <TextField
-            size="small"
-            select
-            label="Tipo"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}
-            sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' }, minWidth: { xs: 100, sm: 130 } }}
+        {/* Transações */}
+        <Card sx={{ borderRadius: '18px', border: 1, borderColor: 'divider', overflow: 'hidden' }}>
+          <Stack
+            direction={{ xs: 'column', lg: 'row' }}
+            alignItems={{ xs: 'stretch', lg: 'center' }}
+            justifyContent="space-between"
+            spacing={1.5}
+            sx={{ px: { xs: 2, sm: 2.75 }, py: 2.25, borderBottom: 1, borderColor: 'divider' }}
           >
-            <MenuItem value="ALL">Todos</MenuItem>
-            <MenuItem value="INCOME">Receitas</MenuItem>
-            <MenuItem value="EXPENSE">Despesas</MenuItem>
-          </TextField>
-          <TextField
-            size="small"
-            select
-            label="Nota"
-            value={invoiceFilter}
-            onChange={(e) => setInvoiceFilter(e.target.value as InvoiceFilter)}
-            sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' }, minWidth: { xs: 100, sm: 150 } }}
-          >
-            <MenuItem value="ALL">Todas</MenuItem>
-            <MenuItem value="PENDING">Pendentes</MenuItem>
-            <MenuItem value="ISSUED">Emitidas</MenuItem>
-          </TextField>
-        </ListFiltersBar>
+            <Typography component="h3" sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>
+              Transações
+            </Typography>
 
-        <AppDataGrid
-          height={480}
-          rows={filtered}
-          columns={columns}
-          loading={isLoading}
-          localeText={{
-            noRowsLabel:
-              entries.length === 0
-                ? 'Nenhum lançamento no período'
-                : 'Nenhum lançamento encontrado com os filtros',
-          }}
-        />
-      </Card>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1.25}
+              flexWrap="wrap"
+              useFlexGap
+              justifyContent={{ lg: 'flex-end' }}
+            >
+              <Stack
+                direction="row"
+                alignItems="center"
+                spacing={1.1}
+                sx={{
+                  height: 38,
+                  px: 1.6,
+                  borderRadius: '11px',
+                  border: 1,
+                  borderColor: 'divider',
+                  bgcolor: 'grey.50',
+                  width: { xs: '100%', sm: 260 },
+                }}
+              >
+                <SearchIcon sx={{ fontSize: 17, color: 'text.disabled' }} />
+                <InputBase
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(0);
+                  }}
+                  placeholder="Buscar lançamento..."
+                  inputProps={{ 'aria-label': 'Buscar por descrição, categoria ou forma de pagamento' }}
+                  sx={{ fontSize: fontSizes.sm, flex: 1, minWidth: 0 }}
+                />
+              </Stack>
+              <Select
+                size="small"
+                value={typeFilter}
+                onChange={(e) => {
+                  setTypeFilter(e.target.value as TypeFilter);
+                  setPage(0);
+                }}
+                inputProps={{ 'aria-label': 'Tipo' }}
+                sx={TOOLBAR_SELECT_SX}
+              >
+                <MenuItem value="ALL">Todos os tipos</MenuItem>
+                <MenuItem value="INCOME">Receitas</MenuItem>
+                <MenuItem value="EXPENSE">Despesas</MenuItem>
+              </Select>
+              <Select
+                size="small"
+                value={invoiceFilter}
+                onChange={(e) => {
+                  setInvoiceFilter(e.target.value as InvoiceFilter);
+                  setPage(0);
+                }}
+                inputProps={{ 'aria-label': 'Nota' }}
+                sx={TOOLBAR_SELECT_SX}
+              >
+                <MenuItem value="ALL">Todas as notas</MenuItem>
+                <MenuItem value="PENDING">Notas pendentes</MenuItem>
+                <MenuItem value="ISSUED">Notas emitidas</MenuItem>
+              </Select>
+              <Button
+                variant="text"
+                onClick={exportPeriodCsv}
+                sx={{ flexShrink: 0, whiteSpace: 'nowrap', fontSize: fontSizes.sm, fontWeight: 700 }}
+              >
+                Exportar período
+              </Button>
+            </Stack>
+          </Stack>
+
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <Box key={i} sx={{ px: 2.75, py: 1.5, borderBottom: 1, borderColor: 'grey.100' }}>
+                <Skeleton height={36} />
+              </Box>
+            ))
+          ) : rows.length === 0 ? (
+            <Box sx={{ py: 7, textAlign: 'center' }}>
+              <ReceiptLongOutlinedIcon sx={{ fontSize: 46, color: 'text.disabled', mb: 1 }} />
+              <Typography sx={{ fontWeight: 700 }}>
+                {entries.length === 0 ? 'Nenhum lançamento no período' : 'Nenhum lançamento encontrado com os filtros'}
+              </Typography>
+              <Typography color="text.secondary" sx={{ fontSize: fontSizes.md, mt: 0.5 }}>
+                {entries.length === 0 ? 'Ajuste o período ou registre um novo lançamento.' : 'Tente ajustar a busca ou os filtros.'}
+              </Typography>
+            </Box>
+          ) : (
+            rows.map((entry) => (
+              <TransactionRow
+                key={entry.id}
+                entry={entry}
+                onEdit={() => handleEdit(entry)}
+                onDelete={() => handleDelete(entry)}
+                onToggleInvoice={(issued) => invoiceMutation.mutate({ id: entry.id, issued })}
+              />
+            ))
+          )}
+
+          {!isLoading && filtered.length > 0 && (
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              flexWrap="wrap"
+              useFlexGap
+              spacing={1.5}
+              sx={{ px: { xs: 2, sm: 2.75 }, py: 1.75 }}
+            >
+              <Typography sx={{ fontSize: fontSizes.sm, color: 'text.disabled', fontWeight: 600 }}>
+                Mostrando {current * PAGE_SIZE + 1}–{Math.min((current + 1) * PAGE_SIZE, filtered.length)} de{' '}
+                {filtered.length} {filtered.length === 1 ? 'lançamento' : 'lançamentos'}
+                {filtered.length !== entries.length && ` (de ${entries.length})`}
+              </Typography>
+              {pageCount > 1 && (
+                <Stack direction="row" spacing={0.9} alignItems="center">
+                  <IconButton
+                    size="small"
+                    aria-label="Página anterior"
+                    disabled={current === 0}
+                    onClick={() => setPage(current - 1)}
+                    sx={{ width: 34, height: 34, border: 1, borderColor: 'divider', borderRadius: '9px' }}
+                  >
+                    <ChevronLeftIcon fontSize="small" />
+                  </IconButton>
+                  {pageWindow(current, pageCount).map((p, i) =>
+                    p == null ? (
+                      <Typography key={`gap-${i}`} sx={{ color: 'text.disabled', px: 0.25 }}>
+                        …
+                      </Typography>
+                    ) : (
+                      <Box
+                        key={p}
+                        component="button"
+                        type="button"
+                        onClick={() => setPage(p)}
+                        aria-current={p === current ? 'page' : undefined}
+                        sx={{
+                          minWidth: 34,
+                          height: 34,
+                          px: 0.75,
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          fontSize: fontSizes.sm,
+                          fontWeight: 700,
+                          borderRadius: '9px',
+                          border: 1,
+                          borderColor: p === current ? 'primary.main' : 'divider',
+                          color: p === current ? '#fff' : 'text.secondary',
+                          bgcolor: p === current ? 'primary.main' : 'background.paper',
+                          '&:hover': { bgcolor: p === current ? 'primary.main' : 'grey.50' },
+                        }}
+                      >
+                        {p + 1}
+                      </Box>
+                    ),
+                  )}
+                  <IconButton
+                    size="small"
+                    aria-label="Próxima página"
+                    disabled={current >= pageCount - 1}
+                    onClick={() => setPage(current + 1)}
+                    sx={{ width: 34, height: 34, border: 1, borderColor: 'divider', borderRadius: '9px' }}
+                  >
+                    <ChevronRightIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              )}
+            </Stack>
+          )}
+        </Card>
+      </Stack>
 
       <FinanceFormDialog open={formOpen} onClose={() => setFormOpen(false)} entry={editing} />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="FinancialEntry"
-        title="Financeiro"
-      />
     </Box>
   );
 }
