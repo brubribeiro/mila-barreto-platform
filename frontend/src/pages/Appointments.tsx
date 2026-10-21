@@ -28,6 +28,7 @@ import {
 } from '../utils/unavailabilityCalendar';
 import { slotOverlapsProfessionalAppointment } from '../utils/appointmentScheduling';
 import { fontSizes } from '../theme/fontSizes';
+import { clickableProps } from '../utils/a11y';
 
 const statusColors: Record<AppointmentStatus, { bg: string; border: string; text: string }> = {
   SCHEDULED: { bg: '#B8E5E2', border: '#0ABAB5', text: '#07807C' },
@@ -342,7 +343,8 @@ export function Appointments() {
             alignItems="center"
             spacing={1.25}
             sx={{ px: 2, py: 1.35, cursor: 'pointer' }}
-            onClick={() => setPendingExpanded((v) => !v)}
+            {...clickableProps(() => setPendingExpanded((v) => !v))}
+            aria-expanded={pendingExpanded}
           >
             <Box sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: '#C25A4C', flexShrink: 0 }} />
             <Typography sx={{ flex: 1, fontSize: fontSizes.md, fontWeight: 700 }}>
@@ -380,11 +382,11 @@ export function Appointments() {
               {pendingAppointments.map((a) => (
                 <Box
                   key={a.id}
-                  onClick={() => {
+                  {...clickableProps(() => {
                     setEditing(a);
                     setDefaultStart(null);
                     setFormOpen(true);
-                  }}
+                  })}
                   sx={{
                     display: 'flex',
                     alignItems: 'center',

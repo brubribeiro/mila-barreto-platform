@@ -400,6 +400,7 @@ function AppointmentsTab({ appointments }: { appointments: Appointment[] }) {
                 key={o.k}
                 component="button"
                 type="button"
+                aria-pressed={active}
                 onClick={() => {
                   setPayFilter(o.k);
                   setPage(0);
@@ -466,6 +467,7 @@ function AppointmentsTab({ appointments }: { appointments: Appointment[] }) {
           <Stack direction="row" spacing={0.75}>
             <IconButton
               size="small"
+              aria-label="Página anterior"
               disabled={current === 0}
               onClick={() => setPage((v) => Math.max(0, v - 1))}
               sx={{ border: 1, borderColor: 'divider', borderRadius: '9px' }}
@@ -474,6 +476,7 @@ function AppointmentsTab({ appointments }: { appointments: Appointment[] }) {
             </IconButton>
             <IconButton
               size="small"
+              aria-label="Próxima página"
               disabled={current >= pageCount - 1}
               onClick={() => setPage((v) => Math.min(pageCount - 1, v + 1))}
               sx={{ border: 1, borderColor: 'divider', borderRadius: '9px' }}
@@ -625,6 +628,7 @@ function DocumentsTab({
               <Tooltip title="Abrir documento">
                 <IconButton
                   size="small"
+                  aria-label={`Abrir documento ${doc.name} em nova aba`}
                   href={doc.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -1083,6 +1087,7 @@ export function PatientDetail() {
               {data.phone && (
                 <Tooltip title="WhatsApp">
                   <IconButton
+                    aria-label={`Abrir WhatsApp de ${data.name}`}
                     onClick={() =>
                       window.open(`https://wa.me/55${onlyDigits(data.phone ?? '')}`, '_blank', 'noopener')
                     }

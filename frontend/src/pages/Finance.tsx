@@ -45,6 +45,7 @@ import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import { downloadCsv } from '../utils/csv';
 import { fontSizes } from '../theme/fontSizes';
+import { clickableProps } from '../utils/a11y';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -601,7 +602,7 @@ export function Finance() {
             <Box sx={{ height: '100%' }}>
               <Card
                 sx={{ height: '100%', cursor: 'pointer' }}
-                onClick={() => setInvoiceFilter('PENDING')}
+                {...clickableProps(() => setInvoiceFilter('PENDING'), 'Filtrar notas pendentes')}
               >
                 <CardContent>
                   <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>

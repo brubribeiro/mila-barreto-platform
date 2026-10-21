@@ -163,12 +163,14 @@ export function Packages() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar pacote..."
+              inputProps={{ 'aria-label': 'Buscar pacote' }}
               sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />
           </Stack>
           {isAdmin && (
             <Tooltip title="Histórico de alterações">
               <IconButton
+                aria-label="Histórico de alterações"
                 onClick={() => setHistoryOpen(true)}
                 sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
               >
@@ -317,6 +319,7 @@ export function Packages() {
                     <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
                       <Tooltip title="Editar">
                         <IconButton
+                          aria-label={`Editar ${p.name}`}
                           onClick={() => handleEdit(p)}
                           sx={{ width: 30, height: 30, borderRadius: '9px', border: 1, borderColor: 'divider', color: 'text.secondary' }}
                         >
@@ -325,6 +328,7 @@ export function Packages() {
                       </Tooltip>
                       <Tooltip title="Excluir">
                         <IconButton
+                          aria-label={`Excluir ${p.name}`}
                           onClick={() => handleDelete(p)}
                           sx={{
                             width: 30,
@@ -442,6 +446,8 @@ export function Packages() {
                     key={i}
                     component="button"
                     type="button"
+                    aria-label={`Página ${i + 1}`}
+                    aria-current={activePage ? 'page' : undefined}
                     onClick={() => setPage(i)}
                     sx={{
                       minWidth: 38,

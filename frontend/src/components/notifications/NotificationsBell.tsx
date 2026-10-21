@@ -27,6 +27,7 @@ import { NotificationPreferencesDialog } from './NotificationPreferencesDialog';
 import { useAppToast } from '../../contexts/AppToastContext';
 import type { Notification } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
+import { clickableProps } from '../../utils/a11y';
 
 dayjs.extend(relativeTime);
 dayjs.locale('pt-br');
@@ -94,6 +95,7 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
     <>
       <Tooltip title="Notificações">
         <IconButton
+          aria-label={count > 0 ? `Notificações, ${count} não lidas` : 'Notificações'}
           onClick={handleOpen}
           sx={{
             width: 38,
@@ -187,7 +189,7 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
             notifications.map((n) => (
               <Box
                 key={n.id}
-                onClick={() => handleClickNotification(n)}
+                {...clickableProps(() => handleClickNotification(n))}
                 sx={{
                   display: 'flex',
                   gap: 1.25,

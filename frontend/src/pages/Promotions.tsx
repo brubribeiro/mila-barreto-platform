@@ -202,12 +202,14 @@ export function Promotions() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar campanha..."
+              inputProps={{ 'aria-label': 'Buscar campanha' }}
               sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />
           </Stack>
           {isAdmin && (
             <Tooltip title="Histórico de alterações">
               <IconButton
+                aria-label="Histórico de alterações"
                 onClick={() => setHistoryOpen(true)}
                 sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
               >
@@ -310,6 +312,7 @@ export function Promotions() {
                         <Switch
                           size="small"
                           checked={p.active}
+                          inputProps={{ 'aria-label': `${p.active ? 'Desativar' : 'Ativar'} ${p.name}` }}
                           onChange={() => toggleActiveMutation.mutate({ id: p.id, active: !p.active })}
                         />
                       </Tooltip>
@@ -358,6 +361,7 @@ export function Promotions() {
                       {canEdit && (
                         <Tooltip title="Editar">
                           <IconButton
+                            aria-label={`Editar ${p.name}`}
                             onClick={() => handleEdit(p)}
                             sx={{ width: 34, height: 34, borderRadius: '10px', border: 1, borderColor: 'divider', color: 'text.secondary' }}
                           >
@@ -368,6 +372,7 @@ export function Promotions() {
                       {canDelete && (
                         <Tooltip title="Excluir">
                           <IconButton
+                            aria-label={`Excluir ${p.name}`}
                             onClick={() => handleDelete(p)}
                             sx={{
                               width: 34,
@@ -414,6 +419,8 @@ export function Promotions() {
                     key={i}
                     component="button"
                     type="button"
+                    aria-label={`Página ${i + 1}`}
+                    aria-current={activePage ? 'page' : undefined}
                     onClick={() => setPage(i)}
                     sx={{
                       minWidth: 38,

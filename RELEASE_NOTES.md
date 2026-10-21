@@ -96,6 +96,10 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ### Correções
 
+**Acessibilidade**
+- Botões só com ícone (editar, excluir, WhatsApp, paginação, menu, notificações) agora são lidos por leitores de tela com o nome do item, por exemplo "Editar Maria Silva".
+- Dá para navegar pelo teclado: a lista de pacientes, os agendamentos pendentes, as notificações e outros cards clicáveis recebem foco com Tab e abrem com Enter ou Espaço, com contorno de foco visível.
+
 **Agenda e disponibilidade**
 - Validação do expediente do profissional passa a usar horário de **Brasília**, evitando rejeição indevida de horários válidos.
 - Formulário de agendamento deixa de fazer consulta extra de profissionais disponíveis ao abrir com horário padrão.

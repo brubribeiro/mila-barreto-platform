@@ -230,6 +230,7 @@ export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardP
                         <span>
                           <IconButton
                             size="small"
+                            aria-label={`Marcar ${e.description} como pago`}
                             disabled={isMutating}
                             onClick={(ev) => {
                               ev.stopPropagation();

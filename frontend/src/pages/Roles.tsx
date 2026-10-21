@@ -71,7 +71,7 @@ export function Roles() {
             </Typography>
             {params.row.isSystem && (
               <Tooltip title="Grupo do sistema (não pode ser excluído)">
-                <LockIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                <LockIcon fontSize="small" role="img" aria-hidden={false} sx={{ color: 'text.secondary' }} />
               </Tooltip>
             )}
           </Stack>
@@ -138,7 +138,7 @@ export function Roles() {
                     <EditIcon fontSize="small" />
                   </Tooltip>
                 }
-                label="Editar"
+                label={`Editar ${params.row.name}`}
                 onClick={() => {
                   setEditing(params.row);
                   setFormOpen(true);
@@ -155,7 +155,7 @@ export function Roles() {
                     <DeleteIcon fontSize="small" />
                   </Tooltip>
                 }
-                label="Excluir"
+                label={`Excluir ${params.row.name}`}
                 onClick={async () => {
                   const ok = await confirm({
                     title: 'Excluir grupo',

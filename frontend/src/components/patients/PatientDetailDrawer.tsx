@@ -877,6 +877,7 @@ export function PatientDetailDrawer({
           {data.phone && (
             <Tooltip title="WhatsApp">
               <IconButton
+                aria-label={`Abrir WhatsApp de ${data.name}`}
                 onClick={() =>
                   window.open(`https://wa.me/55${onlyDigits(data.phone ?? '')}`, '_blank', 'noopener')
                 }

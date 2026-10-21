@@ -2447,6 +2447,7 @@ export function AppointmentFormDialog({
                                         <Tooltip title="Remover">
                                           <IconButton
                                             size="small"
+                                            aria-label={`Remover material ${index + 1}`}
                                             onClick={() =>
                                               setExtraMaterials((rows) =>
                                                 rows.filter((_, i) => i !== index),

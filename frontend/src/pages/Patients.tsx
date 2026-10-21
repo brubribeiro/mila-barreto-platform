@@ -40,6 +40,7 @@ import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import { maskPhone } from '../utils/masks';
 import { patientInitials } from '../utils/patientPhoto';
+import { clickableProps } from '../utils/a11y';
 import type { Patient } from '../types';
 import { fontSizes } from '../theme/fontSizes';
 
@@ -263,12 +264,14 @@ export function Patients() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Buscar paciente, CPF..."
+                inputProps={{ 'aria-label': 'Buscar paciente por nome, CPF ou telefone' }}
                 sx={{ fontSize: fontSizes.sm, flex: 1 }}
               />
             </Stack>
             {isAdmin && (
               <Tooltip title="Histórico de alterações">
                 <IconButton
+                  aria-label="Histórico de alterações"
                   onClick={() => setHistoryOpen(true)}
                   sx={{
                     width: 38,
@@ -418,7 +421,7 @@ export function Patients() {
             return (
               <Box
                 key={p.id}
-                onClick={() => setDetailId(p.id)}
+                {...clickableProps(() => setDetailId(p.id), `Abrir ficha de ${p.name}`)}
                 sx={{
                   display: 'grid',
                   gridTemplateColumns: { xs: '1fr auto', md: GRID_COLS },
@@ -438,6 +441,7 @@ export function Patients() {
                 <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
                   <Avatar
                     src={p.photoUrl ?? undefined}
+                    alt=""
                     sx={{
                       width: 40,
                       height: 40,
@@ -543,6 +547,7 @@ export function Patients() {
                     <span>
                       <IconButton
                         size="small"
+                        aria-label={`Enviar WhatsApp para ${p.name}`}
                         disabled={!p.phone}
                         onClick={() => setWhatsappPatient(p)}
                         sx={{ color: '#25D366' }}
@@ -553,7 +558,11 @@ export function Patients() {
                   </Tooltip>
                   {canEdit && (
                     <Tooltip title="Anamnese">
-                      <IconButton size="small" onClick={() => setAnamnesisPatientId(p.id)}>
+                      <IconButton
+                        size="small"
+                        aria-label={`Anamnese de ${p.name}`}
+                        onClick={() => setAnamnesisPatientId(p.id)}
+                      >
                         <AssignmentOutlinedIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -562,6 +571,7 @@ export function Patients() {
                     <Tooltip title="Editar">
                       <IconButton
                         size="small"
+                        aria-label={`Editar ${p.name}`}
                         onClick={() => {
                           setEditing(p);
                           setFormOpen(true);
@@ -573,7 +583,12 @@ export function Patients() {
                   )}
                   {canDelete && (
                     <Tooltip title="Excluir">
-                      <IconButton size="small" onClick={() => handleDelete(p)} sx={{ color: 'error.main' }}>
+                      <IconButton
+                        size="small"
+                        aria-label={`Excluir ${p.name}`}
+                        onClick={() => handleDelete(p)}
+                        sx={{ color: 'error.main' }}
+                      >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -600,6 +615,7 @@ export function Patients() {
             <Stack direction="row" alignItems="center" spacing={0.75}>
               <IconButton
                 size="small"
+                aria-label="Página anterior"
                 disabled={currentPage === 0}
                 onClick={() => setPage((v) => Math.max(0, v - 1))}
                 sx={{ border: 1, borderColor: 'divider', borderRadius: '9px' }}
@@ -624,6 +640,9 @@ export function Patients() {
                   <Box
                     key={item}
                     component="button"
+                    type="button"
+                    aria-label={`Página ${item + 1}`}
+                    aria-current={item === currentPage ? 'page' : undefined}
                     onClick={() => setPage(item)}
                     sx={{
                       minWidth: 30,
@@ -646,6 +665,7 @@ export function Patients() {
               )}
               <IconButton
                 size="small"
+                aria-label="Próxima página"
                 disabled={currentPage >= pageCount - 1}
                 onClick={() => setPage((v) => Math.min(pageCount - 1, v + 1))}
                 sx={{ border: 1, borderColor: 'divider', borderRadius: '9px' }}

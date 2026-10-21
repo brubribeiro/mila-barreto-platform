@@ -536,6 +536,7 @@ export function Availability() {
                         <Tooltip title="Remover">
                           <IconButton
                             size="small"
+                            aria-label={`Remover indisponibilidade ${formatUnavailabilityPeriod(u.startAt, u.endAt)}`}
                             onClick={() => removeUnavailMutation.mutate(u.id)}
                           >
                             <DeleteIcon fontSize="small" />

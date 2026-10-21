@@ -45,6 +45,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 - Disponibilidade: dia/hora do expediente extraídos no fuso do Brasil, não UTC do servidor.
 - Formulário de agendamento: elimina requisição extra de profissionais disponíveis ao abrir.
+- Acessibilidade: `aria-label` descritivo (com o nome do item) em todos os `IconButton`; busca, selects e switches com rótulo acessível; avatares decorativos com `alt=""`/`aria-hidden`; paginação com `aria-current`; filtros com `aria-pressed`.
+- Acessibilidade: linhas e cards clicáveis (Pacientes, Agenda, Dashboard, Financeiro, notificações, emojis, histórico de auditoria) focáveis por Tab e ativáveis com Enter/Espaço via `clickableProps` (`src/utils/a11y.ts`).
+- Tema: contorno de foco visível (`:focus-visible`) para navegação por teclado; botão de excluir foto aparece também ao receber foco.
 
 ## [0.2.0] - 2026-07-15
 

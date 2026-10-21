@@ -18,6 +18,7 @@ import { auditLogsApi } from '../../api/auditLogs';
 import { AppDataGrid } from '../AppDataGrid';
 import { actionConfig, flattenAuditLogs, type AuditChangeRow } from './auditUtils';
 import { fontSizes } from '../../theme/fontSizes';
+import { clickableProps } from '../../utils/a11y';
 
 interface AuditHistoryPanelProps {
   entity: string;
@@ -108,7 +109,8 @@ export function AuditHistoryPanel({ entity, entityId }: AuditHistoryPanelProps) 
   return (
     <Box sx={{ mt: 2 }}>
       <Box
-        onClick={() => setOpen((o) => !o)}
+        {...clickableProps(() => setOpen((o) => !o))}
+        aria-expanded={open}
         sx={{
           display: 'flex',
           alignItems: 'center',

@@ -53,6 +53,7 @@ import { DashboardDetailItem } from '../components/dashboard/DashboardDetailItem
 import { DashboardEmptyState } from '../components/dashboard/DashboardEmptyState';
 import { AppGrid } from '../components/AppGrid';
 import { AuroraIcon } from '../components/AuroraIcon';
+import { clickableProps } from '../utils/a11y';
 
 const UPCOMING_BIRTHDAY_WINDOW_DAYS = 30;
 
@@ -814,11 +815,11 @@ export function Dashboard() {
                     direction="row"
                     alignItems="center"
                     spacing={1.5}
-                    onClick={() => {
-                      if (!canSeeAgenda) return;
-                      setEditingWeekAppt(a);
-                      setWeekApptDialogOpen(true);
-                    }}
+                    {...(canSeeAgenda &&
+                      clickableProps(() => {
+                        setEditingWeekAppt(a);
+                        setWeekApptDialogOpen(true);
+                      }))}
                     sx={{
                       px: 1,
                       py: 1.25,

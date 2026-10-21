@@ -115,6 +115,7 @@ export function Login() {
         <Stack direction="row" spacing={2} alignItems="center">
           <Avatar
             variant="rounded"
+            aria-hidden
             sx={{
               width: 56,
               height: 56,
@@ -188,6 +189,7 @@ export function Login() {
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3, alignSelf: 'stretch' }}>
           <Avatar
             variant="rounded"
+            aria-hidden
             sx={{
               width: 44,
               height: 44,
