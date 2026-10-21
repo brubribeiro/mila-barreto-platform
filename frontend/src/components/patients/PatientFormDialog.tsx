@@ -9,15 +9,9 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  FormControl,
-  Grid,
   IconButton,
   InputAdornment,
-  InputLabel,
   MenuItem,
-  OutlinedInput,
-  Paper,
-  Select,
   Stack,
   Tab,
   Tabs,
@@ -29,16 +23,10 @@ import {
   useTheme,
 } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import StickyNote2OutlinedIcon from '@mui/icons-material/StickyNote2Outlined';
 import CloseIcon from '@mui/icons-material/Close';
-import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
-import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
-import WcOutlinedIcon from '@mui/icons-material/WcOutlined';
-import CakeOutlinedIcon from '@mui/icons-material/CakeOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
@@ -115,23 +103,6 @@ const ADDRESS_DISABLED_SX = {
   },
 } as const;
 
-const FORM_CARD_SX = {
-  p: { xs: 1.5, sm: 1.75 },
-  borderRadius: 2,
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-} as const;
-
-const FORM_CARD_FILL_SX = {
-  ...FORM_CARD_SX,
-  flex: 1,
-  minHeight: 0,
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-} as const;
-
 function LabeledField({
   label,
   required,
@@ -185,58 +156,6 @@ function buildPatientOptionalFields(
   }
 
   return out;
-}
-
-const AUTOFILL_WHITE = {
-  '& input:-webkit-autofill': {
-    WebkitBoxShadow: '0 0 0 1000px #fff inset',
-    WebkitTextFillColor: '#2A2A2A',
-    caretColor: '#2A2A2A',
-  },
-  '& input:-webkit-autofill:hover': {
-    WebkitBoxShadow: '0 0 0 1000px #fff inset',
-  },
-  '& input:-webkit-autofill:focus': {
-    WebkitBoxShadow: '0 0 0 1000px #fff inset',
-  },
-} as const;
-
-const FIELD_SX = {
-  '& .MuiOutlinedInput-root': {
-    bgcolor: '#fff',
-  },
-  ...AUTOFILL_WHITE,
-} as const;
-
-const AUTO_FIELD_SX = {
-  '& .MuiOutlinedInput-root.Mui-disabled': {
-    bgcolor: 'background.default',
-    WebkitTextFillColor: 'text.primary',
-  },
-  '& input:-webkit-autofill:disabled': {
-    WebkitBoxShadow: '0 0 0 1000px #F4F4F2 inset',
-    WebkitTextFillColor: '#2A2A2A',
-  },
-} as const;
-
-function TabPanel({ active, children }: { active: boolean; children: ReactNode }) {
-  return (
-    <Box
-      role="tabpanel"
-      aria-hidden={!active}
-      sx={{
-        position: 'absolute',
-        inset: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'auto',
-        visibility: active ? 'visible' : 'hidden',
-        pointerEvents: active ? 'auto' : 'none',
-      }}
-    >
-      {children}
-    </Box>
-  );
 }
 
 export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogProps) {
@@ -1028,7 +947,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
             disabled={mutation.isPending || formState.isSubmitting}
             sx={{ boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
           >
-            {mutation.isPending ? 'Salvando…' : isEditing ? 'Salvar paciente' : 'Salvar paciente'}
+            {mutation.isPending ? 'Salvando…' : 'Salvar paciente'}
           </Button>
         </DialogActions>
       </Box>

@@ -2,11 +2,9 @@ import {
   Avatar,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Drawer,
   IconButton,
-  LinearProgress,
   Paper,
   Stack,
   Tab,
@@ -17,12 +15,8 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
-import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import EventNoteOutlinedIcon from '@mui/icons-material/EventNoteOutlined';
-import ViewInArIcon from '@mui/icons-material/ViewInAr';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
 import CakeOutlinedIcon from '@mui/icons-material/CakeOutlined';
@@ -30,16 +24,14 @@ import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import WcOutlinedIcon from '@mui/icons-material/WcOutlined';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
-import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
 import AddIcon from '@mui/icons-material/Add';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { useMemo, useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { patientsApi } from '../../api/patients';
-import { packagesApi } from '../../api/packages';
 import { AnamnesisView, hasAnamnesisData } from './AnamnesisView';
 import { PatientPhotosGallery } from './PatientPhotosGallery';
 import { usePermissions } from '../../contexts/usePermissions';
@@ -49,35 +41,12 @@ import { dayjsFromDateOnlyApi, formatDateOnlyFromApi } from '../../utils/dateOnl
 import { formatPatientAddressDisplay } from '../../utils/patientAddress';
 import { patientSexLabel } from '../../utils/patientSex';
 import { patientReferralSourceLabel } from '../../utils/patientReferralSource';
-import { maskCEP, maskPhone, onlyDigits } from '../../utils/masks';
+import { maskPhone, onlyDigits } from '../../utils/masks';
 import type { Appointment, AppointmentKind } from '../../types';
 import { patientInitials } from '../../utils/patientPhoto';
 import { fontSizes } from '../../theme/fontSizes';
 import { brl } from '../../utils/money';
 
-
-const packageStatusLabel: Record<string, string> = {
-  ACTIVE: 'Ativo',
-  COMPLETED: 'Concluído',
-  EXPIRED: 'Expirado',
-  CANCELLED: 'Cancelado',
-};
-
-const packageStatusColor: Record<string, 'success' | 'default' | 'error' | 'warning'> = {
-  ACTIVE: 'success',
-  COMPLETED: 'default',
-  EXPIRED: 'warning',
-  CANCELLED: 'error',
-};
-
-const statusLabel: Record<string, string> = {
-  SCHEDULED: 'Agendado',
-  CONFIRMED: 'Confirmado',
-  IN_PROGRESS: 'Em atendimento',
-  COMPLETED: 'Concluído',
-  CANCELLED: 'Cancelado',
-  NO_SHOW: 'Faltou',
-};
 
 const statusAccent: Record<string, string> = {
   SCHEDULED: 'info.main',
@@ -115,71 +84,6 @@ function patientAgeLabel(birthDate?: string | null) {
   if (!birth) return null;
   const age = dayjs().diff(birth, 'year');
   return age >= 0 ? `${age} anos` : null;
-}
-
-function HeaderIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 32,
-        height: 32,
-        borderRadius: 1.5,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function SectionCard({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: 2,
-        borderColor: 'divider',
-        borderRadius: '14px',
-        bgcolor: 'grey.50',
-        boxShadow: 'none',
-      }}
-    >
-      <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
-        <HeaderIcon>{icon}</HeaderIcon>
-        <Typography variant="subtitle2" fontWeight={700} letterSpacing="-0.01em">
-          {title}
-        </Typography>
-      </Stack>
-      {children}
-    </Paper>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: ReactNode }) {
-  if (value == null || value === '' || value === '—') return null;
-  return (
-    <Stack direction="row" spacing={1.5} sx={{ py: 0.75 }}>
-      <Typography variant="body2" color="text.secondary" sx={{ width: 108, flexShrink: 0 }}>
-        {label}
-      </Typography>
-      <Typography variant="body2" fontWeight={500} sx={{ flex: 1, minWidth: 0 }}>
-        {value}
-      </Typography>
-    </Stack>
-  );
 }
 
 function InfoLine({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
@@ -230,88 +134,6 @@ function EmptyBlock({ message }: { message: string }) {
         {message}
       </Typography>
     </Box>
-  );
-}
-
-function NoteBlock({ label, text }: { label: string; text: string }) {
-  return (
-    <Box>
-      <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.5 }}>
-        {label}
-      </Typography>
-      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>
-        {text}
-      </Typography>
-    </Box>
-  );
-}
-
-function AppointmentNotesCard({
-  appt,
-  highlighted,
-}: {
-  appt: Appointment;
-  highlighted?: boolean;
-}) {
-  const hasNotes = !!(appt.notes?.trim() || appt.clinicalNotes?.trim());
-  const accent = statusAccent[appt.status] ?? 'primary.main';
-
-  return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: 2,
-        borderRadius: '14px',
-        borderColor: highlighted ? 'primary.main' : 'divider',
-        bgcolor: highlighted
-          ? (theme) => alpha(theme.palette.primary.main, 0.05)
-          : 'grey.50',
-        borderLeft: '4px solid',
-        borderLeftColor: accent,
-      }}
-    >
-      <Stack spacing={1.25}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="body2" fontWeight={700}>
-              {dayjs(appt.startAt).format('DD/MM/YYYY · HH:mm')}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" display="block">
-              {appt.procedure?.name ?? kindLabel[appt.kind] ?? 'Atendimento'}
-              {appt.professional?.name ? ` · ${appt.professional.name}` : ''}
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={0.5} flexWrap="wrap" justifyContent="flex-end">
-            <Chip size="small" label={kindLabel[appt.kind] ?? appt.kind} variant="outlined" />
-            <Chip
-              size="small"
-              label={statusLabel[appt.status] ?? appt.status}
-              color={
-                appt.status === 'COMPLETED'
-                  ? 'success'
-                  : appt.status === 'CANCELLED' || appt.status === 'NO_SHOW'
-                    ? 'error'
-                    : 'default'
-              }
-              variant={appt.status === 'COMPLETED' ? 'filled' : 'outlined'}
-            />
-          </Stack>
-        </Stack>
-
-        {hasNotes ? (
-          <Stack spacing={1.25} sx={{ pt: 0.5 }}>
-            {appt.notes?.trim() && <NoteBlock label="Observações administrativas" text={appt.notes.trim()} />}
-            {appt.clinicalNotes?.trim() && (
-              <NoteBlock label="Anotações clínicas" text={appt.clinicalNotes.trim()} />
-            )}
-          </Stack>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            Sem anotações neste atendimento.
-          </Typography>
-        )}
-      </Stack>
-    </Paper>
   );
 }
 
@@ -367,77 +189,10 @@ function AppointmentRowCard({ appt }: { appt: Appointment }) {
   );
 }
 
-function PackageCard({
-  name,
-  status,
-  sessionsUsed,
-  sessionsTotal,
-  totalPaid,
-  expiresAt,
-  notes,
-}: {
-  name: string;
-  status: string;
-  sessionsUsed: number;
-  sessionsTotal: number;
-  totalPaid: number;
-  expiresAt?: string | null;
-  notes?: string;
-}) {
-  const progress = sessionsTotal > 0 ? Math.min(100, (sessionsUsed / sessionsTotal) * 100) : 0;
-
-  return (
-    <Paper variant="outlined" sx={{ p: 2, borderRadius: '14px', bgcolor: 'grey.50', borderColor: 'divider' }}>
-      <Stack spacing={1.5}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="body2" fontWeight={700} noWrap>
-              {name}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {brl.format(totalPaid)}
-              {expiresAt ? ` · expira ${formatDateOnlyFromApi(expiresAt)}` : ''}
-            </Typography>
-          </Box>
-          <Chip
-            size="small"
-            label={packageStatusLabel[status] ?? status}
-            color={packageStatusColor[status] ?? 'default'}
-            variant={status === 'ACTIVE' ? 'filled' : 'outlined'}
-          />
-        </Stack>
-
-        <Box>
-          <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-            <Typography variant="caption" color="text.secondary">
-              Sessões utilizadas
-            </Typography>
-            <Typography variant="caption" fontWeight={600}>
-              {sessionsUsed}/{sessionsTotal}
-            </Typography>
-          </Stack>
-          <LinearProgress
-            variant="determinate"
-            value={progress}
-            sx={{ height: 6, borderRadius: 3 }}
-          />
-        </Box>
-
-        {notes?.trim() && (
-          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
-            {notes.trim()}
-          </Typography>
-        )}
-      </Stack>
-    </Paper>
-  );
-}
-
 export function PatientDetailDrawer({
   patientId,
   onClose,
   defaultTab = 'general',
-  highlightAppointmentId,
   onEditAnamnesis,
 }: PatientDetailDrawerProps) {
   const [tab, setTab] = useState<ChartTab>(defaultTab);
@@ -457,33 +212,6 @@ export function PatientDetailDrawer({
     queryFn: () => patientsApi.getReliability(patientId!),
     enabled: !!patientId,
   });
-
-  const { data: patientPackages = [] } = useQuery({
-    queryKey: ['patient-packages', patientId],
-    queryFn: () => packagesApi.listPatientPackages(patientId!),
-    enabled: !!patientId,
-  });
-
-  const appointmentsWithNotes = useMemo(() => {
-    if (!data?.appointments) return [];
-    return data.appointments.filter((a) => a.notes?.trim() || a.clinicalNotes?.trim());
-  }, [data?.appointments]);
-
-  const activePackagesCount = useMemo(
-    () => patientPackages.filter((p) => p.status === 'ACTIVE').length,
-    [patientPackages],
-  );
-
-  const upcomingAppointmentsCount = useMemo(() => {
-    if (!data?.appointments) return 0;
-    const now = dayjs();
-    return data.appointments.filter(
-      (a) =>
-        dayjs(a.startAt).isAfter(now) &&
-        a.status !== 'CANCELLED' &&
-        a.status !== 'NO_SHOW',
-    ).length;
-  }, [data?.appointments]);
 
   const ageLabel = data ? patientAgeLabel(data.birthDate) : null;
   const addressLine = data ? formatPatientAddressDisplay(data) : '';
