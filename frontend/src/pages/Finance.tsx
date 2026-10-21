@@ -33,6 +33,7 @@ import { PageHeader } from '../components/PageHeader';
 import { ListFiltersBar } from '../components/ListFiltersBar';
 import { AppDataGrid } from '../components/AppDataGrid';
 import { matchFields } from '../utils/listFilters';
+import { useUrlGridState, useUrlState, urlDate, urlEnum } from '../hooks/useUrlState';
 import { financeApi } from '../api/finance';
 import { recurringExpensesApi } from '../api/recurring-expenses';
 import { appointmentsBackfillFinance } from '../api/appointments';
@@ -128,17 +129,24 @@ function monthsInRange(from: string, to: string): { year: number; month: number 
 
 type TypeFilter = 'ALL' | 'INCOME' | 'EXPENSE';
 type InvoiceFilter = 'ALL' | 'PENDING' | 'ISSUED';
+const TYPE_FILTER_CODEC = urlEnum<TypeFilter>(['ALL', 'INCOME', 'EXPENSE']);
+const INVOICE_FILTER_CODEC = urlEnum<InvoiceFilter>(['ALL', 'PENDING', 'ISSUED']);
 
 export function Finance() {
   const queryClient = useQueryClient();
   const { confirm, alert } = useAppDialog();
   const toast = useAppToast();
   const { isAdmin } = usePermissions();
-  const [from, setFrom] = useState(dayjs().startOf('month').format('YYYY-MM-DD'));
-  const [to, setTo] = useState(dayjs().endOf('month').format('YYYY-MM-DD'));
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
-  const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('ALL');
+  const [from, setFrom] = useUrlState('de', dayjs().startOf('month').format('YYYY-MM-DD'), urlDate);
+  const [to, setTo] = useUrlState('ate', dayjs().endOf('month').format('YYYY-MM-DD'), urlDate);
+  const [search, setSearch] = useUrlState('busca', '');
+  const [typeFilter, setTypeFilter] = useUrlState<TypeFilter>('tipo', 'ALL', TYPE_FILTER_CODEC);
+  const [invoiceFilter, setInvoiceFilter] = useUrlState<InvoiceFilter>(
+    'notaFiscal',
+    'ALL',
+    INVOICE_FILTER_CODEC,
+  );
+  const { gridProps, resetPage } = useUrlGridState();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialEntry | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -601,7 +609,10 @@ export function Finance() {
             <Box sx={{ height: '100%' }}>
               <Card
                 sx={{ height: '100%', cursor: 'pointer' }}
-                onClick={() => setInvoiceFilter('PENDING')}
+                onClick={() => {
+                  setInvoiceFilter('PENDING');
+                  resetPage();
+                }}
               >
                 <CardContent>
                   <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
@@ -623,7 +634,10 @@ export function Finance() {
       <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
         <ListFiltersBar
           search={search}
-          onSearchChange={setSearch}
+          onSearchChange={(value) => {
+            setSearch(value);
+            resetPage();
+          }}
           searchPlaceholder="Buscar por descrição, categoria ou forma de pagamento"
           filteredCount={filtered.length}
           totalCount={entries.length}
@@ -634,7 +648,10 @@ export function Finance() {
             type="date"
             label="De"
             value={from}
-            onChange={(e) => setFrom(e.target.value)}
+            onChange={(e) => {
+              setFrom(e.target.value);
+              resetPage();
+            }}
             InputLabelProps={{ shrink: true }}
             sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' }, minWidth: { sm: 150 } }}
           />
@@ -643,7 +660,10 @@ export function Finance() {
             type="date"
             label="Até"
             value={to}
-            onChange={(e) => setTo(e.target.value)}
+            onChange={(e) => {
+              setTo(e.target.value);
+              resetPage();
+            }}
             InputLabelProps={{ shrink: true }}
             sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' }, minWidth: { sm: 150 } }}
           />
@@ -652,7 +672,10 @@ export function Finance() {
             select
             label="Tipo"
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}
+            onChange={(e) => {
+              setTypeFilter(e.target.value as TypeFilter);
+              resetPage();
+            }}
             sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' }, minWidth: { xs: 100, sm: 130 } }}
           >
             <MenuItem value="ALL">Todos</MenuItem>
@@ -664,7 +687,10 @@ export function Finance() {
             select
             label="Nota"
             value={invoiceFilter}
-            onChange={(e) => setInvoiceFilter(e.target.value as InvoiceFilter)}
+            onChange={(e) => {
+              setInvoiceFilter(e.target.value as InvoiceFilter);
+              resetPage();
+            }}
             sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' }, minWidth: { xs: 100, sm: 150 } }}
           >
             <MenuItem value="ALL">Todas</MenuItem>
@@ -674,6 +700,7 @@ export function Finance() {
         </ListFiltersBar>
 
         <AppDataGrid
+          {...gridProps}
           height={480}
           rows={filtered}
           columns={columns}

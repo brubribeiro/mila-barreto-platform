@@ -13,7 +13,14 @@ import dayjs from 'dayjs';
 import { PageHeader } from '../components/PageHeader';
 import { ListFiltersBar, ActiveFilterSelect } from '../components/ListFiltersBar';
 import { AppDataGrid } from '../components/AppDataGrid';
-import { FILTER_FIELD_SX, matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
+import { useUrlGridState, useUrlState, urlEnum } from '../hooks/useUrlState';
+import {
+  ACTIVE_FILTER_CODEC,
+  FILTER_FIELD_SX,
+  matchFields,
+  matchesActiveFilter,
+  type ActiveFilter,
+} from '../utils/listFilters';
 import { usersApi } from '../api/users';
 import { UserFormDialog } from '../components/users/UserFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
@@ -23,6 +30,9 @@ import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { UserSummary } from '../types';
+
+type ProfessionalFilter = 'ALL' | 'YES' | 'NO';
+const PROFESSIONAL_FILTER_CODEC = urlEnum<ProfessionalFilter>(['ALL', 'YES', 'NO']);
 
 export function Users() {
   const queryClient = useQueryClient();
@@ -34,10 +44,11 @@ export function Users() {
   const canEdit = has('users:edit');
   const canDelete = has('users:delete');
 
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
-  const [roleFilter, setRoleFilter] = useState('ALL');
-  const [professionalFilter, setProfessionalFilter] = useState<'ALL' | 'YES' | 'NO'>('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [activeFilter, setActiveFilter] = useUrlState<ActiveFilter>('status', 'ALL', ACTIVE_FILTER_CODEC);
+  const [roleFilter, setRoleFilter] = useUrlState('perfil', 'ALL');
+  const [professionalFilter, setProfessionalFilter] = useUrlState<ProfessionalFilter>('profissional', 'ALL', PROFESSIONAL_FILTER_CODEC);
+  const { gridProps, resetPage } = useUrlGridState();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<UserSummary | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -247,7 +258,10 @@ export function Users() {
       <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
         <ListFiltersBar
           search={search}
-          onSearchChange={setSearch}
+          onSearchChange={(v) => {
+            setSearch(v);
+            resetPage();
+          }}
           searchPlaceholder="Buscar por nome, e-mail ou grupo"
           filteredCount={filteredUsers.length}
           totalCount={users.length}
@@ -258,7 +272,10 @@ export function Users() {
             size="small"
             label="Grupo"
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
+            onChange={(e) => {
+              setRoleFilter(e.target.value);
+              resetPage();
+            }}
             sx={FILTER_FIELD_SX}
           >
             <MenuItem value="ALL">Todos</MenuItem>
@@ -273,16 +290,26 @@ export function Users() {
             size="small"
             label="Profissional"
             value={professionalFilter}
-            onChange={(e) => setProfessionalFilter(e.target.value as typeof professionalFilter)}
+            onChange={(e) => {
+              setProfessionalFilter(e.target.value as typeof professionalFilter);
+              resetPage();
+            }}
             sx={FILTER_FIELD_SX}
           >
             <MenuItem value="ALL">Todos</MenuItem>
             <MenuItem value="YES">É profissional</MenuItem>
             <MenuItem value="NO">Só usuário</MenuItem>
           </TextField>
-          <ActiveFilterSelect value={activeFilter} onChange={setActiveFilter} />
+          <ActiveFilterSelect
+            value={activeFilter}
+            onChange={(v) => {
+              setActiveFilter(v);
+              resetPage();
+            }}
+          />
         </ListFiltersBar>
         <AppDataGrid
+          {...gridProps}
           rows={filteredUsers}
           columns={columns}
           loading={isLoading}

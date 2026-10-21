@@ -24,8 +24,11 @@ import { dayjsFromDateOnlyApi, formatDateOnlyFromApi } from '../utils/dateOnly';
 import { PageHeader } from '../components/PageHeader';
 import { ListFiltersBar, ActiveFilterSelect } from '../components/ListFiltersBar';
 import { AppDataGrid } from '../components/AppDataGrid';
+import { useUrlGridState, useUrlState } from '../hooks/useUrlState';
 import {
+  ACTIVE_FILTER_CODEC,
   FILTER_FIELD_SX,
+  MAINTENANCE_FILTER_CODEC,
   matchFields,
   matchesActiveFilter,
   type ActiveFilter,
@@ -54,9 +57,10 @@ export function EquipmentPage() {
   const canEdit = has('equipment:edit');
   const canDelete = has('equipment:delete');
 
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
-  const [maintenanceFilter, setMaintenanceFilter] = useState<MaintenanceFilter>('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [activeFilter, setActiveFilter] = useUrlState<ActiveFilter>('status', 'ALL', ACTIVE_FILTER_CODEC);
+  const [maintenanceFilter, setMaintenanceFilter] = useUrlState<MaintenanceFilter>('manutencao', 'ALL', MAINTENANCE_FILTER_CODEC);
+  const { gridProps, resetPage } = useUrlGridState();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Equipment | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -310,7 +314,10 @@ export function EquipmentPage() {
       <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
         <ListFiltersBar
           search={search}
-          onSearchChange={setSearch}
+          onSearchChange={(v) => {
+            setSearch(v);
+            resetPage();
+          }}
           searchPlaceholder="Buscar por nome, marca ou modelo"
           filteredCount={filteredItems.length}
           totalCount={items.length}
@@ -321,15 +328,25 @@ export function EquipmentPage() {
             size="small"
             label="Manutenção"
             value={maintenanceFilter}
-            onChange={(e) => setMaintenanceFilter(e.target.value as MaintenanceFilter)}
+            onChange={(e) => {
+              setMaintenanceFilter(e.target.value as MaintenanceFilter);
+              resetPage();
+            }}
             sx={FILTER_FIELD_SX}
           >
             <MenuItem value="ALL">Todas</MenuItem>
             <MenuItem value="DUE">Próxima ou atrasada</MenuItem>
           </TextField>
-          <ActiveFilterSelect value={activeFilter} onChange={setActiveFilter} />
+          <ActiveFilterSelect
+            value={activeFilter}
+            onChange={(v) => {
+              setActiveFilter(v);
+              resetPage();
+            }}
+          />
         </ListFiltersBar>
         <AppDataGrid
+          {...gridProps}
           rows={filteredItems}
           columns={columns}
           loading={isLoading}

@@ -29,6 +29,7 @@ import { AppDataGrid } from '../components/AppDataGrid';
 import { MessageTemplateFormDialog } from '../components/messages/MessageTemplateFormDialog';
 import { WhatsAppPreview } from '../components/messages/WhatsAppPreview';
 import { categoryLabel, categoryOptions } from '../components/messages/messageTemplateConstants';
+import { useUrlGridState, useUrlState } from '../hooks/useUrlState';
 import { FILTER_FIELD_SX, matchFields } from '../utils/listFilters';
 import { messagesApi } from '../api/messages';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
@@ -80,8 +81,9 @@ export function Messages() {
   const canEdit = has('messages:edit');
   const canDelete = has('messages:delete');
 
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [categoryFilter, setCategoryFilter] = useUrlState('categoria', 'ALL');
+  const { gridProps, resetPage } = useUrlGridState();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MessageTemplate | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<MessageTemplate | null>(null);
@@ -249,7 +251,10 @@ export function Messages() {
       <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
         <ListFiltersBar
           search={search}
-          onSearchChange={setSearch}
+          onSearchChange={(v) => {
+            setSearch(v);
+            resetPage();
+          }}
           searchPlaceholder="Buscar por nome ou conteúdo"
           filteredCount={filteredTemplates.length}
           totalCount={templates.length}
@@ -260,7 +265,10 @@ export function Messages() {
             size="small"
             label="Categoria"
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value);
+              resetPage();
+            }}
             sx={FILTER_FIELD_SX}
           >
             <MenuItem value="ALL">Todas</MenuItem>
@@ -275,6 +283,7 @@ export function Messages() {
         </ListFiltersBar>
 
         <AppDataGrid
+          {...gridProps}
           rows={filteredTemplates}
           columns={columns}
           loading={isLoading}

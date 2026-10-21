@@ -23,6 +23,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Componente compartilhado `FormSection` para seções de modais.
 - Pacotes: campo **highlight** (Mais vendido / Recorrente), `GET /packages/stats/summary`, agregações na listagem (preço, economia, pacientes ativos).
 - Promoções: tipo de desconto **COMBO** no enum Prisma; migration `20260730140000_promotion_combo_discount_type`.
+- Hook `useUrlState` / `useUrlGridState` (`frontend/src/hooks/useUrlState.ts`): busca, filtros, ordenação e página das listas na query string (`history.replace`, valores padrão omitidos). Aplicado em Pacientes (mantém `?ficha=`), Financeiro, Estoque, Documentos, Agenda (`visao`, `data`, `profissionais`), Procedimentos, Pacotes, Promoções, Equipamentos, Usuários, Auditoria, Despesas recorrentes e Mensagens.
 
 ### Changed
 

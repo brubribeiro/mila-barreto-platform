@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -21,6 +21,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { urlPage, useUrlState } from '../hooks/useUrlState';
 import { packagesApi } from '../api/packages';
 import { PackageFormDialog } from '../components/packages/PackageFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
@@ -49,7 +50,7 @@ export function Packages() {
   const canManage = has('packages:edit');
   const canCreate = has('packages:create');
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlState('busca', '');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Package | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -84,8 +85,7 @@ export function Packages() {
     );
   }, [packages, search]);
 
-  const [page, setPage] = useState(0);
-  useEffect(() => setPage(0), [search]);
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
@@ -161,7 +161,10 @@ export function Packages() {
             <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
             <InputBase
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
               placeholder="Buscar pacote..."
               sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />

@@ -29,7 +29,14 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { PageHeader } from '../components/PageHeader';
 import { ListFiltersBar, ActiveFilterSelect } from '../components/ListFiltersBar';
 import { AppDataGrid } from '../components/AppDataGrid';
-import { FILTER_FIELD_SX, matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
+import { useUrlGridState, useUrlState, urlEnum } from '../hooks/useUrlState';
+import {
+  ACTIVE_FILTER_CODEC,
+  FILTER_FIELD_SX,
+  matchFields,
+  matchesActiveFilter,
+  type ActiveFilter,
+} from '../utils/listFilters';
 import { recurringExpensesApi, type HourlyCostSettings } from '../api/recurring-expenses';
 import { RecurringExpenseFormDialog } from '../components/finance/RecurringExpenseFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
@@ -41,14 +48,18 @@ import type { RecurringExpense } from '../types';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
+type ExpenseTypeFilter = 'ALL' | 'FIXED' | 'VARIABLE';
+const TYPE_FILTER_CODEC = urlEnum<ExpenseTypeFilter>(['ALL', 'FIXED', 'VARIABLE']);
+
 export function RecurringExpensesPage() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
   const { isAdmin } = usePermissions();
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
-  const [typeFilter, setTypeFilter] = useState<'ALL' | 'FIXED' | 'VARIABLE'>('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [activeFilter, setActiveFilter] = useUrlState<ActiveFilter>('status', 'ALL', ACTIVE_FILTER_CODEC);
+  const [typeFilter, setTypeFilter] = useUrlState<ExpenseTypeFilter>('tipo', 'ALL', TYPE_FILTER_CODEC);
+  const { gridProps, resetPage } = useUrlGridState();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RecurringExpense | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -444,7 +455,10 @@ export function RecurringExpensesPage() {
       <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
         <ListFiltersBar
           search={search}
-          onSearchChange={setSearch}
+          onSearchChange={(v) => {
+            setSearch(v);
+            resetPage();
+          }}
           searchPlaceholder="Buscar por nome ou categoria"
           filteredCount={filteredItems.length}
           totalCount={items.length}
@@ -462,16 +476,26 @@ export function RecurringExpensesPage() {
             size="small"
             label="Tipo"
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+            onChange={(e) => {
+              setTypeFilter(e.target.value as typeof typeFilter);
+              resetPage();
+            }}
             sx={FILTER_FIELD_SX}
           >
             <MenuItem value="ALL">Todos</MenuItem>
             <MenuItem value="FIXED">Fixa</MenuItem>
             <MenuItem value="VARIABLE">Variável</MenuItem>
           </TextField>
-          <ActiveFilterSelect value={activeFilter} onChange={setActiveFilter} />
+          <ActiveFilterSelect
+            value={activeFilter}
+            onChange={(v) => {
+              setActiveFilter(v);
+              resetPage();
+            }}
+          />
         </ListFiltersBar>
         <AppDataGrid
+          {...gridProps}
           height={480}
           rows={filteredItems}
           columns={columns}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -20,6 +20,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { urlPage, useUrlState } from '../hooks/useUrlState';
 import { proceduresApi } from '../api/procedures';
 import { ProcedureFormDialog } from '../components/procedures/ProcedureFormDialog';
 import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
@@ -59,9 +60,9 @@ export function Procedures() {
   const canEdit = has('procedures:edit');
   const canDelete = has('procedures:delete');
 
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('Todos');
-  const [page, setPage] = useState(0);
+  const [search, setSearch] = useUrlState('busca', '');
+  const [category, setCategory] = useUrlState('categoria', 'Todos');
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Procedure | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -99,8 +100,6 @@ export function Procedures() {
     });
   }, [procedures, search, category]);
 
-  useEffect(() => setPage(0), [search, category]);
-
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
   const rows = filtered.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
@@ -133,7 +132,10 @@ export function Procedures() {
                 key={c}
                 component="button"
                 type="button"
-                onClick={() => setCategory(c)}
+                onClick={() => {
+                  setCategory(c);
+                  setPage(0);
+                }}
                 sx={{
                   border: 0,
                   cursor: 'pointer',
@@ -180,7 +182,10 @@ export function Procedures() {
             <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
             <InputBase
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
               placeholder="Buscar procedimento..."
               sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />

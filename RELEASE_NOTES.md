@@ -94,6 +94,10 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Contagem no topo de profissionais cadastrados e quantos estão **disponíveis agora**; botão **Adicionar profissional** abre o cadastro já como profissional.
 - Perfil completo no cadastro de usuário: **cor no calendário**, **bio**, **foto** (upload) e registro no conselho.
 
+**Filtros guardados no endereço**
+- Busca, filtros, ordenação e página das listas ficam no endereço da página. Ao voltar de outra tela, recarregar ou compartilhar o link, a lista abre do mesmo jeito.
+- Na **Agenda**, a visão (dia, semana ou mês) e o período exibido também são mantidos.
+
 ### Correções
 
 **Agenda e disponibilidade**

@@ -28,7 +28,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PageHeader } from '../components/PageHeader';
 import { ListFiltersBar } from '../components/ListFiltersBar';
 import { AppDataGrid } from '../components/AppDataGrid';
-import { FILTER_FIELD_SX, matchFields, type StockFilter } from '../utils/listFilters';
+import { useUrlGridState, useUrlState } from '../hooks/useUrlState';
+import { FILTER_FIELD_SX, STOCK_FILTER_CODEC, matchFields, type StockFilter } from '../utils/listFilters';
 import { inventoryApi } from '../api/inventory';
 import { InventoryFormDialog } from '../components/inventory/InventoryFormDialog';
 import { MovementDialog } from '../components/inventory/MovementDialog';
@@ -52,8 +53,9 @@ export function Inventory() {
   const canEdit = has('inventory:edit');
   const canDelete = has('inventory:delete');
 
-  const [search, setSearch] = useState('');
-  const [stockFilter, setStockFilter] = useState<StockFilter>('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [stockFilter, setStockFilter] = useUrlState<StockFilter>('estoque', 'ALL', STOCK_FILTER_CODEC);
+  const { gridProps, resetPage } = useUrlGridState();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [movementItem, setMovementItem] = useState<InventoryItem | null>(null);
@@ -332,7 +334,10 @@ export function Inventory() {
       <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
         <ListFiltersBar
           search={search}
-          onSearchChange={setSearch}
+          onSearchChange={(v) => {
+            setSearch(v);
+            resetPage();
+          }}
           searchPlaceholder="Buscar por nome ou SKU"
           filteredCount={filteredItems.length}
           totalCount={items.length}
@@ -343,7 +348,10 @@ export function Inventory() {
             size="small"
             label="Estoque"
             value={stockFilter}
-            onChange={(e) => setStockFilter(e.target.value as StockFilter)}
+            onChange={(e) => {
+              setStockFilter(e.target.value as StockFilter);
+              resetPage();
+            }}
             sx={FILTER_FIELD_SX}
           >
             <MenuItem value="ALL">Todos</MenuItem>
@@ -352,6 +360,7 @@ export function Inventory() {
         </ListFiltersBar>
 
         <AppDataGrid
+          {...gridProps}
           rows={filteredItems}
           columns={columns}
           loading={isLoading}

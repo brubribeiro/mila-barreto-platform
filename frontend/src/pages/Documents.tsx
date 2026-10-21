@@ -59,6 +59,7 @@ import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
+import { useUrlState, urlEnum } from '../hooks/useUrlState';
 import { matchFields } from '../utils/listFilters';
 import type { DocumentFile } from '../types';
 
@@ -494,6 +495,8 @@ function StatMiniCard({
   );
 }
 
+const LINK_FILTER_CODEC = urlEnum<LinkFilter>(['ALL', 'PATIENT', 'EQUIPMENT', 'NONE']);
+
 export function Documents() {
   const queryClient = useQueryClient();
   const { confirm, alert } = useAppDialog();
@@ -502,9 +505,9 @@ export function Documents() {
   const canCreate = has('documents:create');
   const canDelete = has('documents:delete');
 
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [linkFilter, setLinkFilter] = useState<LinkFilter>('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [categoryFilter, setCategoryFilter] = useUrlState('categoria', 'ALL');
+  const [linkFilter, setLinkFilter] = useUrlState<LinkFilter>('vinculo', 'ALL', LINK_FILTER_CODEC);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -541,7 +544,7 @@ export function Documents() {
       setSearch('');
       void queryClient.invalidateQueries({ queryKey: ['documents'] });
     },
-    [queryClient],
+    [queryClient, setCategoryFilter, setLinkFilter, setSearch],
   );
 
   const deleteMutation = useMutation({
