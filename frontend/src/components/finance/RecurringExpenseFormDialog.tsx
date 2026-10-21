@@ -6,7 +6,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  InputAdornment,
   MenuItem,
   Switch,
   TextField,
@@ -24,6 +23,7 @@ import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { LabeledField } from '../LabeledField';
+import { MoneyField } from '../MoneyField';
 import type { ExpenseType, RecurringExpense } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
 
@@ -131,6 +131,7 @@ export function RecurringExpenseFormDialog({ open, onClose, expense }: Props) {
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
         sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
       >
@@ -189,18 +190,14 @@ export function RecurringExpenseFormDialog({ open, onClose, expense }: Props) {
             <Controller
               name="amount"
               control={control}
-              rules={{ required: true, min: 0.01 }}
-              render={({ field }) => (
+              rules={{ validate: (v) => Number(v) > 0 || 'Informe um valor maior que zero' }}
+              render={({ field, fieldState }) => (
                 <LabeledField label="Valor mensal" required>
-                  <TextField
+                  <MoneyField
                     {...field}
-                    type="number"
                     fullWidth
-                    placeholder="0,00"
-                    inputProps={{ step: '0.01', min: 0 }}
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                    }}
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
                   />
                 </LabeledField>
               )}
@@ -223,15 +220,20 @@ export function RecurringExpenseFormDialog({ open, onClose, expense }: Props) {
             <Controller
               name="dueDay"
               control={control}
-              rules={{ required: true, min: 1, max: 31 }}
-              render={({ field }) => (
+              rules={{
+                required: 'Informe o dia do vencimento',
+                min: { value: 1, message: 'Use um dia entre 1 e 31' },
+                max: { value: 31, message: 'Use um dia entre 1 e 31' },
+              }}
+              render={({ field, fieldState }) => (
                 <LabeledField label="Dia do vencimento" required>
                   <TextField
                     {...field}
                     type="number"
                     fullWidth
-                    inputProps={{ min: 1, max: 31 }}
-                    helperText="Dia do mês (1–31)"
+                    inputProps={{ inputMode: 'numeric', min: 1, max: 31 }}
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message ?? 'Dia do mês (1–31)'}
                   />
                 </LabeledField>
               )}

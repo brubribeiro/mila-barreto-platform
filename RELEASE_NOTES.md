@@ -67,6 +67,10 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 **Formulários**
 - Modais de cadastro (paciente, financeiro, estoque, pacotes, profissionais, etc.) passam a usar seções visuais consistentes (**FormSection**), alinhadas ao estilo Aurora.
+- Campos de valor em **R$** ganharam máscara (digite 123456 e aparece 1.234,56).
+- No celular, campos numéricos, de telefone e de e-mail abrem o teclado certo.
+- Ao abrir um cadastro, o cursor já vai para o primeiro campo; Enter salva.
+- Mensagens de erro mais claras: telefone incompleto, e-mail inválido, CEP incompleto, valor zerado, quantidade ou dia de vencimento fora do limite.
 
 **Barra superior**
 - Sino de notificações reposicionado; botão **Novo agendamento** com estilo outlined.

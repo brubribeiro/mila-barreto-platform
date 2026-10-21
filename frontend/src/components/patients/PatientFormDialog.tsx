@@ -50,7 +50,7 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { FormSection } from '../FormSection';
 import type { Patient, PatientSex, PatientReferralSource } from '../../types';
-import { isValidCPF, maskCPF, maskCEP, maskPhone, onlyDigits } from '../../utils/masks';
+import { EMAIL_PATTERN, isValidCPF, isValidPhone, maskCPF, maskCEP, maskPhone, onlyDigits } from '../../utils/masks';
 import { birthDatePayloadFromInput, dateInputValueFromApi } from '../../utils/dateOnly';
 import { PATIENT_SEX_OPTIONS } from '../../utils/patientSex';
 import { PATIENT_REFERRAL_SOURCE_OPTIONS } from '../../utils/patientReferralSource';
@@ -469,7 +469,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
   const submit = handleSubmit(
     (values) => mutation.mutate(values),
     (errors) => {
-      if (errors.name || errors.document || errors.cep || errors.referralSourceOther) {
+      if (errors.name || errors.document || errors.phone || errors.email || errors.cep || errors.referralSourceOther) {
         setTab('basic');
       }
     },
@@ -504,6 +504,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
     >
       <Box
         component="form"
+        noValidate
         onSubmit={submit}
         sx={{
           display: 'flex',
@@ -682,6 +683,8 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                       fullWidth
                       size="small"
                       placeholder="Ex.: Marina Costa"
+                      autoFocus={!patient}
+                      inputProps={{ autoComplete: 'off' }}
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
                     />
@@ -714,15 +717,19 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
               <Controller
                 name="phone"
                 control={control}
-                render={({ field }) => (
+                rules={{ validate: (v) => !v || isValidPhone(v) || 'Telefone incompleto: informe DDD + número' }}
+                render={({ field, fieldState }) => (
                   <LabeledField label="Telefone">
                     <TextField
                       {...field}
+                      type="tel"
                       fullWidth
                       size="small"
                       placeholder="(11) 90000-0000"
                       onChange={(e) => field.onChange(maskPhone(e.target.value))}
-                      inputProps={{ inputMode: 'numeric', maxLength: 16 }}
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      inputProps={{ inputMode: 'tel', autoComplete: 'off', maxLength: 16 }}
                     />
                   </LabeledField>
                 )}
@@ -742,9 +749,19 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
             <Controller
               name="email"
               control={control}
-              render={({ field }) => (
+              rules={{ validate: (v) => !v || EMAIL_PATTERN.test(v.trim()) || 'E-mail inválido' }}
+              render={({ field, fieldState }) => (
                 <LabeledField label="E-mail">
-                  <TextField {...field} type="email" fullWidth size="small" placeholder="email@exemplo.com" />
+                  <TextField
+                    {...field}
+                    type="email"
+                    fullWidth
+                    size="small"
+                    placeholder="email@exemplo.com"
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                    inputProps={{ inputMode: 'email', autoComplete: 'off' }}
+                  />
                 </LabeledField>
               )}
             />
@@ -848,8 +865,9 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                         placeholder="CEP"
                         onChange={(e) => field.onChange(maskCEP(e.target.value))}
                         error={!!fieldState.error || cepStatus.error}
+                        helperText={fieldState.error?.message}
                         disabled={mutation.isPending}
-                        inputProps={{ inputMode: 'numeric', maxLength: 9 }}
+                        inputProps={{ inputMode: 'numeric', autoComplete: 'off', maxLength: 9 }}
                         sx={ADDRESS_INPUT_SX}
                         InputProps={{
                           startAdornment: (

@@ -29,6 +29,7 @@ import { proceduresApi } from '../../api/procedures';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { MoneyField } from '../MoneyField';
 import { LabeledField } from '../LabeledField';
 import type { Package, PackageHighlight } from '../../types';
 
@@ -230,6 +231,7 @@ export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
         sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
       >
@@ -384,7 +386,7 @@ export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps
                         {...field}
                         type="number"
                         fullWidth
-                        inputProps={{ min: 1 }}
+                        inputProps={{ inputMode: 'numeric', min: 1 }}
                         error={!!fieldState.error}
                         helperText={fieldState.error?.message}
                       />
@@ -442,14 +444,7 @@ export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps
                 control={control}
                 render={({ field }) => (
                   <LabeledField label="Valor do pacote (R$)">
-                    <TextField
-                      {...field}
-                      type="number"
-                      fullWidth
-                      placeholder="0,00"
-                      inputProps={{ step: '0.01', min: 0 }}
-                      InputProps={{ startAdornment: <InputAdornment position="start">R$</InputAdornment> }}
-                    />
+                    <MoneyField {...field} fullWidth />
                   </LabeledField>
                 )}
               />

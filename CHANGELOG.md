@@ -67,6 +67,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - `Login.tsx`: layout Aurora (painel de marca verde-escuro com gradiente e orbes animados, painel claro com botão “Entrar com o Google”, caixa de acesso exclusivo, contato do administrador e links de Termos/Privacidade); o botão oficial do `GoogleLogin` fica invisível sobre o botão visual, mantendo o fluxo de ID token; painel de marca some abaixo de `md`. Novo ícone `lock` em `AuroraIcon`, token `fontSizes['8xl']` (38px) e variável opcional `VITE_ADMIN_CONTACT_EMAIL` (link `mailto:` de “Fale com o administrador”).
 - `TermsOfUse.tsx`: layout Aurora (cabeçalho fixo com marca e botão Voltar ao login, selo Documento legal, seções em card único, rodapé com link para `/privacidade`); texto legal e rota `/termos` inalterados.
 - Layout: rotas autenticadas envolvidas por `PAGE_SHELL_SX` (`theme/layout.ts`, largura total sem `maxWidth` centralizado); `PAGE_MAX_WIDTH` mantido só para scroll horizontal de grades (procedimentos); removidos limites locais em rotinas, detalhe de estoque e páginas legais.
+- Formulários: componente `MoneyField` (máscara R$ "1.234,56", digitação por centavos) nos campos de valor de equipamentos, procedimentos, estoque, financeiro, despesas recorrentes, promoções, pacotes, movimentação e compra em lote; `masks.ts` ganha `formatMoneyInput`, `parseMoneyInput`, `isValidPhone` e `EMAIL_PATTERN`.
+- Formulários: `noValidate` nos `<form>` (mensagens do react-hook-form em português no lugar das do navegador), `inputMode` numeric/decimal/tel/email, `autoComplete="off"` em dados de terceiros, autoFocus no primeiro campo de paciente, usuário e procedimento, mensagens para regras que falhavam sem texto (duração, dia de vencimento, quantidades, valores, materiais e equipamentos).
+- Paciente: validação de telefone (DDD + número) e e-mail; erro de CEP passa a aparecer.
 
 ### Fixed
 
