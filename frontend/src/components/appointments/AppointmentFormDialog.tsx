@@ -1,29 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import {
   Alert,
-  Autocomplete,
   Box,
   Button,
-  Chip,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
-  Grid,
-  IconButton,
-  List,
-  ListItem,
-  ListItemText,
-  MenuItem,
-  Paper,
-  Popover,
   Stack,
-  Tab,
-  Tabs,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   Typography,
   alpha,
@@ -31,94 +15,65 @@ import {
   useTheme,
 } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import StarRateRoundedIcon from '@mui/icons-material/StarRateRounded';
-import AddIcon from '@mui/icons-material/Add';
-import InventoryIcon from '@mui/icons-material/Inventory2Outlined';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import EventRepeatIcon from '@mui/icons-material/EventRepeat';
-import PaymentIcon from '@mui/icons-material/Payment';
-import ViewInArIcon from '@mui/icons-material/ViewInAr';
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
-import NotesOutlinedIcon from '@mui/icons-material/NotesOutlined';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import PauseIcon from '@mui/icons-material/Pause';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
-import { keepPreviousData, useMutation, useQuery, useQueryClient, type Query, type QueryKey } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
+import 'dayjs/locale/pt-br';
 
 import { appointmentsApi, AppointmentPayload } from '../../api/appointments';
-import { formatDateOnlyFromApi } from '../../utils/dateOnly';
 import { paymentMethodsApi } from '../../api/paymentMethods';
-import { availabilityApi } from '../../api/availability';
-import { patientsApi, type PatientReliability } from '../../api/patients';
+import { patientsApi } from '../../api/patients';
 import { proceduresApi } from '../../api/procedures';
-import { usersApi } from '../../api/users';
 import { packagesApi } from '../../api/packages';
 import { inventoryApi } from '../../api/inventory';
-import { useAuth } from '../../contexts/AuthContext';
 import { useAppDialog } from '../../contexts/AppDialogContext';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { usePermissions } from '../../contexts/usePermissions';
-import { DialogHeader, dialogPaperSx, dialogActionsBorderSx, dialogSimpleContentSx } from '../DialogCloseButton';
+import { DialogHeader } from '../DialogCloseButton';
 import { SendWhatsAppDialog } from '../messages/SendWhatsAppDialog';
 import { PatientDetailDrawer } from '../patients/PatientDetailDrawer';
 import { varsFromAppointment } from '../../utils/whatsapp';
-import {
-  computeEarliestRecurrenceDate,
-  formatRecurrenceEarliestLabel,
-  isDateBeforeRecurrenceEarliest,
-} from '../../utils/appointmentRecurrence';
 import { getApiErrorMessage } from '../../utils/apiError';
-import type { Appointment, AppointmentKind, AppointmentStatus, PatientPackage, Package, PaymentMethodEntry, Procedure } from '../../types';
-import { fontSizes } from '../../theme/fontSizes';
-
-function selectValueIfListed(value: string, options: { id: string }[]) {
-  if (!value) return '';
-  return options.some((o) => o.id === value) ? value : '';
-}
-
-function isAppointmentListQuery(query: Query) {
-  const root = query.queryKey[0];
-  return root === 'appointments' || root === 'appointments-range' || root === 'appointments-week';
-}
-
-function invalidateAppointmentListQueries(queryClient: ReturnType<typeof useQueryClient>) {
-  queryClient.invalidateQueries({ predicate: isAppointmentListQuery });
-}
-
-function snapshotAppointmentLists(queryClient: ReturnType<typeof useQueryClient>) {
-  return queryClient.getQueriesData<Appointment[]>({ predicate: isAppointmentListQuery });
-}
-
-function removeAppointmentFromCache(
-  queryClient: ReturnType<typeof useQueryClient>,
-  appointmentId: string,
-) {
-  queryClient.setQueriesData<Appointment[]>({ predicate: isAppointmentListQuery }, (current) =>
-    current?.filter((item) => item.id !== appointmentId),
-  );
-}
-
-function restoreAppointmentLists(
-  queryClient: ReturnType<typeof useQueryClient>,
-  snapshots: [QueryKey, Appointment[] | undefined][],
-) {
-  for (const [key, data] of snapshots) {
-    queryClient.setQueryData(key, data);
-  }
-}
-
-interface ExtraMaterialRow {
-  itemId: string;
-  quantity: number;
-}
+import type { Appointment, Package, PaymentMethodEntry, Procedure } from '../../types';
+import {
+  invalidateAppointmentListQueries,
+  isAppointmentListQuery,
+  removeAppointmentFromCache,
+  restoreAppointmentLists,
+  snapshotAppointmentLists,
+} from './appointmentCache';
+import {
+  emptyFormValues,
+  formatElapsed,
+  kindOptions,
+  normalizeExtraMaterials,
+  type ExtraMaterialRow,
+  type FormValues,
+  type SectionKey,
+} from './appointmentFormModel';
+import type { SectionState } from './AppointmentFormSection';
+import { AppointmentStatusSelect } from './AppointmentStatusSelect';
+import {
+  AppointmentSummaryBar,
+  AppointmentSummaryPanel,
+  type AppointmentSummaryData,
+} from './AppointmentSummary';
+import { BatchSessionsDialog, type BatchTarget } from './BatchSessionsDialog';
+import { CompletePaymentDialog } from './CompletePaymentDialog';
+import { MaterialsSection, useAppointmentMaterials } from './MaterialsSection';
+import { NotesSection } from './NotesSection';
+import { PackageSection } from './PackageSection';
+import { PackageSessionsDialog } from './PackageSessionsDialog';
+import { PatientSection } from './PatientSection';
+import { ReturnAppointmentDialog } from './ReturnAppointmentDialog';
+import { ScheduleSection } from './ScheduleSection';
+import { SellPackageDialog } from './SellPackageDialog';
+import { ServiceSection } from './ServiceSection';
+import { SessionTimerCard, SessionTimerCompact } from './SessionTimerCard';
+import { useAppointmentProfessionals } from './useAppointmentProfessionals';
+import { useSessionTimer } from './useSessionTimer';
 
 interface AppointmentFormDialogProps {
   open: boolean;
@@ -128,164 +83,16 @@ interface AppointmentFormDialogProps {
   defaultPatientId?: string | null;
 }
 
-interface FormValues {
-  patientId: string;
-  procedureId: string;
-  professionalId: string;
-  date: string;
-  startTime: string;
-  status: AppointmentStatus;
-  kind: AppointmentKind;
-  notes: string;
-  clinicalNotes: string;
-}
+const SECTION_ORDER: SectionKey[] = ['patient', 'service', 'schedule', 'package', 'materials', 'notes'];
 
-const empty: FormValues = {
-  patientId: '',
-  procedureId: '',
-  professionalId: '',
-  date: dayjs().format('YYYY-MM-DD'),
-  startTime: '09:00',
-  status: 'SCHEDULED',
-  kind: 'PROCEDURE',
-  notes: '',
-  clinicalNotes: '',
+const DEFAULT_EXPANDED: Record<SectionKey, boolean> = {
+  patient: true,
+  service: true,
+  schedule: true,
+  package: false,
+  materials: false,
+  notes: false,
 };
-
-const statusOptions: { value: AppointmentStatus; label: string }[] = [
-  { value: 'SCHEDULED', label: 'Agendado' },
-  { value: 'CONFIRMED', label: 'Confirmado' },
-  { value: 'IN_PROGRESS', label: 'Em atendimento' },
-  { value: 'COMPLETED', label: 'Concluído' },
-  { value: 'CANCELLED', label: 'Cancelado' },
-  { value: 'NO_SHOW', label: 'Faltou' },
-];
-
-const kindOptions: { value: AppointmentKind; label: string }[] = [
-  { value: 'EVALUATION', label: 'Avaliação' },
-  { value: 'PROCEDURE', label: 'Procedimento' },
-  { value: 'RETURN', label: 'Retorno' },
-];
-
-
-function LabeledField({
-  label,
-  required,
-  action,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <Box>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 1,
-          mb: 0.5,
-          minHeight: 20,
-        }}
-      >
-        <Typography
-          component="label"
-          sx={{ fontSize: fontSizes.xs, fontWeight: 700, color: 'text.secondary' }}
-        >
-          {label}
-          {required ? ' *' : ''}
-        </Typography>
-        {action}
-      </Box>
-      {children}
-    </Box>
-  );
-}
-
-const STATUS_DOT: Record<string, string> = {
-  SCHEDULED: '#8B8680',
-  CONFIRMED: '#3787DE',
-  IN_PROGRESS: '#C98A12',
-  COMPLETED: '#15998B',
-  CANCELLED: '#C25A4C',
-  NO_SHOW: '#D46B8A',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  SCHEDULED: 'Agendado',
-  CONFIRMED: 'Confirmado',
-  IN_PROGRESS: 'Em andamento',
-  COMPLETED: 'Concluído',
-  CANCELLED: 'Cancelado',
-  NO_SHOW: 'Faltou',
-};
-
-function SectionIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        borderRadius: '11px',
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function AppointmentFormSection({
-  title,
-  icon,
-  action,
-  children,
-  sx,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  action?: ReactNode;
-  children: ReactNode;
-  sx?: object;
-}) {
-  return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: 1.75,
-        borderRadius: '14px',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
-        boxShadow: '0 1px 2px rgba(16,40,37,0.03)',
-        ...sx,
-      }}
-    >
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.75 }}>
-        <Typography
-          sx={{
-            fontSize: fontSizes.xs,
-            fontWeight: 800,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            color: 'text.disabled',
-          }}
-        >
-          {title}
-        </Typography>
-        {action && <Box sx={{ ml: 'auto' }}>{action}</Box>}
-      </Stack>
-      {children}
-    </Paper>
-  );
-}
 
 export function AppointmentFormDialog({
   open,
@@ -296,34 +103,38 @@ export function AppointmentFormDialog({
 }: AppointmentFormDialogProps) {
   const muiTheme = useTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(muiTheme.breakpoints.down('md'));
+  const showSidebar = useMediaQuery(muiTheme.breakpoints.up('lg'));
 
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const { confirm, alert } = useAppDialog();
+  const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, restrictToOwnAppointments } = usePermissions();
+  const { has } = usePermissions();
   const canDelete = has('appointments:delete');
   const canCreate = has('appointments:create');
   const canViewPatient = has('patients:view');
 
-  const { control, handleSubmit, reset, watch, setValue, getValues } = useForm<FormValues>({ defaultValues: empty });
+  const {
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    getValues,
+    formState: { errors, isDirty },
+  } = useForm<FormValues>({ defaultValues: emptyFormValues });
+  const [expanded, setExpanded] = useState<Record<SectionKey, boolean>>(DEFAULT_EXPANDED);
   const [whatsappOpen, setWhatsappOpen] = useState(false);
-  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [pendingReturn, setPendingReturn] = useState<Appointment | null>(null);
-  const [returnDate, setReturnDate] = useState('');
-  const [returnStartTime, setReturnStartTime] = useState('');
-  const [returnCreateError, setReturnCreateError] = useState<string | null>(null);
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
-  const [summaryAnchor, setSummaryAnchor] = useState<HTMLElement | null>(null);
   const [pendingFormValues, setPendingFormValues] = useState<FormValues | null>(null);
-  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState('');
-  const [selectedReferenceMonth, setSelectedReferenceMonth] = useState('');
   const [sessionsDialogOpen, setSessionsDialogOpen] = useState(false);
   const [extraMaterials, setExtraMaterials] = useState<ExtraMaterialRow[]>([]);
-  const [sideTab, setSideTab] = useState<'materials' | 'notes'>('materials');
   const [chartPatientId, setChartPatientId] = useState<string | null>(null);
+  const [selectedPackageId, setSelectedPackageId] = useState<string>('');
+  const [sellPackageTarget, setSellPackageTarget] = useState<Package | null>(null);
+  const [batchTarget, setBatchTarget] = useState<BatchTarget | null>(null);
+  /** Materiais extras como estavam ao abrir, para detectar alterações não salvas. */
+  const initialExtrasRef = useRef('[]');
   // Só habilita a busca de profissionais depois que o formulário foi inicializado
   // com os valores reais (reset), evitando uma requisição extra com o horário padrão.
   const [formInitialized, setFormInitialized] = useState(false);
@@ -348,11 +159,6 @@ export function AppointmentFormDialog({
   const { data: procedures = [] } = useQuery({
     queryKey: ['procedures'],
     queryFn: () => proceduresApi.list(),
-    enabled: open,
-  });
-  const { data: appointmentProviders = [] } = useQuery({
-    queryKey: ['users', 'appointment-providers'],
-    queryFn: () => usersApi.listAppointmentProviders(),
     enabled: open,
   });
 
@@ -382,14 +188,19 @@ export function AppointmentFormDialog({
     } else {
       const start = defaultStart ?? new Date();
       const isMidnight = start.getHours() === 0 && start.getMinutes() === 0;
-      professionalManuallySelectedRef.current = false;
       reset({
-        ...empty,
+        ...emptyFormValues,
         patientId: defaultPatientId ?? '',
         date: dayjs(start).format('YYYY-MM-DD'),
         startTime: isMidnight ? '09:00' : dayjs(start).format('HH:mm'),
       });
     }
+    setExpanded({
+      ...DEFAULT_EXPANDED,
+      package: !!appointment?.patientPackageId,
+      materials: !!appointment?.extraMaterials?.length,
+      notes: !!(appointment?.notes?.trim() || appointment?.clinicalNotes?.trim()),
+    });
     setFormInitialized(true);
   }, [open, appointment, defaultStart, defaultPatientId, reset]);
 
@@ -397,34 +208,30 @@ export function AppointmentFormDialog({
     if (!open) return;
     const source = appointmentDetail ?? appointment;
     if (source?.extraMaterials?.length) {
-      setExtraMaterials(
-        source.extraMaterials.map((m) => ({
-          itemId: m.itemId,
-          quantity: Number(m.quantity),
-        })),
-      );
+      const rows = source.extraMaterials.map((m) => ({
+        itemId: m.itemId,
+        quantity: Number(m.quantity),
+      }));
+      initialExtrasRef.current = JSON.stringify(normalizeExtraMaterials(rows));
+      setExtraMaterials(rows);
     } else if (!appointment) {
+      initialExtrasRef.current = '[]';
       setExtraMaterials([]);
     }
   }, [open, appointment, appointmentDetail]);
 
   const selectedKind = watch('kind');
   const selectedProcedureId = watch('procedureId');
-
-  useEffect(() => {
-    if (!open) return;
-    setSideTab(selectedKind === 'PROCEDURE' ? 'materials' : 'notes');
-  }, [open, selectedKind]);
-
-  const materialsEnabled = selectedKind === 'PROCEDURE' && !!selectedProcedureId;
-  const showMaterialsTab = true;
-  const activeSideTab = materialsEnabled ? sideTab : 'notes';
-
   const selectedStatus = watch('status');
   const selectedPatientId = watch('patientId');
   const selectedDate = watch('date');
   const selectedStartTime = watch('startTime');
   const selectedProfessionalId = watch('professionalId');
+  const notes = watch('notes');
+  const clinicalNotes = watch('clinicalNotes');
+
+  const materialsEnabled = selectedKind === 'PROCEDURE' && !!selectedProcedureId;
+
   const procedureOptions = useMemo(() => {
     const byId = new Map<string, Procedure>(procedures.map((p) => [p.id, p]));
     const fromAppointment = appointmentDetail?.procedure ?? appointment?.procedure;
@@ -454,46 +261,6 @@ export function AppointmentFormDialog({
   }, [open, selectedKind, procedureOptions, getValues, setValue]);
 
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
-
-  const { data: reliability } = useQuery<PatientReliability>({
-    queryKey: ['patient-reliability', selectedPatientId],
-    queryFn: () => patientsApi.getReliability(selectedPatientId),
-    enabled: open && !!selectedPatientId,
-  });
-
-  const { data: patientDetail } = useQuery({
-    queryKey: ['patient-detail-summary', selectedPatientId],
-    queryFn: () => patientsApi.findOne(selectedPatientId),
-    enabled: Boolean(summaryAnchor) && !!selectedPatientId,
-  });
-
-  const patientSummary = useMemo(() => {
-    const appts = patientDetail?.appointments ?? [];
-    const completed = appts.filter((a) => a.status === 'COMPLETED');
-    const last = [...completed].sort(
-      (a, b) => dayjs(b.startAt).valueOf() - dayjs(a.startAt).valueOf(),
-    )[0];
-    return { visits: completed.length, last };
-  }, [patientDetail]);
-
-  const reliabilityColor = useMemo(() => {
-    if (!reliability) return undefined;
-    if (reliability.reliabilityPercent >= 80) return 'success' as const;
-    if (reliability.reliabilityPercent >= 50) return 'warning' as const;
-    return 'error' as const;
-  }, [reliability]);
-
-  const [selectedPackageId, setSelectedPackageId] = useState<string>('');
-  const [sellDialogOpen, setSellDialogOpen] = useState(false);
-  const [sellPackageTarget, setSellPackageTarget] = useState<Package | null>(null);
-  const [sellPaymentMethodId, setSellPaymentMethodId] = useState('');
-  const [sellTotalPaid, setSellTotalPaid] = useState<number>(0);
-  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
-  const [batchPatientPkg, setBatchPatientPkg] = useState<PatientPackage | null>(null);
-  const [batchCreating, setBatchCreating] = useState(false);
-  const [batchSessions, setBatchSessions] = useState<{ date: string; startTime: string }[]>([]);
-  /** Quando definido, o agendamento em lote preenche exatamente N sessões faltantes. */
-  const [batchFillCount, setBatchFillCount] = useState<number | null>(null);
 
   const { data: activePatientPackages = [] } = useQuery({
     queryKey: ['patient-packages-active', selectedPatientId],
@@ -531,42 +298,6 @@ export function AppointmentFormDialog({
   });
 
   const recurrenceEarliestDate = recurrenceLimit?.earliestDate ?? null;
-
-  useEffect(() => {
-    if (!batchDialogOpen || !batchPatientPkg || !selectedProcedure?.recurrenceDays) {
-      return;
-    }
-    const remaining =
-      batchFillCount ?? batchPatientPkg.sessionsTotal - batchPatientPkg.sessionsUsed;
-    if (remaining <= 0) {
-      setBatchSessions([]);
-      return;
-    }
-    // Ao preencher faltantes, começa após a última sessão já agendada
-    const lastScheduled =
-      batchFillCount != null && packageSessions.length > 0
-        ? packageSessions[packageSessions.length - 1]
-        : null;
-    const baseDate = lastScheduled
-      ? dayjs(lastScheduled.startAt).add(selectedProcedure.recurrenceDays!, 'day')
-      : dayjs(`${selectedDate}T${selectedStartTime}`);
-    const sessions = Array.from({ length: remaining }, (_, i) => {
-      const sessionDate = baseDate.add(i * selectedProcedure.recurrenceDays!, 'day');
-      return {
-        date: sessionDate.format('YYYY-MM-DD'),
-        startTime: sessionDate.format('HH:mm'),
-      };
-    });
-    setBatchSessions(sessions);
-  }, [
-    batchDialogOpen,
-    batchPatientPkg,
-    batchFillCount,
-    packageSessions,
-    selectedProcedure?.recurrenceDays,
-    selectedDate,
-    selectedStartTime,
-  ]);
 
   const { data: allCatalogPackages = [] } = useQuery({
     queryKey: ['packages'],
@@ -626,24 +357,6 @@ export function AppointmentFormDialog({
   // Mês de referência (competência) — relevante para agendamentos de meses passados
   const appointmentMonthKey = appointment ? dayjs(appointment.startAt).format('YYYY-MM') : '';
   const currentMonthKey = dayjs().format('YYYY-MM');
-  const isOldAppointment = !!appointment && appointmentMonthKey < currentMonthKey;
-
-  const referenceMonthOptions = useMemo(() => {
-    const opts: { value: string; label: string }[] = [];
-    if (!appointmentMonthKey) return opts;
-    const end = dayjs().startOf('month');
-    let m = dayjs(`${appointmentMonthKey}-01`).startOf('month');
-    // Do mês do agendamento até o mês atual (inclusive)
-    while (m.isBefore(end) || m.isSame(end, 'month')) {
-      const label = m.format('MMMM [de] YYYY').replace(/^./, (c) => c.toUpperCase());
-      opts.push({
-        value: m.format('YYYY-MM'),
-        label: m.isSame(end, 'month') ? `${label} (atual)` : label,
-      });
-      m = m.add(1, 'month');
-    }
-    return opts;
-  }, [appointmentMonthKey]);
 
   const needsPaymentOnComplete = useCallback(
     (values: FormValues) => {
@@ -659,179 +372,32 @@ export function AppointmentFormDialog({
     [appointment, selectedPackageId, selectedPatientPkg],
   );
 
-  const brl = useMemo(
-    () => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }),
-    [],
-  );
-
-  const slotStart = useMemo(
-    () => dayjs(`${selectedDate}T${selectedStartTime}`),
-    [selectedDate, selectedStartTime],
-  );
-  const slotEnd = useMemo(
-    () => slotStart.add(selectedProcedure?.durationMinutes ?? 60, 'minute'),
-    [slotStart, selectedProcedure?.durationMinutes],
-  );
-  const slotValid = slotStart.isValid() && slotEnd.isValid() && slotEnd.isAfter(slotStart);
-
-  const {
-    data: availableProfessionals = [],
-    isLoading: loadingProfessionals,
-    isFetching: fetchingProfessionals,
-  } = useQuery({
-    queryKey: [
-      'available-professionals',
-      selectedDate,
-      selectedStartTime,
-      selectedProcedure?.durationMinutes ?? 60,
-      appointment?.id,
-    ],
-    queryFn: () =>
-      availabilityApi.listAvailableProfessionals(
-        slotStart.toISOString(),
-        slotEnd.toISOString(),
-        appointment?.id,
-      ),
-    enabled: open && slotValid && formInitialized,
-    placeholderData: keepPreviousData,
-  });
-
-  const checkingAvailability = loadingProfessionals;
-  const verifyingAvailability = fetchingProfessionals && !loadingProfessionals;
-
-  const professionalOptions = useMemo(() => {
-    const byId = new Map<string, { id: string; name: string }>();
-    for (const p of availableProfessionals) byId.set(p.id, p);
-
-    const fallbacks = [appointmentDetail?.professional, appointment?.professional];
-    for (const p of fallbacks) {
-      if (p?.id && !byId.has(p.id)) byId.set(p.id, p);
-    }
-
-    if (selectedProfessionalId) {
-      const fromProviders = appointmentProviders.find((p) => p.id === selectedProfessionalId);
-      if (fromProviders && !byId.has(fromProviders.id)) byId.set(fromProviders.id, fromProviders);
-    }
-
-    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-  }, [
-    availableProfessionals,
+  const professionals = useAppointmentProfessionals({
+    open,
+    formInitialized,
     appointment,
     appointmentDetail,
-    selectedProfessionalId,
-    appointmentProviders,
-  ]);
-
-  const assignedProfessional = useMemo(() => {
-    if (appointment?.professional) return appointment.professional;
-    const id = selectedProfessionalId;
-    if (!id) return undefined;
-    return (
-      appointmentProviders.find((p) => p.id === id) ??
-      availableProfessionals.find((p) => p.id === id)
-    );
-  }, [appointment?.professional, selectedProfessionalId, appointmentProviders, availableProfessionals]);
-
-  const selectedPerformsAppointments = useMemo(() => {
-    if (!selectedProfessionalId) return false;
-    return appointmentProviders.some((p) => p.id === selectedProfessionalId);
-  }, [selectedProfessionalId, appointmentProviders]);
-
-  const loggedUserCannotBeScheduled =
-    !!restrictToOwnAppointments && !!user && user.providesAppointments === false;
-
-  useEffect(() => {
-    if (!open || appointment) return;
-
-    if (restrictToOwnAppointments && user) {
-      if (loggedUserCannotBeScheduled) {
-        setValue('professionalId', '');
-        return;
-      }
-      if (!slotValid) return;
-      if (fetchingProfessionals && availableProfessionals.length === 0) return;
-      if (availableProfessionals.some((p) => p.id === user.id)) {
-        setValue('professionalId', user.id);
-      } else {
-        setValue('professionalId', '');
-      }
-      return;
-    }
-
-    if (!slotValid) return;
-    if (fetchingProfessionals && availableProfessionals.length === 0) return;
-
-    if (selectedProfessionalId && (fetchingProfessionals || professionalManuallySelectedRef.current)) {
-      return;
-    }
-
-    if (availableProfessionals.length === 0) {
-      setValue('professionalId', '');
-      return;
-    }
-
-    if (!selectedProfessionalId) {
-      setValue('professionalId', availableProfessionals[0].id);
-      return;
-    }
-
-    const currentStillAvailable = availableProfessionals.some(
-      (p) => p.id === selectedProfessionalId,
-    );
-    if (!currentStillAvailable) {
-      setValue('professionalId', availableProfessionals[0].id);
-    }
-  }, [
-    open,
-    appointment,
-    restrictToOwnAppointments,
-    user,
-    slotValid,
-    fetchingProfessionals,
-    availableProfessionals,
-    selectedProfessionalId,
-    loggedUserCannotBeScheduled,
-    setValue,
-  ]);
-
-  const noProfessionalAvailable =
-    !appointment &&
-    slotValid &&
-    !checkingAvailability &&
-    !fetchingProfessionals &&
-    !loggedUserCannotBeScheduled &&
-    !selectedProfessionalId;
-
-  const timeOrProfessionalChanged = useMemo(() => {
-    if (!appointment) return true;
-    const start = dayjs(`${selectedDate}T${selectedStartTime}`);
-    const duration = selectedProcedure?.durationMinutes ?? 60;
-    const end = start.add(duration, 'minute');
-    return (
-      !start.isSame(appointment.startAt) ||
-      !end.isSame(appointment.endAt) ||
-      selectedProfessionalId !== appointment.professionalId
-    );
-  }, [
-    appointment,
+    selectedProcedure,
     selectedDate,
     selectedStartTime,
-    selectedProcedure?.durationMinutes,
     selectedProfessionalId,
-  ]);
-
-  const scheduleSlotBlocked =
-    slotValid &&
-    !fetchingProfessionals &&
-    !!selectedProfessionalId &&
-    !availableProfessionals.some((p) => p.id === selectedProfessionalId);
-
-  const requiresValidProvider = !appointment || timeOrProfessionalChanged;
-
-  const professionalSlotConflict =
-    !fetchingProfessionals &&
-    ((scheduleSlotBlocked && timeOrProfessionalChanged) ||
-      (requiresValidProvider && !!selectedProfessionalId && !selectedPerformsAppointments));
+    setValue,
+  });
+  const {
+    appointmentProviders,
+    slotEnd,
+    slotValid,
+    checkingAvailability,
+    professionalOptions,
+    assignedProfessional,
+    selectedProfessional,
+    selectedPerformsAppointments,
+    loggedUserCannotBeScheduled,
+    noProfessionalAvailable,
+    professionalSlotConflict,
+    requiresValidProvider,
+    blockingMessage,
+  } = professionals;
 
   const willDeductMaterials =
     selectedStatus === 'SCHEDULED' ||
@@ -839,53 +405,29 @@ export function AppointmentFormDialog({
     selectedStatus === 'IN_PROGRESS' ||
     selectedStatus === 'COMPLETED';
 
-  const materials = selectedProcedure?.materials ?? [];
+  const materialsState = useAppointmentMaterials({
+    inventory,
+    appointmentSource: appointmentDetail ?? appointment,
+    selectedProcedure,
+    extraMaterials,
+  });
+  const stockBlocksSave = willDeductMaterials && materialsState.hasInsufficient && selectedKind === 'PROCEDURE';
 
-  const effectiveAvailable = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const item of inventory) {
-      map.set(item.id, Number(item.quantity));
+  useEffect(() => {
+    if (stockBlocksSave && materialsEnabled) {
+      setExpanded((prev) => (prev.materials ? prev : { ...prev, materials: true }));
     }
-    const source = appointmentDetail ?? appointment;
-    if (source?.materialsDeducted) {
-      for (const m of materials) {
-        map.set(m.itemId, (map.get(m.itemId) ?? 0) + Number(m.quantity));
-      }
-      for (const m of source.extraMaterials ?? []) {
-        map.set(m.itemId, (map.get(m.itemId) ?? 0) + Number(m.quantity));
-      }
-    }
-    return map;
-  }, [inventory, appointment, appointmentDetail, materials]);
-
-  const totalMaterialNeed = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const m of materials) {
-      map.set(m.itemId, (map.get(m.itemId) ?? 0) + Number(m.quantity));
-    }
-    for (const extra of extraMaterials) {
-      if (!extra.itemId || extra.quantity <= 0) continue;
-      map.set(extra.itemId, (map.get(extra.itemId) ?? 0) + Number(extra.quantity));
-    }
-    return map;
-  }, [materials, extraMaterials]);
-
-  const hasInsufficient = useMemo(() => {
-    for (const [itemId, needed] of totalMaterialNeed) {
-      const available = effectiveAvailable.get(itemId);
-      if (available !== undefined && available < needed) return true;
-    }
-    return false;
-  }, [totalMaterialNeed, effectiveAvailable]);
+  }, [stockBlocksSave, materialsEnabled]);
 
   const normalizedExtraMaterials = useMemo(
-    () =>
-      extraMaterials.filter((m) => m.itemId && m.quantity > 0).map((m) => ({
-        itemId: m.itemId,
-        quantity: Number(m.quantity),
-      })),
+    () => normalizeExtraMaterials(extraMaterials),
     [extraMaterials],
   );
+
+  const hasUnsavedChanges =
+    isDirty ||
+    JSON.stringify(normalizedExtraMaterials) !== initialExtrasRef.current ||
+    selectedPackageId !== (appointment?.patientPackageId ?? '');
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => appointmentsApi.remove(id),
@@ -911,101 +453,11 @@ export function AppointmentFormDialog({
     },
   });
 
-  const isInProgress = appointmentDetail?.status === 'IN_PROGRESS' || appointment?.status === 'IN_PROGRESS';
-  const hasStartedAt = !!(appointmentDetail?.startedAt ?? appointment?.startedAt);
-  const hasFinishedAt = !!(appointmentDetail?.finishedAt ?? appointment?.finishedAt);
-  const canStartSession =
-    appointment &&
-    (appointment.status === 'SCHEDULED' || appointment.status === 'CONFIRMED') &&
-    !hasStartedAt;
-  const canFinishSession = isInProgress;
-  const showSessionControls =
-    !!appointment && (canStartSession || isInProgress || hasStartedAt);
-
-  const [elapsed, setElapsed] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const professionalManuallySelectedRef = useRef(false);
-
-  const startTimer = useCallback((startedAt: string) => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    const calc = () => Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
-    setElapsed(calc());
-    timerRef.current = setInterval(() => setElapsed(calc()), 1000);
-  }, []);
-
-  useEffect(() => {
-    if (!open) {
-      if (timerRef.current) clearInterval(timerRef.current);
-      timerRef.current = null;
-      return;
-    }
-    const detail = appointmentDetail ?? appointment;
-    if (detail?.startedAt && !detail?.finishedAt) {
-      startTimer(detail.startedAt);
-    } else if (detail?.startedAt && detail?.finishedAt) {
-      setElapsed(Math.floor((new Date(detail.finishedAt).getTime() - new Date(detail.startedAt).getTime()) / 1000));
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [open, appointmentDetail, appointment, startTimer]);
-
-  const formatElapsed = (secs: number) => {
-    const h = Math.floor(secs / 3600);
-    const m = Math.floor((secs % 3600) / 60);
-    const s = secs % 60;
-    return h > 0
-      ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-      : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  };
-
-  const startMutation = useMutation({
-    mutationFn: () => appointmentsApi.start(appointment!.id),
-    onSuccess: (saved) => {
-      invalidateAppointmentListQueries(queryClient);
-      queryClient.invalidateQueries({ queryKey: ['appointment', saved.id] });
-      if (saved.startedAt) startTimer(saved.startedAt);
-      setValue('status', 'IN_PROGRESS');
-      toast.success('Atendimento iniciado.');
-    },
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err, 'Não foi possível iniciar o atendimento.'));
-    },
-  });
-
-  const pauseMutation = useMutation({
-    mutationFn: () => appointmentsApi.finish(appointment!.id),
-    onSuccess: (saved) => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      invalidateAppointmentListQueries(queryClient);
-      queryClient.invalidateQueries({ queryKey: ['appointment', saved.id] });
-      toast.success('Atendimento pausado.');
-    },
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err, 'Não foi possível pausar o atendimento.'));
-    },
-  });
-
-  const stopTimerIfRunning = useCallback(async () => {
-    if (!appointment) return;
-    const detail = appointmentDetail ?? appointment;
-    if (detail.status === 'IN_PROGRESS' && !detail.finishedAt) {
-      await appointmentsApi.finish(appointment.id);
-      if (timerRef.current) clearInterval(timerRef.current);
-    }
-  }, [appointment, appointmentDetail]);
-
-  const resumeMutation = useMutation({
-    mutationFn: () => appointmentsApi.resume(appointment!.id),
-    onSuccess: (saved) => {
-      invalidateAppointmentListQueries(queryClient);
-      queryClient.invalidateQueries({ queryKey: ['appointment', saved.id] });
-      if (saved.startedAt) startTimer(saved.startedAt);
-      toast.success('Atendimento retomado.');
-    },
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err, 'Não foi possível retomar o atendimento.'));
-    },
+  const timer = useSessionTimer({
+    open,
+    appointment,
+    appointmentDetail,
+    onStarted: () => setValue('status', 'IN_PROGRESS'),
   });
 
   const mutation = useMutation({
@@ -1076,8 +528,6 @@ export function AppointmentFormDialog({
             saved.professionalId ?? saved.professional?.id ?? getValues().professionalId,
           procedureId: saved.procedureId ?? saved.procedure?.id ?? getValues().procedureId,
         });
-        setReturnCreateError(null);
-        setReturnDialogOpen(true);
       } else {
         onClose();
       }
@@ -1087,22 +537,35 @@ export function AppointmentFormDialog({
     },
   });
 
+  const requestClose = useCallback(async () => {
+    if (mutation.isPending) return;
+    if (hasUnsavedChanges) {
+      const discard = await confirm({
+        title: 'Descartar alterações?',
+        message: appointment
+          ? 'As alterações feitas neste agendamento ainda não foram salvas.'
+          : 'Os dados preenchidos para este novo agendamento ainda não foram salvos.',
+        subtitle: 'Alterações não salvas',
+        confirmLabel: 'Descartar',
+        cancelLabel: 'Continuar editando',
+        confirmColor: 'error',
+      });
+      if (!discard) return;
+    }
+    onClose();
+  }, [mutation.isPending, hasUnsavedChanges, confirm, appointment, onClose]);
+
   const handleConfirmFinishSession = async () => {
     setConfirmFinishOpen(false);
     if (!appointment) return;
 
-    await stopTimerIfRunning();
+    await timer.stopTimerIfRunning();
 
     const values: FormValues = { ...getValues(), status: 'COMPLETED' };
     setValue('status', 'COMPLETED');
 
-    const needsPayment = needsPaymentOnComplete(values);
-
-    if (needsPayment) {
+    if (needsPaymentOnComplete(values)) {
       setPendingFormValues(values);
-      setSelectedPaymentMethodId('');
-      setSelectedReferenceMonth('');
-      setPaymentDialogOpen(true);
       return;
     }
 
@@ -1114,205 +577,108 @@ export function AppointmentFormDialog({
       return;
     }
     if (!values.professionalId || !selectedPerformsAppointments) {
-      void alert({
-        title: 'Profissional inválido',
-        message: 'Selecione um profissional que realiza atendimentos e esteja disponível neste horário.',
-        severity: 'warning',
-      });
+      setExpanded((prev) => ({ ...prev, service: true }));
+      toast.warning('Selecione um profissional que realiza atendimentos e esteja disponível neste horário.');
       return;
     }
     if (values.kind === 'PROCEDURE' && !selectedProcedure) {
-      void alert({
-        title: 'Procedimento inválido',
-        message: 'Selecione um procedimento válido antes de salvar.',
-        severity: 'warning',
-      });
+      setExpanded((prev) => ({ ...prev, service: true }));
+      toast.warning('Selecione um procedimento válido antes de salvar.');
       return;
     }
 
-    const isCompleting = needsPaymentOnComplete(values);
-
-    if (isCompleting) {
+    if (needsPaymentOnComplete(values)) {
       setPendingFormValues(values);
-      setSelectedPaymentMethodId('');
-      setSelectedReferenceMonth('');
-      setPaymentDialogOpen(true);
     } else {
       mutation.mutate({ values });
     }
   };
 
-  const confirmPaymentAndSave = async () => {
+  const onInvalid = (formErrors: FieldErrors<FormValues>) => {
+    setExpanded((prev) => ({
+      ...prev,
+      patient: prev.patient || !!formErrors.patientId,
+      service: prev.service || !!formErrors.procedureId || !!formErrors.professionalId,
+      schedule: prev.schedule || !!formErrors.date || !!formErrors.startTime,
+    }));
+    toast.warning('Revise os campos destacados antes de salvar.');
+  };
+
+  const confirmPaymentAndSave = async (paymentMethodId: string, referenceMonth: string) => {
     if (!pendingFormValues) return;
-    await stopTimerIfRunning();
+    await timer.stopTimerIfRunning();
+    const ref = referenceMonth || appointmentMonthKey;
     mutation.mutate({
       values: pendingFormValues,
-      paymentMethodId: selectedPaymentMethodId || undefined,
-      referenceMonth: (() => {
-        const ref = selectedReferenceMonth || appointmentMonthKey;
-        return ref && ref !== currentMonthKey ? ref : undefined;
-      })(),
+      paymentMethodId: paymentMethodId || undefined,
+      referenceMonth: ref && ref !== currentMonthKey ? ref : undefined,
     });
-    setPaymentDialogOpen(false);
     setPendingFormValues(null);
   };
 
-  const pendingReturnProcedure = useMemo(() => {
-    if (!pendingReturn) return undefined;
-    return (
-      pendingReturn.procedure ??
-      procedures.find((p) => p.id === pendingReturn.procedureId) ??
-      selectedProcedure
-    );
-  }, [pendingReturn, procedures, selectedProcedure]);
+  const sectionStates: Record<SectionKey, SectionState> = {
+    patient: errors.patientId ? 'error' : selectedPatientId ? 'complete' : 'pending',
+    service:
+      errors.procedureId || errors.professionalId || blockingMessage
+        ? 'error'
+        : (selectedKind !== 'PROCEDURE' || selectedProcedure) &&
+            (selectedProfessional || (professionals.restrictToOwnAppointments && assignedProfessional))
+          ? 'complete'
+          : 'pending',
+    schedule: errors.date || errors.startTime || !slotValid ? 'error' : 'complete',
+    package: selectedPatientPkg ? 'complete' : 'pending',
+    materials: materialsEnabled ? (stockBlocksSave ? 'error' : 'complete') : 'pending',
+    notes: notes.trim() || clinicalNotes.trim() ? 'complete' : 'pending',
+  };
 
-  const returnMinDate = useMemo(() => {
-    if (!pendingReturn || !pendingReturnProcedure?.recurrenceDays) return null;
-    return computeEarliestRecurrenceDate(
-      pendingReturn.startAt,
-      pendingReturnProcedure.recurrenceDays,
-    );
-  }, [pendingReturn, pendingReturnProcedure]);
-
-  const returnDateTooEarly =
-    !!returnMinDate &&
-    !!returnDate &&
-    isDateBeforeRecurrenceEarliest(returnDate, returnMinDate);
-
-  const returnDateTime = useMemo(
-    () => (returnDate && returnStartTime ? dayjs(`${returnDate}T${returnStartTime}`) : null),
-    [returnDate, returnStartTime],
-  );
-
-  const returnProfessionalId = useMemo(
-    () => pendingReturn?.professionalId ?? pendingReturn?.professional?.id ?? '',
-    [pendingReturn],
-  );
-
-  const returnSlotEnd = useMemo(
-    () =>
-      returnDateTime?.isValid()
-        ? returnDateTime.add(pendingReturnProcedure?.durationMinutes ?? 60, 'minute')
-        : null,
-    [returnDateTime, pendingReturnProcedure?.durationMinutes],
-  );
-
-  const returnSlotValid =
-    !!returnDateTime?.isValid() &&
-    !!returnSlotEnd?.isValid() &&
-    returnSlotEnd.isAfter(returnDateTime);
-
-  const { data: returnAvailableProfessionals = [], isLoading: loadingReturnAvailability } = useQuery({
-    queryKey: [
-      'return-available-professionals',
-      returnDate,
-      returnStartTime,
-      pendingReturnProcedure?.durationMinutes ?? 60,
-    ],
-    queryFn: () =>
-      availabilityApi.listAvailableProfessionals(
-        returnDateTime!.toISOString(),
-        returnSlotEnd!.toISOString(),
-      ),
-    enabled: returnDialogOpen && returnSlotValid,
+  const section = (key: SectionKey) => ({
+    step: SECTION_ORDER.indexOf(key) + 1,
+    expanded: expanded[key],
+    onToggle: () => setExpanded((prev) => ({ ...prev, [key]: !prev[key] })),
+    state: sectionStates[key],
   });
 
-  const returnProfessionalAvailable = useMemo(() => {
-    if (!returnProfessionalId || !returnSlotValid) return false;
-    if (loadingReturnAvailability) return true;
-    return returnAvailableProfessionals.some((p) => p.id === returnProfessionalId);
-  }, [
-    returnProfessionalId,
-    returnSlotValid,
-    loadingReturnAvailability,
-    returnAvailableProfessionals,
-  ]);
+  const summaryData: AppointmentSummaryData = {
+    patientName: selectedPatient?.name,
+    serviceLabel:
+      selectedKind === 'PROCEDURE'
+        ? (selectedProcedure?.name ?? 'Procedimento não selecionado')
+        : (kindOptions.find((o) => o.value === selectedKind)?.label ?? ''),
+    professionalName: professionals.restrictToOwnAppointments
+      ? (assignedProfessional?.name ?? professionals.user?.name)
+      : selectedProfessional?.name,
+    dateLabel: slotValid ? dayjs(selectedDate).locale('pt-br').format('ddd, DD/MM/YYYY') : undefined,
+    timeLabel: slotValid ? `${selectedStartTime} – ${slotEnd.format('HH:mm')}` : undefined,
+    durationMinutes: selectedProcedure?.durationMinutes,
+    packageLabel: selectedPatientPkg
+      ? `${selectedPatientPkg.package?.name ?? 'Pacote'} · ${selectedPatientPkg.sessionsUsed}/${selectedPatientPkg.sessionsTotal}`
+      : 'Avulso',
+    amount: paymentAmountOnComplete,
+    status: appointment ? selectedStatus : undefined,
+    blockingMessage,
+    stockWarning: materialsEnabled && stockBlocksSave,
+  };
 
-  const closeReturnDialog = useCallback(() => {
-    setReturnDialogOpen(false);
-    setPendingReturn(null);
-    setReturnDate('');
-    setReturnStartTime('');
-    setReturnCreateError(null);
-    onClose();
-  }, [onClose]);
-
-  useEffect(() => {
-    if (!returnDialogOpen || !pendingReturn) return;
-    const procedure =
-      pendingReturn.procedure ??
-      procedures.find((p) => p.id === pendingReturn.procedureId);
-    const suggested = procedure?.recurrenceDays
-      ? dayjs(pendingReturn.startAt).add(procedure.recurrenceDays, 'day')
-      : dayjs(pendingReturn.startAt).add(7, 'day');
-    setReturnDate(suggested.format('YYYY-MM-DD'));
-    setReturnStartTime(suggested.format('HH:mm'));
-  }, [returnDialogOpen, pendingReturn, procedures]);
-
-  const createReturnMutation = useMutation({
-    mutationFn: async () => {
-      if (!pendingReturn || !returnDate || !returnStartTime) return;
-      const procedureForReturn =
-        pendingReturn.procedure ??
-        procedures.find((p) => p.id === pendingReturn.procedureId) ??
-        selectedProcedure;
-      const professionalId =
-        pendingReturn.professionalId ?? pendingReturn.professional?.id;
-      const procedureId = pendingReturn.procedureId ?? pendingReturn.procedure?.id;
-      if (!professionalId || !procedureId) {
-        throw new Error('Dados do atendimento incompletos para agendar o retorno.');
-      }
-      const returnStart = dayjs(`${returnDate}T${returnStartTime}`);
-      if (!returnStart.isValid()) {
-        throw new Error('Data ou horário do retorno inválido.');
-      }
-      if (
-        returnMinDate &&
-        isDateBeforeRecurrenceEarliest(returnDate, returnMinDate)
-      ) {
-        throw new Error(
-          `Retorno só pode ser agendado a partir de ${formatRecurrenceEarliestLabel(returnMinDate)}.`,
-        );
-      }
-      const durationMinutes = procedureForReturn?.durationMinutes ?? 60;
-      const start = returnStart.toISOString();
-      const end = returnStart.add(durationMinutes, 'minute').toISOString();
-      return appointmentsApi.create({
-        patientId: pendingReturn.patientId,
-        procedureId,
-        professionalId,
-        startAt: start,
-        endAt: end,
-        status: 'SCHEDULED',
-        kind: 'RETURN',
-        notes: procedureForReturn?.recurrenceDays
-          ? 'Retorno automático sugerido'
-          : 'Retorno agendado manualmente',
-      });
-    },
-    onSuccess: () => {
-      invalidateAppointmentListQueries(queryClient);
-      closeReturnDialog();
-      toast.success('Retorno agendado.');
-    },
-    onError: (err: unknown) => {
-      const message = getApiErrorMessage(err, 'Não foi possível agendar o retorno.');
-      setReturnCreateError(message);
-      toast.error(message);
-    },
-  });
+  const showTimerCard = !!appointment && (timer.showSessionControls || timer.isInProgress || timer.hasStartedAt);
+  const timerCard = showTimerCard && !isMobile && (
+    <SessionTimerCard
+      timer={timer}
+      finishDisabled={mutation.isPending}
+      onFinish={() => setConfirmFinishOpen(true)}
+    />
+  );
 
   return (
     <>
       <Dialog
         open={open}
-        onClose={onClose}
-        maxWidth="xl"
+        onClose={() => void requestClose()}
+        maxWidth="lg"
         fullWidth
         fullScreen={isMobile}
         PaperProps={{
           sx: {
-            maxWidth: isMobile ? '100%' : 1280,
+            maxWidth: isMobile ? '100%' : 1120,
             width: '100%',
             height: isMobile ? '100%' : 'min(94dvh, 840px)',
             maxHeight: isMobile ? '100%' : '94dvh',
@@ -1325,11 +691,12 @@ export function AppointmentFormDialog({
       >
         <Box
           component="form"
-          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          onSubmit={handleSubmit(onSubmit, onInvalid)}
           sx={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}
         >
           <DialogHeader
-            onClose={onClose}
+            onClose={() => void requestClose()}
             isMobile={isMobile}
             title={appointment ? 'Editar agendamento' : 'Novo agendamento'}
             subtitle={
@@ -1341,135 +708,16 @@ export function AppointmentFormDialog({
             }
             icon={<EventAvailableOutlinedIcon fontSize="small" />}
             sx={{ pt: { xs: 1.5, sm: 2.5 }, bgcolor: 'background.paper' }}
-            trailing={
-              appointment && !isMobile ? (
-                <Stack direction="row" spacing={1.5} alignItems="center" flexShrink={0}>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ flexShrink: 0 }}>
-                    <Typography
-                      sx={{
-                        fontSize: fontSizes['2xs'],
-                        fontWeight: 700,
-                        color: 'text.secondary',
-                        letterSpacing: '0.5px',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      Status
-                    </Typography>
-                    <Controller
-                      name="status"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          select
-                          size="small"
-                          sx={{ minWidth: 180, flexShrink: 0 }}
-                          SelectProps={{
-                            renderValue: (value) => {
-                              const opt = statusOptions.find((o) => o.value === value);
-                              return (
-                                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-                                  <Box
-                                    component="span"
-                                    sx={{
-                                      width: 9,
-                                      height: 9,
-                                      borderRadius: '50%',
-                                      bgcolor: STATUS_DOT[value as string] ?? 'grey.400',
-                                    }}
-                                  />
-                                  {opt?.label ?? (value as string)}
-                                </Box>
-                              );
-                            },
-                          }}
-                        >
-                          {statusOptions.map((opt) => (
-                            <MenuItem key={opt.value} value={opt.value}>
-                              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-                                <Box
-                                  component="span"
-                                  sx={{
-                                    width: 9,
-                                    height: 9,
-                                    borderRadius: '50%',
-                                    bgcolor: STATUS_DOT[opt.value] ?? 'grey.400',
-                                  }}
-                                />
-                                {opt.label}
-                              </Box>
-                            </MenuItem>
-                          ))}
-                        </TextField>
-                      )}
-                    />
-                  </Stack>
-                </Stack>
-              ) : undefined
-            }
+            trailing={appointment && !isMobile ? <AppointmentStatusSelect control={control} /> : undefined}
             bottom={
               appointment && isMobile ? (
                 <Stack spacing={1}>
-                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-                    {(isInProgress || hasStartedAt) && (
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 0.5,
-                          px: 1,
-                          py: 0.35,
-                          borderRadius: 1.5,
-                          bgcolor: isInProgress && !hasFinishedAt
-                            ? (theme) => alpha(theme.palette.success.main, 0.1)
-                            : (theme) => alpha(theme.palette.grey[500], 0.1),
-                          border: '1px solid',
-                          borderColor: isInProgress && !hasFinishedAt
-                            ? (theme) => alpha(theme.palette.success.main, 0.3)
-                            : 'divider',
-                        }}
-                      >
-                        <TimerOutlinedIcon sx={{ fontSize: 16, color: isInProgress && !hasFinishedAt ? 'success.main' : 'text.secondary' }} />
-                        <Typography variant="body2" fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums', color: isInProgress && !hasFinishedAt ? 'success.main' : 'text.primary' }}>
-                          {formatElapsed(elapsed)}
-                        </Typography>
-                      </Box>
-                    )}
-                    {showSessionControls && (
-                      <>
-                        {canStartSession && !isInProgress && !hasFinishedAt && (
-                          <Button variant="contained" color="primary" size="small" startIcon={<PlayArrowIcon />} disabled={startMutation.isPending} onClick={() => startMutation.mutate()}>
-                            Iniciar
-                          </Button>
-                        )}
-                        {isInProgress && !hasFinishedAt && (
-                          <Button variant="outlined" color="inherit" size="small" startIcon={<PauseIcon />} disabled={pauseMutation.isPending} onClick={() => pauseMutation.mutate()}>
-                            Pausar
-                          </Button>
-                        )}
-                        {hasFinishedAt && isInProgress && (
-                          <Button variant="outlined" color="primary" size="small" startIcon={<PlayArrowIcon />} disabled={resumeMutation.isPending} onClick={() => resumeMutation.mutate()}>
-                            Retomar
-                          </Button>
-                        )}
-                        <Button variant="contained" color="success" size="small" startIcon={<CheckCircleOutlineIcon />} disabled={!canFinishSession || mutation.isPending} onClick={() => setConfirmFinishOpen(true)}>
-                          Finalizar
-                        </Button>
-                      </>
-                    )}
-                  </Stack>
-                  <Controller
-                    name="status"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField {...field} select label="Status" size="small" fullWidth>
-                        {statusOptions.map((opt) => (
-                          <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
-                        ))}
-                      </TextField>
-                    )}
+                  <SessionTimerCompact
+                    timer={timer}
+                    finishDisabled={mutation.isPending}
+                    onFinish={() => setConfirmFinishOpen(true)}
                   />
+                  <AppointmentStatusSelect control={control} compact />
                 </Stack>
               ) : undefined
             }
@@ -1477,1051 +725,109 @@ export function AppointmentFormDialog({
 
           <DialogContent
             sx={{
-              px: { xs: 1.5, sm: 2.5 },
-              pb: 1.75,
+              p: 0,
+              '&&': { pt: 0 },
               bgcolor: 'grey.50',
               flex: 1,
               minHeight: 0,
-              overflow: 'auto',
               display: 'flex',
-              flexDirection: 'column',
-              '&&': {
-                pt: { xs: 1.5, sm: 2 },
-              },
+              overflow: 'hidden',
             }}
           >
-            {mutation.isError && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {getApiErrorMessage(mutation.error, 'Erro ao salvar agendamento')}
-              </Alert>
+            <Box
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                overflowY: 'auto',
+                px: { xs: 1.5, sm: 2.5 },
+                py: { xs: 1.5, sm: 2 },
+              }}
+            >
+              <Stack spacing={1.5}>
+                {mutation.isError && (
+                  <Alert severity="error">
+                    {getApiErrorMessage(mutation.error, 'Erro ao salvar agendamento')}
+                  </Alert>
+                )}
+                {!showSidebar && timerCard}
+                <PatientSection
+                  section={section('patient')}
+                  control={control}
+                  open={open}
+                  patients={patients}
+                  selectedPatient={selectedPatient}
+                />
+                <ServiceSection
+                  section={section('service')}
+                  control={control}
+                  selectedKind={selectedKind}
+                  procedureOptions={procedureOptions}
+                  selectedProcedure={selectedProcedure}
+                  professionals={professionals}
+                />
+                <ScheduleSection
+                  section={section('schedule')}
+                  control={control}
+                  selectedDate={selectedDate}
+                  selectedStartTime={selectedStartTime}
+                  slotEnd={slotEnd}
+                  slotValid={slotValid}
+                  recurrenceEarliestDate={recurrenceEarliestDate}
+                  recurrenceDays={recurrenceLimit?.recurrenceDays}
+                />
+                <PackageSection
+                  section={section('package')}
+                  isEditing={!!appointment}
+                  selectedProcedure={selectedProcedure}
+                  selectedPackageId={selectedPackageId}
+                  onSelectPackage={setSelectedPackageId}
+                  filteredPatientPackages={filteredPatientPackages}
+                  selectedPatientPkg={selectedPatientPkg}
+                  availableCatalogPackages={availableCatalogPackages}
+                  packageSessionsCount={packageSessions.length}
+                  paymentAmount={paymentAmountOnComplete}
+                  onOpenSessions={() => setSessionsDialogOpen(true)}
+                  onScheduleRemaining={(pkg) => setBatchTarget({ patientPkg: pkg, fillCount: null })}
+                  onBuyPackage={setSellPackageTarget}
+                />
+                <MaterialsSection
+                  section={section('materials')}
+                  enabled={materialsEnabled}
+                  inventory={inventory}
+                  extraMaterials={extraMaterials}
+                  setExtraMaterials={setExtraMaterials}
+                  willDeductMaterials={willDeductMaterials}
+                  materialsState={materialsState}
+                />
+                <NotesSection
+                  section={section('notes')}
+                  control={control}
+                  notes={notes}
+                  clinicalNotes={clinicalNotes}
+                />
+              </Stack>
+            </Box>
+
+            {showSidebar && (
+              <Box
+                component="aside"
+                sx={{
+                  width: 320,
+                  flexShrink: 0,
+                  borderLeft: 1,
+                  borderColor: 'divider',
+                  p: 2,
+                  minHeight: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <AppointmentSummaryPanel data={summaryData}>{timerCard}</AppointmentSummaryPanel>
+              </Box>
             )}
-            <Grid container spacing={{ xs: 1.5, sm: 1.75 }} sx={{ flex: 1, minHeight: 0, alignItems: 'stretch' }}>
-              <Grid
-                item
-                xs={12}
-                lg={6}
-                sx={{ display: 'flex', flexDirection: 'column', flex: { xs: '0 0 auto', lg: 1 }, minHeight: 0 }}
-              >
-                <Stack spacing={1.5} sx={{ flex: 1, minHeight: 0 }}>
-                  <AppointmentFormSection title="Paciente e atendimento" icon={<PersonOutlineIcon fontSize="small" />}>
-                    <Stack spacing={2}>
-                      <Controller
-                        name="patientId"
-                        control={control}
-                        rules={{ required: 'Selecione um paciente' }}
-                        render={({ field, fieldState }) => (
-                          <LabeledField
-                            label="Paciente"
-                            required
-                            action={
-                              <Button
-                                size="small"
-                                disabled={!selectedPatient}
-                                onClick={(e) => setSummaryAnchor(e.currentTarget)}
-                                startIcon={<InfoOutlinedIcon sx={{ fontSize: 15 }} />}
-                                sx={{ fontSize: fontSizes.xs, fontWeight: 700, py: 0.15, px: 0.75, minWidth: 0 }}
-                              >
-                                Resumo
-                              </Button>
-                            }
-                          >
-                            <Autocomplete
-                              options={patients}
-                              getOptionLabel={(p) => p.name}
-                              value={patients.find((p) => p.id === field.value) ?? null}
-                              onChange={(_, val) => field.onChange(val?.id ?? '')}
-                              renderInput={(params) => (
-                                <TextField
-                                  {...params}
-                                  placeholder="Buscar paciente pelo nome..."
-                                  error={!!fieldState.error}
-                                  helperText={fieldState.error?.message}
-                                />
-                              )}
-                            />
-                          </LabeledField>
-                        )}
-                      />
-
-
-                      <Popover
-                        open={Boolean(summaryAnchor)}
-                        anchorEl={summaryAnchor}
-                        onClose={() => setSummaryAnchor(null)}
-                        disableScrollLock
-                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                        slotProps={{
-                          paper: {
-                            sx: {
-                              width: 300,
-                              p: 2,
-                              mt: 0.5,
-                              borderRadius: '14px',
-                              boxShadow: '0 12px 48px -16px rgba(16,40,37,.28)',
-                            },
-                          },
-                        }}
-                      >
-                        {selectedPatient && (
-                          <Stack spacing={1.5}>
-                            <Stack direction="row" alignItems="center" spacing={1.25}>
-                              <Box
-                                sx={{
-                                  width: 38,
-                                  height: 38,
-                                  borderRadius: '11px',
-                                  bgcolor: 'primary.main',
-                                  color: '#fff',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: fontSizes.sm,
-                                  fontWeight: 800,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {selectedPatient.name
-                                  .trim()
-                                  .split(/\s+/)
-                                  .map((w) => w[0] ?? '')
-                                  .slice(0, 2)
-                                  .join('')
-                                  .toUpperCase()}
-                              </Box>
-                              <Box sx={{ minWidth: 0, flex: 1 }}>
-                                <Typography noWrap sx={{ fontSize: fontSizes.md, fontWeight: 800 }}>
-                                  {selectedPatient.name}
-                                </Typography>
-                                <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
-                                  {patientSummary.visits} visita{patientSummary.visits !== 1 ? 's' : ''}
-                                  {patientSummary.last
-                                    ? ` · última ${dayjs(patientSummary.last.startAt).format('DD MMM YYYY')}`
-                                    : ''}
-                                </Typography>
-                              </Box>
-                              {reliability && (
-                                <Box
-                                  component="span"
-                                  sx={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: 0.25,
-                                    px: 1,
-                                    py: 0.4,
-                                    borderRadius: '8px',
-                                    bgcolor: 'rgba(201,138,18,.14)',
-                                    color: '#C98A12',
-                                    fontSize: fontSizes.xs,
-                                    fontWeight: 800,
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  <StarRateRoundedIcon sx={{ fontSize: 15 }} /> {reliability.reliabilityPercent}
-                                </Box>
-                              )}
-                            </Stack>
-                            {reliability && reliability.total >= 4 && (
-                              <Stack direction="row" alignItems="center" spacing={0.75}>
-                                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main', flexShrink: 0 }} />
-                                <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700, color: 'success.main' }}>
-                                  Paciente recorrente · {reliability.total} atendimentos
-                                </Typography>
-                              </Stack>
-                            )}
-                            {patientSummary.last && (
-                              <Box sx={{ pt: 1.25, borderTop: '1px solid', borderColor: 'divider' }}>
-                                <Typography
-                                  sx={{
-                                    fontSize: fontSizes['3xs'],
-                                    fontWeight: 700,
-                                    color: 'text.secondary',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.4px',
-                                    mb: 0.5,
-                                  }}
-                                >
-                                  Último atendimento
-                                </Typography>
-                                <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 600 }}>
-                                  {patientSummary.last.procedure?.name ?? 'Atendimento'}
-                                  {patientSummary.last.professional?.name
-                                    ? ` · ${patientSummary.last.professional.name}`
-                                    : ''}
-                                </Typography>
-                                <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', mt: 0.25 }}>
-                                  {dayjs(patientSummary.last.startAt).format('DD MMM YYYY')}
-                                </Typography>
-                              </Box>
-                            )}
-                            <Stack
-                              direction="row"
-                              alignItems="flex-start"
-                              spacing={0.75}
-                              sx={{ pt: 1.25, borderTop: '1px solid', borderColor: 'divider' }}
-                            >
-                              <InfoOutlinedIcon sx={{ fontSize: 15, color: '#C98A12', mt: '1px', flexShrink: 0 }} />
-                              <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 500, lineHeight: 1.4 }}>
-                                {selectedPatient.notes?.trim()
-                                  ? selectedPatient.notes
-                                  : 'Sem observações clínicas relevantes'}
-                              </Typography>
-                            </Stack>
-                          </Stack>
-                        )}
-                      </Popover>
-
-                      <Controller
-                        name="kind"
-                        control={control}
-                        render={({ field }) => (
-                          <ToggleButtonGroup
-                            exclusive
-                            fullWidth
-                            value={field.value}
-                            onChange={(_, val) => val && field.onChange(val)}
-                            size="small"
-                            sx={{
-                              bgcolor: 'grey.100',
-                              p: '4px',
-                              borderRadius: '11px',
-                              gap: '4px',
-                              '& .MuiToggleButton-root': {
-                                flex: 1,
-                                py: 0.75,
-                                border: 'none',
-                                borderRadius: '8px !important',
-                                fontWeight: 700,
-                                fontSize: fontSizes.sm,
-                                textTransform: 'none',
-                                color: 'text.secondary',
-                                '&.Mui-selected': {
-                                  bgcolor: 'background.paper',
-                                  color: 'primary.main',
-                                  boxShadow: '0 1px 3px rgba(16,40,37,.14)',
-                                  '&:hover': { bgcolor: 'background.paper' },
-                                },
-                              },
-                            }}
-                          >
-                            {kindOptions.map((opt) => (
-                              <ToggleButton key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </ToggleButton>
-                            ))}
-                          </ToggleButtonGroup>
-                        )}
-                      />
-
-                      <>
-                          <Controller
-                            name="procedureId"
-                            control={control}
-                            rules={{
-                              required:
-                                selectedKind === 'PROCEDURE' ? 'Selecione um procedimento' : false,
-                            }}
-                            render={({ field, fieldState }) => (
-                              <LabeledField label="Procedimento" required={selectedKind === 'PROCEDURE'}>
-                                <TextField
-                                  {...field}
-                                  value={selectValueIfListed(field.value, procedureOptions)}
-                                  onChange={field.onChange}
-                                  select
-                                  fullWidth
-                                  disabled={selectedKind !== 'PROCEDURE'}
-                                  error={!!fieldState.error}
-                                  helperText={fieldState.error?.message}
-                                  SelectProps={{ displayEmpty: true }}
-                                >
-                                  <MenuItem value="" disabled>
-                                    Selecione um procedimento
-                                  </MenuItem>
-                                  {procedureOptions.map((p) => (
-                                    <MenuItem key={p.id} value={p.id}>
-                                      {p.name}
-                                    </MenuItem>
-                                  ))}
-                                </TextField>
-                              </LabeledField>
-                            )}
-                          />
-                          {selectedKind === 'PROCEDURE' && (
-                            <Stack direction="row" flexWrap="wrap" gap={1}>
-                              {[
-                                selectedProcedure ? `${selectedProcedure.durationMinutes} min` : '— min',
-                                `Retorno: ${selectedProcedure?.recurrenceDays ?? '—'} dias`,
-                                selectedProcedure?.price != null
-                                  ? brl.format(Number(selectedProcedure.price))
-                                  : 'R$ —',
-                              ].map((label) => (
-                                <Box
-                                  key={label}
-                                  component="span"
-                                  sx={{
-                                    fontSize: fontSizes.xs,
-                                    fontWeight: 700,
-                                    color: 'text.secondary',
-                                    px: 1.25,
-                                    py: 0.6,
-                                    borderRadius: '8px',
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    bgcolor: 'grey.50',
-                                  }}
-                                >
-                                  {label}
-                                </Box>
-                              ))}
-                            </Stack>
-                          )}
-                        </>
-                    </Stack>
-                  </AppointmentFormSection>
-
-                  <AppointmentFormSection title="Data e profissional" icon={<ScheduleOutlinedIcon fontSize="small" />}>
-                    <Grid container spacing={1.5}>
-                      <Grid item xs={12}>
-                        {restrictToOwnAppointments ? (
-                          <LabeledField label="Profissional">
-                          <TextField
-                            value={
-                              checkingAvailability && slotValid
-                                ? 'Verificando disponibilidade...'
-                                : (assignedProfessional?.name ?? user?.name ?? '—')
-                            }
-                            fullWidth
-                            InputProps={{ readOnly: true }}
-                            helperText={
-                              loggedUserCannotBeScheduled
-                                ? 'Seu usuário não realiza atendimentos'
-                                : professionalSlotConflict
-                                  ? 'Este profissional já possui agendamento neste horário'
-                                  : noProfessionalAvailable
-                                    ? 'Nenhum profissional disponível neste horário'
-                                    : 'Agendamento vinculado ao seu usuário'
-                            }
-                            error={
-                              loggedUserCannotBeScheduled ||
-                              noProfessionalAvailable ||
-                              professionalSlotConflict
-                            }
-                          />
-                          </LabeledField>
-                        ) : (
-                          <Controller
-                            name="professionalId"
-                            control={control}
-                            rules={{ required: 'Selecione um profissional' }}
-                            render={({ field, fieldState }) => (
-                              <LabeledField label="Profissional" required>
-                              <TextField
-                                {...field}
-                                value={selectValueIfListed(field.value, professionalOptions)}
-                                onChange={(event) => {
-                                  professionalManuallySelectedRef.current = true;
-                                  field.onChange(event);
-                                }}
-                                select
-                                fullWidth
-                                disabled={!slotValid || (checkingAvailability && professionalOptions.length === 0)}
-                                error={
-                                  !!fieldState.error ||
-                                  noProfessionalAvailable ||
-                                  professionalSlotConflict
-                                }
-                                helperText={
-                                  fieldState.error?.message ??
-                                  (professionalSlotConflict && !selectedPerformsAppointments
-                                    ? 'Selecione um profissional que realiza atendimentos'
-                                    : professionalSlotConflict
-                                      ? 'Este profissional já possui agendamento neste horário'
-                                      : noProfessionalAvailable
-                                        ? 'Nenhum profissional disponível neste horário'
-                                        : verifyingAvailability && slotValid
-                                          ? 'Atualizando disponibilidade...'
-                                          : checkingAvailability && slotValid && professionalOptions.length === 0
-                                            ? 'Verificando disponibilidade...'
-                                            : undefined)
-                                }
-                              >
-                                {checkingAvailability && slotValid && professionalOptions.length === 0 ? (
-                                  <MenuItem disabled value="">
-                                    Verificando disponibilidade...
-                                  </MenuItem>
-                                ) : professionalOptions.length === 0 ? (
-                                  <MenuItem disabled value="">
-                                    Nenhum profissional disponível
-                                  </MenuItem>
-                                ) : (
-                                  professionalOptions.map((p) => (
-                                    <MenuItem key={p.id} value={p.id}>
-                                      {p.name}
-                                    </MenuItem>
-                                  ))
-                                )}
-                              </TextField>
-                              </LabeledField>
-                            )}
-                          />
-                        )}
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Controller
-                          name="date"
-                          control={control}
-                          rules={{
-                            required: true,
-                            validate: (value) => {
-                              if (!recurrenceEarliestDate) return true;
-                              if (isDateBeforeRecurrenceEarliest(value, recurrenceEarliestDate)) {
-                                return `Agende a partir de ${formatRecurrenceEarliestLabel(recurrenceEarliestDate)}`;
-                              }
-                              return true;
-                            },
-                          }}
-                          render={({ field, fieldState }) => (
-                            <LabeledField label="Data" required>
-                            <TextField
-                              {...field}
-                              type="date"
-                              fullWidth
-                              inputProps={{
-                                min: recurrenceEarliestDate ?? undefined,
-                              }}
-                              error={!!fieldState.error}
-                              helperText={
-                                fieldState.error?.message ??
-                                (recurrenceEarliestDate && recurrenceLimit?.recurrenceDays
-                                  ? `Retorno em ${recurrenceLimit.recurrenceDays} dias — a partir de ${formatRecurrenceEarliestLabel(recurrenceEarliestDate)}`
-                                  : undefined)
-                              }
-                            />
-                            </LabeledField>
-                          )}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Controller
-                          name="startTime"
-                          control={control}
-                          rules={{ required: true }}
-                          render={({ field }) => (
-                            <LabeledField label="Horário" required>
-                            <TextField {...field} type="time" fullWidth />
-                            </LabeledField>
-                          )}
-                        />
-                      </Grid>
-                    </Grid>
-
-                  </AppointmentFormSection>
-
-                </Stack>
-              </Grid>
-
-              <Grid
-                item
-                xs={12}
-                lg={6}
-                sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
-              >
-                <Stack spacing={1.5} sx={{ flex: 1, minHeight: 0 }}>
-                  {appointment && !isMobile && (showSessionControls || isInProgress || hasStartedAt) && (
-                    <Paper
-                      variant="outlined"
-                      sx={{
-                        p: 1.75,
-                        borderRadius: '14px',
-                        borderColor: 'divider',
-                        bgcolor: 'background.paper',
-                        boxShadow: '0 1px 2px rgba(16,40,37,0.03)',
-                      }}
-                    >
-                      <Stack direction="row" alignItems="center" spacing={1.5}>
-                        <SectionIcon>
-                          <TimerOutlinedIcon fontSize="small" />
-                        </SectionIcon>
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 600, color: 'text.secondary' }}>
-                            Timer da sessão (opcional)
-                          </Typography>
-                          <Typography
-                            sx={{
-                              fontSize: fontSizes['3xl'],
-                              fontWeight: 800,
-                              fontVariantNumeric: 'tabular-nums',
-                              lineHeight: 1.1,
-                              color: isInProgress && !hasFinishedAt ? 'success.main' : 'text.primary',
-                            }}
-                          >
-                            {formatElapsed(elapsed)}
-                          </Typography>
-                        </Box>
-                        {showSessionControls && (
-                          <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
-                            {canStartSession && !isInProgress && !hasFinishedAt ? (
-                              <Button
-                                variant="contained"
-                                color="primary"
-                                size="small"
-                                startIcon={<PlayArrowIcon />}
-                                disabled={startMutation.isPending}
-                                onClick={() => startMutation.mutate()}
-                              >
-                                {startMutation.isPending ? 'Iniciando...' : 'Iniciar'}
-                              </Button>
-                            ) : isInProgress && !hasFinishedAt ? (
-                              <Button
-                                variant="outlined"
-                                color="inherit"
-                                size="small"
-                                startIcon={<PauseIcon />}
-                                disabled={pauseMutation.isPending}
-                                onClick={() => pauseMutation.mutate()}
-                              >
-                                {pauseMutation.isPending ? 'Pausando...' : 'Pausar'}
-                              </Button>
-                            ) : hasFinishedAt && isInProgress ? (
-                              <Button
-                                variant="outlined"
-                                color="primary"
-                                size="small"
-                                startIcon={<PlayArrowIcon />}
-                                disabled={resumeMutation.isPending}
-                                onClick={() => resumeMutation.mutate()}
-                              >
-                                {resumeMutation.isPending ? 'Retomando...' : 'Retomar'}
-                              </Button>
-                            ) : null}
-                            <Button
-                              variant="contained"
-                              color="success"
-                              size="small"
-                              startIcon={<CheckCircleOutlineIcon />}
-                              disabled={!canFinishSession || mutation.isPending}
-                              onClick={() => setConfirmFinishOpen(true)}
-                            >
-                              Finalizar
-                            </Button>
-                          </Stack>
-                        )}
-                      </Stack>
-                    </Paper>
-                  )}
-                  {true && (
-                    <AppointmentFormSection
-                      title="Pacote"
-                      icon={<ViewInArIcon fontSize="small" />}
-                      action={
-                        selectedPackageId ? (
-                          <Button
-                            size="small"
-                            startIcon={<CalendarMonthIcon sx={{ fontSize: '1rem !important' }} />}
-                            onClick={() => setSessionsDialogOpen(true)}
-                            sx={{
-                              minWidth: 0,
-                              px: 0.75,
-                              py: 0.25,
-                              fontSize: fontSizes.xs,
-                              fontWeight: 700,
-                              color: 'primary.main',
-                            }}
-                          >
-                            Ver sessões
-                            {packageSessions.length > 0 ? ` (${packageSessions.length})` : ''}
-                          </Button>
-                        ) : undefined
-                      }
-                    >
-                      <Box sx={{ mb: 1.5 }}>
-                      <LabeledField label="Pacote ativo do paciente">
-                        <TextField
-                          select
-                          value={selectedPackageId}
-                          onChange={(e) => setSelectedPackageId(e.target.value)}
-                          fullWidth
-                          disabled={filteredPatientPackages.length === 0}
-                          SelectProps={{
-                            displayEmpty: true,
-                            renderValue: (val) => {
-                              if (!val) {
-                                return (
-                                  <Typography component="span" variant="body2" sx={{ color: 'text.disabled' }}>
-                                    {filteredPatientPackages.length === 0
-                                      ? 'Nenhum pacote ativo'
-                                      : 'Nenhum (avulso)'}
-                                  </Typography>
-                                );
-                              }
-                              const pp = filteredPatientPackages.find((p) => p.id === val);
-                              return pp
-                                ? `${pp.package?.name ?? 'Pacote'} — ${pp.sessionsUsed}/${pp.sessionsTotal} sessões`
-                                : '';
-                            },
-                          }}
-                          helperText={
-                            filteredPatientPackages.length === 0
-                              ? 'Este paciente não possui pacotes ativos'
-                              : selectedPatientPkg
-                                ? `${selectedPatientPkg.sessionsUsed}/${selectedPatientPkg.sessionsTotal} sessões usadas${
-                                    selectedPatientPkg.expiresAt
-                                      ? ` · expira em ${formatDateOnlyFromApi(selectedPatientPkg.expiresAt)}`
-                                      : ''
-                                  }`
-                                : 'Vincular este agendamento a um pacote ativo'
-                          }
-                        >
-                          <MenuItem value="">
-                            <em>Nenhum (avulso)</em>
-                          </MenuItem>
-                          {filteredPatientPackages.map((pp) => (
-                            <MenuItem key={pp.id} value={pp.id}>
-                              {pp.package?.name ?? 'Pacote'} — {pp.sessionsUsed}/{pp.sessionsTotal} sessões
-                            </MenuItem>
-                          ))}
-                        </TextField>
-                      </LabeledField>
-                      </Box>
-
-                      {selectedPatientPkg &&
-                        !appointment &&
-                        selectedPatientPkg.sessionsTotal - selectedPatientPkg.sessionsUsed > 1 && (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<CalendarMonthIcon />}
-                            onClick={() => {
-                              setBatchFillCount(null);
-                              setBatchPatientPkg(selectedPatientPkg);
-                              setBatchDialogOpen(true);
-                            }}
-                            sx={{ mb: 1.5 }}
-                          >
-                            Agendar {selectedPatientPkg.sessionsTotal - selectedPatientPkg.sessionsUsed} sessões
-                            restantes
-                          </Button>
-                        )}
-
-                      {filteredPatientPackages.length === 0 && availableCatalogPackages.length > 0 && (
-                        <Stack spacing={1}>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                            Pacotes disponíveis para <strong>{selectedProcedure?.name}</strong>
-                          </Typography>
-                          {availableCatalogPackages.map((pkg) => {
-                            const itemForProc = pkg.items?.find((i) => i.procedureId === selectedProcedureId);
-                            const sessions =
-                              pkg.type === 'SESSIONS'
-                                ? (itemForProc?.quantity ?? pkg.sessionCount)
-                                : pkg.sessionCount;
-                            const price = pkg.totalPrice
-                              ? brl.format(Number(pkg.totalPrice))
-                              : pkg.discountPercent
-                                ? `${Number(pkg.discountPercent)}% de desconto`
-                                : '';
-                            return (
-                              <Box
-                                key={pkg.id}
-                                sx={{
-                                  p: 1.5,
-                                  borderRadius: 2,
-                                  border: '1px solid',
-                                  borderColor: (theme) => alpha(theme.palette.primary.main, 0.22),
-                                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  gap: 1.5,
-                                }}
-                              >
-                                <Box sx={{ minWidth: 0 }}>
-                                  <Typography variant="body2" fontWeight={600}>
-                                    {pkg.name}
-                                  </Typography>
-                                  <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.5 }}>
-                                    <Chip size="small" label={`${sessions} sessões`} color="primary" variant="outlined" />
-                                    {price && (
-                                      <Typography variant="caption" color="text.secondary">
-                                        {price}
-                                      </Typography>
-                                    )}
-                                  </Stack>
-                                </Box>
-                                <Button
-                                  size="small"
-                                  variant="contained"
-                                  startIcon={<AddShoppingCartIcon />}
-                                  onClick={() => {
-                                    setSellPackageTarget(pkg);
-                                    const sumPrice = (pkg.items ?? []).reduce((sum, item) => {
-                                      const p = procedures.find((pr) => pr.id === item.procedureId);
-                                      return sum + (p ? Number(p.price) * item.quantity : 0);
-                                    }, 0);
-                                    if (pkg.totalPrice) {
-                                      setSellTotalPaid(Number(pkg.totalPrice));
-                                    } else if (pkg.discountPercent) {
-                                      setSellTotalPaid(sumPrice * (1 - Number(pkg.discountPercent) / 100));
-                                    } else {
-                                      setSellTotalPaid(sumPrice);
-                                    }
-                                    setSellPaymentMethodId('');
-                                    setSellDialogOpen(true);
-                                  }}
-                                  sx={{ flexShrink: 0 }}
-                                >
-                                  Adquirir
-                                </Button>
-                              </Box>
-                            );
-                          })}
-                        </Stack>
-                      )}
-
-                      {filteredPatientPackages.length === 0 && availableCatalogPackages.length === 0 && (
-                        <Typography variant="body2" color="text.secondary">
-                          Nenhum pacote disponível para este procedimento.
-                        </Typography>
-                      )}
-                    </AppointmentFormSection>
-                  )}
-
-                  <Paper
-                    variant="outlined"
-                    sx={{
-                      flex: activeSideTab === 'materials' ? 1 : '0 1 auto',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      minHeight: activeSideTab === 'materials' ? { xs: 200, lg: 0 } : 0,
-                      overflow: 'hidden',
-                      borderRadius: '16px',
-                      borderColor: 'divider',
-                      bgcolor: 'background.paper',
-                    }}
-                  >
-                    <Tabs
-                      value={activeSideTab}
-                      onChange={(_, value: 'materials' | 'notes') => setSideTab(value)}
-                      sx={{
-                        px: 1,
-                        borderBottom: 1,
-                        borderColor: 'divider',
-                        flexShrink: 0,
-                        minHeight: 44,
-                        '& .MuiTab-root': { minHeight: 44, textTransform: 'none', fontWeight: 500 },
-                      }}
-                    >
-                      {showMaterialsTab && (
-                        <Tab
-                          value="materials"
-                          disabled={!materialsEnabled}
-                          label={
-                            <Stack direction="row" spacing={0.75} alignItems="center">
-                              <span>Materiais</span>
-                              {willDeductMaterials && hasInsufficient && (
-                                <Chip label="!" size="small" color="warning" sx={{ height: 18, fontSize: 11 }} />
-                              )}
-                            </Stack>
-                          }
-                          icon={<InventoryIcon sx={{ fontSize: 18 }} />}
-                          iconPosition="start"
-                        />
-                      )}
-                      <Tab
-                        value="notes"
-                        label="Observações"
-                        icon={<NotesOutlinedIcon sx={{ fontSize: 18 }} />}
-                        iconPosition="start"
-                      />
-                    </Tabs>
-
-                    <Box
-                      sx={{
-                        p: 2,
-                        flex: 1,
-                        minHeight: 0,
-                        overflowX: 'hidden',
-                        overflowY: activeSideTab === 'materials' ? 'auto' : 'visible',
-                      }}
-                    >
-                      {activeSideTab === 'materials' && showMaterialsTab && (
-                        <Stack spacing={1.5}>
-                          {materials.length > 0 && (
-                            <Box>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                fontWeight={600}
-                                sx={{ display: 'block', mb: 0.75 }}
-                              >
-                                Previstos no procedimento
-                                {!willDeductMaterials && ' (reservados)'}
-                              </Typography>
-                              <Stack direction="row" flexWrap="wrap" gap={0.75}>
-                                {materials.map((m) => {
-                                  const needed = totalMaterialNeed.get(m.itemId) ?? Number(m.quantity);
-                                  const available =
-                                    effectiveAvailable.get(m.itemId) ??
-                                    (m.item?.quantity !== undefined ? Number(m.item.quantity) : undefined);
-                                  const minQty =
-                                    m.item?.minQuantity !== undefined ? Number(m.item.minQuantity) : undefined;
-                                  const noStock = available !== undefined && available < needed;
-                                  const low =
-                                    !noStock &&
-                                    available !== undefined &&
-                                    minQty !== undefined &&
-                                    available - needed <= minQty;
-                                  const tone = noStock ? 'error' : low ? 'warning' : null;
-                                  return (
-                                    <Box
-                                      key={m.id}
-                                      component="span"
-                                      sx={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: 0.6,
-                                        fontSize: fontSizes.xs,
-                                        fontWeight: 700,
-                                        px: 1.15,
-                                        py: 0.55,
-                                        borderRadius: '8px',
-                                        border: '1px solid',
-                                        borderColor: tone ? `${tone}.main` : 'divider',
-                                        bgcolor: tone
-                                          ? (t) => alpha(t.palette[tone].main, 0.1)
-                                          : 'grey.50',
-                                        color: tone ? `${tone}.dark` : 'text.secondary',
-                                      }}
-                                    >
-                                      {tone && (
-                                        <Box
-                                          sx={{
-                                            width: 6,
-                                            height: 6,
-                                            borderRadius: '50%',
-                                            bgcolor: `${tone}.main`,
-                                            flexShrink: 0,
-                                          }}
-                                        />
-                                      )}
-                                      {m.item?.name ?? 'Item'} — {m.quantity}
-                                      {m.item?.unit ? ` ${m.item.unit}` : ''}
-                                    </Box>
-                                  );
-                                })}
-                              </Stack>
-                              <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
-                                <Stack direction="row" alignItems="center" spacing={0.6}>
-                                  <Box
-                                    sx={{
-                                      width: 10,
-                                      height: 10,
-                                      borderRadius: '3px',
-                                      border: '1px solid',
-                                      borderColor: 'warning.main',
-                                      bgcolor: (t) => alpha(t.palette.warning.main, 0.14),
-                                    }}
-                                  />
-                                  <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary' }}>
-                                    Estoque baixo
-                                  </Typography>
-                                </Stack>
-                                <Stack direction="row" alignItems="center" spacing={0.6}>
-                                  <Box
-                                    sx={{
-                                      width: 10,
-                                      height: 10,
-                                      borderRadius: '3px',
-                                      border: '1px solid',
-                                      borderColor: 'error.main',
-                                      bgcolor: (t) => alpha(t.palette.error.main, 0.14),
-                                    }}
-                                  />
-                                  <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary' }}>
-                                    Sem estoque
-                                  </Typography>
-                                </Stack>
-                              </Stack>
-                            </Box>
-                          )}
-
-                          <Box>
-                            <Stack
-                              direction="row"
-                              alignItems="center"
-                              justifyContent="space-between"
-                              sx={{ mb: 1 }}
-                            >
-                              <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                Materiais extras
-                              </Typography>
-                              <Button
-                                size="small"
-                                startIcon={<AddIcon />}
-                                onClick={() =>
-                                  setExtraMaterials((rows) => [...rows, { itemId: '', quantity: 1 }])
-                                }
-                              >
-                                Adicionar
-                              </Button>
-                            </Stack>
-
-                            {extraMaterials.length === 0 ? (
-                              <Typography variant="body2" color="text.secondary">
-                                Nenhum material extra além do previsto no procedimento.
-                              </Typography>
-                            ) : (
-                              <Box sx={{ maxHeight: 240, overflowY: 'auto', pr: 0.5, mr: -0.5 }}>
-                              <Stack spacing={1.25}>
-                                {extraMaterials.map((row, index) => {
-                                  const otherUsedIds = new Set(
-                                    extraMaterials
-                                      .filter((_, i) => i !== index)
-                                      .map((m) => m.itemId)
-                                      .filter(Boolean),
-                                  );
-                                  const availableItems = inventory.filter(
-                                    (i) => i.id === row.itemId || !otherUsedIds.has(i.id),
-                                  );
-                                  const totalForItem = row.itemId
-                                    ? totalMaterialNeed.get(row.itemId) ?? 0
-                                    : 0;
-                                  const available = row.itemId
-                                    ? effectiveAvailable.get(row.itemId)
-                                    : undefined;
-                                  const insufficient =
-                                    !!row.itemId &&
-                                    available !== undefined &&
-                                    available < totalForItem;
-
-                                  return (
-                                    <Stack
-                                      key={index}
-                                      direction={{ xs: 'column', sm: 'row' }}
-                                      spacing={1}
-                                      alignItems={{ sm: 'flex-start' }}
-                                    >
-                                      <Autocomplete
-                                        sx={{ flex: 1, minWidth: 0 }}
-                                        size="small"
-                                        options={availableItems}
-                                        getOptionLabel={(i) =>
-                                          `${i.name}${i.unit ? ` (${i.unit})` : ''} — disp.: ${effectiveAvailable.get(i.id) ?? i.quantity}`
-                                        }
-                                        value={
-                                          availableItems.find((i) => i.id === row.itemId) ?? null
-                                        }
-                                        onChange={(_, val) => {
-                                          setExtraMaterials((rows) =>
-                                            rows.map((r, i) =>
-                                              i === index ? { ...r, itemId: val?.id ?? '' } : r,
-                                            ),
-                                          );
-                                        }}
-                                        renderInput={(params) => (
-                                          <TextField
-                                            {...params}
-                                            label="Material"
-                                            size="small"
-                                            required
-                                          />
-                                        )}
-                                      />
-                                      <Stack direction="row" spacing={0.5} alignItems="flex-start">
-                                        <TextField
-                                          type="number"
-                                          size="small"
-                                          label="Qtd"
-                                          value={row.quantity}
-                                          inputProps={{ min: 0.001, step: 0.001 }}
-                                          sx={{ width: 88 }}
-                                          error={!!insufficient}
-                                          onChange={(e) => {
-                                            const quantity = Number(e.target.value);
-                                            setExtraMaterials((rows) =>
-                                              rows.map((r, i) =>
-                                                i === index ? { ...r, quantity } : r,
-                                              ),
-                                            );
-                                          }}
-                                        />
-                                        <Tooltip title="Remover">
-                                          <IconButton
-                                            size="small"
-                                            onClick={() =>
-                                              setExtraMaterials((rows) =>
-                                                rows.filter((_, i) => i !== index),
-                                              )
-                                            }
-                                            sx={{ mt: 0.25 }}
-                                          >
-                                            <DeleteOutlineIcon fontSize="small" />
-                                          </IconButton>
-                                        </Tooltip>
-                                      </Stack>
-                                    </Stack>
-                                  );
-                                })}
-                              </Stack>
-                              </Box>
-                            )}
-                          </Box>
-
-                        </Stack>
-                      )}
-
-                      {activeSideTab === 'notes' && (
-                        <Stack spacing={1.5}>
-                          <Controller
-                            name="notes"
-                            control={control}
-                            render={({ field }) => (
-                              <LabeledField label="Observações administrativas">
-                                <TextField
-                                  {...field}
-                                  fullWidth
-                                  multiline
-                                  minRows={4}
-                                  placeholder="Lembretes internos, preferências do paciente..."
-                                />
-                              </LabeledField>
-                            )}
-                          />
-                          <Controller
-                            name="clinicalNotes"
-                            control={control}
-                            render={({ field }) => (
-                              <LabeledField label="Anotações clínicas">
-                                <TextField
-                                  {...field}
-                                  placeholder="Avaliação da pele, produtos usados, reações..."
-                                  fullWidth
-                                  multiline
-                                  minRows={5}
-                                />
-                              </LabeledField>
-                            )}
-                          />
-                        </Stack>
-                      )}
-                    </Box>
-                  </Paper>
-
-                  {(loggedUserCannotBeScheduled || noProfessionalAvailable || professionalSlotConflict) && (
-                    <Alert severity="error">
-                      {loggedUserCannotBeScheduled
-                        ? 'Seu usuário não realiza atendimentos e não pode receber agendamentos.'
-                        : professionalSlotConflict && !selectedPerformsAppointments
-                          ? 'Selecione um profissional que realiza atendimentos.'
-                          : professionalSlotConflict
-                            ? 'Este profissional já tem agendamento ativo no mesmo horário.'
-                            : 'Nenhum profissional disponível para este horário.'}
-                    </Alert>
-                  )}
-
-                </Stack>
-              </Grid>
-            </Grid>
           </DialogContent>
+
+          {!showSidebar && <AppointmentSummaryBar data={summaryData} />}
 
           <DialogActions
             sx={{
@@ -2535,23 +841,6 @@ export function AppointmentFormDialog({
               gap: isMobile ? 1 : 0,
             }}
           >
-            {!appointment && slotValid && (
-              <Stack
-                direction="row"
-                alignItems="center"
-                spacing={0.75}
-                sx={{ color: 'text.secondary', mr: 1.5, display: { xs: 'none', sm: 'flex' } }}
-              >
-                <ScheduleOutlinedIcon sx={{ fontSize: 16, color: 'primary.main' }} />
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  Término:{' '}
-                  <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                    {slotEnd.format('HH:mm')}
-                  </Box>
-                  {selectedProcedure ? ` · duração de ${selectedProcedure.durationMinutes} min` : ''}
-                </Typography>
-              </Stack>
-            )}
             {appointment && canViewPatient && selectedPatient && (
               <Button
                 variant="outlined"
@@ -2626,7 +915,7 @@ export function AppointmentFormDialog({
             {!isMobile && (
               <Button
                 variant="outlined"
-                onClick={onClose}
+                onClick={() => void requestClose()}
                 sx={{
                   mr: 1,
                   color: 'text.primary',
@@ -2650,7 +939,7 @@ export function AppointmentFormDialog({
                 noProfessionalAvailable ||
                 professionalSlotConflict ||
                 (requiresValidProvider && !selectedPerformsAppointments) ||
-                (willDeductMaterials && hasInsufficient && watch('kind') === 'PROCEDURE')
+                stockBlocksSave
               }
             >
               {mutation.isPending
@@ -2679,697 +968,84 @@ export function AppointmentFormDialog({
         />
       )}
 
-      <Dialog
+      <PackageSessionsDialog
         open={sessionsDialogOpen}
         onClose={() => setSessionsDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { ...dialogPaperSx(isMobile), ...(isMobile ? {} : { maxWidth: 520 }) } }}
-      >
-        <DialogHeader
-          onClose={() => setSessionsDialogOpen(false)}
-          title="Sessões do pacote"
-          subtitle={
-            selectedPackageDetail?.package?.name
-              ? `${selectedPackageDetail.package.name} · ${selectedPatientPkg?.sessionsUsed ?? 0}/${
-                  selectedPatientPkg?.sessionsTotal ?? packageSessions.length
-                } sessões usadas`
-              : 'Agendamentos vinculados a este pacote'
+        isMobile={isMobile}
+        subtitle={
+          selectedPackageDetail?.package?.name
+            ? `${selectedPackageDetail.package.name} · ${selectedPatientPkg?.sessionsUsed ?? 0}/${
+                selectedPatientPkg?.sessionsTotal ?? packageSessions.length
+              } sessões usadas`
+            : 'Agendamentos vinculados a este pacote'
+        }
+        sessions={packageSessions}
+        currentAppointmentId={appointment?.id}
+        missingSessions={missingSessions}
+        onScheduleMissing={() => {
+          setSessionsDialogOpen(false);
+          if (selectedPatientPkg) {
+            setBatchTarget({ patientPkg: selectedPatientPkg, fillCount: missingSessions });
           }
-          subtitleWrap
-          icon={<ViewInArIcon fontSize="small" />}
-        />
-        <DialogContent sx={dialogSimpleContentSx}>
-          {packageSessions.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
-              Nenhuma sessão agendada ainda para este pacote.
-            </Typography>
-          ) : (
-            <Stack spacing={1} sx={{ mt: 0.5 }}>
-              {packageSessions.map((sess, idx) => {
-                const isCurrent = appointment?.id === sess.id;
-                const color = STATUS_DOT[sess.status] ?? '#8B8680';
-                return (
-                  <Stack
-                    key={sess.id}
-                    direction="row"
-                    alignItems="center"
-                    spacing={1.25}
-                    sx={{
-                      px: 1.25,
-                      py: 1,
-                      borderRadius: '12px',
-                      border: '1px solid',
-                      borderColor: isCurrent ? 'primary.main' : 'divider',
-                      bgcolor: isCurrent ? (t) => alpha(t.palette.primary.main, 0.06) : 'grey.50',
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 26,
-                        height: 26,
-                        borderRadius: '50%',
-                        flexShrink: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: fontSizes.xs,
-                        fontWeight: 800,
-                        bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
-                        color: 'primary.dark',
-                      }}
-                    >
-                      {idx + 1}
-                    </Box>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700 }} noWrap>
-                        {dayjs(sess.startAt).format('DD/MM/YYYY [às] HH:mm')}
-                      </Typography>
-                      {sess.procedure?.name && (
-                        <Typography
-                          sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}
-                          noWrap
-                        >
-                          {sess.procedure.name}
-                        </Typography>
-                      )}
-                    </Box>
-                    <Box
-                      component="span"
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 0.6,
-                        flexShrink: 0,
-                        fontSize: fontSizes.xs,
-                        fontWeight: 700,
-                        color: 'text.secondary',
-                      }}
-                    >
-                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color }} />
-                      {STATUS_LABEL[sess.status] ?? sess.status}
-                    </Box>
-                  </Stack>
-                );
-              })}
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions
-          sx={{
-            ...dialogActionsBorderSx,
-            justifyContent: missingSessions > 0 ? 'space-between' : 'flex-end',
-          }}
-        >
-          {missingSessions > 0 && (
-            <Button
-              variant="outlined"
-              startIcon={<CalendarMonthIcon />}
-              onClick={() => {
-                setSessionsDialogOpen(false);
-                setBatchPatientPkg(selectedPatientPkg ?? null);
-                setBatchFillCount(missingSessions);
-                setBatchDialogOpen(true);
-              }}
-              sx={{
-                bgcolor: 'background.paper',
-                borderColor: 'divider',
-                color: 'primary.main',
-                fontWeight: 700,
-                '&:hover': { bgcolor: 'grey.50', borderColor: 'primary.main' },
-              }}
-            >
-              Agendar faltantes ({missingSessions})
-            </Button>
-          )}
-          <Button
-            variant="contained"
-            onClick={() => setSessionsDialogOpen(false)}
-            sx={{ boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
-          >
-            Fechar
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog
-        open={paymentDialogOpen}
-        onClose={() => {
-          setPaymentDialogOpen(false);
-          setPendingFormValues(null);
         }}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { ...dialogPaperSx(isMobile), ...(isMobile ? {} : { maxWidth: 480 }) } }}
-      >
-        <DialogHeader
-          onClose={() => {
-            setPaymentDialogOpen(false);
-            setPendingFormValues(null);
-          }}
-          title="Registrar no financeiro"
-          subtitle="Este agendamento será lançado como receita do dia"
-          subtitleWrap
-        />
-        <DialogContent sx={dialogSimpleContentSx}>
-          <Box
-            sx={{
-              p: 2,
-              mb: 2.75,
-              borderRadius: '14px',
-              border: '1px solid',
-              borderColor: (t) => alpha(t.palette.primary.main, 0.22),
-              bgcolor: (t) => alpha(t.palette.primary.main, 0.07),
-            }}
-          >
-            <Stack direction="row" alignItems="center" spacing={1.5}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 40,
-                  height: 40,
-                  borderRadius: '11px',
-                  flexShrink: 0,
-                  bgcolor: 'background.paper',
-                  color: 'primary.main',
-                  border: '1px solid',
-                  borderColor: (t) => alpha(t.palette.primary.main, 0.22),
-                }}
-              >
-                <PaymentIcon fontSize="small" />
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography noWrap sx={{ fontSize: fontSizes.md, fontWeight: 800, lineHeight: 1.35 }}>
-                  {selectedPatient?.name ?? 'Paciente'}
-                </Typography>
-                <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.secondary', lineHeight: 1.35 }}>
-                  {selectedProcedure?.name ?? 'Atendimento'}
-                </Typography>
-              </Box>
-            </Stack>
-            <Stack
-              direction="row"
-              alignItems="center"
-              justifyContent="space-between"
-              sx={{
-                mt: 1.5,
-                pt: 1.5,
-                borderTop: '1px dashed',
-                borderColor: (t) => alpha(t.palette.primary.main, 0.22),
-              }}
-            >
-              <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
-                {selectedPackageId && selectedPatientPkg
-                  ? 'Receita do pacote ao confirmar'
-                  : 'Receita ao confirmar'}
-              </Typography>
-              <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 800, color: 'primary.dark' }}>
-                {paymentAmountOnComplete > 0 ? brl.format(paymentAmountOnComplete) : '—'}
-              </Typography>
-            </Stack>
-          </Box>
-          <LabeledField label="Forma de pagamento" required>
-            <TextField
-              select
-              value={selectedPaymentMethodId}
-              onChange={(e) => setSelectedPaymentMethodId(e.target.value)}
-              fullWidth
-              SelectProps={{
-                displayEmpty: true,
-                renderValue: (val) => {
-                  const m = paymentMethods.find((pm) => pm.id === val);
-                  return m ? (
-                    `${m.name}${Number(m.feePercent) > 0 ? ` (${Number(m.feePercent)}%)` : ''}`
-                  ) : (
-                    <Typography component="span" variant="body2" sx={{ color: 'text.disabled' }}>
-                      Selecione uma forma de pagamento
-                    </Typography>
-                  );
-                },
-              }}
-            >
-              {paymentMethods.filter((m) => m.active).map((m) => (
-                <MenuItem key={m.id} value={m.id}>
-                  {m.name}{Number(m.feePercent) > 0 ? ` (${Number(m.feePercent)}%)` : ''}
-                </MenuItem>
-              ))}
-            </TextField>
-          </LabeledField>
-          {isOldAppointment && (
-            <Box sx={{ mt: 2.25 }}>
-              <LabeledField label="Mês de referência">
-                <TextField
-                  select
-                  value={selectedReferenceMonth}
-                  onChange={(e) => setSelectedReferenceMonth(e.target.value)}
-                  fullWidth
-                  SelectProps={{
-                    displayEmpty: true,
-                    renderValue: (val) => {
-                      const opt = referenceMonthOptions.find((o) => o.value === val);
-                      return opt ? (
-                        opt.label
-                      ) : (
-                        <Typography component="span" variant="body2" sx={{ color: 'text.disabled' }}>
-                          Selecione o mês de competência
-                        </Typography>
-                      );
-                    },
-                  }}
-                >
-                  {referenceMonthOptions.map((opt) => (
-                    <MenuItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </LabeledField>
-              <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', mt: 0.75, lineHeight: 1.4 }}>
-                Use um mês passado para registrar agendamentos atrasados no financeiro correto.
-              </Typography>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={dialogActionsBorderSx}>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setPaymentDialogOpen(false);
-              setPendingFormValues(null);
-            }}
-            sx={{
-              bgcolor: 'background.paper',
-              borderColor: 'divider',
-              color: 'text.secondary',
-              '&:hover': { bgcolor: 'grey.50', borderColor: 'divider' },
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            disabled={!selectedPaymentMethodId || mutation.isPending}
-            onClick={confirmPaymentAndSave}
-            sx={{ boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
-          >
-            {mutation.isPending ? 'Salvando...' : 'Confirmar e registrar'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      />
 
-      <Dialog
-        open={returnDialogOpen}
-        onClose={closeReturnDialog}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogHeader
-          onClose={() => setReturnDialogOpen(false)}
-          title="Agendar retorno?"
-          subtitle="Confirme a data do próximo atendimento"
-          icon={<EventRepeatIcon fontSize="small" />}
-        />
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 0.5 }}>
-            {pendingReturn && pendingReturnProcedure?.recurrenceDays ? (
-              <Typography variant="body2">
-                Intervalo de retorno: <strong>{pendingReturnProcedure.recurrenceDays} dias</strong>.
-                {returnMinDate ? (
-                  <>
-                    {' '}
-                    Só é possível agendar a partir de{' '}
-                    <strong>{formatRecurrenceEarliestLabel(returnMinDate)}</strong>.
-                  </>
-                ) : null}
-              </Typography>
-            ) : pendingReturn ? (
-              <Typography variant="body2" color="text.secondary">
-                Este procedimento não tem intervalo de retorno cadastrado. Escolha manualmente a data
-                e o horário do retorno.
-              </Typography>
-            ) : null}
-            {returnCreateError && (
-              <Alert severity="error">{returnCreateError}</Alert>
-            )}
-            {!loadingReturnAvailability &&
-              returnSlotValid &&
-              returnProfessionalId &&
-              !returnProfessionalAvailable && (
-                <Alert severity="warning">
-                  O profissional não está disponível neste horário (expediente, folga ou conflito).
-                  Escolha outra data ou horário.
-                </Alert>
-              )}
-            {returnDateTooEarly && returnMinDate && (
-              <Alert severity="warning">
-                A data deve ser a partir de {formatRecurrenceEarliestLabel(returnMinDate)}.
-              </Alert>
-            )}
-            <TextField
-              type="date"
-              label="Data do retorno"
-              value={returnDate}
-              onChange={(e) => {
-                setReturnDate(e.target.value);
-                setReturnCreateError(null);
-              }}
-              fullWidth
-              required
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ min: returnMinDate ?? undefined }}
-              error={returnDateTooEarly}
-              helperText={
-                returnMinDate
-                  ? `Disponível a partir de ${formatRecurrenceEarliestLabel(returnMinDate)}`
-                  : undefined
-              }
-            />
-            <TextField
-              type="time"
-              label="Horário"
-              value={returnStartTime}
-              onChange={(e) => {
-                setReturnStartTime(e.target.value);
-                setReturnCreateError(null);
-              }}
-              fullWidth
-              required
-              InputLabelProps={{ shrink: true }}
-            />
-            {returnDateTime?.isValid() && pendingReturnProcedure && (
-              <Typography variant="caption" color="text.secondary">
-                Duração estimada: {pendingReturnProcedure.durationMinutes} min · mesmo profissional e
-                procedimento do atendimento concluído.
-              </Typography>
-            )}
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={closeReturnDialog}>
-            Agora não
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<EventRepeatIcon />}
-            disabled={
-              createReturnMutation.isPending ||
-              loadingReturnAvailability ||
-              !returnDate ||
-              !returnStartTime ||
-              !returnSlotValid ||
-              !returnProfessionalAvailable ||
-              returnDateTooEarly
-            }
-            onClick={() => {
-              setReturnCreateError(null);
-              createReturnMutation.mutate();
-            }}
-          >
-            {createReturnMutation.isPending ? 'Criando...' : 'Criar retorno'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CompletePaymentDialog
+        open={!!pendingFormValues}
+        isMobile={isMobile}
+        patientName={selectedPatient?.name}
+        procedureName={selectedProcedure?.name}
+        isPackage={!!(selectedPackageId && selectedPatientPkg)}
+        amount={paymentAmountOnComplete}
+        paymentMethods={paymentMethods}
+        appointmentMonthKey={appointmentMonthKey}
+        isPending={mutation.isPending}
+        onCancel={() => setPendingFormValues(null)}
+        onConfirm={(paymentMethodId, referenceMonth) =>
+          void confirmPaymentAndSave(paymentMethodId, referenceMonth)
+        }
+      />
 
-      <Dialog
-        open={sellDialogOpen}
+      <ReturnAppointmentDialog
+        pendingReturn={pendingReturn}
+        procedures={procedures}
+        fallbackProcedure={selectedProcedure}
         onClose={() => {
-          setSellDialogOpen(false);
+          setPendingReturn(null);
+          onClose();
+        }}
+      />
+
+      <SellPackageDialog
+        pkg={sellPackageTarget}
+        patientId={selectedPatientId}
+        patientName={selectedPatient?.name}
+        procedures={procedures}
+        paymentMethods={paymentMethods}
+        onClose={() => setSellPackageTarget(null)}
+        onCreated={(created) => {
           setSellPackageTarget(null);
+          setSelectedPackageId(created.id);
+          if (created.sessionsTotal > 1 && selectedProcedure?.recurrenceDays) {
+            setBatchTarget({ patientPkg: created, fillCount: null });
+          }
         }}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogHeader
-          onClose={() => setSellDialogOpen(false)}
-          title="Adquirir pacote"
-          subtitle="Vincular pacote ao paciente selecionado"
-          icon={<AddShoppingCartIcon fontSize="small" />}
-        />
-        <DialogContent>
-          {sellPackageTarget && (
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              <Typography variant="body2">
-                Vincular o pacote <strong>{sellPackageTarget.name}</strong> ao paciente{' '}
-                <strong>{selectedPatient?.name}</strong>.
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {sellPackageTarget.sessionCount} sessões
-                {sellPackageTarget.validityDays
-                  ? ` · Validade: ${sellPackageTarget.validityDays} dias`
-                  : ' · Sem validade'}
-              </Typography>
+      />
 
-              <Alert severity="info" sx={{ py: 0.5 }}>
-                O pagamento será registrado ao concluir o primeiro agendamento. Você pode informar
-                o pagamento agora, se preferir.
-              </Alert>
-
-              <TextField
-                type="number"
-                label="Valor acordado"
-                value={sellTotalPaid}
-                onChange={(e) => setSellTotalPaid(Number(e.target.value))}
-                fullWidth
-                inputProps={{ step: '0.01', min: 0 }}
-                InputProps={{
-                  startAdornment: <Typography sx={{ mr: 0.5 }}>R$</Typography>,
-                }}
-              />
-
-              <Typography variant="subtitle2" color="text.secondary">
-                Pagamento antecipado (opcional)
-              </Typography>
-
-              <TextField
-                select
-                label="Método de pagamento"
-                value={sellPaymentMethodId}
-                onChange={(e) => setSellPaymentMethodId(e.target.value)}
-                fullWidth
-                helperText="Deixe em branco para cobrar ao concluir o agendamento"
-              >
-                <MenuItem value="">—</MenuItem>
-                {paymentMethods.filter((m) => m.active).map((m) => (
-                  <MenuItem key={m.id} value={m.id}>
-                    {m.name}{Number(m.feePercent) > 0 ? ` (${Number(m.feePercent)}%)` : ''}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button
-            onClick={() => {
-              setSellDialogOpen(false);
-              setSellPackageTarget(null);
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            disabled={!sellPackageTarget}
-            onClick={async () => {
-              if (!sellPackageTarget || !selectedPatientId) return;
-              try {
-                const created = await packagesApi.createPatientPackage({
-                  patientId: selectedPatientId,
-                  packageId: sellPackageTarget.id,
-                  totalPaid: sellTotalPaid,
-                  ...(sellPaymentMethodId ? { paymentMethodId: sellPaymentMethodId } : {}),
-                });
-                queryClient.invalidateQueries({ queryKey: ['patient-packages-active'] });
-                queryClient.invalidateQueries({ queryKey: ['patient-packages'] });
-                setSellDialogOpen(false);
-                setSellPackageTarget(null);
-                setSelectedPackageId(created.id);
-                if (created.sessionsTotal > 1 && selectedProcedure?.recurrenceDays) {
-                  setBatchPatientPkg(created);
-                  setBatchDialogOpen(true);
-                }
-              } catch (err: any) {
-                await alert({
-                  title: 'Erro',
-                  message: getApiErrorMessage(err, 'Erro ao vincular pacote'),
-                  severity: 'error',
-                });
-              }
-            }}
-          >
-            Vincular pacote
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog
-        open={batchDialogOpen}
-        onClose={() => {
-          setBatchDialogOpen(false);
-          setBatchPatientPkg(null);
-          setBatchFillCount(null);
+      <BatchSessionsDialog
+        target={batchTarget}
+        procedure={selectedProcedure}
+        packageSessions={packageSessions}
+        patientId={selectedPatientId}
+        professionalId={selectedProfessionalId}
+        baseDate={selectedDate}
+        baseStartTime={selectedStartTime}
+        onClose={() => setBatchTarget(null)}
+        onDone={() => {
+          setBatchTarget(null);
+          onClose();
         }}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogHeader
-          onClose={() => setBatchDialogOpen(false)}
-          title="Agendar sessões do pacote"
-          subtitle="Distribua as sessões restantes na agenda"
-          icon={<CalendarMonthIcon fontSize="small" />}
-        />
-        <DialogContent>
-          {batchPatientPkg && selectedProcedure && (
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              <Typography variant="body2">
-                {batchFillCount != null ? (
-                  <>
-                    Faltam <strong>{batchFillCount}</strong> sessão(ões) a agendar no pacote{' '}
-                    <strong>{batchPatientPkg.package?.name}</strong> de{' '}
-                    <strong>{selectedProcedure.name}</strong>.
-                  </>
-                ) : (
-                  <>
-                    O pacote <strong>{batchPatientPkg.package?.name}</strong> possui{' '}
-                    <strong>{batchPatientPkg.sessionsTotal - batchPatientPkg.sessionsUsed}</strong> sessões
-                    restantes de <strong>{selectedProcedure.name}</strong>.
-                  </>
-                )}
-              </Typography>
-
-              {selectedProcedure.recurrenceDays ? (
-                <>
-                  <Typography variant="body2" color="text.secondary">
-                    Serão agendadas com intervalo de <strong>{selectedProcedure.recurrenceDays} dias</strong>{' '}
-                    entre cada sessão, a partir de{' '}
-                    <strong>
-                      {dayjs(
-                        batchSessions[0]
-                          ? `${batchSessions[0].date}T${batchSessions[0].startTime}`
-                          : `${selectedDate}T${selectedStartTime}`,
-                      ).format('DD/MM/YYYY [às] HH:mm')}
-                    </strong>
-                    , com o mesmo profissional.
-                  </Typography>
-
-                  <Typography variant="overline" color="text.secondary">
-                    Sessões que serão agendadas (altere data/horário se precisar):
-                  </Typography>
-                  <List dense disablePadding sx={{ maxHeight: 320, overflow: 'auto' }}>
-                    {batchSessions.map((session, i) => (
-                      <ListItem key={i} disableGutters sx={{ py: 0.75 }}>
-                        <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
-                          <Chip
-                            size="small"
-                            label={`${i + 1}ª`}
-                            color="primary"
-                            variant="outlined"
-                            sx={{ minWidth: 36 }}
-                          />
-                          <TextField
-                            type="date"
-                            size="small"
-                            value={session.date}
-                            onChange={(e) =>
-                              setBatchSessions((prev) =>
-                                prev.map((s, idx) =>
-                                  idx === i ? { ...s, date: e.target.value } : s,
-                                ),
-                              )
-                            }
-                            InputLabelProps={{ shrink: true }}
-                            sx={{ flex: 1, minWidth: 130 }}
-                          />
-                          <TextField
-                            type="time"
-                            size="small"
-                            value={session.startTime}
-                            onChange={(e) =>
-                              setBatchSessions((prev) =>
-                                prev.map((s, idx) =>
-                                  idx === i ? { ...s, startTime: e.target.value } : s,
-                                ),
-                              )
-                            }
-                            InputLabelProps={{ shrink: true }}
-                            sx={{ width: 110 }}
-                          />
-                        </Stack>
-                      </ListItem>
-                    ))}
-                  </List>
-                </>
-              ) : (
-                <Alert severity="warning">
-                  Este procedimento não possui intervalo de retorno configurado. Configure o campo
-                  "Retorno (dias)" no procedimento para agendar em lote automaticamente.
-                </Alert>
-              )}
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button
-            onClick={() => {
-              setBatchDialogOpen(false);
-              setBatchPatientPkg(null);
-            }}
-          >
-            Agendar só esta sessão
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={batchCreating ? <CircularProgress size={18} /> : <CalendarMonthIcon />}
-            disabled={batchCreating || !selectedProcedure?.recurrenceDays}
-            onClick={async () => {
-              if (!batchPatientPkg || !selectedProcedure?.recurrenceDays) return;
-              setBatchCreating(true);
-              try {
-                const remaining = batchSessions.length;
-                const duration = selectedProcedure.durationMinutes;
-                const professionalId = selectedProfessionalId;
-
-                for (let i = 0; i < remaining; i++) {
-                  const session = batchSessions[i];
-                  const sessionStart = dayjs(`${session.date}T${session.startTime}`);
-                  const sessionEnd = sessionStart.add(duration, 'minute');
-
-                  await appointmentsApi.create({
-                    patientId: selectedPatientId,
-                    procedureId: selectedProcedureId,
-                    professionalId,
-                    startAt: sessionStart.toISOString(),
-                    endAt: sessionEnd.toISOString(),
-                    status: 'SCHEDULED',
-                    kind: 'PROCEDURE',
-                    notes: `Sessão ${i + 1}/${remaining} — ${batchPatientPkg.package?.name ?? 'Pacote'}`,
-                    patientPackageId: batchPatientPkg.id,
-                  });
-                }
-
-                invalidateAppointmentListQueries(queryClient);
-                queryClient.invalidateQueries({ queryKey: ['patient-packages-active'] });
-                queryClient.invalidateQueries({ queryKey: ['patient-packages'] });
-                setBatchDialogOpen(false);
-                setBatchPatientPkg(null);
-                onClose();
-              } catch (err: any) {
-                await alert({
-                  title: 'Erro',
-                  message: getApiErrorMessage(err, 'Erro ao criar agendamentos em lote'),
-                  severity: 'error',
-                });
-              } finally {
-                setBatchCreating(false);
-              }
-            }}
-          >
-            {batchCreating ? 'Agendando...' : `Agendar ${batchSessions.length} sessões`}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      />
 
       <PatientDetailDrawer
         patientId={chartPatientId}
@@ -3382,12 +1058,12 @@ export function AppointmentFormDialog({
         <DialogHeader
           onClose={() => setConfirmFinishOpen(false)}
           title="Concluir atendimento?"
-          subtitle={`Tempo registrado: ${formatElapsed(elapsed)}`}
+          subtitle={`Tempo registrado: ${formatElapsed(timer.elapsed)}`}
         />
         <DialogContent>
           <Typography variant="body2">
-            Tempo registrado: <strong>{formatElapsed(elapsed)}</strong>.
-            {hasFinishedAt ? ' O cronômetro está pausado.' : ' O cronômetro será parado.'}
+            Tempo registrado: <strong>{formatElapsed(timer.elapsed)}</strong>.
+            {timer.hasFinishedAt ? ' O cronômetro está pausado.' : ' O cronômetro será parado.'}
             {' '}O agendamento será marcado como <strong>Concluído</strong>.
           </Typography>
         </DialogContent>
