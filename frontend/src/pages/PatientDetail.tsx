@@ -12,7 +12,6 @@ import {
   Stack,
   Tab,
   Tabs,
-  Tooltip,
   Typography,
   alpha,
 } from '@mui/material';
@@ -25,39 +24,38 @@ import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import EventNoteOutlinedIcon from '@mui/icons-material/EventNoteOutlined';
 import ViewInArIcon from '@mui/icons-material/ViewInAr';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import type { ReactNode } from 'react';
 
-import { patientsApi } from '../api/patients';
 import { packagesApi } from '../api/packages';
-import { AnamnesisView, hasAnamnesisData } from '../components/patients/AnamnesisView';
 import { ANAMNESIS_SECTIONS } from '../components/patients/anamnesisFields';
 import { AnamnesisFormDialog } from '../components/patients/AnamnesisFormDialog';
 import { PatientPhotosGallery } from '../components/patients/PatientPhotosGallery';
-import { PatientSkinRoutinesCard } from '../components/skincare/PatientSkinRoutinesCard';
+import { EmptyBlock } from '../components/patients/EmptyBlock';
+import { PatientAnamnesisSection } from '../components/patients/PatientAnamnesisSection';
+import { PatientWhatsAppButton } from '../components/patients/PatientWhatsAppButton';
+import { ReliabilityBadge } from '../components/patients/ReliabilityBadge';
+import {
+  appointmentKindLabel,
+  appointmentStatusAccent,
+  patientAgeLabel,
+  scoreTone,
+} from '../components/patients/patientChart';
+import { usePatientChart } from '../components/patients/usePatientChart';
 import { useAppointmentDialog } from '../contexts/AppointmentDialogContext';
 import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
-import StarRoundedIcon from '@mui/icons-material/StarRounded';
-import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import AddIcon from '@mui/icons-material/Add';
 import { usePermissions } from '../contexts/usePermissions';
-import { dayjsFromDateOnlyApi, formatDateOnlyFromApi } from '../utils/dateOnly';
+import { formatDateOnlyFromApi } from '../utils/dateOnly';
 import { formatPatientAddressDisplay } from '../utils/patientAddress';
 import { patientSexLabel } from '../utils/patientSex';
-import { maskPhone, onlyDigits } from '../utils/masks';
+import { maskPhone } from '../utils/masks';
 import { patientInitials } from '../utils/patientPhoto';
-import type { Appointment, AppointmentKind } from '../types';
+import type { Appointment } from '../types';
 import { fontSizes } from '../theme/fontSizes';
 import { brl } from '../utils/money';
 
-
-function scoreTone(v: number) {
-  if (v >= 90) return { main: '#15998B', label: 'Excelente' };
-  if (v >= 75) return { main: '#C98A12', label: 'Bom' };
-  return { main: '#D65A5A', label: 'Atenção' };
-}
 
 const packageStatusLabel: Record<string, string> = {
   ACTIVE: 'Ativo',
@@ -73,29 +71,7 @@ const packageStatusColor: Record<string, 'success' | 'default' | 'error' | 'warn
   CANCELLED: 'error',
 };
 
-const statusAccent: Record<string, string> = {
-  SCHEDULED: 'info.main',
-  CONFIRMED: 'primary.main',
-  IN_PROGRESS: 'warning.main',
-  COMPLETED: 'success.main',
-  CANCELLED: 'error.main',
-  NO_SHOW: 'error.main',
-};
-
-const kindLabel: Record<AppointmentKind, string> = {
-  EVALUATION: 'Avaliação',
-  PROCEDURE: 'Procedimento',
-  RETURN: 'Retorno',
-};
-
 type DetailTab = 'general' | 'appointments' | 'packages' | 'anamnesis' | 'fotos';
-
-function patientAgeLabel(birthDate?: string | null) {
-  const birth = dayjsFromDateOnlyApi(birthDate);
-  if (!birth) return null;
-  const age = dayjs().diff(birth, 'year');
-  return age >= 0 ? `${age} anos` : null;
-}
 
 function HeaderIcon({ children }: { children: ReactNode }) {
   return (
@@ -131,26 +107,6 @@ function SectionCard({ title, icon, children }: { title: string; icon: ReactNode
       </Stack>
       {children}
     </Paper>
-  );
-}
-
-function EmptyBlock({ message }: { message: string }) {
-  return (
-    <Box
-      sx={{
-        py: 4,
-        px: 2,
-        textAlign: 'center',
-        borderRadius: 2,
-        border: '1px dashed',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
-      }}
-    >
-      <Typography variant="body2" color="text.secondary">
-        {message}
-      </Typography>
-    </Box>
   );
 }
 
@@ -436,7 +392,7 @@ function PackagesTab({ patientPackages }: { patientPackages: any[] }) {
 }
 
 function AppointmentRowCard({ appt }: { appt: Appointment }) {
-  const accent = statusAccent[appt.status] ?? 'primary.main';
+  const accent = appointmentStatusAccent[appt.status] ?? 'primary.main';
   const income = appt.financialEntries?.[0];
   const paid = !!appt.financeGenerated || !!income;
   const value = income ? Number(income.amount) : (appt.procedure as any)?.price;
@@ -455,7 +411,7 @@ function AppointmentRowCard({ appt }: { appt: Appointment }) {
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
             <Box sx={{ minWidth: 0 }}>
               <Typography sx={{ fontSize: fontSizes.md, fontWeight: 800 }} noWrap>
-                {appt.procedure?.name ?? kindLabel[appt.kind] ?? 'Atendimento'}
+                {appt.procedure?.name ?? appointmentKindLabel[appt.kind] ?? 'Atendimento'}
               </Typography>
               <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                 {dayjs(appt.startAt).format('DD/MM/YYYY [às] HH:mm')}
@@ -569,17 +525,7 @@ export function PatientDetail() {
   const [tab, setTab] = useState<DetailTab>((searchParams.get('tab') as DetailTab) || 'general');
   const [anamnesisOpen, setAnamnesisOpen] = useState(false);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['patient', id],
-    queryFn: () => patientsApi.findOne(id!),
-    enabled: !!id,
-  });
-
-  const { data: reliability } = useQuery({
-    queryKey: ['patient-reliability', id],
-    queryFn: () => patientsApi.getReliability(id!),
-    enabled: !!id,
-  });
+  const { data, isLoading, reliability } = usePatientChart(id);
 
   const { data: patientPackages = [] } = useQuery({
     queryKey: ['patient-packages', id],
@@ -695,24 +641,7 @@ export function PatientDetail() {
                 const tone = scoreTone(reliability.reliabilityPercent);
                 return (
                   <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ mt: 1.5 }}>
-                    <Box
-                      component="span"
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 0.5,
-                        px: 1.1,
-                        py: 0.4,
-                        borderRadius: '9px',
-                        fontSize: fontSizes.sm,
-                        fontWeight: 800,
-                        color: tone.main,
-                        bgcolor: alpha(tone.main, 0.14),
-                      }}
-                    >
-                      <StarRoundedIcon sx={{ fontSize: 15 }} />
-                      {reliability.reliabilityPercent}
-                    </Box>
+                    <ReliabilityBadge value={reliability.reliabilityPercent} variant="page" />
                     <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700, color: tone.main }}>
                       {tone.label}
                     </Typography>
@@ -806,24 +735,7 @@ export function PatientDetail() {
                 Agendar
               </Button>
               {data.phone && (
-                <Tooltip title="WhatsApp">
-                  <IconButton
-                    onClick={() =>
-                      window.open(`https://wa.me/55${onlyDigits(data.phone ?? '')}`, '_blank', 'noopener')
-                    }
-                    sx={{
-                      width: 38,
-                      height: 38,
-                      flexShrink: 0,
-                      borderRadius: '11px',
-                      border: 1,
-                      borderColor: 'divider',
-                      color: '#1DAE53',
-                    }}
-                  >
-                    <WhatsAppIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                <PatientWhatsAppButton phone={data.phone} sx={{ flexShrink: 0, borderRadius: '11px' }} />
               )}
             </Stack>
           </Stack>
@@ -857,25 +769,7 @@ export function PatientDetail() {
             {tab === 'appointments' && <AppointmentsTab appointments={data.appointments ?? []} />}
             {tab === 'packages' && <PackagesTab patientPackages={patientPackages} />}
             {tab === 'anamnesis' && (
-              <Stack spacing={2}>
-                {has('routines:view') && (
-                  <PatientSkinRoutinesCard
-                    patient={{ id: data.id, name: data.name, phone: data.phone, email: data.email }}
-                  />
-                )}
-                {canEdit && (
-                  <Stack direction="row" justifyContent="flex-end">
-                    <Button
-                      variant="contained"
-                      startIcon={<EditOutlinedIcon />}
-                      onClick={() => setAnamnesisOpen(true)}
-                    >
-                      {hasAnamnesisData(data.anamnesis) ? 'Editar anamnese' : 'Preencher anamnese'}
-                    </Button>
-                  </Stack>
-                )}
-                <AnamnesisView anamnesis={data.anamnesis} />
-              </Stack>
+              <PatientAnamnesisSection patient={data} onEdit={canEdit ? () => setAnamnesisOpen(true) : undefined} />
             )}
             {tab === 'fotos' && (
               <PatientPhotosGallery patientId={id!} canEdit={canEdit} showTitle={false} />

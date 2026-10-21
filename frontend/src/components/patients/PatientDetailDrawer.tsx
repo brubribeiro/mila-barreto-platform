@@ -7,15 +7,11 @@ import {
   IconButton,
   Paper,
   Stack,
-  Tab,
-  Tabs,
-  Tooltip,
   Typography,
   alpha,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
@@ -23,53 +19,32 @@ import CakeOutlinedIcon from '@mui/icons-material/CakeOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import WcOutlinedIcon from '@mui/icons-material/WcOutlined';
-import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import AddIcon from '@mui/icons-material/Add';
-import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { patientsApi } from '../../api/patients';
-import { AnamnesisView, hasAnamnesisData } from './AnamnesisView';
 import { PatientPhotosGallery } from './PatientPhotosGallery';
+import { EmptyBlock } from './EmptyBlock';
+import { PatientAnamnesisSection } from './PatientAnamnesisSection';
+import { PatientWhatsAppButton } from './PatientWhatsAppButton';
+import { ReliabilityBadge } from './ReliabilityBadge';
+import { appointmentKindLabel, appointmentStatusAccent, patientAgeLabel } from './patientChart';
+import { usePatientChart } from './usePatientChart';
 import { usePermissions } from '../../contexts/usePermissions';
-import { PatientSkinRoutinesCard } from '../skincare/PatientSkinRoutinesCard';
 import { useAppointmentDialog } from '../../contexts/AppointmentDialogContext';
-import { dayjsFromDateOnlyApi, formatDateOnlyFromApi } from '../../utils/dateOnly';
+import { formatDateOnlyFromApi } from '../../utils/dateOnly';
 import { formatPatientAddressDisplay } from '../../utils/patientAddress';
 import { patientSexLabel } from '../../utils/patientSex';
 import { patientReferralSourceLabel } from '../../utils/patientReferralSource';
-import { maskPhone, onlyDigits } from '../../utils/masks';
-import type { Appointment, AppointmentKind } from '../../types';
+import { maskPhone } from '../../utils/masks';
+import type { Appointment } from '../../types';
 import { patientInitials } from '../../utils/patientPhoto';
 import { fontSizes } from '../../theme/fontSizes';
 import { brl } from '../../utils/money';
 
 
-const statusAccent: Record<string, string> = {
-  SCHEDULED: 'info.main',
-  CONFIRMED: 'primary.main',
-  IN_PROGRESS: 'warning.main',
-  COMPLETED: 'success.main',
-  CANCELLED: 'error.main',
-  NO_SHOW: 'error.main',
-};
-
-const kindLabel: Record<AppointmentKind, string> = {
-  EVALUATION: 'Avaliação',
-  PROCEDURE: 'Procedimento',
-  RETURN: 'Retorno',
-};
-
 type ChartTab = 'notes' | 'general' | 'appointments' | 'packages' | 'anamnesis' | 'fotos';
-
-function scoreTone(v: number) {
-  if (v >= 90) return { main: '#15998B', label: 'Excelente' };
-  if (v >= 75) return { main: '#C98A12', label: 'Bom' };
-  return { main: '#D65A5A', label: 'Atenção' };
-}
 
 interface PatientDetailDrawerProps {
   patientId: string | null;
@@ -77,13 +52,6 @@ interface PatientDetailDrawerProps {
   defaultTab?: ChartTab;
   highlightAppointmentId?: string | null;
   onEditAnamnesis?: (patientId: string) => void;
-}
-
-function patientAgeLabel(birthDate?: string | null) {
-  const birth = dayjsFromDateOnlyApi(birthDate);
-  if (!birth) return null;
-  const age = dayjs().diff(birth, 'year');
-  return age >= 0 ? `${age} anos` : null;
 }
 
 function InfoLine({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
@@ -117,28 +85,8 @@ function InfoLine({ icon, label, value }: { icon: ReactNode; label: string; valu
   );
 }
 
-function EmptyBlock({ message }: { message: string }) {
-  return (
-    <Box
-      sx={{
-        py: 4,
-        px: 2,
-        textAlign: 'center',
-        borderRadius: 2,
-        border: '1px dashed',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
-      }}
-    >
-      <Typography variant="body2" color="text.secondary">
-        {message}
-      </Typography>
-    </Box>
-  );
-}
-
 function AppointmentRowCard({ appt }: { appt: Appointment }) {
-  const accent = statusAccent[appt.status] ?? 'primary.main';
+  const accent = appointmentStatusAccent[appt.status] ?? 'primary.main';
   const obs = appt.clinicalNotes?.trim() || appt.notes?.trim();
 
   return (
@@ -152,7 +100,7 @@ function AppointmentRowCard({ appt }: { appt: Appointment }) {
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
             <Box sx={{ minWidth: 0 }}>
               <Typography sx={{ fontSize: fontSizes.md, fontWeight: 800 }} noWrap>
-                {appt.procedure?.name ?? kindLabel[appt.kind] ?? 'Atendimento'}
+                {appt.procedure?.name ?? appointmentKindLabel[appt.kind] ?? 'Atendimento'}
               </Typography>
               <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
                 {dayjs(appt.startAt).format('DD/MM/YYYY [às] HH:mm')}
@@ -201,17 +149,7 @@ export function PatientDetailDrawer({
   const canEdit = has('patients:edit');
   const { openAppointmentDialog } = useAppointmentDialog();
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['patient', patientId],
-    queryFn: () => patientsApi.findOne(patientId!),
-    enabled: !!patientId,
-  });
-
-  const { data: reliability } = useQuery({
-    queryKey: ['patient-reliability', patientId],
-    queryFn: () => patientsApi.getReliability(patientId!),
-    enabled: !!patientId,
-  });
+  const { data, isLoading, reliability } = usePatientChart(patientId);
 
   const ageLabel = data ? patientAgeLabel(data.birthDate) : null;
   const addressLine = data ? formatPatientAddressDisplay(data) : '';
@@ -313,30 +251,9 @@ export function PatientDetailDrawer({
                       {maskPhone(data.phone) || data.phone}
                     </Typography>
                   )}
-                  {reliability != null &&
-                    (() => {
-                      const tone = scoreTone(reliability.reliabilityPercent);
-                      return (
-                        <Box
-                          component="span"
-                          sx={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 0.5,
-                            px: 1,
-                            py: 0.35,
-                            borderRadius: '9px',
-                            fontSize: fontSizes.xs,
-                            fontWeight: 800,
-                            color: tone.main,
-                            bgcolor: alpha(tone.main, 0.14),
-                          }}
-                        >
-                          <StarRoundedIcon sx={{ fontSize: 13 }} />
-                          {reliability.reliabilityPercent}
-                        </Box>
-                      );
-                    })()}
+                  {reliability != null && (
+                    <ReliabilityBadge value={reliability.reliabilityPercent} variant="drawer" />
+                  )}
                 </Stack>
               </Box>
             </Stack>
@@ -517,24 +434,11 @@ export function PatientDetailDrawer({
         )}
 
         {data && tab === 'anamnesis' && (
-          <Stack spacing={2}>
-            {has('routines:view') && (
-              <PatientSkinRoutinesCard patient={{ id: data.id, name: data.name, phone: data.phone, email: data.email }} />
-            )}
-            {onEditAnamnesis && (
-              <Stack direction="row" justifyContent="flex-end">
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={<EditOutlinedIcon />}
-                  onClick={() => onEditAnamnesis(data.id)}
-                >
-                  {hasAnamnesisData(data.anamnesis) ? 'Editar anamnese' : 'Preencher anamnese'}
-                </Button>
-              </Stack>
-            )}
-            <AnamnesisView anamnesis={data.anamnesis} />
-          </Stack>
+          <PatientAnamnesisSection
+            patient={data}
+            onEdit={onEditAnamnesis ? () => onEditAnamnesis(data.id) : undefined}
+            buttonSize="small"
+          />
         )}
 
         {data && tab === 'appointments' && (
@@ -607,24 +511,7 @@ export function PatientDetailDrawer({
             Agendar
           </Button>
           {data.phone && (
-            <Tooltip title="WhatsApp">
-              <IconButton
-                onClick={() =>
-                  window.open(`https://wa.me/55${onlyDigits(data.phone ?? '')}`, '_blank', 'noopener')
-                }
-                sx={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: '12px',
-                  border: 1,
-                  borderColor: 'divider',
-                  bgcolor: 'background.paper',
-                  color: '#1DAE53',
-                }}
-              >
-                <WhatsAppIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <PatientWhatsAppButton phone={data.phone} sx={{ borderRadius: '12px', bgcolor: 'background.paper' }} />
           )}
         </Stack>
       )}

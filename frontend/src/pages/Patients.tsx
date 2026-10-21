@@ -16,7 +16,6 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
-import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -30,6 +29,7 @@ import { patientsApi } from '../api/patients';
 import { PatientFormDialog } from '../components/patients/PatientFormDialog';
 import { AnamnesisFormDialog } from '../components/patients/AnamnesisFormDialog';
 import { PatientDetailDrawer } from '../components/patients/PatientDetailDrawer';
+import { ReliabilityBadge } from '../components/patients/ReliabilityBadge';
 import { SendWhatsAppDialog } from '../components/messages/SendWhatsAppDialog';
 import {
   LIST_HEADER_ACTION_SX,
@@ -60,12 +60,6 @@ function formatCpf(doc?: string) {
   const raw = doc?.replace(/\D/g, '');
   if (!raw || raw.length !== 11) return '—';
   return `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6, 9)}-${raw.slice(9)}`;
-}
-
-function scoreTone(v: number) {
-  if (v >= 90) return { main: '#15998B', label: 'Excelente' };
-  if (v >= 75) return { main: '#C98A12', label: 'Bom' };
-  return { main: '#D65A5A', label: 'Atenção' };
 }
 
 const GRID_COLS = '1.8fr 1.1fr 1.2fr 1fr 1fr 0.75fr 0.8fr 120px';
@@ -367,7 +361,6 @@ export function Patients() {
         ) : (
           pageRows.map((p) => {
             const score = p.reliabilityPercent ?? 100;
-            const tone = scoreTone(score);
             const color = avatarColor(p.name);
             return (
               <Box
@@ -466,24 +459,7 @@ export function Patients() {
 
                 {/* Score */}
                 <Box sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'flex-end' }}>
-                  <Box
-                    component="span"
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 0.5,
-                      px: 1.1,
-                      py: 0.5,
-                      borderRadius: '9px',
-                      fontSize: fontSizes.xs,
-                      fontWeight: 800,
-                      color: tone.main,
-                      bgcolor: alpha(tone.main, 0.12),
-                    }}
-                  >
-                    <StarRoundedIcon sx={{ fontSize: 14 }} />
-                    {score}
-                  </Box>
+                  <ReliabilityBadge value={score} variant="list" />
                 </Box>
 
                 {/* Ações */}
