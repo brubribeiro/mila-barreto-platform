@@ -42,6 +42,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 - `Patients.tsx`: substitui DataGrid por lista customizada Aurora.
 - `PatientDetail.tsx`, `PatientDetailDrawer`, `PatientFormDialog`: alinhados ao visual Aurora.
+- Pacientes (refatoração sem mudança de comportamento ou visual): `PatientDetail`, `PatientDetailDrawer`, `PatientFormDialog` e `Patients` divididos em subcomponentes e hooks em `components/patients/`. Compartilhados entre ficha, gaveta e lista: `usePatientChart` (paciente + score), `patientChart.ts` (`scoreTone`, `patientAgeLabel`, rótulos de status/tipo de agendamento), `ReliabilityBadge`, `PatientWhatsAppButton`, `PatientAnamnesisSection` e `EmptyBlock`. Ficha: `PatientSummarySidebar`, `PatientOverviewTab`, `PatientAppointmentsTab`, `PatientPackagesTab`. Gaveta: `PatientDrawerHeader`, `PatientDrawerSummaryTab`, `PatientDrawerAppointmentsTab`. Formulário: `patientFormValues.ts` (valores iniciais e payload), `useCepAddressLookup`, `usePatientPhotoDraft`, `PatientPhotoPicker`, `PatientFormBasicFields`, `PatientFormAddressSection`, `LabeledField`. Lista: `PatientListRow`, `PatientListColumns`, `PatientListPagination`, `PatientListEmptyState`, `PatientStatCard`.
 - `AnamnesisFormDialog` / `AnamnesisView`: seções em cards, campos com `LabeledField`.
 - `AppointmentFormDialog`: suporte a `defaultPatientId`; busca de profissionais só após init do form; redesign Aurora (seções, modais de pagamento e confirmação).
 - Agenda: skeleton de carregamento no calendário; remoção de scrollbar customizada local (usa tema global).
@@ -79,6 +80,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Procedimentos: filtro de categoria passa de pills para select no cabeçalho do card (`LIST_HEADER_SELECT_SX`, compartilhado com Usuários); título do card mostra a categoria selecionada.
 - Usuários: removido o texto explicativo que ficava fora do card.
 - Listagens: filtros/busca/ações de Procedimentos e Usuários movidos para dentro do card da tabela (como Pacientes, Documentos, Estoque, Financeiro, Despesas recorrentes e Mensagens), via novo `ListCardHeader` (`ListSearchField`, `ListHistoryButton`, `LIST_HEADER_ACTION_SX`); Pacientes passa a usá-lo.
+
+### Removed
+
+- Pacientes: código morto da ficha, gaveta e formulário (abas Observações/Financeiro/Documentos e suas queries nunca exibidas, `InfoRow`, `NoteBlock`, `AppointmentNotesCard`, `PackageCard` e query de pacotes da gaveta, constantes de estilo e `TabPanel` sem uso no formulário, imports não usados). Some com isso os dois erros de `tsc` em `PatientDetail.tsx` (comparação de aba com `'finance'`/`'documents'`).
 
 ## [0.2.0] - 2026-07-15
 
