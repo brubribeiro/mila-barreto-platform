@@ -19,7 +19,7 @@ import {
   ListCardHeader,
   ListSearchField,
 } from '../components/ListCardHeader';
-import { ListPageButtons } from '../components/ListPageButtons';
+import { COMPACT_PAGE_ARROW_SX, ListPageButtons } from '../components/ListPageButtons';
 import { ListEmptyState, ListSkeletonRows } from '../components/ListStates';
 import { useFinanceBackgroundSync } from '../hooks/useFinanceBackgroundSync';
 import { usePagination } from '../hooks/usePagination';
@@ -32,8 +32,6 @@ import { fontSizes } from '../theme/fontSizes';
 import { brl } from '../utils/money';
 
 const PAGE_SIZE = 10;
-
-const COMPACT_PAGE_ARROW_SX = { width: 34, height: 34, border: 1, borderColor: 'divider', borderRadius: '9px' } as const;
 
 type TypeFilter = 'ALL' | 'INCOME' | 'EXPENSE';
 type InvoiceFilter = 'ALL' | 'PENDING' | 'ISSUED';

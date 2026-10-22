@@ -6,6 +6,15 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { fontSizes } from '../theme/fontSizes';
 import { pageWindow } from '../utils/pagination';
 
+/** Setas da paginação compacta (Financeiro, Estoque). */
+export const COMPACT_PAGE_ARROW_SX = {
+  width: 34,
+  height: 34,
+  border: 1,
+  borderColor: 'divider',
+  borderRadius: '9px',
+} as const;
+
 interface ListPageButtonsProps {
   page: number;
   pageCount: number;
