@@ -40,6 +40,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Dashboard: scroll na lista de aniversariantes; botão WhatsApp desabilitado sem telefone.
 - `Packages.tsx`: substitui DataGrid por cards Aurora; `PackageFormDialog` reorganizada.
 - `Promotions.tsx`: substitui DataGrid por cards Aurora; `PromotionFormDialog` com tipo Combo e escopo (procedimentos/pacotes).
+- Backend (refactor, sem mudança de API/comportamento): `AppointmentsService` dividido em `AppointmentRulesService` (referências, disponibilidade, intervalo de retorno), `AppointmentMaterialsService` (baixa/devolução de estoque), `AppointmentFinanceService` (receita, custo de materiais, backfill) e `AppointmentEventsService` (notificações/auditoria), mais `appointment.helpers.ts`; regra de receita de pacote unificada entre conclusão e backfill; removido cálculo morto de `costDetails` e consultas duplicadas em `update`.
+- Backend (refactor, sem mudança de API/comportamento): `PatientsService` dividido em `PatientPhotoStorageService` (R2, validação e URLs assinadas), `PatientStatsService` (agregações e confiabilidade), `PatientEventsService` (auditoria/notificação) e `patient-fields.util.ts` (normalização de campos com regra única para nulos/trim).
+- Testes: spec de pacientes passa a prover `CompressionService` e mock de `financialEntry` (12 testes que falhavam na montagem do módulo voltam a passar).
 
 ### Fixed
 
