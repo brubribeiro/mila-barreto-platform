@@ -40,6 +40,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Changed
 
+- Refatoração sem mudança visual de Financeiro, Despesas recorrentes, Documentos, Equipamentos, Estoque, `ProcedureFormDialog` e `BulkPurchaseDialog` (comparação pixel a pixel antes/depois em 1440px e 390px, incluindo estados vazios, carregamento, paginação e modais):
+  - Peças compartilhadas de listagem: `ListPageButtons` (+ `utils/pagination.ts` `pageWindow`), `ListEmptyState`/`ListSkeletonRows` (`ListStates.tsx`), `ListTableHeader`, `StatCard`, `RowActionButton` e o hook `usePagination`; `ListCardHeader` ganhou `breakpoint`, `nowrapFrom` e `sx`, e `ListSearchField` ganhou `width`, `ariaLabel` e `compact`, mais os estilos `LIST_HEADER_PAPER_SELECT_SX`, `LIST_HEADER_COMPACT_SELECT_SX`, `LIST_HEADER_ICON_BUTTON_SX` e `LIST_HEADER_PRIMARY_ACTION_SX`.
+  - Subcomponentes extraídos das páginas: `TransactionRow`, `FinanceKpiCard`, `PeriodField`, hook `useFinanceBackgroundSync`; `RecurringSummaryCards`, `HourlyCostCard` (com suas queries e o switch de custo variável), `RecurringExpenseRow`, `recurringDue.ts`; `DocumentListRow`, `DocumentActionsMenu`; `EquipmentCard`, `equipmentMaintenance.ts`; `InventoryListRow`; `ProcedureToggleCard`, `ProcedureCostSummary`; `BulkPurchaseLineRow`, `BulkPurchaseTotals`, `bulkPurchase.ts` (rateio de frete) e `inventoryUnits.ts` (unidades compartilhadas com `InventoryFormDialog`).
+  - Código morto removido em `ProcedureFormDialog` (imports, `FIELD_SX` vazio, `DIALOG_HEIGHT_DESKTOP`, `watchedName`, `watchedActive`, `estimatedMargin`) e funções `pageWindow` duplicadas.
+  - Acessibilidade (sem efeito visual): a busca de Equipamentos, Despesas recorrentes e Documentos passa a ter `aria-label`, e os números de página de todas essas listas marcam `aria-current="page"`.
+
 - `Patients.tsx`: substitui DataGrid por lista customizada Aurora.
 - `PatientDetail.tsx`, `PatientDetailDrawer`, `PatientFormDialog`: alinhados ao visual Aurora.
 - `AnamnesisFormDialog` / `AnamnesisView`: seções em cards, campos com `LabeledField`.
