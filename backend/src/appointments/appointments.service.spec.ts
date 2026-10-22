@@ -8,6 +8,10 @@ import { AvailabilityService } from '../availability/availability.service';
 import { PackagesService } from '../packages/packages.service';
 import { PromotionsService } from '../promotions/promotions.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { AppointmentRulesService } from './appointment-rules.service';
+import { AppointmentMaterialsService } from './appointment-materials.service';
+import { AppointmentFinanceService } from './appointment-finance.service';
+import { AppointmentEventsService } from './appointment-events.service';
 
 describe('AppointmentsService', () => {
   let service: AppointmentsService;
@@ -103,6 +107,10 @@ describe('AppointmentsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AppointmentsService,
+        AppointmentRulesService,
+        AppointmentMaterialsService,
+        AppointmentFinanceService,
+        AppointmentEventsService,
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationsService, useValue: notifications },
         { provide: AvailabilityService, useValue: availability },
