@@ -35,6 +35,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { proceduresApi, ProcedurePayload } from '../../api/procedures';
 import { LabeledField } from '../LabeledField';
+import { MoneyField } from '../MoneyField';
 import { FormSection } from '../FormSection';
 import { inventoryApi } from '../../api/inventory';
 import { equipmentApi } from '../../api/equipment';
@@ -239,6 +240,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
         sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
       >
@@ -288,6 +290,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                       fullWidth
                       size="small"
                       placeholder="Ex.: Toxina Botulínica"
+                      autoFocus={!procedure}
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
                       sx={FIELD_SX}
@@ -322,8 +325,11 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                 <Controller
                   name="durationMinutes"
                   control={control}
-                  rules={{ required: true, min: 5 }}
-                  render={({ field }) => (
+                  rules={{
+                    required: 'Informe a duração',
+                    min: { value: 5, message: 'Mínimo de 5 minutos' },
+                  }}
+                  render={({ field, fieldState }) => (
                     <LabeledField label="Duração" required>
                       <TextField
                         {...field}
@@ -331,6 +337,9 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                         fullWidth
                         size="small"
                         sx={FIELD_SX}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        inputProps={{ inputMode: 'numeric', min: 5 }}
                         InputProps={{ endAdornment: <InputAdornment position="end">min</InputAdornment> }}
                       />
                     </LabeledField>
@@ -348,6 +357,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                         size="small"
                         placeholder="Opcional"
                         sx={FIELD_SX}
+                        inputProps={{ inputMode: 'numeric', min: 0 }}
                         InputProps={{ endAdornment: <InputAdornment position="end">dias</InputAdornment> }}
                       />
                     </LabeledField>
@@ -562,8 +572,8 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                           <Controller
                             name={`materials.${index}.itemId` as const}
                             control={control}
-                            rules={{ required: true }}
-                            render={({ field: f }) => (
+                            rules={{ required: 'Selecione o material' }}
+                            render={({ field: f, fieldState }) => (
                               <Autocomplete
                                 size="small"
                                 sx={{ minWidth: 0 }}
@@ -572,7 +582,13 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                                 value={availableItems.find((i) => i.id === f.value) ?? null}
                                 onChange={(_, val) => f.onChange(val?.id ?? '')}
                                 renderInput={(params) => (
-                                  <TextField {...params} placeholder="Selecionar" size="small" sx={FIELD_SX} />
+                                  <TextField
+                                    {...params}
+                                    placeholder="Selecionar"
+                                    size="small"
+                                    sx={FIELD_SX}
+                                    error={!!fieldState.error}
+                                  />
                                 )}
                               />
                             )}
@@ -581,14 +597,14 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                             <Controller
                               name={`materials.${index}.quantity` as const}
                               control={control}
-                              rules={{ required: true, min: 1 }}
-                              render={({ field: f }) => (
+                              rules={{ required: 'Informe a quantidade', min: { value: 1, message: 'Mínimo 1' } }}
+                              render={({ field: f, fieldState }) => (
                                 <TextField
                                   {...f}
                                   type="number"
                                   size="small"
-                                  inputProps={{ min: 1, style: { textAlign: 'center' } }}
-                                  error={insufficient}
+                                  inputProps={{ inputMode: 'numeric', min: 1, style: { textAlign: 'center' } }}
+                                  error={insufficient || !!fieldState.error}
                                   sx={{ width: 56, ...FIELD_SX }}
                                 />
                               )}
@@ -659,8 +675,8 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                         <Controller
                           name={`equipments.${index}.equipmentId` as const}
                           control={control}
-                          rules={{ required: true }}
-                          render={({ field: f }) => (
+                          rules={{ required: 'Selecione o equipamento' }}
+                          render={({ field: f, fieldState }) => (
                             <Autocomplete
                               size="small"
                               sx={{ minWidth: 0 }}
@@ -669,7 +685,13 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                               value={equipmentList.find((e) => e.id === f.value) ?? null}
                               onChange={(_, val) => f.onChange(val?.id ?? '')}
                               renderInput={(params) => (
-                                <TextField {...params} placeholder="Selecionar" size="small" sx={FIELD_SX} />
+                                <TextField
+                                  {...params}
+                                  placeholder="Selecionar"
+                                  size="small"
+                                  sx={FIELD_SX}
+                                  error={!!fieldState.error}
+                                />
                               )}
                             />
                           )}
@@ -678,14 +700,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                           name={`equipments.${index}.costPerUse` as const}
                           control={control}
                           render={({ field: f }) => (
-                            <TextField
-                              {...f}
-                              type="number"
-                              size="small"
-                              inputProps={{ step: '0.01', min: 0 }}
-                              sx={FIELD_SX}
-                              InputProps={{ startAdornment: <InputAdornment position="start">R$</InputAdornment> }}
-                            />
+                            <MoneyField {...f} size="small" sx={FIELD_SX} />
                           )}
                         />
                         <IconButton
@@ -711,17 +726,16 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
               <Controller
                 name="price"
                 control={control}
-                rules={{ required: true, min: 0 }}
-                render={({ field }) => (
+                rules={{ required: 'Informe o valor de venda' }}
+                render={({ field, fieldState }) => (
                   <LabeledField label="Valor de venda (R$)" required>
-                    <TextField
+                    <MoneyField
                       {...field}
-                      type="number"
-                      inputProps={{ step: '0.01' }}
                       fullWidth
                       size="small"
                       sx={FIELD_SX}
-                      InputProps={{ startAdornment: <InputAdornment position="start">R$</InputAdornment> }}
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
                     />
                   </LabeledField>
                 )}

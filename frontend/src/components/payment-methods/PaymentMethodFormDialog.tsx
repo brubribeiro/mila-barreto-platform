@@ -151,6 +151,7 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit(onSubmit)}
         sx={{
           display: 'flex',
@@ -256,7 +257,7 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
                           'Desconto aplicado automaticamente nos lançamentos financeiros'
                         }
                         fullWidth
-                        inputProps={{ step: 0.01, min: 0, max: 100 }}
+                        inputProps={{ inputMode: 'decimal', step: 0.01, min: 0, max: 100 }}
                         InputProps={{
                           endAdornment: <InputAdornment position="end">%</InputAdornment>,
                         }}

@@ -9,7 +9,6 @@ import {
   DialogActions,
   DialogContent,
   IconButton,
-  InputAdornment,
   MenuItem,
   Stack,
   TextField,
@@ -30,6 +29,7 @@ import { inventoryApi } from '../../api/inventory';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { MoneyField } from '../MoneyField';
 import { dateOnlyToApiIso } from '../../utils/dateOnly';
 import type { InventoryItem } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
@@ -250,6 +250,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
         sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
       >
@@ -497,13 +498,17 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
                           <Controller
                             name={`lines.${index}.quantity`}
                             control={control}
-                            rules={{ required: true, min: 0.001 }}
-                            render={({ field }) => (
+                            rules={{
+                              required: 'Informe a quantidade',
+                              min: { value: 0.001, message: 'Informe uma quantidade maior que zero' },
+                            }}
+                            render={({ field, fieldState }) => (
                               <TextField
                                 {...field}
                                 type="number"
                                 size="small"
-                                inputProps={{ min: 0.001, step: 'any', 'aria-label': 'Quantidade', style: { textAlign: 'center' } }}
+                                error={!!fieldState.error}
+                                inputProps={{ inputMode: 'decimal', min: 0.001, step: 'any', 'aria-label': 'Quantidade', style: { textAlign: 'center' } }}
                                 sx={CELL_INPUT_SX}
                               />
                             )}
@@ -519,7 +524,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
                                   {...field}
                                   type="number"
                                   size="small"
-                                  inputProps={{ min: 0, step: 1, 'aria-label': 'Estoque mínimo', style: { textAlign: 'center' } }}
+                                  inputProps={{ inputMode: 'numeric', min: 0, step: 1, 'aria-label': 'Estoque mínimo', style: { textAlign: 'center' } }}
                                   sx={CELL_INPUT_SX}
                                 />
                               )}
@@ -534,14 +539,17 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
                           <Controller
                             name={`lines.${index}.unitPrice`}
                             control={control}
-                            rules={{ required: true, min: 0.01 }}
-                            render={({ field }) => (
-                              <TextField
+                            rules={{
+                              required: 'Informe o valor unitário',
+                              min: { value: 0.01, message: 'Informe um valor maior que zero' },
+                            }}
+                            render={({ field, fieldState }) => (
+                              <MoneyField
                                 {...field}
-                                type="number"
                                 size="small"
-                                placeholder="0,00"
-                                inputProps={{ min: 0, step: '0.01', 'aria-label': 'Valor unitário', style: { textAlign: 'right' } }}
+                                error={!!fieldState.error}
+                                InputProps={{ startAdornment: null }}
+                                inputProps={{ 'aria-label': 'Valor unitário', style: { textAlign: 'right' } }}
                                 sx={CELL_INPUT_SX}
                               />
                             )}
@@ -644,15 +652,10 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
                   name="freight"
                   control={control}
                   render={({ field }) => (
-                    <TextField
+                    <MoneyField
                       {...field}
-                      type="number"
                       fullWidth
-                      placeholder="0,00"
-                      inputProps={{ min: 0, step: '0.01', 'aria-label': 'Frete da compra' }}
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                      }}
+                      inputProps={{ 'aria-label': 'Frete da compra' }}
                       sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'grey.50', fontWeight: 700 } }}
                     />
                   )}

@@ -25,6 +25,7 @@ import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { LabeledField } from '../LabeledField';
+import { MoneyField } from '../MoneyField';
 import { dateInputValueFromApi, dateOnlyToApiIso } from '../../utils/dateOnly';
 import type { Equipment } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
@@ -189,6 +190,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
         sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
       >
@@ -313,16 +315,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                 control={control}
                 render={({ field }) => (
                   <LabeledField label="Valor da máquina">
-                    <TextField
-                      {...field}
-                      type="number"
-                      fullWidth
-                      placeholder="0,00"
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                      }}
-                      inputProps={{ step: '0.01', min: 0 }}
-                    />
+                    <MoneyField {...field} fullWidth />
                   </LabeledField>
                 )}
               />
@@ -371,7 +364,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                       InputProps={{
                         endAdornment: <InputAdornment position="end">meses</InputAdornment>,
                       }}
-                      inputProps={{ min: 1 }}
+                      inputProps={{ inputMode: 'numeric', min: 1 }}
                     />
                   </LabeledField>
                 )}
@@ -388,7 +381,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                       InputProps={{
                         endAdornment: <InputAdornment position="end">dias</InputAdornment>,
                       }}
-                      inputProps={{ min: 0 }}
+                      inputProps={{ inputMode: 'numeric', min: 0 }}
                     />
                   </LabeledField>
                 )}
@@ -398,16 +391,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                 control={control}
                 render={({ field }) => (
                   <LabeledField label="Valor da manutenção">
-                    <TextField
-                      {...field}
-                      type="number"
-                      fullWidth
-                      placeholder="0,00"
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                      }}
-                      inputProps={{ step: '0.01', min: 0 }}
-                    />
+                    <MoneyField {...field} fullWidth />
                   </LabeledField>
                 )}
               />

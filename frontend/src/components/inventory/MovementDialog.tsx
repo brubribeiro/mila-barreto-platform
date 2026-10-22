@@ -8,7 +8,6 @@ import {
   DialogActions,
   DialogContent,
   Grid,
-  InputAdornment,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -22,6 +21,7 @@ import { inventoryApi, MovementType } from '../../api/inventory';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogPaperSx } from '../DialogCloseButton';
+import { MoneyField } from '../MoneyField';
 import { dateOnlyToApiIso } from '../../utils/dateOnly';
 import type { InventoryItem } from '../../types';
 
@@ -119,7 +119,7 @@ export function MovementDialog({ open, onClose, item: fixedItem, items }: Moveme
       fullScreen={isMobile}
       PaperProps={{ sx: dialogPaperSx(isMobile) }}
     >
-      <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
+      <form noValidate onSubmit={handleSubmit((v) => mutation.mutate(v))}>
         <DialogHeader
           onClose={onClose}
           isMobile={isMobile}
@@ -170,20 +170,26 @@ export function MovementDialog({ open, onClose, item: fixedItem, items }: Moveme
               <Controller
                 name="quantity"
                 control={control}
-                rules={{ required: true, min: 1 }}
-                render={({ field }) => (
+                rules={{
+                  required: 'Informe a quantidade',
+                  min: { value: 1, message: 'A quantidade mínima é 1' },
+                }}
+                render={({ field, fieldState }) => (
                   <TextField
                     {...field}
                     type="number"
                     label={type === 'ADJUSTMENT' ? 'Nova quantidade total' : 'Quantidade'}
                     fullWidth
                     required
+                    autoFocus
+                    inputProps={{ inputMode: 'numeric', min: 1 }}
                     helperText={
-                      type === 'ADJUSTMENT'
+                      fieldState.error?.message ??
+                      (type === 'ADJUSTMENT'
                         ? `O estoque ficará com ${quantity} unidades`
-                        : `Quantidade resultante: ${newQuantity}`
+                        : `Quantidade resultante: ${newQuantity}`)
                     }
-                    error={newQuantity < 0}
+                    error={!!fieldState.error || newQuantity < 0}
                   />
                 )}
               />
@@ -219,10 +225,8 @@ export function MovementDialog({ open, onClose, item: fixedItem, items }: Moveme
                       min: { value: 0.01, message: 'Informe um valor maior que zero' },
                     }}
                     render={({ field, fieldState }) => (
-                      <TextField
+                      <MoneyField
                         {...field}
-                        type="number"
-                        inputProps={{ step: '0.01', min: 0.01 }}
                         label="Valor total da compra"
                         fullWidth
                         required
@@ -233,9 +237,6 @@ export function MovementDialog({ open, onClose, item: fixedItem, items }: Moveme
                             ? `Custo unitário: ${brl.format(calculatedUnitPrice)} · gera despesa no financeiro`
                             : 'Gera uma despesa no financeiro ao confirmar')
                         }
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                        }}
                       />
                     )}
                   />
