@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -24,7 +24,8 @@ import SwapVertIcon from '@mui/icons-material/SwapVert';
 import { downloadCsv } from '../utils/csv';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { matchFields, type StockFilter } from '../utils/listFilters';
+import { urlPage, useUrlState } from '../hooks/useUrlState';
+import { STOCK_FILTER_CODEC, matchFields, type StockFilter } from '../utils/listFilters';
 import { inventoryApi } from '../api/inventory';
 import { InventoryFormDialog } from '../components/inventory/InventoryFormDialog';
 import { MovementDialog } from '../components/inventory/MovementDialog';
@@ -97,15 +98,15 @@ export function Inventory() {
   const canEdit = has('inventory:edit');
   const canDelete = has('inventory:delete');
 
-  const [search, setSearch] = useState('');
-  const [stockFilter, setStockFilter] = useState<StockFilter>('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [stockFilter, setStockFilter] = useUrlState<StockFilter>('estoque', 'ALL', STOCK_FILTER_CODEC);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [movementOpen, setMovementOpen] = useState(false);
   const [movementItem, setMovementItem] = useState<InventoryItem | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['inventory'],
@@ -139,7 +140,6 @@ export function Inventory() {
     [items, search, stockFilter],
   );
 
-  useEffect(() => setPage(0), [search, stockFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
@@ -308,7 +308,10 @@ export function Inventory() {
                 <SearchIcon sx={{ fontSize: 17, color: 'text.disabled' }} />
                 <InputBase
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(0);
+                  }}
                   placeholder="Buscar produto..."
                   inputProps={{ 'aria-label': 'Buscar por nome ou SKU' }}
                   sx={{ fontSize: fontSizes.sm, flex: 1, minWidth: 0 }}
@@ -317,7 +320,10 @@ export function Inventory() {
               <Select
                 size="small"
                 value={stockFilter}
-                onChange={(e) => setStockFilter(e.target.value as StockFilter)}
+                onChange={(e) => {
+                  setStockFilter(e.target.value as StockFilter);
+                  setPage(0);
+                }}
                 inputProps={{ 'aria-label': 'Filtrar estoque' }}
                 sx={{
                   height: 38,

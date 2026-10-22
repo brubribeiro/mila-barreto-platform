@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import dayjs from 'dayjs';
 import { Box, Button, Card, Checkbox, Collapse, FormControl, IconButton, InputLabel, ListItemText, MenuItem, OutlinedInput, Select, Skeleton, Stack, Typography, lighten, useMediaQuery, useTheme } from '@mui/material';
 import { AuroraIcon } from '../components/AuroraIcon';
 import FullCalendar from '@fullcalendar/react';
@@ -11,6 +12,7 @@ import type { EventInput, DatesSetArg, DateSelectArg, EventClickArg, DateClickAr
 import { useQueries, useQuery } from '@tanstack/react-query';
 
 import { PageHeader } from '../components/PageHeader';
+import { useUrlState, urlDate, urlEnum, urlList } from '../hooks/useUrlState';
 import { appointmentsApi } from '../api/appointments';
 import { availabilityApi } from '../api/availability';
 import { usersApi } from '../api/users';
@@ -70,6 +72,7 @@ const AGENDA_VIEWS = [
   { view: 'timeGridWeek', label: 'Semana' },
   { view: 'dayGridMonth', label: 'Mês' },
 ];
+const AGENDA_VIEW_CODEC = urlEnum(AGENDA_VIEWS.map((v) => v.view));
 
 // Cor "de categoria" derivada de forma determinística do nome do procedimento
 // (o backend ainda não tem cor por categoria).
@@ -87,7 +90,12 @@ export function Appointments() {
   const { has, restrictToOwnAppointments } = usePermissions();
   const canCreate = has('appointments:create');
   const calendarRef = useRef<FullCalendar | null>(null);
-  const [currentView, setCurrentView] = useState<string>(isMobile ? 'timeGridDay' : 'timeGridWeek');
+  const [currentView, setCurrentView] = useUrlState(
+    'visao',
+    isMobile ? 'timeGridDay' : 'timeGridWeek',
+    AGENDA_VIEW_CODEC,
+  );
+  const [currentDate, setCurrentDate] = useUrlState('data', dayjs().format('YYYY-MM-DD'), urlDate);
   const [periodLabel, setPeriodLabel] = useState('');
   const [pendingDismissed, setPendingDismissed] = useState(false);
 
@@ -95,7 +103,7 @@ export function Appointments() {
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [defaultStart, setDefaultStart] = useState<Date | null>(null);
   const [defaultPatientId, setDefaultPatientId] = useState<string | null>(null);
-  const [filterProfessionalIds, setFilterProfessionalIds] = useState<string[]>([]);
+  const [filterProfessionalIds] = useUrlState<string[]>('profissionais', [], urlList);
 
   const [range, setRange] = useState<{ from: string; to: string }>(() => {
     const now = new Date();
@@ -238,6 +246,7 @@ export function Appointments() {
     setRange({ from: info.start.toISOString(), to: info.end.toISOString() });
     setPeriodLabel(info.view.title);
     setCurrentView(info.view.type);
+    setCurrentDate(dayjs(info.view.calendar.getDate()).format('YYYY-MM-DD'));
   };
 
   const handleSelect = (info: DateSelectArg) => {
@@ -832,7 +841,8 @@ export function Appointments() {
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView={isMobile ? 'timeGridDay' : 'timeGridWeek'}
+          initialView={currentView}
+          initialDate={currentDate}
           locale={ptBrLocale}
           height="100%"
           scrollTime="08:00:00"

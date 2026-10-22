@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { useMemo, useState, type MouseEvent } from 'react';
 import {
   Box,
   Button,
@@ -24,7 +24,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { dayjsFromDateOnlyApi, formatDateOnlyFromApi } from '../utils/dateOnly';
 
+import { useUrlState, urlPage } from '../hooks/useUrlState';
 import {
+  ACTIVE_FILTER_CODEC,
+  MAINTENANCE_FILTER_CODEC,
   matchFields,
   matchesActiveFilter,
   type ActiveFilter,
@@ -178,9 +181,9 @@ export function EquipmentPage() {
   const canEdit = has('equipment:edit');
   const canDelete = has('equipment:delete');
 
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
-  const [maintenanceFilter, setMaintenanceFilter] = useState<MaintenanceFilter>('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [activeFilter, setActiveFilter] = useUrlState<ActiveFilter>('status', 'ALL', ACTIVE_FILTER_CODEC);
+  const [maintenanceFilter, setMaintenanceFilter] = useUrlState<MaintenanceFilter>('manutencao', 'ALL', MAINTENANCE_FILTER_CODEC);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Equipment | null>(null);
 
@@ -238,8 +241,7 @@ export function EquipmentPage() {
     [items, search, activeFilter, maintenanceFilter],
   );
 
-  const [page, setPage] = useState(0);
-  useEffect(() => setPage(0), [search, activeFilter, maintenanceFilter]);
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
 
   const pageCount = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
@@ -311,7 +313,10 @@ export function EquipmentPage() {
             select
             size="small"
             value={maintenanceFilter}
-            onChange={(e) => setMaintenanceFilter(e.target.value as MaintenanceFilter)}
+            onChange={(e) => {
+              setMaintenanceFilter(e.target.value as MaintenanceFilter);
+              setPage(0);
+            }}
             sx={TOOLBAR_SELECT_SX}
             inputProps={{ 'aria-label': 'Manutenção' }}
           >
@@ -322,7 +327,10 @@ export function EquipmentPage() {
             select
             size="small"
             value={activeFilter}
-            onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
+            onChange={(e) => {
+              setActiveFilter(e.target.value as ActiveFilter);
+              setPage(0);
+            }}
             sx={TOOLBAR_SELECT_SX}
             inputProps={{ 'aria-label': 'Status' }}
           >
@@ -348,7 +356,10 @@ export function EquipmentPage() {
             <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
             <InputBase
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
               placeholder="Buscar equipamento..."
               sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />

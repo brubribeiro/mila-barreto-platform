@@ -24,6 +24,7 @@ import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
+import { urlPage, useUrlState } from '../hooks/useUrlState';
 import { getPromotionStatusKey, isPromotionActive } from '../utils/listFilters';
 import { promotionsApi } from '../api/promotions';
 import { PromotionFormDialog } from '../components/promotions/PromotionFormDialog';
@@ -70,8 +71,8 @@ export function Promotions() {
   const canEdit = has('promotions:edit');
   const canDelete = has('promotions:delete');
 
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(0);
+  const [search, setSearch] = useUrlState('busca', '');
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Promotion | null>(null);
   const [initialCommemorativeDate, setInitialCommemorativeDate] = useState<string | undefined>();
@@ -119,8 +120,6 @@ export function Promotions() {
         (p.commemorativeDate ?? '').toLowerCase().includes(q),
     );
   }, [promotions, search]);
-
-  useEffect(() => setPage(0), [search]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
@@ -197,7 +196,10 @@ export function Promotions() {
             <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
             <InputBase
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
               placeholder="Buscar campanha..."
               sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />

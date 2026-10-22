@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Alert,
   Box,
@@ -12,12 +12,13 @@ import {
   Typography,
 } from '@mui/material';
 import HistoryIcon from '@mui/icons-material/History';
-import { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
+import { GridColDef } from '@mui/x-data-grid';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
 import { auditLogsApi, type AuditLogFilters } from '../api/auditLogs';
 import { AppDataGrid } from '../components/AppDataGrid';
+import { useUrlGridState, useUrlState, urlDate } from '../hooks/useUrlState';
 import {
   actionConfig,
   flattenAuditLogs,
@@ -63,19 +64,19 @@ const entityLabel = (entity: string) =>
   ENTITY_OPTIONS.find((e) => e.value === entity)?.label ?? entity;
 
 export function AuditLogs() {
-  const [filters, setFilters] = useState<AuditLogFilters>({
-    page: 1,
-    limit: 25,
-  });
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
-    page: 0,
-    pageSize: 25,
-  });
+  const [entity, setEntity] = useUrlState('entidade', '');
+  const [action, setAction] = useUrlState('acao', '');
+  const [startDate, setStartDate] = useUrlState('de', '', urlDate);
+  const [endDate, setEndDate] = useUrlState('ate', '', urlDate);
+  const { gridProps, resetPage } = useUrlGridState(25);
 
   const queryFilters: AuditLogFilters = {
-    ...filters,
-    page: paginationModel.page + 1,
-    limit: paginationModel.pageSize,
+    entity: entity || undefined,
+    action: action || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    page: gridProps.paginationModel.page + 1,
+    limit: gridProps.paginationModel.pageSize,
   };
 
   const { data, isLoading, error } = useQuery({
@@ -200,10 +201,10 @@ export function AuditLogs() {
           <InputLabel>Entidade</InputLabel>
           <Select
             label="Entidade"
-            value={filters.entity ?? ''}
+            value={entity}
             onChange={(e) => {
-              setFilters((f) => ({ ...f, entity: e.target.value || undefined }));
-              setPaginationModel((p) => ({ ...p, page: 0 }));
+              setEntity(e.target.value);
+              resetPage();
             }}
           >
             {ENTITY_OPTIONS.map((o) => (
@@ -218,10 +219,10 @@ export function AuditLogs() {
           <InputLabel>Ação</InputLabel>
           <Select
             label="Ação"
-            value={filters.action ?? ''}
+            value={action}
             onChange={(e) => {
-              setFilters((f) => ({ ...f, action: e.target.value || undefined }));
-              setPaginationModel((p) => ({ ...p, page: 0 }));
+              setAction(e.target.value);
+              resetPage();
             }}
           >
             {ACTION_OPTIONS.map((o) => (
@@ -237,10 +238,10 @@ export function AuditLogs() {
           type="date"
           label="De"
           InputLabelProps={{ shrink: true }}
-          value={filters.startDate ?? ''}
+          value={startDate}
           onChange={(e) => {
-            setFilters((f) => ({ ...f, startDate: e.target.value || undefined }));
-            setPaginationModel((p) => ({ ...p, page: 0 }));
+            setStartDate(e.target.value);
+            resetPage();
           }}
           sx={{ minWidth: 150 }}
         />
@@ -250,10 +251,10 @@ export function AuditLogs() {
           type="date"
           label="Até"
           InputLabelProps={{ shrink: true }}
-          value={filters.endDate ?? ''}
+          value={endDate}
           onChange={(e) => {
-            setFilters((f) => ({ ...f, endDate: e.target.value || undefined }));
-            setPaginationModel((p) => ({ ...p, page: 0 }));
+            setEndDate(e.target.value);
+            resetPage();
           }}
           sx={{ minWidth: 150 }}
         />
@@ -273,8 +274,7 @@ export function AuditLogs() {
         getRowId={(row) => row.id}
         paginationMode="server"
         rowCount={data?.total ?? 0}
-        paginationModel={paginationModel}
-        onPaginationModelChange={setPaginationModel}
+        {...gridProps}
         pageSizeOptions={[10, 25, 50]}
         localeText={{
           noRowsLabel: 'Nenhuma alteração encontrada',

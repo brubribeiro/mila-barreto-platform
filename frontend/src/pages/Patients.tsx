@@ -42,11 +42,30 @@ import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import { maskPhone } from '../utils/masks';
 import { patientInitials } from '../utils/patientPhoto';
+import { useUrlState, urlPage, type UrlCodec } from '../hooks/useUrlState';
 import type { Patient } from '../types';
 import { fontSizes } from '../theme/fontSizes';
 import { moneyFormatter } from '../utils/money';
 
 const PAGE_SIZE = 8;
+
+type PatientSort = {
+  key: 'lastVisit' | 'totalSpent' | 'appointments';
+  dir: 'asc' | 'desc';
+};
+
+const PATIENT_SORT_KEYS: PatientSort['key'][] = ['lastVisit', 'totalSpent', 'appointments'];
+
+// ?ordem=-lastVisit (desc) | ?ordem=lastVisit (asc)
+const PATIENT_SORT_CODEC: UrlCodec<PatientSort | null> = {
+  parse: (raw) => {
+    const key = raw.replace(/^-/, '') as PatientSort['key'];
+    if (!PATIENT_SORT_KEYS.includes(key)) return undefined;
+    return { key, dir: raw.startsWith('-') ? 'desc' : 'asc' };
+  },
+  serialize: (value) => (value ? `${value.dir === 'desc' ? '-' : ''}${value.key}` : ''),
+};
+
 const AVATAR_COLORS = ['#15998B', '#5BA8DE', '#D46B8A', '#E0915B', '#9B7BD4', '#4FB3A8'];
 const brl = moneyFormatter({ maximumFractionDigits: 0 });
 
@@ -96,16 +115,18 @@ export function Patients() {
   const canEdit = has('patients:edit');
   const canDelete = has('patients:delete');
 
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(0);
+  const [search, setSearch] = useUrlState('busca', '');
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
+  const [searchInput, setSearchInput] = useState(search);
 
   useEffect(() => {
+    if (searchInput === search) return;
     const t = setTimeout(() => {
       setSearch(searchInput);
       setPage(0);
     }, 350);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
   // Reabre o drawer da ficha ao voltar da página estendida (?ficha=<id>)
@@ -120,10 +141,7 @@ export function Patients() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
-  const [sort, setSort] = useState<{
-    key: 'lastVisit' | 'totalSpent' | 'appointments';
-    dir: 'asc' | 'desc';
-  } | null>(null);
+  const [sort, setSort] = useUrlState<PatientSort | null>('ordem', null, PATIENT_SORT_CODEC);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);

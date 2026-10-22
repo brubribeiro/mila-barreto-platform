@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   Alert,
   Box,
@@ -35,7 +35,13 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import dayjs, { type Dayjs } from 'dayjs';
 import 'dayjs/locale/pt-br';
 
-import { matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
+import { useUrlState, urlEnum, urlPage } from '../hooks/useUrlState';
+import {
+  ACTIVE_FILTER_CODEC,
+  matchFields,
+  matchesActiveFilter,
+  type ActiveFilter,
+} from '../utils/listFilters';
 import { recurringExpensesApi, type HourlyCostSettings } from '../api/recurring-expenses';
 import { RecurringExpenseFormDialog } from '../components/finance/RecurringExpenseFormDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
@@ -168,14 +174,17 @@ function SummaryIcon({ children, tone }: { children: ReactNode; tone: 'primary' 
   );
 }
 
+type ExpenseTypeFilter = 'ALL' | 'FIXED' | 'VARIABLE';
+const TYPE_FILTER_CODEC = urlEnum<ExpenseTypeFilter>(['ALL', 'FIXED', 'VARIABLE']);
+
 export function RecurringExpensesPage() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
-  const [typeFilter, setTypeFilter] = useState<'ALL' | 'FIXED' | 'VARIABLE'>('ALL');
-  const [page, setPage] = useState(0);
+  const [search, setSearch] = useUrlState('busca', '');
+  const [activeFilter, setActiveFilter] = useUrlState<ActiveFilter>('status', 'ALL', ACTIVE_FILTER_CODEC);
+  const [typeFilter, setTypeFilter] = useUrlState<ExpenseTypeFilter>('tipo', 'ALL', TYPE_FILTER_CODEC);
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RecurringExpense | null>(null);
   const [hourlyCostCollapsed, setHourlyCostCollapsed] = useState(false);
@@ -347,7 +356,6 @@ export function RecurringExpensesPage() {
     [items, search, activeFilter, typeFilter],
   );
 
-  useEffect(() => setPage(0), [search, activeFilter, typeFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
@@ -702,7 +710,10 @@ export function RecurringExpensesPage() {
               select
               size="small"
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+              onChange={(e) => {
+                setTypeFilter(e.target.value as ExpenseTypeFilter);
+                setPage(0);
+              }}
               sx={TOOLBAR_SELECT_SX}
               inputProps={{ 'aria-label': 'Tipo' }}
             >
@@ -714,7 +725,10 @@ export function RecurringExpensesPage() {
               select
               size="small"
               value={activeFilter}
-              onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
+              onChange={(e) => {
+                setActiveFilter(e.target.value as ActiveFilter);
+                setPage(0);
+              }}
               sx={TOOLBAR_SELECT_SX}
               inputProps={{ 'aria-label': 'Status' }}
             >
@@ -740,7 +754,10 @@ export function RecurringExpensesPage() {
               <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
               <InputBase
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(0);
+                }}
                 placeholder="Buscar despesa, categoria..."
                 sx={{ fontSize: fontSizes.sm, flex: 1 }}
               />

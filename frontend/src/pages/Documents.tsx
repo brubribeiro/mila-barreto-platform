@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { useMemo, useRef, useState, type MouseEvent } from 'react';
 import {
   Box,
   Button,
@@ -55,6 +55,7 @@ import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
+import { useUrlState, urlEnum, urlPage } from '../hooks/useUrlState';
 import { matchFields } from '../utils/listFilters';
 import type { DocumentFile, DocumentStatus } from '../types';
 import { fontSizes } from '../theme/fontSizes';
@@ -160,6 +161,9 @@ function LinkCell({ doc }: { doc: DocumentFile }) {
   );
 }
 
+const STATUS_FILTER_CODEC = urlEnum<'ALL' | DocumentStatus>(['ALL', 'PENDING', 'SENT', 'SIGNED']);
+const LINK_FILTER_CODEC = urlEnum<LinkFilter>(['ALL', 'PATIENT', 'EQUIPMENT', 'NONE']);
+
 export function Documents() {
   const theme = useTheme();
   const queryClient = useQueryClient();
@@ -170,10 +174,10 @@ export function Documents() {
   const canEdit = has('documents:edit');
   const canDelete = has('documents:delete');
 
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | DocumentStatus>('ALL');
-  const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [linkFilter, setLinkFilter] = useState<LinkFilter>('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [statusFilter, setStatusFilter] = useUrlState<'ALL' | DocumentStatus>('status', 'ALL', STATUS_FILTER_CODEC);
+  const [categoryFilter, setCategoryFilter] = useUrlState('categoria', 'ALL');
+  const [linkFilter, setLinkFilter] = useUrlState<LinkFilter>('vinculo', 'ALL', LINK_FILTER_CODEC);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<DocumentFile | null>(null);
   const [viewing, setViewing] = useState<DocumentFile | null>(null);
@@ -201,6 +205,7 @@ export function Documents() {
       setCategoryFilter('ALL');
       setLinkFilter('ALL');
       setSearch('');
+      setPage(0);
       if (saved.templateId) void queryClient.invalidateQueries({ queryKey: ['document-templates'] });
       // Documento gerado de modelo: abre o texto para conferir e imprimir
       if (saved.hasContent && !saved.storageKey) setViewing(saved);
@@ -303,8 +308,7 @@ export function Documents() {
     [docs, search, statusFilter, categoryFilter, linkFilter],
   );
 
-  const [page, setPage] = useState(0);
-  useEffect(() => setPage(0), [search, statusFilter, categoryFilter, linkFilter]);
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
 
   const pageCount = Math.max(1, Math.ceil(filteredDocs.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
@@ -425,7 +429,10 @@ export function Documents() {
               select
               size="small"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as 'ALL' | DocumentStatus)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value as 'ALL' | DocumentStatus);
+                setPage(0);
+              }}
               inputProps={{ 'aria-label': 'Status' }}
               sx={TOOLBAR_SELECT_SX}
             >
@@ -440,7 +447,10 @@ export function Documents() {
               select
               size="small"
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setPage(0);
+              }}
               inputProps={{ 'aria-label': 'Tipo' }}
               sx={TOOLBAR_SELECT_SX}
             >
@@ -456,7 +466,10 @@ export function Documents() {
               select
               size="small"
               value={linkFilter}
-              onChange={(e) => setLinkFilter(e.target.value as LinkFilter)}
+              onChange={(e) => {
+                setLinkFilter(e.target.value as LinkFilter);
+                setPage(0);
+              }}
               inputProps={{ 'aria-label': 'Vínculo' }}
               sx={TOOLBAR_SELECT_SX}
             >
@@ -483,7 +496,10 @@ export function Documents() {
               <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
               <InputBase
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(0);
+                }}
                 placeholder="Buscar documento, paciente..."
                 sx={{ fontSize: fontSizes.sm, flex: 1 }}
               />

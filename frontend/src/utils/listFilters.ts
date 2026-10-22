@@ -1,4 +1,5 @@
 import type { Promotion } from '../types';
+import { urlEnum } from '../hooks/useUrlState';
 
 export type ActiveFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 
@@ -7,6 +8,10 @@ export type PromotionStatusFilter = 'ALL' | 'ACTIVE' | 'FUTURE' | 'INACTIVE' | '
 export type StockFilter = 'ALL' | 'LOW';
 
 export type MaintenanceFilter = 'ALL' | 'DUE';
+
+export const ACTIVE_FILTER_CODEC = urlEnum<ActiveFilter>(['ALL', 'ACTIVE', 'INACTIVE']);
+export const STOCK_FILTER_CODEC = urlEnum<StockFilter>(['ALL', 'LOW']);
+export const MAINTENANCE_FILTER_CODEC = urlEnum<MaintenanceFilter>(['ALL', 'DUE']);
 
 export function normalizeSearch(query: string): string {
   return query.trim().toLowerCase();
