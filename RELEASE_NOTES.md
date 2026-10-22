@@ -9,6 +9,9 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 ### Novidades
 
 **Visual Aurora**
+- Barra superior: botão **Novo agendamento** em destaque, **histórico de alterações** da tela no relógio do topo e **olho** para ocultar os valores em R$.
+- **Histórico de alterações** redesenhado no mesmo visual das listas: quem fez, quando e o que mudou (antes → depois), com filtros por tipo e período; nas telas sem histórico o relógio aparece desabilitado.
+- **Modo escuro**: o botão da **lua** no topo alterna entre tema claro e escuro em todas as telas; a escolha fica salva no navegador e, na primeira visita, segue o tema do sistema.
 - O painel ganhou um novo visual com cores verde-água, fonte **Plus Jakarta Sans** e ícones de traço mais leves.
 - O **menu lateral** ficou escuro, com seções organizadas (Principal, Catálogo, Financeiro, Equipe, Configurações) e destaque verde no item ativo.
 - Cards, botões e tabelas foram refinados para um layout mais limpo e moderno.
@@ -42,6 +45,7 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 **Dashboard**
 - **Agenda da semana** passa a considerar 7 dias a partir da data selecionada (antes fixava segunda a domingo).
 - Card **Contas a pagar** com skeleton de carregamento mais suave.
+- Card **Metas do mês** com o mesmo visual do card de Agenda; quando não há metas, o aviso ocupa a largura toda do card e já traz o botão **Definir metas**.
 
 **Visual geral**
 - Barras de rolagem finas e discretas em todo o painel (tema global).
@@ -81,11 +85,75 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Data comemorativa selecionável (Dia das Mães, Black Friday, etc.).
 - Paginação na lista (8 campanhas por página) e interruptor em cada card para **ativar ou desativar** sem abrir o cadastro.
 
+**Formas de pagamento**
+- Tela redesenhada no estilo Aurora: grade de cards por forma de pagamento, com inicial colorida, **taxa** em destaque (verde quando não há taxa) e o **valor líquido** recebido a cada R$ 100.
+- Cada card mostra em quantos **lançamentos** a forma já foi usada; formas inativas aparecem esmaecidas com a etiqueta **Inativa**.
+- Clique no card para editar; ações rápidas de editar e excluir, busca, filtro de status e histórico de alterações.
+- Modal de cadastro reorganizada em seções **Identificação** e **Taxa da maquininha**, com prévia da taxa e do valor líquido.
+
+**Grupos e permissões**
+- Tela redesenhada no estilo Aurora: grupos em cards à esquerda (com cor e número de membros) e, ao lado, a matriz de permissões do grupo selecionado (**Ver**, **Criar**, **Editar**, **Excluir** por módulo).
+- As permissões são ajustadas direto na matriz: clique numa célula, no nome do módulo (linha inteira) ou no título da coluna; depois **Salvar permissões** ou **Descartar**.
+- Novo grupo em modal mais simples: nome, descrição, **copiar permissões de** um grupo existente, **cor do grupo** e restrição à própria agenda.
+
+**Documentos**
+- Tela redesenhada no estilo Aurora: resumo com total de documentos, **assinados**, **pendentes** e **modelos ativos**.
+- Cada documento agora tem **status** — Pendente, Enviado ou Assinado — exibido na lista e alterável pelo menu da linha.
+- **Modelos de documento**: crie termos de consentimento, fichas de anamnese, autorizações etc. com campos como nome, CPF e data, preenchidos automaticamente com os dados do paciente. Já vêm 3 modelos padrão.
+- **Novo documento**: gere a partir de um modelo (abre pronto para imprimir) ou anexe um arquivo arrastando ou clicando; escolha tipo, paciente ou equipamento, status e observações.
+- Depois de assinado, use **Anexar versão assinada** para guardar o arquivo; o documento passa para Assinado.
+- Filtros de **status**, **tipo** e **vínculo**, busca, paginação e histórico de alterações.
+
+**Equipamentos**
+- Tela redesenhada no estilo Aurora: cards de resumo (**equipamentos**, **operacionais**, **manutenção atrasada** e **manutenção nos próximos 30 dias**) e grade de cards por equipamento.
+- Cada card mostra **status** (Operacional, Manut. atrasada, Inativo), barra do **ciclo de manutenção** com dias restantes, datas agendada/automática e valores da máquina e da manutenção.
+- Clique no card para editar; ações rápidas para **registrar manutenção**, editar e excluir. Filtros de manutenção e status, busca e paginação.
+- Modal de cadastro reorganizada em coluna única, com seções **Aquisição** e **Manutenção**.
+
 **Usuários**
 - Nova tela **Usuários** no menu Equipe: lista com busca, filtros por **grupo**, **profissional** e **status**, e ações de editar e excluir.
 - Formulário unificado para criar ou editar conta: grupo de permissão, vínculo como **profissional**, marcação **Principal** e dados de perfil quando aplicável.
 - Administradores podem **personificar** outro usuário ativo direto da lista (com confirmação).
 - Histórico de alterações disponível para administradores.
+
+**Despesas recorrentes**
+- Tela redesenhada no estilo Aurora: cards de resumo com **total mensal** (e projeção anual), divisão entre **fixas e variáveis**, **contas ativas** e despesas que **vencem nos próximos 7 dias**.
+- Painel **Custo por hora operacional** mostra carga horária do mês, custo fixo, base de cálculo e o valor por hora; pode ser **minimizado** e mantém o interruptor **Incluir custos variáveis**.
+- Lista em tabela com tipo, categoria, valor, lançamentos gerados, **próximo vencimento** e status; filtros por tipo e status, busca e paginação.
+- Modal de cadastro reorganizada em coluna única, com interruptor **Despesa ativa**.
+
+**Mensagens**
+- Tela redesenhada no estilo Aurora: lista de **modelos de mensagem** à esquerda e, à direita, a prévia do modelo selecionado em um balão de conversa do WhatsApp, com as variáveis destacadas.
+- Cada modelo tem um **gatilho de envio** (Ao agendar, 1 dia antes, No dia do aniversário, Após o atendimento, 90 dias sem visita ou Envio manual) e pode ser **ativado ou desativado** com um clique.
+- Novo modal **Novo modelo de mensagem**: título, gatilho, mensagem com emojis e variáveis clicáveis (**{nome}**, {procedimento}, {data}, {hora}, {profissional}, {valor}).
+- Ao enviar pelo WhatsApp (Agenda, Pacientes, Dashboard), só aparecem modelos ativos e o modelo certo é sugerido pelo gatilho. Modelos antigos com {paciente_nome} continuam funcionando.
+
+**Login**
+- Tela de entrada redesenhada no estilo Aurora: painel verde-escuro com a marca e o resumo da plataforma, e ao lado o botão **Entrar com o Google**, o aviso de acesso exclusivo e o atalho **Fale com o administrador**.
+- Os links de **Termos de Uso** e **Política de Privacidade** continuam na tela; no celular o painel de marca é ocultado e o login ocupa a tela toda.
+
+**Metas**
+- Nova tela **Metas** no menu Análise: resumo com metas ativas, atingidas e progresso médio, e um card por meta com valor atual, objetivo, barra de progresso e status (**Atingida**, **Quase lá**, **No caminho** ou **Atenção**).
+- O valor atual é calculado sozinho para **faturamento**, **novos pacientes**, **procedimentos realizados**, **ticket médio**, **ocupação da agenda** e **taxa de retorno**; para outros objetivos, informe o valor manualmente.
+- Metas mensais, trimestrais ou anuais, com cor escolhida e filtro entre metas em andamento, próximas e encerradas.
+- O card **Metas do mês** do Dashboard agora mostra as metas reais do mês selecionado.
+- Acesso controlado pela nova permissão **Metas** nos grupos (administradores já têm acesso).
+
+**Central de Pendências**
+- Nova tela **Pendências** no menu Principal, que reúne o que precisa de atenção na clínica: estoque abaixo do mínimo, produtos perto do vencimento, contas a vencer, agendamentos sem desfecho, manutenção de equipamentos, documentos sem assinatura e datas comemorativas sem promoção.
+- As pendências são separadas em **Urgentes**, **Atrasadas** e **Próximas**, com contadores, filtro por categoria e gráfico por categoria. O card **Foco de hoje** mostra as 3 mais importantes.
+- Cada pendência mostra prazo e **responsável** (clique para trocar), pode ser marcada como **resolvida** e tem o botão **Ver detalhes**, que abre a tela de origem. As resolvidas dos últimos 30 dias ficam no card **Resolvidas** e podem ser reabertas.
+- Em **Regras**, escolha o que gera pendência automaticamente, a antecedência de cada alerta e o responsável padrão.
+- Crie pendências manuais em **Nova pendência** e exporte a lista em **Relatório de pendências** (CSV).
+- Acesso controlado pela nova permissão **Pendências** nos grupos (Recepção e Profissional já recebem acesso).
+
+**Rotinas de skincare (anamnese de pele)**
+- Na ficha da paciente, aba **Anamnese**, o novo card **Anamnese de pele** guarda o histórico de rotinas. Em **Nova anamnese de pele**, responda 4 perguntas (tipo de pele, afecções, olheiras e faixa etária), revise e clique em **Gerar rotina**.
+- A rotina sai separada em **Manhã**, **Noite** e **Semanal**, com produto, marca, ativo e modo de uso, além das **Orientações** e dos produtos **evitados** (com o motivo). Dá para tirar ou acrescentar produtos em **Editar rotina** e escrever **Observações da profissional**.
+- **Salvar na ficha** guarda a rotina na paciente; **Imprimir / PDF** imprime só a rotina; **Enviar para paciente** abre o WhatsApp ou o e-mail com a mensagem e a rotina em texto.
+- O mesmo assistente abre pelo atalho **Anamnese de pele** no agendamento em edição.
+- Nova tela **Rotinas de skincare** no menu Catálogo, para cadastrar os **produtos** (momento, etapa, características) e as **regras** que montam a rotina a partir das respostas. Ela já vem com um catálogo de exemplo.
+- Acesso controlado pela nova permissão **Rotinas de skincare** nos grupos (Profissional cria e edita; Recepção só visualiza).
 
 **Profissionais**
 - Tela redesenhada no estilo Aurora: grade de cards com **foto**, função, registro profissional e **áreas de atuação** (Toxina, Preenchimento, etc.).
@@ -94,7 +162,26 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Contagem no topo de profissionais cadastrados e quantos estão **disponíveis agora**; botão **Adicionar profissional** abre o cadastro já como profissional.
 - Perfil completo no cadastro de usuário: **cor no calendário**, **bio**, **foto** (upload) e registro no conselho.
 
+**Métricas**
+- Tela redesenhada no estilo Aurora, com quatro indicadores no topo: **receita de procedimentos**, **ticket médio**, **taxa de retorno** e **no-show**, cada um comparado ao período anterior.
+- Abas em formato de botões coloridos (Agendamentos, Pacientes, Procedimentos, Pacotes e Financeiro) e indicadores de cada aba reunidos numa faixa só.
+- Gráficos mais limpos: barras com valor visível, ranking de **receita por procedimento**, **retenção** de pacientes em anel, **margem** por procedimento e **receita por categoria** no financeiro.
+
+**Política de Privacidade**
+- Página redesenhada no estilo Aurora: cabeçalho fixo com botão **Voltar ao login**, texto em card com leitura mais confortável e link para os **Termos de Uso** no rodapé. O conteúdo da política não mudou.
+
+**Termos de Uso**
+- Página de Termos de Uso no estilo Aurora: cabeçalho fixo com botão **Voltar ao login**, texto em um card único mais legível e link para a **Política de Privacidade** no rodapé. O conteúdo dos termos não mudou.
+
 ### Correções
+
+**Ajustes de layout**
+- Todas as telas do painel (Usuários, Horários, Estoque, Financeiro, Métricas, Metas, Documentos, etc.) ocupam a **largura total** ao lado do menu, sem faixa centralizada; o mesmo padrão vale para **Termos de Uso** e **Política de Privacidade**.
+- **Horários:** os dois cards (Disponibilidade da equipe e Bloqueios de agenda) agora têm cabeçalhos da mesma altura, com as linhas divisórias alinhadas.
+- Textos de apoio (como "60h por semana" em Horários) ficaram mais escuros e legíveis em várias telas.
+- **Procedimentos:** as categorias agora são escolhidas em uma lista suspensa, no mesmo estilo dos filtros das outras telas.
+- **Usuários:** removido o texto explicativo que ficava solto acima da tabela.
+- **Procedimentos** e **Usuários**: busca, filtros e botões agora ficam dentro do card da tabela, igual às demais listagens.
 
 **Agenda e disponibilidade**
 - Validação do expediente do profissional passa a usar horário de **Brasília**, evitando rejeição indevida de horários válidos.

@@ -5,7 +5,6 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
   CircularProgress,
   IconButton,
   Menu,
@@ -49,10 +48,12 @@ import type { Appointment, AppointmentStatus, Patient } from '../types';
 import { dayjsFromDateOnlyApi } from '../utils/dateOnly';
 import { UpcomingDatesCard } from '../components/dashboard/UpcomingDatesCard';
 import { UpcomingExpensesCard } from '../components/dashboard/UpcomingExpensesCard';
+import { GoalsCard } from '../components/dashboard/GoalsCard';
 import { DashboardDetailItem } from '../components/dashboard/DashboardDetailItem';
 import { DashboardEmptyState } from '../components/dashboard/DashboardEmptyState';
 import { AppGrid } from '../components/AppGrid';
 import { AuroraIcon } from '../components/AuroraIcon';
+import { brl } from '../utils/money';
 
 const UPCOMING_BIRTHDAY_WINDOW_DAYS = 30;
 
@@ -298,6 +299,7 @@ export function Dashboard() {
   const { has, restrictToOwnAppointments } = usePermissions();
   const canSeeFinance = has('finance:view');
   const canSeeAgenda = has('appointments:view');
+  const canSeeGoals = has('goals:view');
   const canSeePatients = has('patients:view');
   const canSeeInventory = has('inventory:view');
 
@@ -328,6 +330,12 @@ export function Dashboard() {
       to: ref.endOf('month').toISOString(),
     };
   }, [mode, selectedYear, selectedMonth, customFrom, customTo]);
+
+  // Metas do mês selecionado; no intervalo personalizado, as de hoje.
+  const goalsAt =
+    mode === 'MONTH'
+      ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`
+      : todayStr;
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['finance-summary', from, to],
@@ -729,14 +737,8 @@ export function Dashboard() {
         {canSeeFinance ? (
           <SummaryCard
             label="Faturamento do mês"
-            value={new Intl.NumberFormat('pt-BR', {
-              style: 'currency',
-              currency: 'BRL',
-            }).format(summary?.totalIncome ?? 0)}
-            hint={`Saldo: ${new Intl.NumberFormat('pt-BR', {
-              style: 'currency',
-              currency: 'BRL',
-            }).format(summary?.balance ?? 0)}`}
+            value={brl.format(summary?.totalIncome ?? 0)}
+            hint={`Saldo: ${brl.format(summary?.balance ?? 0)}`}
             icon={<AuroraIcon name="money" size={19} />}
             color="success.main"
             to="/financeiro"
@@ -783,7 +785,7 @@ export function Dashboard() {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: '1.6fr 1fr' },
+          gridTemplateColumns: { xs: '1fr', lg: canSeeGoals ? '1.6fr 1fr' : '1fr' },
           gap: { xs: 2, sm: 2.5 },
         }}
       >
@@ -883,42 +885,7 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Metas do mês (novo — sem dados ainda) */}
-        <Card sx={{ display: 'flex', flexDirection: 'column' }}>
-          <CardContent sx={{ p: { xs: 2, sm: 2.75 } }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2.25 }}>
-              <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>Metas do mês</Typography>
-              <Chip
-                label="Em breve"
-                size="small"
-                variant="outlined"
-                sx={{ height: 22, fontSize: fontSizes['2xs'], fontWeight: 700 }}
-              />
-            </Stack>
-            <Stack spacing={2}>
-              {[
-                { label: 'Faturamento', detail: 'Meta não definida' },
-                { label: 'Novos pacientes', detail: 'Meta não definida' },
-                { label: 'Taxa de ocupação', detail: 'Meta não definida' },
-              ].map((m) => (
-                <Box key={m.label}>
-                  <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.75 }}>
-                    <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 600 }}>{m.label}</Typography>
-                    <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 800, color: 'text.secondary' }}>
-                      0%
-                    </Typography>
-                  </Stack>
-                  <Box sx={{ height: 8, borderRadius: 8, bgcolor: 'grey.100', overflow: 'hidden' }}>
-                    <Box sx={{ height: '100%', width: '0%', borderRadius: 8, bgcolor: 'primary.main' }} />
-                  </Box>
-                  <Typography sx={{ display: 'block', fontSize: fontSizes.xs, color: 'text.secondary', mt: 0.75 }}>
-                    {m.detail}
-                  </Typography>
-                </Box>
-              ))}
-            </Stack>
-          </CardContent>
-        </Card>
+        {canSeeGoals && <GoalsCard at={goalsAt} canCreate={has('goals:create')} />}
       </Box>
 
       <Box

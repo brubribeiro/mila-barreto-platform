@@ -34,6 +34,7 @@ import { usePermissions } from '../../contexts/usePermissions';
 import { DialogHeader } from '../DialogCloseButton';
 import { SendWhatsAppDialog } from '../messages/SendWhatsAppDialog';
 import { PatientDetailDrawer } from '../patients/PatientDetailDrawer';
+import { SkinAnamnesisDialog } from '../skincare/SkinAnamnesisDialog';
 import { varsFromAppointment } from '../../utils/whatsapp';
 import { getApiErrorMessage } from '../../utils/apiError';
 import type { Appointment, Package, PaymentMethodEntry, Procedure } from '../../types';
@@ -72,6 +73,7 @@ import { ScheduleSection } from './ScheduleSection';
 import { SellPackageDialog } from './SellPackageDialog';
 import { ServiceSection } from './ServiceSection';
 import { SessionTimerCard, SessionTimerCompact } from './SessionTimerCard';
+import { SkinAnamnesisShortcut } from './SkinAnamnesisShortcut';
 import { useAppointmentProfessionals } from './useAppointmentProfessionals';
 import { useSessionTimer } from './useSessionTimer';
 
@@ -124,6 +126,7 @@ export function AppointmentFormDialog({
   } = useForm<FormValues>({ defaultValues: emptyFormValues });
   const [expanded, setExpanded] = useState<Record<SectionKey, boolean>>(DEFAULT_EXPANDED);
   const [whatsappOpen, setWhatsappOpen] = useState(false);
+  const [skinOpen, setSkinOpen] = useState(false);
   const [pendingReturn, setPendingReturn] = useState<Appointment | null>(null);
   const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
   const [pendingFormValues, setPendingFormValues] = useState<FormValues | null>(null);
@@ -660,6 +663,9 @@ export function AppointmentFormDialog({
   };
 
   const showTimerCard = !!appointment && (timer.showSessionControls || timer.isInProgress || timer.hasStartedAt);
+  const skinShortcut = appointment && selectedPatient && has('routines:create') && (
+    <SkinAnamnesisShortcut onClick={() => setSkinOpen(true)} />
+  );
   const timerCard = showTimerCard && !isMobile && (
     <SessionTimerCard
       timer={timer}
@@ -749,6 +755,7 @@ export function AppointmentFormDialog({
                     {getApiErrorMessage(mutation.error, 'Erro ao salvar agendamento')}
                   </Alert>
                 )}
+                {!showSidebar && skinShortcut}
                 {!showSidebar && timerCard}
                 <PatientSection
                   section={section('patient')}
@@ -822,7 +829,10 @@ export function AppointmentFormDialog({
                   flexDirection: 'column',
                 }}
               >
-                <AppointmentSummaryPanel data={summaryData}>{timerCard}</AppointmentSummaryPanel>
+                <AppointmentSummaryPanel data={summaryData}>
+                  {skinShortcut}
+                  {timerCard}
+                </AppointmentSummaryPanel>
               </Box>
             )}
           </DialogContent>
@@ -951,6 +961,14 @@ export function AppointmentFormDialog({
           </DialogActions>
         </Box>
       </Dialog>
+
+      {appointment && selectedPatient && (
+        <SkinAnamnesisDialog
+          open={skinOpen}
+          onClose={() => setSkinOpen(false)}
+          patient={{ id: selectedPatient.id, name: selectedPatient.name, phone: selectedPatient.phone, email: selectedPatient.email }}
+        />
+      )}
 
       {appointment && (
         <SendWhatsAppDialog
