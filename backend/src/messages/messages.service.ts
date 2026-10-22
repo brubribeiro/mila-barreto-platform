@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { IsOptional, IsString } from 'class-validator';
+import { MessageTrigger } from '@prisma/client';
+import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
@@ -10,10 +11,18 @@ export class CreateMessageTemplateDto {
 
   @IsOptional()
   @IsString()
-  category?: string;
+  category?: string | null;
 
   @IsString()
   content: string;
+
+  @IsOptional()
+  @IsEnum(MessageTrigger)
+  trigger?: MessageTrigger;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
 
   @IsOptional()
   @IsString()
@@ -27,11 +36,19 @@ export class UpdateMessageTemplateDto {
 
   @IsOptional()
   @IsString()
-  category?: string;
+  category?: string | null;
 
   @IsOptional()
   @IsString()
   content?: string;
+
+  @IsOptional()
+  @IsEnum(MessageTrigger)
+  trigger?: MessageTrigger;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
 
   @IsOptional()
   @IsString()

@@ -32,6 +32,12 @@ const ENTITY_OPTIONS: { value: string; label: string }[] = [
   { value: 'FinancialEntry', label: 'Financeiro' },
   { value: 'RecurringExpense', label: 'Despesa recorrente' },
   { value: 'PaymentMethod', label: 'Forma de pagamento' },
+  { value: 'Goal', label: 'Meta' },
+  { value: 'PendingTask', label: 'Pendência' },
+  { value: 'PendingRules', label: 'Regras de pendência' },
+  { value: 'SkincareRoutine', label: 'Rotina de skincare' },
+  { value: 'SkincareProduct', label: 'Produto de skincare' },
+  { value: 'SkincareRule', label: 'Regra de skincare' },
   { value: 'Promotion', label: 'Promoção' },
   { value: 'InventoryItem', label: 'Estoque' },
   { value: 'InventoryMovement', label: 'Movimentação de estoque' },
@@ -43,6 +49,7 @@ const ENTITY_OPTIONS: { value: string; label: string }[] = [
   { value: 'PatientPackage', label: 'Pacote do paciente' },
   { value: 'Procedure', label: 'Procedimento' },
   { value: 'Document', label: 'Documento' },
+  { value: 'DocumentTemplate', label: 'Modelo de documento' },
 ];
 
 const ACTION_OPTIONS: { value: string; label: string }[] = [

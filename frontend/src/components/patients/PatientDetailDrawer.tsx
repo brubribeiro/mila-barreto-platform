@@ -43,6 +43,7 @@ import { packagesApi } from '../../api/packages';
 import { AnamnesisView, hasAnamnesisData } from './AnamnesisView';
 import { PatientPhotosGallery } from './PatientPhotosGallery';
 import { usePermissions } from '../../contexts/usePermissions';
+import { PatientSkinRoutinesCard } from '../skincare/PatientSkinRoutinesCard';
 import { useAppointmentDialog } from '../../contexts/AppointmentDialogContext';
 import { dayjsFromDateOnlyApi, formatDateOnlyFromApi } from '../../utils/dateOnly';
 import { formatPatientAddressDisplay } from '../../utils/patientAddress';
@@ -52,8 +53,8 @@ import { maskCEP, maskPhone, onlyDigits } from '../../utils/masks';
 import type { Appointment, AppointmentKind } from '../../types';
 import { patientInitials } from '../../utils/patientPhoto';
 import { fontSizes } from '../../theme/fontSizes';
+import { brl } from '../../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const packageStatusLabel: Record<string, string> = {
   ACTIVE: 'Ativo',
@@ -789,6 +790,9 @@ export function PatientDetailDrawer({
 
         {data && tab === 'anamnesis' && (
           <Stack spacing={2}>
+            {has('routines:view') && (
+              <PatientSkinRoutinesCard patient={{ id: data.id, name: data.name, phone: data.phone, email: data.email }} />
+            )}
             {onEditAnamnesis && (
               <Stack direction="row" justifyContent="flex-end">
                 <Button

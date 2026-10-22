@@ -18,6 +18,7 @@ import { PromotionsModule } from '../promotions/promotions.module';
     AppointmentFinanceService,
     AppointmentEventsService,
   ],
+  exports: [AppointmentsService],
   controllers: [AppointmentsController],
 })
 export class AppointmentsModule {}

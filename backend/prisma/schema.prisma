@@ -32,6 +32,8 @@ model Role {
   id                        String   @id @default(uuid())
   name                      String   @unique
   description               String?
+  // Cor de identificação do grupo na tela de permissões (hex #RRGGBB).
+  color                     String?
   permissions               String[]
   isSystem                  Boolean  @default(false)
   // Quando true, usuários desse grupo só veem/editam os próprios agendamentos.
@@ -70,6 +72,7 @@ model User {
   notificationPreferences NotificationPreference[]
   workingHours            WorkingHours[]
   unavailabilities        Unavailability[]
+  pendingTasks            PendingTask[]            @relation("PendingTaskAssignee")
 
   @@map("users")
 }
@@ -149,23 +152,52 @@ model Equipment {
 model Document {
   id           String   @id @default(uuid())
   name         String
-  category     String? // "contrato", "vigilancia", "certificado", "livre"
+  category     String? // ver DOCUMENT_CATEGORIES no frontend (consentimento, anamnese, contrato, ...)
+  status       DocumentStatus @default(PENDING)
+  signedAt     DateTime?
   storageKey   String? @map("driveFileId") // chave no Cloudflare R2
   fileUrl      String? @map("driveViewUrl") // URL pública do arquivo
   mimeType     String?
   size         Int? // bytes
   notes        String?
+  // Texto gerado a partir de um modelo (placeholders já substituídos)
+  content      String?
+  templateId   String?
   // Vínculo opcional com paciente ou equipamento
   patientId    String?
   equipmentId  String?
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
 
-  patient   Patient?   @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  equipment Equipment? @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+  patient   Patient?          @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  equipment Equipment?        @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+  template  DocumentTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
 
   @@index([patientId])
   @@index([equipmentId])
+  @@index([status])
   @@map("documents")
+}
+
+enum DocumentStatus {
+  PENDING // aguardando assinatura
+  SENT // enviado ao paciente
+  SIGNED // assinado / arquivo final
+}
+
+// Modelos de documento (termos, fichas, contratos) com placeholders {{paciente}}, {{cpf}}...
+model DocumentTemplate {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  category  String?
+  content   String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents Document[]
+
+  @@map("document_templates")
 }
 
 // =========================
@@ -174,14 +206,26 @@ model Document {
 
 // Templates reutilizáveis para envio de mensagens.
 // Suporta variáveis no formato {paciente_nome}, {data}, {hora}, {procedimento}, {profissional}.
+/// Momento em que o modelo é usado (sugerido no envio pelo WhatsApp).
+enum MessageTrigger {
+  ON_BOOKING
+  DAY_BEFORE
+  BIRTHDAY
+  AFTER_APPOINTMENT
+  INACTIVE_90_DAYS
+  MANUAL
+}
+
 model MessageTemplate {
-  id          String   @id @default(uuid())
-  name        String   @unique
+  id          String         @id @default(uuid())
+  name        String         @unique
   category    String? // "confirmacao", "lembrete", "retorno", "aniversario", "livre"
+  trigger     MessageTrigger @default(MANUAL)
+  active      Boolean        @default(true)
   content     String
   procedureId String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   procedure Procedure? @relation(fields: [procedureId], references: [id], onDelete: SetNull)
 
@@ -268,6 +312,7 @@ model Patient {
   documents        Document[]
   packages         PatientPackage[]
   photos           PatientPhoto[]
+  skincareRoutines SkincareRoutine[]
 
   @@map("patients")
 }
@@ -756,4 +801,171 @@ model InventoryMovement {
 
   @@index([itemId])
   @@map("inventory_movements")
+}
+
+// =========================
+// METAS
+// =========================
+
+// Indicador acompanhado pela meta. MANUAL = valor atual informado pelo usuário;
+// os demais são calculados a partir dos dados do período (ver goals.service.ts).
+enum GoalMetric {
+  REVENUE // faturamento (receitas lançadas no financeiro)
+  NEW_PATIENTS // pacientes cadastrados no período
+  PROCEDURES // procedimentos realizados (agendamentos concluídos)
+  AVERAGE_TICKET // faturamento ÷ atendimentos concluídos
+  OCCUPANCY // % do expediente da equipe ocupado por agendamentos
+  RETURN_RATE // % dos pacientes atendidos que já tinham atendimento anterior
+  MANUAL
+}
+
+enum GoalFormat {
+  CURRENCY
+  NUMBER
+  PERCENT
+}
+
+enum GoalPeriodType {
+  MONTH
+  QUARTER
+  YEAR
+}
+
+model Goal {
+  id          String         @id @default(uuid())
+  name        String
+  metric      GoalMetric     @default(MANUAL)
+  format      GoalFormat     @default(NUMBER)
+  target      Decimal        @db.Decimal(12, 2)
+  // Valor atual informado manualmente (usado só quando metric = MANUAL)
+  manualValue Decimal?       @db.Decimal(12, 2)
+  periodType  GoalPeriodType @default(MONTH)
+  // Primeiro dia do período (mês, trimestre ou ano), sem horário
+  periodStart DateTime       @db.Date
+  color       String         @default("#15998B")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([periodStart])
+  @@map("goals")
+}
+
+// =========================
+// CENTRAL DE PENDÊNCIAS
+// =========================
+
+/// Regras que geram pendências automaticamente a partir das outras telas.
+enum PendingRule {
+  LOW_STOCK
+  EXPIRING_STOCK
+  BILLS_DUE
+  APPOINTMENT_NO_OUTCOME
+  EQUIPMENT_MAINTENANCE
+  DOCUMENT_UNSIGNED
+  COMMEMORATIVE_DATE
+}
+
+enum PendingCategory {
+  ADMINISTRATIVE
+  FINANCE
+  INVENTORY
+  OPERATIONAL
+  MAINTENANCE
+  HEALTH_SURVEILLANCE
+  MARKETING
+  TEAM
+  PATIENTS
+  MANAGEMENT
+}
+
+/// Pendência manual, ou o estado (responsável/resolução) de uma pendência gerada por regra.
+model PendingTask {
+  id             String          @id @default(uuid())
+  // Null = pendência manual
+  rule           PendingRule?
+  // Identifica a ocorrência gerada pela regra (ex.: "DOCUMENT:<id>"); muda quando a situação se repete
+  sourceKey      String?         @unique
+  title          String
+  description    String?
+  category       PendingCategory
+  dueDate        DateTime?       @db.Date
+  urgent         Boolean         @default(false)
+  link           String?
+  assigneeId     String?
+  resolvedAt     DateTime?
+  resolvedById   String?
+  resolvedByName String?
+  createdById    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  assignee User? @relation("PendingTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([resolvedAt])
+  @@index([assigneeId])
+  @@map("pending_tasks")
+}
+
+// =========================
+// ROTINAS DE SKINCARE (anamnese de pele)
+// =========================
+
+/// Produto do catálogo usado para montar as rotinas.
+model SkincareProduct {
+  id               String   @id @default(uuid())
+  name             String
+  brand            String?
+  activeIngredient String?
+  // manha | noite | semanal
+  moments          String[] @default([])
+  // limpeza | tratamento | hidratacao | protetor | olhos | esfoliacao | mascara
+  step             String
+  // Características usadas pelas restrições das regras (acido, acido-alto, retinoide, fragrancia, oleo)
+  tags             String[] @default([])
+  howTo            String?
+  note             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("skincare_products")
+}
+
+/// Regra: quando a resposta da anamnese bate com field/value, inclui produtos, evita características e soma uma orientação.
+model SkincareRule {
+  id         String   @id @default(uuid())
+  // pele | afeccao | olheira | idade
+  field      String
+  value      String
+  productIds String[] @default([])
+  avoidTags  String[] @default([])
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("skincare_rules")
+}
+
+/// Anamnese de pele salva na ficha da paciente, com a rotina gerada (produtos copiados no momento do salvamento).
+model SkincareRoutine {
+  id            String   @id @default(uuid())
+  patientId     String
+  consultDate   DateTime @db.Date
+  // { pele, afec[], afecOutra, olheira, olheiraTipo, idade }
+  answers       Json
+  // [{ moment, step, productId, name, brand, activeIngredient, howTo, note }]
+  items         Json     @default("[]")
+  // [{ productId, name, reason }]
+  avoided       Json     @default("[]")
+  // [{ text, source }]
+  guidelines    Json     @default("[]")
+  notes         String?
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, consultDate])
+  @@map("skincare_routines")
 }
