@@ -304,7 +304,7 @@ export function SidebarContent({ collapsed: isCollapsed, groups, pathname, onNav
               </Avatar>
             </Tooltip>
             <Tooltip title="Sair" placement="right">
-              <IconButton size="small" onClick={onLogout} sx={LOGOUT_BUTTON_SX}>
+              <IconButton aria-label="Sair" size="small" onClick={onLogout} sx={LOGOUT_BUTTON_SX}>
                 <AuroraIcon name="logout" size={18} strokeWidth={2} />
               </IconButton>
             </Tooltip>
@@ -325,7 +325,7 @@ export function SidebarContent({ collapsed: isCollapsed, groups, pathname, onNav
               )}
             </Box>
             <Tooltip title="Sair">
-              <IconButton size="small" onClick={onLogout} sx={{ ...LOGOUT_BUTTON_SX, flexShrink: 0 }}>
+              <IconButton aria-label="Sair" size="small" onClick={onLogout} sx={{ ...LOGOUT_BUTTON_SX, flexShrink: 0 }}>
                 <AuroraIcon name="logout" size={18} strokeWidth={2} />
               </IconButton>
             </Tooltip>

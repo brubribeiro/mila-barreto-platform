@@ -187,6 +187,10 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ### Correções
 
+**Acessibilidade**
+- Botões só com ícone (editar, excluir, WhatsApp, paginação, menu, notificações) agora são lidos por leitores de tela com o nome do item, por exemplo "Editar Maria Silva".
+- Dá para navegar pelo teclado: a lista de pacientes, os agendamentos pendentes, as notificações e outros cards clicáveis recebem foco com Tab e abrem com Enter ou Espaço, com contorno de foco visível.
+
 **Ajustes de layout**
 - Todas as telas do painel (Usuários, Horários, Estoque, Financeiro, Métricas, Metas, Documentos, etc.) ocupam a **largura total** ao lado do menu, sem faixa centralizada; o mesmo padrão vale para **Termos de Uso** e **Política de Privacidade**.
 - **Horários:** os dois cards (Disponibilidade da equipe e Bloqueios de agenda) agora têm cabeçalhos da mesma altura, com as linhas divisórias alinhadas.

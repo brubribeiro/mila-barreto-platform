@@ -108,6 +108,7 @@ export function ListHistoryButton({ onClick }: { onClick: () => void }) {
   return (
     <Tooltip title="Histórico de alterações">
       <IconButton
+        aria-label="Histórico de alterações"
         onClick={onClick}
         sx={{
           flexShrink: 0,

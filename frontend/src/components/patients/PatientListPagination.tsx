@@ -56,6 +56,7 @@ export function PatientListPagination({
       <Stack direction="row" alignItems="center" spacing={0.75}>
         <IconButton
           size="small"
+          aria-label="Página anterior"
           disabled={currentPage === 0}
           onClick={() => setPage((v) => Math.max(0, v - 1))}
           sx={{ border: 1, borderColor: 'divider', borderRadius: '9px' }}
@@ -80,6 +81,9 @@ export function PatientListPagination({
             <Box
               key={item}
               component="button"
+              type="button"
+              aria-label={`Página ${item + 1}`}
+              aria-current={item === currentPage ? 'page' : undefined}
               onClick={() => setPage(item)}
               sx={{
                 minWidth: 30,
@@ -102,6 +106,7 @@ export function PatientListPagination({
         )}
         <IconButton
           size="small"
+          aria-label="Próxima página"
           disabled={currentPage >= pageCount - 1}
           onClick={() => setPage((v) => Math.min(pageCount - 1, v + 1))}
           sx={{ border: 1, borderColor: 'divider', borderRadius: '9px' }}

@@ -265,6 +265,7 @@ export function MaterialsSection({
                       />
                       <Tooltip title="Remover">
                         <IconButton
+                          aria-label={`Remover material ${index + 1}`}
                           size="small"
                           onClick={() => setExtraMaterials((rows) => rows.filter((_, i) => i !== index))}
                           sx={{ mt: 0.25 }}

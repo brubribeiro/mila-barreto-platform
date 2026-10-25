@@ -4,6 +4,7 @@ import { Link as RouterLink } from 'react-router-dom';
 
 import type { Appointment, AppointmentStatus } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
+import { clickableProps } from '../../utils/a11y';
 import { DashboardEmptyState } from './DashboardEmptyState';
 
 const statusLabelDashboard: Partial<Record<AppointmentStatus, string>> = {
@@ -60,10 +61,7 @@ export function WeekAgendaCard({ appointments, loading, canSeeAgenda, onOpen }: 
                 direction="row"
                 alignItems="center"
                 spacing={1.5}
-                onClick={() => {
-                  if (!canSeeAgenda) return;
-                  onOpen(a);
-                }}
+                {...(canSeeAgenda && clickableProps(() => onOpen(a)))}
                 sx={{
                   px: 1,
                   py: 1.25,

@@ -211,6 +211,7 @@ export function DocumentTemplatesDialog({ open, onClose, canEdit, canDelete }: P
             {canEdit && (
               <Tooltip title="Editar">
                 <IconButton
+                  aria-label={`Editar modelo ${t.name}`}
                   sx={ROW_ACTION_SX}
                   onClick={() =>
                     setForm({ id: t.id, name: t.name, category: t.category ?? 'outro', content: t.content, active: t.active })
@@ -222,7 +223,7 @@ export function DocumentTemplatesDialog({ open, onClose, canEdit, canDelete }: P
             )}
             {canDelete && (
               <Tooltip title="Excluir">
-                <IconButton sx={{ ...ROW_ACTION_SX, color: 'error.main' }} onClick={() => handleDelete(t)}>
+                <IconButton aria-label={`Excluir modelo ${t.name}`} sx={{ ...ROW_ACTION_SX, color: 'error.main' }} onClick={() => handleDelete(t)}>
                   <DeleteOutlineIcon sx={{ fontSize: 17 }} />
                 </IconButton>
               </Tooltip>

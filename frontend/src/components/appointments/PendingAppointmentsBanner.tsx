@@ -4,6 +4,7 @@ import { Box, Collapse, IconButton, Stack, Typography } from '@mui/material';
 import { AuroraIcon } from '../AuroraIcon';
 import type { Appointment } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
+import { clickableProps } from '../../utils/a11y';
 import { kindLabel } from './agendaConfig';
 
 interface PendingAppointmentsBannerProps {
@@ -34,7 +35,8 @@ export function PendingAppointmentsBanner({ appointments, onOpen }: PendingAppoi
         alignItems="center"
         spacing={1.25}
         sx={{ px: 2, py: 1.35, cursor: 'pointer' }}
-        onClick={() => setExpanded((v) => !v)}
+        {...clickableProps(() => setExpanded((v) => !v))}
+        aria-expanded={expanded}
       >
         <Box sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: '#C25A4C', flexShrink: 0 }} />
         <Typography sx={{ flex: 1, fontSize: fontSizes.md, fontWeight: 700 }}>
@@ -72,7 +74,7 @@ export function PendingAppointmentsBanner({ appointments, onOpen }: PendingAppoi
           {appointments.map((a) => (
             <Box
               key={a.id}
-              onClick={() => onOpen(a)}
+              {...clickableProps(() => onOpen(a))}
               sx={{
                 display: 'flex',
                 alignItems: 'center',

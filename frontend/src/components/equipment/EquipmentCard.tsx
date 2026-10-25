@@ -7,6 +7,7 @@ import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
 import { formatDateOnlyFromApi } from '../../utils/dateOnly';
 import type { Equipment } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
+import { clickableProps } from '../../utils/a11y';
 import { brl } from '../../utils/money';
 import { RowActionButton } from '../RowActionButton';
 import {
@@ -88,7 +89,7 @@ export function EquipmentCard({ equipment: e, canEdit, canDelete, onEdit, onMain
   return (
     <Card
       key={e.id}
-      onClick={canEdit ? onEdit : undefined}
+      {...(canEdit && clickableProps(onEdit))}
       sx={{
         p: 2.5,
         borderRadius: '18px',

@@ -170,6 +170,12 @@ export function createAppTheme(mode: ColorMode) {
               scrollbarWidth: 'thin',
               scrollbarColor: `${aurora.border} transparent`,
             },
+            // Foco visível só para navegação por teclado (não aparece no clique).
+            'button:focus-visible, a:focus-visible, [role="button"]:focus-visible, [tabindex]:not([tabindex="-1"]):focus-visible':
+              {
+                outline: `2px solid ${aurora.primary}`,
+                outlineOffset: 2,
+              },
             '*::-webkit-scrollbar': {
               width: 8,
               height: 8,

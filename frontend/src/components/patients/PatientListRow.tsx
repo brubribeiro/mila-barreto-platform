@@ -10,6 +10,7 @@ import { fontSizes } from '../../theme/fontSizes';
 import { maskPhone } from '../../utils/masks';
 import { moneyFormatter } from '../../utils/money';
 import { patientInitials } from '../../utils/patientPhoto';
+import { clickableProps } from '../../utils/a11y';
 import { ReliabilityBadge } from './ReliabilityBadge';
 import { GRID_COLS } from './patientListLayout';
 
@@ -51,7 +52,7 @@ export function PatientListRow({
   const color = avatarColor(p.name);
   return (
     <Box
-        onClick={onOpen}
+        {...clickableProps(onOpen, `Abrir ficha de ${p.name}`)}
       sx={{
         display: 'grid',
         gridTemplateColumns: { xs: '1fr auto', md: GRID_COLS },
@@ -71,6 +72,7 @@ export function PatientListRow({
       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
         <Avatar
           src={p.photoUrl ?? undefined}
+          alt=""
           sx={{
             width: 40,
             height: 40,
@@ -159,6 +161,7 @@ export function PatientListRow({
           <span>
             <IconButton
               size="small"
+              aria-label={`Enviar WhatsApp para ${p.name}`}
               disabled={!p.phone}
               onClick={onWhatsApp}
               sx={{ color: '#25D366' }}
@@ -169,7 +172,7 @@ export function PatientListRow({
         </Tooltip>
         {canEdit && (
           <Tooltip title="Anamnese">
-            <IconButton size="small" onClick={onAnamnesis}>
+            <IconButton size="small" aria-label={`Anamnese de ${p.name}`} onClick={onAnamnesis}>
               <AssignmentOutlinedIcon fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -178,6 +181,7 @@ export function PatientListRow({
           <Tooltip title="Editar">
             <IconButton
               size="small"
+              aria-label={`Editar ${p.name}`}
               onClick={onEdit}
             >
               <EditIcon fontSize="small" />
@@ -186,7 +190,12 @@ export function PatientListRow({
         )}
         {canDelete && (
           <Tooltip title="Excluir">
-            <IconButton size="small" onClick={onDelete} sx={{ color: 'error.main' }}>
+            <IconButton
+              size="small"
+              aria-label={`Excluir ${p.name}`}
+              onClick={onDelete}
+              sx={{ color: 'error.main' }}
+            >
               <DeleteIcon fontSize="small" />
             </IconButton>
           </Tooltip>

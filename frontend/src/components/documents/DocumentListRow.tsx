@@ -10,6 +10,7 @@ import 'dayjs/locale/pt-br';
 import { canOpenDocument, categoryMeta, documentFileIcon, fmtFileSize, statusMeta } from './documentUtils';
 import type { DocumentFile, DocumentStatus } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
+import { clickableProps } from '../../utils/a11y';
 
 export const DOCUMENT_GRID_COLS =
   'minmax(0, 2.6fr) minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 0.9fr) 44px';
@@ -79,7 +80,7 @@ export function DocumentListRow({ doc, canEdit, onClick, onOpenMenu }: DocumentL
   ].filter(Boolean);
   return (
     <Box
-        onClick={clickable ? onClick : undefined}
+      {...(clickable && clickableProps(onClick))}
       sx={{
         display: 'grid',
         gridTemplateColumns: { xs: 'minmax(0, 1fr) auto', md: DOCUMENT_GRID_COLS },

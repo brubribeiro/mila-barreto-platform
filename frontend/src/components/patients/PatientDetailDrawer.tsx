@@ -184,7 +184,7 @@ export function PatientDetailDrawer({
             Agendar
           </Button>
           {data.phone && (
-            <PatientWhatsAppButton phone={data.phone} sx={{ borderRadius: '12px', bgcolor: 'background.paper' }} />
+            <PatientWhatsAppButton phone={data.phone} name={data.name} sx={{ borderRadius: '12px', bgcolor: 'background.paper' }} />
           )}
         </Stack>
       )}

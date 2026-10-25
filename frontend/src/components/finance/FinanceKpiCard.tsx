@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Box, Card, Skeleton, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { fontSizes } from '../../theme/fontSizes';
+import { clickableProps } from '../../utils/a11y';
 
 export function FinancePill({ tone, children }: { tone: string; children: ReactNode }) {
   return (
@@ -38,7 +39,7 @@ interface FinanceKpiCardProps {
 export function FinanceKpiCard({ label, tone, loading, value, valueColor, footer, active, onClick }: FinanceKpiCardProps) {
   return (
     <Card
-      onClick={onClick}
+      {...(onClick && clickableProps(onClick))}
       sx={{
         position: 'relative',
         overflow: 'hidden',
