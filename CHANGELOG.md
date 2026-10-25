@@ -40,8 +40,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Changed
 
+- Refatoração sem mudança visual ou de comportamento: `Dashboard.tsx`, `Appointments.tsx` e `Layout.tsx` divididos em subcomponentes e hooks (`components/dashboard/` — `SummaryCard`, `WeekAgendaCard`, `BirthdaysCard`, `useDashboardData`; `components/appointments/` — `AgendaToolbar`, `AgendaStatusLegend`, `PendingAppointmentsBanner`, `AgendaCalendarSkeleton`, `agendaCalendarContent`, `agendaCalendarSx`, `agendaConfig`, `useAgendaData`, `useCalendarKeyboardScroll`; `components/layout/` — `navConfig`, `pageMeta`, `layoutTheme`, `SidebarContent`, `HeaderActions`, `ImpersonationBanner`). Removido código morto: seletor de período oculto do Dashboard (`{false && …}`), `DashboardDetailItem` sem uso, helpers/imports sem uso e estilos de toolbar do FullCalendar que nunca renderizavam (`headerToolbar={false}`).
 - `Patients.tsx`: substitui DataGrid por lista customizada Aurora.
 - `PatientDetail.tsx`, `PatientDetailDrawer`, `PatientFormDialog`: alinhados ao visual Aurora.
+- Pacientes (refatoração sem mudança de comportamento ou visual): `PatientDetail`, `PatientDetailDrawer`, `PatientFormDialog` e `Patients` divididos em subcomponentes e hooks em `components/patients/`. Compartilhados entre ficha, gaveta e lista: `usePatientChart` (paciente + score), `patientChart.ts` (`scoreTone`, `patientAgeLabel`, rótulos de status/tipo de agendamento), `ReliabilityBadge`, `PatientWhatsAppButton`, `PatientAnamnesisSection` e `EmptyBlock`. Ficha: `PatientSummarySidebar`, `PatientOverviewTab`, `PatientAppointmentsTab`, `PatientPackagesTab`. Gaveta: `PatientDrawerHeader`, `PatientDrawerSummaryTab`, `PatientDrawerAppointmentsTab`. Formulário: `patientFormValues.ts` (valores iniciais e payload), `useCepAddressLookup`, `usePatientPhotoDraft`, `PatientPhotoPicker`, `PatientFormBasicFields`, `PatientFormAddressSection`, `LabeledField`. Lista: `PatientListRow`, `PatientListColumns`, `PatientListPagination`, `PatientListEmptyState`, `PatientStatCard`.
 - `AnamnesisFormDialog` / `AnamnesisView`: seções em cards, campos com `LabeledField`.
 - `AppointmentFormDialog`: suporte a `defaultPatientId`; busca de profissionais só após init do form; redesign Aurora (seções, modais de pagamento e confirmação).
 - Agenda: skeleton de carregamento no calendário; remoção de scrollbar customizada local (usa tema global).
@@ -54,6 +56,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Dashboard: scroll na lista de aniversariantes; botão WhatsApp desabilitado sem telefone.
 - `Packages.tsx`: substitui DataGrid por cards Aurora; `PackageFormDialog` reorganizada.
 - `Promotions.tsx`: substitui DataGrid por cards Aurora; `PromotionFormDialog` com tipo Combo e escopo (procedimentos/pacotes).
+- Backend (refactor, sem mudança de API/comportamento): `AppointmentsService` dividido em `AppointmentRulesService` (referências, disponibilidade, intervalo de retorno), `AppointmentMaterialsService` (baixa/devolução de estoque), `AppointmentFinanceService` (receita, custo de materiais, backfill) e `AppointmentEventsService` (notificações/auditoria), mais `appointment.helpers.ts`; regra de receita de pacote unificada entre conclusão e backfill; removido cálculo morto de `costDetails` e consultas duplicadas em `update`.
+- Backend (refactor, sem mudança de API/comportamento): `PatientsService` dividido em `PatientPhotoStorageService` (R2, validação e URLs assinadas), `PatientStatsService` (agregações e confiabilidade), `PatientEventsService` (auditoria/notificação) e `patient-fields.util.ts` (normalização de campos com regra única para nulos/trim).
+- Testes: spec de pacientes passa a prover `CompressionService` e mock de `financialEntry` (12 testes que falhavam na montagem do módulo voltam a passar).
 - `Metrics.tsx`: redesign Aurora sem Recharts (barras, divisão proporcional e donut em MUI); KPIs de topo (receita de procedimentos, ticket médio, taxa de retorno, no-show) com delta vs. período anterior de mesma duração (segunda chamada a `GET /metrics`); abas em pílulas; indicadores por aba em faixa única; aba Financeiro com resumo de receitas/despesas/saldo e receita por categoria.
 - `PaymentMethods.tsx`: substitui DataGrid por grade de cards Aurora (taxa, valor líquido a cada R$ 100, uso em lançamentos); `PaymentMethodFormDialog` com `FormSection`/`LabeledField` e status em select.
 - `RecurringExpenses.tsx`: substitui DataGrid por layout Aurora (cards de resumo com divisão fixo/variável e vencimentos em 7 dias, painel de custo por hora minimizável, tabela paginada com próximo vencimento); `RecurringExpenseFormDialog` em coluna única com `LabeledField`. API e cálculo de custo/hora inalterados.
@@ -70,6 +75,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Formulários: componente `MoneyField` (máscara R$ "1.234,56", digitação por centavos) nos campos de valor de equipamentos, procedimentos, estoque, financeiro, despesas recorrentes, promoções, pacotes, movimentação e compra em lote; `masks.ts` ganha `formatMoneyInput`, `parseMoneyInput`, `isValidPhone` e `EMAIL_PATTERN`.
 - Formulários: `noValidate` nos `<form>` (mensagens do react-hook-form em português no lugar das do navegador), `inputMode` numeric/decimal/tel/email, `autoComplete="off"` em dados de terceiros, autoFocus no primeiro campo de paciente, usuário e procedimento, mensagens para regras que falhavam sem texto (duração, dia de vencimento, quantidades, valores, materiais e equipamentos).
 - Paciente: validação de telefone (DDD + número) e e-mail; erro de CEP passa a aparecer.
+- Refatoração sem mudança de comportamento ou visual: `Metrics.tsx` (1.303 → 90 linhas) e `Availability.tsx` (1.237 → 57) viram composição; abas, blocos de gráfico, KPIs, filtro de período e `useMetricsData` em `components/metrics/`; cards, diálogos de horário/bloqueio, `useAvailabilityData`, `useWorkingHoursForm`, `useUnavailabilityForm`, constantes e formatadores em `components/availability/` (sx dos diálogos, skeleton, invalidação de bloqueios e mensagem de erro da API deixam de ser duplicados).
+
+- `AppointmentFormDialog`: formulário reorganizado em seções numeradas e colapsáveis (paciente → procedimento/profissional → data/horário → pacote/pagamento → materiais → observações), com resumo fixo (lateral em `lg+`, barra acima do rodapé abaixo disso) e botão de salvar sempre visível; ao enviar com erro, as seções inválidas reabrem. Arquivo de ~3.400 linhas dividido em seções, diálogos (`CompletePaymentDialog`, `ReturnAppointmentDialog`, `SellPackageDialog`, `BatchSessionsDialog`, `PackageSessionsDialog`) e hooks (`useAppointmentProfessionals`, `useSessionTimer`, `useAppointmentMaterials`) em `components/appointments/`. Regras de negócio e API inalteradas.
+- `AppointmentFormDialog`: fechar com alterações não salvas (backdrop, Esc, X ou Cancelar) pede confirmação via `confirm` do `AppDialogContext` (`isDirty` do react-hook-form + materiais extras e pacote); avisos e erros que usavam `alert` do `AppDialogContext` passam a usar toast (`AppToastContext`).
 
 ### Fixed
 
@@ -82,6 +91,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Procedimentos: filtro de categoria passa de pills para select no cabeçalho do card (`LIST_HEADER_SELECT_SX`, compartilhado com Usuários); título do card mostra a categoria selecionada.
 - Usuários: removido o texto explicativo que ficava fora do card.
 - Listagens: filtros/busca/ações de Procedimentos e Usuários movidos para dentro do card da tabela (como Pacientes, Documentos, Estoque, Financeiro, Despesas recorrentes e Mensagens), via novo `ListCardHeader` (`ListSearchField`, `ListHistoryButton`, `LIST_HEADER_ACTION_SX`); Pacientes passa a usá-lo.
+
+### Removed
+
+- Pacientes: código morto da ficha, gaveta e formulário (abas Observações/Financeiro/Documentos e suas queries nunca exibidas, `InfoRow`, `NoteBlock`, `AppointmentNotesCard`, `PackageCard` e query de pacotes da gaveta, constantes de estilo e `TabPanel` sem uso no formulário, imports não usados). Some com isso os dois erros de `tsc` em `PatientDetail.tsx` (comparação de aba com `'finance'`/`'documents'`).
 
 ## [0.2.0] - 2026-07-15
 

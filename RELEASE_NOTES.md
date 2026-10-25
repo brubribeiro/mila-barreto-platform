@@ -41,6 +41,10 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - Seção **Pacote** com sessões restantes, botão para ver todas as sessões do pacote e opção de **agendar sessões faltantes** em lote.
 - Ao concluir um agendamento antigo, escolha o **mês de referência** para lançar a receita no financeiro correto.
 - Modal **Registrar pagamento** com espaçamento revisado e campos mais legíveis.
+- Formulário organizado em **etapas numeradas** (paciente, procedimento e profissional, data e horário, pacote e pagamento, materiais, observações), que podem ser recolhidas e mostram um resumo de uma linha.
+- **Resumo fixo** do agendamento (paciente, atendimento, profissional, horário, pacote e valor) sempre à vista, e botão de salvar sempre visível, inclusive no celular.
+- Ao fechar o formulário com alterações não salvas, o painel pergunta se você quer **descartar** as alterações.
+- Avisos de erro agora aparecem como notificação discreta, sem janela para fechar.
 
 **Dashboard**
 - **Agenda da semana** passa a considerar 7 dias a partir da data selecionada (antes fixava segunda a domingo).
