@@ -114,7 +114,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
   const submit = handleSubmit(
     (values) => mutation.mutate(values),
     (errors) => {
-      if (errors.name || errors.document || errors.cep || errors.referralSourceOther) {
+      if (errors.name || errors.document || errors.phone || errors.email || errors.cep || errors.referralSourceOther) {
         setTab('basic');
       }
     },
@@ -149,6 +149,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
     >
       <Box
         component="form"
+        noValidate
         onSubmit={submit}
         sx={{
           display: 'flex',
@@ -218,7 +219,7 @@ export function PatientFormDialog({ open, onClose, patient }: PatientFormDialogP
                   onSelect={photo.handlePhotoSelect}
                   onRemove={photo.handlePhotoRemove}
                 />
-                <PatientFormBasicFields control={control} referralSource={referralSourceWatched} />
+                <PatientFormBasicFields control={control} referralSource={referralSourceWatched} autoFocusName={!patient} />
               </Stack>
             </FormSection>
 

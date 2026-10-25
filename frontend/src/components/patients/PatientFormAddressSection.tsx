@@ -53,7 +53,7 @@ export function PatientFormAddressSection({
                 onChange={(e) => field.onChange(maskCEP(e.target.value))}
                 error={!!fieldState.error || cepStatus.error}
                 disabled={disabled}
-                inputProps={{ inputMode: 'numeric', maxLength: 9 }}
+                inputProps={{ inputMode: 'numeric', autoComplete: 'off', maxLength: 9 }}
                 sx={ADDRESS_INPUT_SX}
                 InputProps={{
                   startAdornment: (
@@ -113,7 +113,7 @@ export function PatientFormAddressSection({
                 fullWidth
                 size="small"
                 placeholder="Número"
-                inputProps={{ inputMode: 'numeric' }}
+                inputProps={{ inputMode: 'numeric', autoComplete: 'off' }}
                 sx={ADDRESS_INPUT_SX}
               />
             )}

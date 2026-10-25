@@ -130,6 +130,7 @@ export function RoleFormDialog({ open, onClose, role, roles, onSaved }: RoleForm
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
         sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
       >

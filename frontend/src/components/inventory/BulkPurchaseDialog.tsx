@@ -7,7 +7,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  InputAdornment,
   Stack,
   TextField,
   Typography,
@@ -25,6 +24,7 @@ import { inventoryApi } from '../../api/inventory';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { MoneyField } from '../MoneyField';
 import { dateOnlyToApiIso } from '../../utils/dateOnly';
 import { fontSizes } from '../../theme/fontSizes';
 import { ListTableHeader } from '../ListTableHeader';
@@ -161,6 +161,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
         sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
       >
@@ -313,15 +314,10 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
                   name="freight"
                   control={control}
                   render={({ field }) => (
-                    <TextField
+                    <MoneyField
                       {...field}
-                      type="number"
                       fullWidth
-                      placeholder="0,00"
-                      inputProps={{ min: 0, step: '0.01', 'aria-label': 'Frete da compra' }}
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                      }}
+                      inputProps={{ 'aria-label': 'Frete da compra' }}
                       sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'grey.50', fontWeight: 700 } }}
                     />
                   )}

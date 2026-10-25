@@ -37,6 +37,7 @@ import { usersApi, UserPayload } from '../../api/users';
 import { rolesApi } from '../../api/roles';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
+import { EMAIL_PATTERN } from '../../utils/masks';
 import { ALL_PERMISSIONS, countCatalogPermissions } from '../../contexts/permissions';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { UserSummary } from '../../types';
@@ -239,6 +240,7 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
         sx={{
           display: 'flex',
@@ -307,7 +309,10 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
                     <Controller
                       name="email"
                       control={control}
-                      rules={{ required: 'E-mail é obrigatório' }}
+                      rules={{
+                        required: 'E-mail é obrigatório',
+                        pattern: { value: EMAIL_PATTERN, message: 'E-mail inválido' },
+                      }}
                       render={({ field, fieldState }) => (
                         <TextField
                           {...field}
@@ -315,6 +320,7 @@ export function ProfessionalFormDialog({ open, onClose, user }: ProfessionalForm
                           label="E-mail"
                           fullWidth
                           required
+                          inputProps={{ inputMode: 'email', autoComplete: 'off' }}
                           error={!!fieldState.error}
                           helperText={fieldState.error?.message}
                         />
