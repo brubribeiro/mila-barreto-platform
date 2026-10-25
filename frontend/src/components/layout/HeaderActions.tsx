@@ -62,6 +62,7 @@ export function HeaderActions({
       )}
       <Tooltip title={moneyHidden ? 'Mostrar valores' : 'Ocultar valores'}>
         <IconButton
+          aria-label={moneyHidden ? 'Mostrar valores' : 'Ocultar valores'}
           onClick={onToggleMoneyHidden}
           aria-pressed={moneyHidden}
           sx={{

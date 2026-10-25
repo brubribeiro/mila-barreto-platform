@@ -378,6 +378,7 @@ export function DocumentFormDialog({ open, onClose, editing, onSaved }: Props) {
               {previewUrl && (
                 <Tooltip title="Visualizar arquivo">
                   <IconButton
+                    aria-label="Visualizar arquivo"
                     size="small"
                     component="a"
                     href={previewUrl}
@@ -393,7 +394,7 @@ export function DocumentFormDialog({ open, onClose, editing, onSaved }: Props) {
                 Trocar
               </Button>
               <Tooltip title="Remover arquivo">
-                <IconButton size="small" onClick={() => setFile(null)} sx={{ color: 'text.secondary' }}>
+                <IconButton aria-label="Remover arquivo" size="small" onClick={() => setFile(null)} sx={{ color: 'text.secondary' }}>
                   <CloseIcon sx={{ fontSize: 18 }} />
                 </IconButton>
               </Tooltip>

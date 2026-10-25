@@ -201,6 +201,7 @@ export function Promotions() {
                 setPage(0);
               }}
               placeholder="Buscar campanha..."
+              inputProps={{ 'aria-label': 'Buscar campanha' }}
               sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />
           </Stack>
@@ -299,6 +300,7 @@ export function Promotions() {
                         <Switch
                           size="small"
                           checked={p.active}
+                          inputProps={{ 'aria-label': `${p.active ? 'Desativar' : 'Ativar'} ${p.name}` }}
                           onChange={() => toggleActiveMutation.mutate({ id: p.id, active: !p.active })}
                         />
                       </Tooltip>
@@ -347,6 +349,7 @@ export function Promotions() {
                       {canEdit && (
                         <Tooltip title="Editar">
                           <IconButton
+                            aria-label={`Editar ${p.name}`}
                             onClick={() => handleEdit(p)}
                             sx={{ width: 34, height: 34, borderRadius: '10px', border: 1, borderColor: 'divider', color: 'text.secondary' }}
                           >
@@ -357,6 +360,7 @@ export function Promotions() {
                       {canDelete && (
                         <Tooltip title="Excluir">
                           <IconButton
+                            aria-label={`Excluir ${p.name}`}
                             onClick={() => handleDelete(p)}
                             sx={{
                               width: 34,
@@ -403,6 +407,8 @@ export function Promotions() {
                     key={i}
                     component="button"
                     type="button"
+                    aria-label={`Página ${i + 1}`}
+                    aria-current={activePage ? 'page' : undefined}
                     onClick={() => setPage(i)}
                     sx={{
                       minWidth: 38,

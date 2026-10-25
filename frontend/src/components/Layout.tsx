@@ -91,6 +91,7 @@ export function Layout() {
           <IconButton
             color="inherit"
             edge="start"
+            aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'}
             onClick={() => setMobileOpen(!mobileOpen)}
             sx={{
               mr: { xs: 0.5, md: 0 },
@@ -106,6 +107,7 @@ export function Layout() {
           <IconButton
             onClick={() => setCollapsed((c) => !c)}
             title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+            aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
             sx={{
               display: { xs: 'none', md: 'inline-flex' },
               width: 40,

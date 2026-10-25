@@ -31,6 +31,7 @@ import {
 import { usePermissions } from '../contexts/usePermissions';
 import type { Goal } from '../types';
 import { fontSizes } from '../theme/fontSizes';
+import { clickableProps } from '../utils/a11y';
 
 const CARD_GRID_SX = {
   display: 'grid',
@@ -170,7 +171,7 @@ export function Goals() {
             return (
               <Card
                 key={g.id}
-                onClick={canEdit ? () => openEdit(g) : undefined}
+                {...(canEdit && clickableProps(() => openEdit(g)))}
                 sx={{
                   p: { xs: 2.25, sm: 2.5 },
                   borderRadius: '18px',
@@ -228,6 +229,7 @@ export function Goals() {
                   {canEdit && (
                     <Tooltip title="Editar meta">
                       <IconButton
+                        aria-label={`Editar meta ${g.name}`}
                         onClick={(ev) => {
                           ev.stopPropagation();
                           openEdit(g);

@@ -162,7 +162,7 @@ export function PatientSummarySidebar({
           >
             Agendar
           </Button>
-          {data.phone && <PatientWhatsAppButton phone={data.phone} sx={{ flexShrink: 0, borderRadius: '11px' }} />}
+          {data.phone && <PatientWhatsAppButton phone={data.phone} name={data.name} sx={{ flexShrink: 0, borderRadius: '11px' }} />}
         </Stack>
       </Stack>
     </Paper>

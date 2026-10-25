@@ -131,7 +131,7 @@ function RoleCard({
       </Box>
       {role.isSystem && (
         <Tooltip title="Grupo do sistema (não pode ser excluído)">
-          <LockOutlinedIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+          <LockOutlinedIcon role="img" aria-hidden={false} sx={{ fontSize: 16, color: 'text.disabled' }} />
         </Tooltip>
       )}
     </ButtonBase>
@@ -343,6 +343,7 @@ export function Roles() {
                 {canEdit && (
                   <Tooltip title="Editar grupo">
                     <IconButton
+                      aria-label={`Editar grupo ${selected.name}`}
                       size="small"
                       sx={ACTION_BUTTON_SX}
                       onClick={() => {
@@ -356,7 +357,7 @@ export function Roles() {
                 )}
                 {canDelete && !selected.isSystem && (
                   <Tooltip title="Excluir grupo">
-                    <IconButton size="small" sx={ACTION_BUTTON_SX} onClick={() => handleDelete(selected)}>
+                    <IconButton aria-label={`Excluir grupo ${selected.name}`} size="small" sx={ACTION_BUTTON_SX} onClick={() => handleDelete(selected)}>
                       <DeleteOutlineIcon sx={{ fontSize: 17 }} />
                     </IconButton>
                   </Tooltip>

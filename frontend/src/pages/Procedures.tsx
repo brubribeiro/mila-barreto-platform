@@ -150,7 +150,7 @@ export function Procedures() {
               setSearch(v);
               setPage(0);
             }}
-            placeholder="Buscar procedimento..." />
+            placeholder="Buscar procedimento..." ariaLabel="Buscar procedimento" />
           {canCreate && (
             <Button
               variant="contained"
@@ -361,6 +361,7 @@ export function Procedures() {
                     <Tooltip title="Editar">
                       <IconButton
                         size="small"
+                        aria-label={`Editar ${p.name}`}
                         onClick={() => {
                           setEditing(p);
                           setFormOpen(true);
@@ -372,7 +373,12 @@ export function Procedures() {
                   )}
                   {canDelete && (
                     <Tooltip title="Excluir">
-                      <IconButton size="small" onClick={() => handleDelete(p)} sx={{ color: 'error.main' }}>
+                      <IconButton
+                        size="small"
+                        aria-label={`Excluir ${p.name}`}
+                        onClick={() => handleDelete(p)}
+                        sx={{ color: 'error.main' }}
+                      >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -398,6 +404,7 @@ export function Procedures() {
             <Stack direction="row" spacing={0.75}>
               <IconButton
                 size="small"
+                aria-label="Página anterior"
                 disabled={current === 0}
                 onClick={() => setPage((v) => Math.max(0, v - 1))}
                 sx={{ border: 1, borderColor: 'divider', borderRadius: '9px' }}
@@ -406,6 +413,7 @@ export function Procedures() {
               </IconButton>
               <IconButton
                 size="small"
+                aria-label="Próxima página"
                 disabled={current >= pageCount - 1}
                 onClick={() => setPage((v) => Math.min(pageCount - 1, v + 1))}
                 sx={{ border: 1, borderColor: 'divider', borderRadius: '9px' }}

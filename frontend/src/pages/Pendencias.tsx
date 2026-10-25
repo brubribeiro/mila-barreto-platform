@@ -39,6 +39,7 @@ import { useAppToast } from '../contexts/AppToastContext';
 import { usePermissions } from '../contexts/usePermissions';
 import type { PendingCategory, PendingGroup, PendingItem, PendingList } from '../types';
 import { fontSizes } from '../theme/fontSizes';
+import { clickableProps } from '../utils/a11y';
 import { getApiErrorMessage } from '../utils/apiError';
 import { downloadCsv } from '../utils/csv';
 
@@ -330,6 +331,7 @@ export function Pendencias() {
         {canEdit && (
           <Tooltip title="Marcar como resolvida">
             <IconButton
+              aria-label={`Marcar ${item.title} como resolvida`}
               onClick={() => resolveMutation.mutate(item)}
               sx={{
                 width: 32,
@@ -448,7 +450,7 @@ export function Pendencias() {
                   direction="row"
                   alignItems="center"
                   spacing={1.4}
-                  onClick={() => openDetails(item)}
+                  {...clickableProps(() => openDetails(item))}
                   sx={{ py: 0.9, minWidth: 0, cursor: item.link || isManual(item) ? 'pointer' : 'default' }}
                 >
                   <Box
@@ -722,7 +724,8 @@ export function Pendencias() {
                 direction="row"
                 alignItems="center"
                 spacing={1.1}
-                onClick={() => setCategory(category === c.key ? '' : c.key)}
+                {...clickableProps(() => setCategory(category === c.key ? '' : c.key))}
+                aria-pressed={category === c.key}
                 sx={{ minWidth: 0, cursor: 'pointer', opacity: category && category !== c.key ? 0.5 : 1 }}
               >
                 <Box sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: c.color, flexShrink: 0 }} />

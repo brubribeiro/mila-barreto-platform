@@ -181,7 +181,7 @@ export function Patients() {
       <Card sx={{ p: 0, overflow: 'hidden' }}>
         {/* Cabeçalho da tabela */}
         <ListCardHeader title={<Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>Todos os pacientes</Typography>}>
-          <ListSearchField value={searchInput} onChange={setSearchInput} placeholder="Buscar paciente, CPF..." />
+          <ListSearchField value={searchInput} onChange={setSearchInput} placeholder="Buscar paciente, CPF..." ariaLabel="Buscar paciente por nome, CPF ou telefone" />
           {canCreate && (
             <Button
               variant="contained"

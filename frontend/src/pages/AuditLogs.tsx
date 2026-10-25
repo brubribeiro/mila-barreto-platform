@@ -198,8 +198,9 @@ export function AuditLogs() {
         sx={{ mb: 2.5 }}
       >
         <FormControl size="small" sx={{ minWidth: 180 }}>
-          <InputLabel>Entidade</InputLabel>
+          <InputLabel id="audit-entity-label">Entidade</InputLabel>
           <Select
+            labelId="audit-entity-label"
             label="Entidade"
             value={entity}
             onChange={(e) => {
@@ -216,8 +217,9 @@ export function AuditLogs() {
         </FormControl>
 
         <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Ação</InputLabel>
+          <InputLabel id="audit-action-label">Ação</InputLabel>
           <Select
+            labelId="audit-action-label"
             label="Ação"
             value={action}
             onChange={(e) => {

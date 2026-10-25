@@ -52,6 +52,7 @@ export function PatientAppointmentsTab({ appointments }: { appointments: Appoint
                 key={o.k}
                 component="button"
                 type="button"
+                aria-pressed={active}
                 onClick={() => {
                   setPayFilter(o.k);
                   setPage(0);
@@ -117,6 +118,7 @@ export function PatientAppointmentsTab({ appointments }: { appointments: Appoint
           </Typography>
           <Stack direction="row" spacing={0.75}>
             <IconButton
+              aria-label="Página anterior"
               size="small"
               disabled={current === 0}
               onClick={() => setPage((v) => Math.max(0, v - 1))}
@@ -125,6 +127,7 @@ export function PatientAppointmentsTab({ appointments }: { appointments: Appoint
               <ChevronLeftIcon fontSize="small" />
             </IconButton>
             <IconButton
+              aria-label="Próxima página"
               size="small"
               disabled={current >= pageCount - 1}
               onClick={() => setPage((v) => Math.min(pageCount - 1, v + 1))}

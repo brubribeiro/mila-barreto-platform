@@ -32,6 +32,7 @@ import { WHATSAPP_EMOJI_GROUPS } from './whatsappTemplateEmojis';
 import { VariableChip } from './VariableChip';
 import type { MessageTemplate, MessageTrigger, Procedure } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
+import { clickableProps } from '../../utils/a11y';
 
 interface MessageTemplateFormDialogProps {
   open: boolean;
@@ -81,6 +82,7 @@ function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void }) {
             label={group.label}
             size="small"
             variant={tab === index ? 'filled' : 'outlined'}
+            aria-pressed={tab === index}
             onClick={() => setTab(index)}
             sx={{ cursor: 'pointer' }}
           />
@@ -90,7 +92,7 @@ function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void }) {
         {WHATSAPP_EMOJI_GROUPS[tab].emojis.map((emoji) => (
           <Box
             key={emoji}
-            onClick={() => onSelect(emoji)}
+            {...clickableProps(() => onSelect(emoji))}
             sx={{
               cursor: 'pointer',
               fontSize: 22,
@@ -278,6 +280,7 @@ export function MessageTemplateFormDialog({
                   action={
                     <Tooltip title="Inserir emoji compatível com WhatsApp">
                       <IconButton
+                        aria-label="Inserir emoji"
                         size="small"
                         onClick={(event) => setEmojiAnchor(event.currentTarget)}
                         sx={{ p: 0.25, color: 'text.secondary' }}
