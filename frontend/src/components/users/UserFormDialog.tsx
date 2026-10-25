@@ -33,6 +33,7 @@ import { rolesApi } from '../../api/roles';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { LabeledField } from '../LabeledField';
+import { EMAIL_PATTERN } from '../../utils/masks';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { UserSummary } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
@@ -202,6 +203,7 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
         sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
       >
@@ -431,6 +433,7 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
                         {...field}
                         fullWidth
                         placeholder="Ex.: Larissa Nunes"
+                        autoFocus={!user}
                         error={!!fieldState.error}
                         helperText={fieldState.error?.message}
                       />
@@ -442,7 +445,10 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
                 <Controller
                   name="email"
                   control={control}
-                  rules={{ required: 'E-mail é obrigatório' }}
+                  rules={{
+                    required: 'E-mail é obrigatório',
+                    pattern: { value: EMAIL_PATTERN, message: 'E-mail inválido' },
+                  }}
                   render={({ field, fieldState }) => (
                     <LabeledField label="E-mail" required>
                       <TextField
@@ -450,6 +456,7 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
                         type="email"
                         fullWidth
                         placeholder="email@clinica.com"
+                        inputProps={{ inputMode: 'email', autoComplete: 'off' }}
                         error={!!fieldState.error}
                         helperText={fieldState.error?.message}
                       />

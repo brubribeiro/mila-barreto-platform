@@ -9,7 +9,6 @@ import {
   DialogActions,
   DialogContent,
   Grid,
-  InputAdornment,
   MenuItem,
   Paper,
   Stack,
@@ -29,6 +28,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { MoneyField } from '../MoneyField';
 import { financeApi, FinancialEntryPayload } from '../../api/finance';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
@@ -241,6 +241,7 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
         sx={{
           display: 'flex',
@@ -384,18 +385,15 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
                     <Controller
                       name="amount"
                       control={control}
-                      rules={{ required: true, min: 0.01 }}
-                      render={({ field }) => (
-                        <TextField
+                      rules={{ validate: (v) => Number(v) > 0 || 'Informe um valor maior que zero' }}
+                      render={({ field, fieldState }) => (
+                        <MoneyField
                           {...field}
-                          type="number"
-                          inputProps={{ step: '0.01', min: 0 }}
                           label="Valor"
                           fullWidth
                           required
-                          InputProps={{
-                            startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                          }}
+                          error={!!fieldState.error}
+                          helperText={fieldState.error?.message}
                           sx={{ flex: 1, minWidth: 0 }}
                         />
                       )}

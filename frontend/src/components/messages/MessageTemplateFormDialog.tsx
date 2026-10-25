@@ -208,6 +208,7 @@ export function MessageTemplateFormDialog({
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit((values) => mutation.mutate(values))}
         sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
       >

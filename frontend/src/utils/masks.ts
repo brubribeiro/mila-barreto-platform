@@ -43,3 +43,28 @@ export function isValidCPF(value: string): boolean {
 
   return calc(9, 10) === parseInt(d[9], 10) && calc(10, 11) === parseInt(d[10], 10);
 }
+
+/** Telefone completo (fixo com DDD = 10 dígitos, celular = 11). */
+export function isValidPhone(value: string): boolean {
+  const len = onlyDigits(value).length;
+  return len === 10 || len === 11;
+}
+
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Número → "1.234,56" (sem "R$"; o símbolo fica no adornment do campo). */
+export function formatMoneyInput(value: number | string | null | undefined): string {
+  if (value === '' || value == null) return '';
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Lê o texto digitado como centavos ("123456" → 1234.56), como nas maquininhas.
+ * Sem dígitos → ''.
+ */
+export function parseMoneyInput(text: string): number | '' {
+  const d = onlyDigits(text).replace(/^0+(?=\d)/, '').slice(0, 13);
+  return d ? Number(d) / 100 : '';
+}

@@ -1,7 +1,7 @@
 import { Box, MenuItem, TextField } from '@mui/material';
 import { Controller, type Control } from 'react-hook-form';
 
-import { isValidCPF, maskCPF, maskPhone } from '../../utils/masks';
+import { EMAIL_PATTERN, isValidCPF, isValidPhone, maskCPF, maskPhone } from '../../utils/masks';
 import { PATIENT_REFERRAL_SOURCE_OPTIONS } from '../../utils/patientReferralSource';
 import { PATIENT_SEX_OPTIONS } from '../../utils/patientSex';
 import { LabeledField } from './PatientFormLabeledField';
@@ -11,9 +11,11 @@ import type { PatientFormValues } from './patientFormValues';
 export function PatientFormBasicFields({
   control,
   referralSource,
+  autoFocusName,
 }: {
   control: Control<PatientFormValues>;
   referralSource: PatientFormValues['referralSource'];
+  autoFocusName?: boolean;
 }) {
   return (
     <>
@@ -29,6 +31,8 @@ export function PatientFormBasicFields({
                 {...field}
                 fullWidth
                 size="small"
+                autoFocus={autoFocusName}
+                inputProps={{ autoComplete: 'off' }}
                 placeholder="Ex.: Marina Costa"
                 error={!!fieldState.error}
                 helperText={fieldState.error?.message}
@@ -50,7 +54,7 @@ export function PatientFormBasicFields({
                 onChange={(e) => field.onChange(maskCPF(e.target.value))}
                 error={!!fieldState.error}
                 helperText={fieldState.error?.message}
-                inputProps={{ inputMode: 'numeric', maxLength: 14 }}
+                inputProps={{ inputMode: 'numeric', autoComplete: 'off', maxLength: 14 }}
               />
             </LabeledField>
           )}
@@ -62,15 +66,19 @@ export function PatientFormBasicFields({
         <Controller
           name="phone"
           control={control}
-          render={({ field }) => (
+          rules={{ validate: (v) => !v || isValidPhone(v) || 'Telefone incompleto: informe DDD + número' }}
+          render={({ field, fieldState }) => (
             <LabeledField label="Telefone">
               <TextField
                 {...field}
+                type="tel"
                 fullWidth
                 size="small"
                 placeholder="(11) 90000-0000"
                 onChange={(e) => field.onChange(maskPhone(e.target.value))}
-                inputProps={{ inputMode: 'numeric', maxLength: 16 }}
+                error={!!fieldState.error}
+                helperText={fieldState.error?.message}
+                inputProps={{ inputMode: 'tel', autoComplete: 'off', maxLength: 16 }}
               />
             </LabeledField>
           )}
@@ -90,9 +98,19 @@ export function PatientFormBasicFields({
       <Controller
         name="email"
         control={control}
-        render={({ field }) => (
+        rules={{ validate: (v) => !v || EMAIL_PATTERN.test(v.trim()) || 'E-mail inválido' }}
+        render={({ field, fieldState }) => (
           <LabeledField label="E-mail">
-            <TextField {...field} type="email" fullWidth size="small" placeholder="email@exemplo.com" />
+            <TextField
+              {...field}
+              type="email"
+              fullWidth
+              size="small"
+              placeholder="email@exemplo.com"
+              error={!!fieldState.error}
+              helperText={fieldState.error?.message}
+              inputProps={{ inputMode: 'email', autoComplete: 'off' }}
+            />
           </LabeledField>
         )}
       />

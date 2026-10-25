@@ -2,6 +2,7 @@ import { Autocomplete, Box, IconButton, MenuItem, Stack, TextField, Tooltip, Typ
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { Controller, type Control } from 'react-hook-form';
 import type { InventoryItem } from '../../types';
+import { MoneyField } from '../MoneyField';
 import { fontSizes } from '../../theme/fontSizes';
 import type { BulkPurchaseFormValues, LineForm } from './bulkPurchase';
 import { INVENTORY_UNIT_OPTIONS } from './inventoryUnits';
@@ -179,13 +180,17 @@ export function BulkPurchaseLineRow({
           <Controller
             name={`lines.${index}.quantity`}
             control={control}
-            rules={{ required: true, min: 0.001 }}
-            render={({ field }) => (
+            rules={{
+              required: 'Informe a quantidade',
+              min: { value: 0.001, message: 'Informe uma quantidade maior que zero' },
+            }}
+            render={({ field, fieldState }) => (
               <TextField
                 {...field}
                 type="number"
                 size="small"
-                inputProps={{ min: 0.001, step: 'any', 'aria-label': 'Quantidade', style: { textAlign: 'center' } }}
+                error={!!fieldState.error}
+                inputProps={{ inputMode: 'decimal', min: 0.001, step: 'any', 'aria-label': 'Quantidade', style: { textAlign: 'center' } }}
                 sx={CELL_INPUT_SX}
               />
             )}
@@ -201,7 +206,7 @@ export function BulkPurchaseLineRow({
                   {...field}
                   type="number"
                   size="small"
-                  inputProps={{ min: 0, step: 1, 'aria-label': 'Estoque mínimo', style: { textAlign: 'center' } }}
+                  inputProps={{ inputMode: 'numeric', min: 0, step: 1, 'aria-label': 'Estoque mínimo', style: { textAlign: 'center' } }}
                   sx={CELL_INPUT_SX}
                 />
               )}
@@ -216,14 +221,17 @@ export function BulkPurchaseLineRow({
           <Controller
             name={`lines.${index}.unitPrice`}
             control={control}
-            rules={{ required: true, min: 0.01 }}
-            render={({ field }) => (
-              <TextField
+            rules={{
+              required: 'Informe o valor unitário',
+              min: { value: 0.01, message: 'Informe um valor maior que zero' },
+            }}
+            render={({ field, fieldState }) => (
+              <MoneyField
                 {...field}
-                type="number"
                 size="small"
-                placeholder="0,00"
-                inputProps={{ min: 0, step: '0.01', 'aria-label': 'Valor unitário', style: { textAlign: 'right' } }}
+                error={!!fieldState.error}
+                InputProps={{ startAdornment: null }}
+                inputProps={{ 'aria-label': 'Valor unitário', style: { textAlign: 'right' } }}
                 sx={CELL_INPUT_SX}
               />
             )}

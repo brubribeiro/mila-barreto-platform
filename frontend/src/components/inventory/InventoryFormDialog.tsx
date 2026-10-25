@@ -25,6 +25,7 @@ import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { FormSection } from '../FormSection';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { MoneyField } from '../MoneyField';
 import type { InventoryItem } from '../../types';
 import { INVENTORY_UNIT_OPTIONS } from './inventoryUnits';
 
@@ -139,6 +140,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
         sx={{
           display: 'flex',
@@ -244,7 +246,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                           type="number"
                           label="Estoque mínimo"
                           fullWidth
-                          inputProps={{ min: 0, step: 1 }}
+                          inputProps={{ inputMode: 'numeric', min: 0, step: 1 }}
                           sx={{ flex: 1, minWidth: 0 }}
                         />
                       )}
@@ -253,17 +255,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                       name="costPrice"
                       control={control}
                       render={({ field }) => (
-                        <TextField
-                          {...field}
-                          type="number"
-                          inputProps={{ step: '0.01', min: 0 }}
-                          label="Custo unitário"
-                          fullWidth
-                          InputProps={{
-                            startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                          }}
-                          sx={{ flex: 1, minWidth: 0 }}
-                        />
+                        <MoneyField {...field} label="Custo unitário" fullWidth sx={{ flex: 1, minWidth: 0 }} />
                       )}
                     />
                   </Stack>
@@ -279,7 +271,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                           type="number"
                           label="Notificar antes da validade"
                           fullWidth
-                          inputProps={{ min: 1 }}
+                          inputProps={{ inputMode: 'numeric', min: 1 }}
                           InputProps={{
                             endAdornment: <InputAdornment position="end">dias</InputAdornment>,
                           }}
