@@ -26,6 +26,7 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { FormSection } from '../FormSection';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { InventoryItem } from '../../types';
+import { INVENTORY_UNIT_OPTIONS } from './inventoryUnits';
 
 interface InventoryFormDialogProps {
   open: boolean;
@@ -55,20 +56,6 @@ const empty: FormValues = {
 
 const DIALOG_MAX_WIDTH = 900;
 const DIALOG_HEIGHT_DESKTOP = 650;
-
-const unitOptions = [
-  { value: 'un', label: 'Unidade (un)' },
-  { value: 'ml', label: 'Mililitro (ml)' },
-  { value: 'L', label: 'Litro (L)' },
-  { value: 'g', label: 'Grama (g)' },
-  { value: 'kg', label: 'Quilograma (kg)' },
-  { value: 'par', label: 'Par' },
-  { value: 'cx', label: 'Caixa (cx)' },
-  { value: 'pct', label: 'Pacote (pct)' },
-  { value: 'fr', label: 'Frasco (fr)' },
-  { value: 'tb', label: 'Tubo (tb)' },
-  { value: 'amp', label: 'Ampola (amp)' },
-] as const;
 
 function SubsectionLabel({ children }: { children: ReactNode }) {
   return (
@@ -237,7 +224,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                           <MenuItem value="">
                             <em>Nenhuma</em>
                           </MenuItem>
-                          {unitOptions.map((opt) => (
+                          {INVENTORY_UNIT_OPTIONS.map((opt) => (
                             <MenuItem key={opt.value} value={opt.value}>
                               {opt.label}
                             </MenuItem>

@@ -1,35 +1,25 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect } from 'react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import {
   Alert,
   Autocomplete,
   Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
-  FormControlLabel,
-  Grid,
   IconButton,
   InputAdornment,
-  Paper,
   Stack,
-  Switch,
   TextField,
-  Tooltip,
   Typography,
-  alpha,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SpaOutlinedIcon from '@mui/icons-material/SpaOutlined';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
-import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -42,6 +32,9 @@ import { recurringExpensesApi } from '../../api/recurring-expenses';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader } from '../DialogCloseButton';
+import { ListTableHeader } from '../ListTableHeader';
+import { ProcedureCostSummary } from './ProcedureCostSummary';
+import { ProcedureToggleCard } from './ProcedureToggleCard';
 import type { Procedure } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
 
@@ -82,10 +75,21 @@ const empty: FormValues = {
 
 const CATEGORY_SUGGESTIONS = ['Facial', 'Injetáveis', 'Laser', 'Corporal', 'Peeling', 'Depilação', 'Capilar'];
 
-const DIALOG_HEIGHT_DESKTOP = 760;
 const DIALOG_MAX_WIDTH = 1140;
 
-const FIELD_SX = {} as const;
+/** Botão contornado neutro (borda cinza, fundo branco). */
+const NEUTRAL_OUTLINED_SX = {
+  bgcolor: 'background.paper',
+  borderColor: 'divider',
+  color: 'text.primary',
+  '&:hover': { bgcolor: 'grey.50', borderColor: 'divider' },
+} as const;
+
+/** Cabeçalho das mini-tabelas de materiais e equipamentos. */
+const MINI_TABLE_HEADER_SX = { gap: 1, px: 1.5, py: 1, fontWeight: 800, letterSpacing: '0.04em' } as const;
+
+const MATERIAL_COLUMNS = '1fr 96px 92px 34px';
+const EQUIPMENT_COLUMNS = '1fr 120px 34px';
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -150,10 +154,8 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
   }, [open, procedure, reset]);
 
   const watchedMaterials = watch('materials');
-  const watchedName = watch('name');
   const watchedPrice = Number(watch('price')) || 0;
   const watchedDuration = Number(watch('durationMinutes')) || 0;
-  const watchedActive = watch('active');
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
@@ -194,11 +196,6 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
     const item = inventory.find((i) => i.id === m.itemId);
     return item && Number(m.quantity) > item.quantity;
   });
-
-  const estimatedMargin =
-    procedure?.baseCost != null && watchedPrice > 0
-      ? watchedPrice - procedure.baseCost
-      : null;
 
   // Custo de material + equipamento + despesa fixa (custo/hora × duração) → margem
   const watchedEquipments = watch('equipments');
@@ -290,7 +287,6 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                       placeholder="Ex.: Toxina Botulínica"
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
-                      sx={FIELD_SX}
                     />
                   </LabeledField>
                 )}
@@ -306,7 +302,6 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                       fullWidth
                       size="small"
                       placeholder="Ex.: Facial, Injetáveis, Laser..."
-                      sx={FIELD_SX}
                       inputProps={{ list: 'procedure-category-list' }}
                     />
                   </LabeledField>
@@ -330,7 +325,6 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                         type="number"
                         fullWidth
                         size="small"
-                        sx={FIELD_SX}
                         InputProps={{ endAdornment: <InputAdornment position="end">min</InputAdornment> }}
                       />
                     </LabeledField>
@@ -347,7 +341,6 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                         fullWidth
                         size="small"
                         placeholder="Opcional"
-                        sx={FIELD_SX}
                         InputProps={{ endAdornment: <InputAdornment position="end">dias</InputAdornment> }}
                       />
                     </LabeledField>
@@ -366,7 +359,6 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                       multiline
                       minRows={4}
                       placeholder="Detalhes do procedimento, cuidados e indicações"
-                      sx={FIELD_SX}
                     />
                   </LabeledField>
                 )}
@@ -376,44 +368,13 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                 name="active"
                 control={control}
                 render={({ field }) => (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1.5,
-                      px: 1.75,
-                      py: 1.25,
-                      borderRadius: '13px',
-                      border: 1,
-                      borderColor: 'divider',
-                      bgcolor: 'grey.50',
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: '10px',
-                        flexShrink: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
-                        color: 'primary.main',
-                      }}
-                    >
-                      <ScheduleOutlinedIcon sx={{ fontSize: 18 }} />
-                    </Box>
-                    <Box sx={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
-                      <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 800 }}>
-                        Disponível para agendamento
-                      </Typography>
-                      <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
-                        {field.value ? 'Visível na agenda e nos pacotes' : 'Oculto até reativar'}
-                      </Typography>
-                    </Box>
-                    <Switch checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
-                  </Box>
+                  <ProcedureToggleCard
+                    icon={<ScheduleOutlinedIcon sx={{ fontSize: 18 }} />}
+                    title="Disponível para agendamento"
+                    subtitle={field.value ? 'Visível na agenda e nos pacotes' : 'Oculto até reativar'}
+                    checked={field.value}
+                    onChange={field.onChange}
+                  />
                 )}
               />
 
@@ -421,42 +382,13 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                 name="applicationMap"
                 control={control}
                 render={({ field }) => (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1.5,
-                      px: 1.75,
-                      py: 1.25,
-                      borderRadius: '13px',
-                      border: 1,
-                      borderColor: 'divider',
-                      bgcolor: 'grey.50',
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: '10px',
-                        flexShrink: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
-                        color: 'primary.main',
-                      }}
-                    >
-                      <SpaOutlinedIcon sx={{ fontSize: 18 }} />
-                    </Box>
-                    <Box sx={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
-                      <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 800 }}>Mapa de aplicação</Typography>
-                      <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
-                        Habilita marcação de pontos no atendimento
-                      </Typography>
-                    </Box>
-                    <Switch checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
-                  </Box>
+                  <ProcedureToggleCard
+                    icon={<SpaOutlinedIcon sx={{ fontSize: 18 }} />}
+                    title="Mapa de aplicação"
+                    subtitle="Habilita marcação de pontos no atendimento"
+                    checked={field.value}
+                    onChange={field.onChange}
+                  />
                 )}
               />
             </Stack>
@@ -474,12 +406,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                     variant="outlined"
                     startIcon={<AddIcon />}
                     onClick={() => append({ itemId: '', quantity: 1 })}
-                    sx={{
-                      bgcolor: 'background.paper',
-                      borderColor: 'divider',
-                      color: 'text.primary',
-                      '&:hover': { bgcolor: 'grey.50', borderColor: 'divider' },
-                    }}
+                    sx={NEUTRAL_OUTLINED_SX}
                   >
                     Material
                   </Button>
@@ -488,12 +415,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                     variant="outlined"
                     startIcon={<AddIcon />}
                     onClick={() => appendEquip({ equipmentId: '', costPerUse: 0 })}
-                    sx={{
-                      bgcolor: 'background.paper',
-                      borderColor: 'divider',
-                      color: 'text.primary',
-                      '&:hover': { bgcolor: 'grey.50', borderColor: 'divider' },
-                    }}
+                    sx={NEUTRAL_OUTLINED_SX}
                   >
                     Equip.
                   </Button>
@@ -502,28 +424,12 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
             >
               <Stack spacing={1.5} sx={{ flex: 1, minHeight: 0 }}>
               <Box sx={{ border: 1, borderColor: 'divider', borderRadius: '13px', overflow: 'hidden' }}>
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 96px 92px 34px',
-                    gap: 1,
-                    px: 1.5,
-                    py: 1,
-                    bgcolor: 'grey.50',
-                    borderBottom: 1,
-                    borderColor: 'divider',
-                    fontSize: fontSizes['2xs'],
-                    fontWeight: 800,
-                    letterSpacing: '0.04em',
-                    textTransform: 'uppercase',
-                    color: 'text.disabled',
-                  }}
-                >
+                <ListTableHeader columns={MATERIAL_COLUMNS} sx={MINI_TABLE_HEADER_SX}>
                   <span>Item</span>
                   <span>Qtd.</span>
                   <span>Custo</span>
                   <span />
-                </Box>
+                </ListTableHeader>
 
                 {fields.length === 0 ? (
                   <Box sx={{ px: 2, py: 3, textAlign: 'center' }}>
@@ -549,7 +455,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                           key={field.id}
                           sx={{
                             display: 'grid',
-                            gridTemplateColumns: '1fr 96px 92px 34px',
+                            gridTemplateColumns: MATERIAL_COLUMNS,
                             gap: 1,
                             px: 1.5,
                             py: 1,
@@ -572,7 +478,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                                 value={availableItems.find((i) => i.id === f.value) ?? null}
                                 onChange={(_, val) => f.onChange(val?.id ?? '')}
                                 renderInput={(params) => (
-                                  <TextField {...params} placeholder="Selecionar" size="small" sx={FIELD_SX} />
+                                  <TextField {...params} placeholder="Selecionar" size="small" />
                                 )}
                               />
                             )}
@@ -589,7 +495,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                                   size="small"
                                   inputProps={{ min: 1, style: { textAlign: 'center' } }}
                                   error={insufficient}
-                                  sx={{ width: 56, ...FIELD_SX }}
+                                  sx={{ width: 56 }}
                                 />
                               )}
                             />
@@ -619,34 +525,18 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
 
               {equipFields.length > 0 && (
                 <Box sx={{ border: 1, borderColor: 'divider', borderRadius: '13px', overflow: 'hidden' }}>
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 120px 34px',
-                      gap: 1,
-                      px: 1.5,
-                      py: 1,
-                      bgcolor: 'grey.50',
-                      borderBottom: 1,
-                      borderColor: 'divider',
-                      fontSize: fontSizes['2xs'],
-                      fontWeight: 800,
-                      letterSpacing: '0.04em',
-                      textTransform: 'uppercase',
-                      color: 'text.disabled',
-                    }}
-                  >
+                  <ListTableHeader columns={EQUIPMENT_COLUMNS} sx={MINI_TABLE_HEADER_SX}>
                     <span>Equipamento</span>
                     <span>Custo / uso</span>
                     <span />
-                  </Box>
+                  </ListTableHeader>
                   <Box sx={{ maxHeight: 200, overflowY: 'auto' }}>
                     {equipFields.map((field, index) => (
                       <Box
                         key={field.id}
                         sx={{
                           display: 'grid',
-                          gridTemplateColumns: '1fr 120px 34px',
+                          gridTemplateColumns: EQUIPMENT_COLUMNS,
                           gap: 1,
                           px: 1.5,
                           py: 1,
@@ -669,7 +559,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                               value={equipmentList.find((e) => e.id === f.value) ?? null}
                               onChange={(_, val) => f.onChange(val?.id ?? '')}
                               renderInput={(params) => (
-                                <TextField {...params} placeholder="Selecionar" size="small" sx={FIELD_SX} />
+                                <TextField {...params} placeholder="Selecionar" size="small" />
                               )}
                             />
                           )}
@@ -683,7 +573,6 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                               type="number"
                               size="small"
                               inputProps={{ step: '0.01', min: 0 }}
-                              sx={FIELD_SX}
                               InputProps={{ startAdornment: <InputAdornment position="start">R$</InputAdornment> }}
                             />
                           )}
@@ -720,56 +609,21 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                       inputProps={{ step: '0.01' }}
                       fullWidth
                       size="small"
-                      sx={FIELD_SX}
                       InputProps={{ startAdornment: <InputAdornment position="start">R$</InputAdornment> }}
                     />
                   </LabeledField>
                 )}
               />
 
-              {/* Caixa de custo */}
-              <Box
-                sx={{
-                  p: 1.75,
-                  borderRadius: '13px',
-                  border: 1,
-                  borderColor: (t) => alpha(t.palette.primary.main, 0.22),
-                  bgcolor: (t) => alpha(t.palette.primary.main, 0.07),
-                }}
-              >
-                <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.6 }}>
-                  <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>Custo de material</Typography>
-                  <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700 }}>{brl.format(materialCost)}</Typography>
-                </Stack>
-                {equipmentCost > 0 && (
-                  <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.6 }}>
-                    <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>Custo de equipamento</Typography>
-                    <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700 }}>{brl.format(equipmentCost)}</Typography>
-                  </Stack>
-                )}
-                <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.6 }}>
-                  <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
-                    Despesa fixa ({watchedDuration} min)
-                  </Typography>
-                  <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700 }}>{brl.format(fixedCostShare)}</Typography>
-                </Stack>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  sx={{ pt: 0.75, borderTop: 1, borderColor: (t) => alpha(t.palette.primary.main, 0.22) }}
-                >
-                  <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 700 }}>Custo total</Typography>
-                  <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 800 }}>{brl.format(totalCost)}</Typography>
-                </Stack>
-                <Stack direction="row" justifyContent="space-between" sx={{ mt: 0.75 }}>
-                  <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>Margem</Typography>
-                  <Typography
-                    sx={{ fontSize: fontSizes.xs, fontWeight: 800, color: marginValue >= 0 ? 'primary.dark' : 'error.main' }}
-                  >
-                    {brl.format(marginValue)} · {marginPct.toFixed(0)}%
-                  </Typography>
-                </Stack>
-              </Box>
+              <ProcedureCostSummary
+                materialCost={materialCost}
+                equipmentCost={equipmentCost}
+                fixedCostShare={fixedCostShare}
+                durationMinutes={watchedDuration}
+                totalCost={totalCost}
+                marginValue={marginValue}
+                marginPct={marginPct}
+              />
               </Stack>
             </FormSection>
           </Box>
@@ -797,12 +651,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
             onClick={onClose}
             type="button"
             variant="outlined"
-            sx={{
-              bgcolor: 'background.paper',
-              borderColor: 'divider',
-              color: 'text.secondary',
-              '&:hover': { bgcolor: 'grey.50', borderColor: 'divider' },
-            }}
+            sx={{ ...NEUTRAL_OUTLINED_SX, color: 'text.secondary' }}
           >
             Cancelar
           </Button>
