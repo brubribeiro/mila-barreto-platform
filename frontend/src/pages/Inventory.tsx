@@ -9,7 +9,8 @@ import SwapVertIcon from '@mui/icons-material/SwapVert';
 import { downloadCsv } from '../utils/csv';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { matchFields, type StockFilter } from '../utils/listFilters';
+import { useUrlState } from '../hooks/useUrlState';
+import { STOCK_FILTER_CODEC, matchFields, type StockFilter } from '../utils/listFilters';
 import { inventoryApi } from '../api/inventory';
 import { InventoryFormDialog } from '../components/inventory/InventoryFormDialog';
 import { MovementDialog } from '../components/inventory/MovementDialog';
@@ -68,8 +69,8 @@ export function Inventory() {
   const canEdit = has('inventory:edit');
   const canDelete = has('inventory:delete');
 
-  const [search, setSearch] = useState('');
-  const [stockFilter, setStockFilter] = useState<StockFilter>('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [stockFilter, setStockFilter] = useUrlState<StockFilter>('estoque', 'ALL', STOCK_FILTER_CODEC);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [movementOpen, setMovementOpen] = useState(false);
@@ -111,9 +112,7 @@ export function Inventory() {
 
   const { page: current, setPage, pageCount, rows, rangeStart, rangeEnd } = usePagination(
     filteredItems,
-    PAGE_SIZE,
-    [search, stockFilter],
-  );
+    PAGE_SIZE);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => inventoryApi.remove(id),
@@ -245,14 +244,20 @@ export function Inventory() {
               compact
               width={210}
               value={search}
-              onChange={setSearch}
+              onChange={(v) => {
+                setSearch(v);
+                setPage(0);
+              }}
               placeholder="Buscar produto..."
               ariaLabel="Buscar por nome ou SKU"
             />
             <Select
               size="small"
               value={stockFilter}
-              onChange={(e) => setStockFilter(e.target.value as StockFilter)}
+              onChange={(e) => {
+                setStockFilter(e.target.value as StockFilter);
+                setPage(0);
+              }}
               inputProps={{ 'aria-label': 'Filtrar estoque' }}
               sx={{ ...LIST_HEADER_COMPACT_SELECT_SX, minWidth: 160 }}
             >

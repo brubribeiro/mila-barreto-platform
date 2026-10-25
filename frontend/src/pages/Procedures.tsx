@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -19,6 +19,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { urlPage, useUrlState } from '../hooks/useUrlState';
 import { proceduresApi } from '../api/procedures';
 import { ProcedureFormDialog } from '../components/procedures/ProcedureFormDialog';
 import {
@@ -64,9 +65,9 @@ export function Procedures() {
   const canEdit = has('procedures:edit');
   const canDelete = has('procedures:delete');
 
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('Todos');
-  const [page, setPage] = useState(0);
+  const [search, setSearch] = useUrlState('busca', '');
+  const [category, setCategory] = useUrlState('categoria', 'Todos');
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Procedure | null>(null);
 
@@ -103,8 +104,6 @@ export function Procedures() {
     });
   }, [procedures, search, category]);
 
-  useEffect(() => setPage(0), [search, category]);
-
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
   const rows = filtered.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
@@ -133,7 +132,10 @@ export function Procedures() {
             select
             size="small"
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            onChange={(e) => {
+              setCategory(e.target.value);
+              setPage(0);
+            }}
             inputProps={{ 'aria-label': 'Categoria' }}
             sx={{ ...LIST_HEADER_SELECT_SX, width: { xs: 'calc(50% - 5px)', sm: 196 } }}
           >
@@ -144,7 +146,11 @@ export function Procedures() {
               </MenuItem>
             ))}
           </TextField>
-          <ListSearchField value={search} onChange={setSearch} placeholder="Buscar procedimento..." />
+          <ListSearchField value={search} onChange={(v) => {
+              setSearch(v);
+              setPage(0);
+            }}
+            placeholder="Buscar procedimento..." />
           {canCreate && (
             <Button
               variant="contained"

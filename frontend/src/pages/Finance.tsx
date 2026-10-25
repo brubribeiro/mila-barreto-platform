@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import { formatDateOnlyFromApi } from '../utils/dateOnly';
 
 import { matchFields } from '../utils/listFilters';
+import { useUrlState, urlDate, urlEnum } from '../hooks/useUrlState';
 import { financeApi } from '../api/finance';
 import { FinanceFormDialog } from '../components/finance/FinanceFormDialog';
 import { FinanceKpiCard, FinancePill } from '../components/finance/FinanceKpiCard';
@@ -35,17 +36,23 @@ const PAGE_SIZE = 10;
 
 type TypeFilter = 'ALL' | 'INCOME' | 'EXPENSE';
 type InvoiceFilter = 'ALL' | 'PENDING' | 'ISSUED';
+const TYPE_FILTER_CODEC = urlEnum<TypeFilter>(['ALL', 'INCOME', 'EXPENSE']);
+const INVOICE_FILTER_CODEC = urlEnum<InvoiceFilter>(['ALL', 'PENDING', 'ISSUED']);
 
 export function Finance() {
   const queryClient = useQueryClient();
   const { confirm, alert } = useAppDialog();
   const toast = useAppToast();
   const theme = useTheme();
-  const [from, setFrom] = useState(dayjs().startOf('month').format('YYYY-MM-DD'));
-  const [to, setTo] = useState(dayjs().endOf('month').format('YYYY-MM-DD'));
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
-  const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('ALL');
+  const [from, setFrom] = useUrlState('de', dayjs().startOf('month').format('YYYY-MM-DD'), urlDate);
+  const [to, setTo] = useUrlState('ate', dayjs().endOf('month').format('YYYY-MM-DD'), urlDate);
+  const [search, setSearch] = useUrlState('busca', '');
+  const [typeFilter, setTypeFilter] = useUrlState<TypeFilter>('tipo', 'ALL', TYPE_FILTER_CODEC);
+  const [invoiceFilter, setInvoiceFilter] = useUrlState<InvoiceFilter>(
+    'notaFiscal',
+    'ALL',
+    INVOICE_FILTER_CODEC,
+  );
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialEntry | null>(null);
 

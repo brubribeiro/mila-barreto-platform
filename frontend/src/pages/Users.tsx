@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -20,6 +20,13 @@ import SwitchAccountIcon from '@mui/icons-material/SwitchAccount';
 import StarIcon from '@mui/icons-material/Star';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { useUrlState, urlEnum, urlPage } from '../hooks/useUrlState';
+import {
+  ACTIVE_FILTER_CODEC,
+  matchFields,
+  matchesActiveFilter,
+  type ActiveFilter,
+} from '../utils/listFilters';
 import { usersApi } from '../api/users';
 import { UserFormDialog } from '../components/users/UserFormDialog';
 import {
@@ -33,7 +40,6 @@ import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
-import { matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
 import type { UserSummary } from '../types';
 import { fontSizes } from '../theme/fontSizes';
 
@@ -87,6 +93,9 @@ function Pill({ label, color, bg }: { label: string; color: string; bg: string |
   );
 }
 
+type ProfessionalFilter = 'ALL' | 'YES' | 'NO';
+const PROFESSIONAL_FILTER_CODEC = urlEnum<ProfessionalFilter>(['ALL', 'YES', 'NO']);
+
 export function Users() {
   const queryClient = useQueryClient();
   const { user: me, impersonate } = useAuth();
@@ -98,10 +107,10 @@ export function Users() {
   const canDelete = has('users:delete');
   const canImpersonate = me?.roleName === 'Administrador';
 
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
-  const [roleFilter, setRoleFilter] = useState('ALL');
-  const [professionalFilter, setProfessionalFilter] = useState<'ALL' | 'YES' | 'NO'>('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [activeFilter, setActiveFilter] = useUrlState<ActiveFilter>('status', 'ALL', ACTIVE_FILTER_CODEC);
+  const [roleFilter, setRoleFilter] = useUrlState('perfil', 'ALL');
+  const [professionalFilter, setProfessionalFilter] = useUrlState<ProfessionalFilter>('profissional', 'ALL', PROFESSIONAL_FILTER_CODEC);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<UserSummary | null>(null);
 
@@ -127,8 +136,7 @@ export function Users() {
     [users, search, activeFilter, roleFilter, professionalFilter],
   );
 
-  const [page, setPage] = useState(0);
-  useEffect(() => setPage(0), [search, activeFilter, roleFilter, professionalFilter]);
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
@@ -192,7 +200,10 @@ export function Users() {
             select
             size="small"
             value={professionalFilter}
-            onChange={(e) => setProfessionalFilter(e.target.value as typeof professionalFilter)}
+            onChange={(e) => {
+              setProfessionalFilter(e.target.value as ProfessionalFilter);
+              setPage(0);
+            }}
             inputProps={{ 'aria-label': 'Vínculo' }}
             sx={LIST_HEADER_SELECT_SX}
           >
@@ -204,7 +215,10 @@ export function Users() {
             select
             size="small"
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
+            onChange={(e) => {
+              setRoleFilter(e.target.value);
+              setPage(0);
+            }}
             inputProps={{ 'aria-label': 'Grupo de permissão' }}
             sx={LIST_HEADER_SELECT_SX}
           >
@@ -219,7 +233,10 @@ export function Users() {
             select
             size="small"
             value={activeFilter}
-            onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
+            onChange={(e) => {
+              setActiveFilter(e.target.value as ActiveFilter);
+              setPage(0);
+            }}
             inputProps={{ 'aria-label': 'Status' }}
             sx={LIST_HEADER_SELECT_SX}
           >
@@ -227,7 +244,11 @@ export function Users() {
             <MenuItem value="ACTIVE">Ativos</MenuItem>
             <MenuItem value="INACTIVE">Inativos</MenuItem>
           </TextField>
-          <ListSearchField value={search} onChange={setSearch} placeholder="Buscar usuário..." />
+          <ListSearchField value={search} onChange={(v) => {
+              setSearch(v);
+              setPage(0);
+            }}
+            placeholder="Buscar usuário..." />
           {canCreate && (
             <Button
               variant="contained"

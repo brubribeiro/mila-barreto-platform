@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import dayjs from 'dayjs';
 import { Box, Card, useMediaQuery, useTheme } from '@mui/material';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -9,6 +10,7 @@ import ptBrLocale from '@fullcalendar/core/locales/pt-br';
 import type { DatesSetArg, DateSelectArg, EventClickArg, DateClickArg } from '@fullcalendar/core';
 
 import { PageHeader } from '../components/PageHeader';
+import { useUrlState, urlDate, urlEnum, urlList } from '../hooks/useUrlState';
 import { AppointmentFormDialog } from '../components/appointments/AppointmentFormDialog';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Appointment } from '../types';
@@ -19,7 +21,10 @@ import { AgendaToolbar } from '../components/appointments/AgendaToolbar';
 import { AgendaStatusLegend } from '../components/appointments/AgendaStatusLegend';
 import { AgendaCalendarSkeleton } from '../components/appointments/AgendaCalendarSkeleton';
 import { agendaCalendarSx } from '../components/appointments/agendaCalendarSx';
+import { AGENDA_VIEWS } from '../components/appointments/agendaConfig';
 import { renderAgendaDayHeader, renderAgendaEventContent } from '../components/appointments/agendaCalendarContent';
+
+const AGENDA_VIEW_CODEC = urlEnum(AGENDA_VIEWS.map((v) => v.view));
 
 export function Appointments() {
   const theme = useTheme();
@@ -27,14 +32,19 @@ export function Appointments() {
   const { has, restrictToOwnAppointments } = usePermissions();
   const canCreate = has('appointments:create');
   const calendarRef = useRef<FullCalendar | null>(null);
-  const [currentView, setCurrentView] = useState<string>(isMobile ? 'timeGridDay' : 'timeGridWeek');
+  const [currentView, setCurrentView] = useUrlState(
+    'visao',
+    isMobile ? 'timeGridDay' : 'timeGridWeek',
+    AGENDA_VIEW_CODEC,
+  );
+  const [currentDate, setCurrentDate] = useUrlState('data', dayjs().format('YYYY-MM-DD'), urlDate);
   const [periodLabel, setPeriodLabel] = useState('');
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [defaultStart, setDefaultStart] = useState<Date | null>(null);
   const [defaultPatientId, setDefaultPatientId] = useState<string | null>(null);
-  const [filterProfessionalIds] = useState<string[]>([]);
+  const [filterProfessionalIds] = useUrlState<string[]>('profissionais', [], urlList);
 
   const [range, setRange] = useState<{ from: string; to: string }>(() => {
     const now = new Date();
@@ -78,6 +88,7 @@ export function Appointments() {
     setRange({ from: info.start.toISOString(), to: info.end.toISOString() });
     setPeriodLabel(info.view.title);
     setCurrentView(info.view.type);
+    setCurrentDate(dayjs(info.view.calendar.getDate()).format('YYYY-MM-DD'));
   };
 
   const handleSelect = (info: DateSelectArg) => {
@@ -143,7 +154,8 @@ export function Appointments() {
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView={isMobile ? 'timeGridDay' : 'timeGridWeek'}
+          initialView={currentView}
+          initialDate={currentDate}
           locale={ptBrLocale}
           height="100%"
           scrollTime="08:00:00"
