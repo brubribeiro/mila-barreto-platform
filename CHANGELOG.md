@@ -74,6 +74,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Layout: rotas autenticadas envolvidas por `PAGE_SHELL_SX` (`theme/layout.ts`, largura total sem `maxWidth` centralizado); `PAGE_MAX_WIDTH` mantido só para scroll horizontal de grades (procedimentos); removidos limites locais em rotinas, detalhe de estoque e páginas legais.
 - Refatoração sem mudança de comportamento ou visual: `Metrics.tsx` (1.303 → 90 linhas) e `Availability.tsx` (1.237 → 57) viram composição; abas, blocos de gráfico, KPIs, filtro de período e `useMetricsData` em `components/metrics/`; cards, diálogos de horário/bloqueio, `useAvailabilityData`, `useWorkingHoursForm`, `useUnavailabilityForm`, constantes e formatadores em `components/availability/` (sx dos diálogos, skeleton, invalidação de bloqueios e mensagem de erro da API deixam de ser duplicados).
 
+- `AppointmentFormDialog`: formulário reorganizado em seções numeradas e colapsáveis (paciente → procedimento/profissional → data/horário → pacote/pagamento → materiais → observações), com resumo fixo (lateral em `lg+`, barra acima do rodapé abaixo disso) e botão de salvar sempre visível; ao enviar com erro, as seções inválidas reabrem. Arquivo de ~3.400 linhas dividido em seções, diálogos (`CompletePaymentDialog`, `ReturnAppointmentDialog`, `SellPackageDialog`, `BatchSessionsDialog`, `PackageSessionsDialog`) e hooks (`useAppointmentProfessionals`, `useSessionTimer`, `useAppointmentMaterials`) em `components/appointments/`. Regras de negócio e API inalteradas.
+- `AppointmentFormDialog`: fechar com alterações não salvas (backdrop, Esc, X ou Cancelar) pede confirmação via `confirm` do `AppDialogContext` (`isDirty` do react-hook-form + materiais extras e pacote); avisos e erros que usavam `alert` do `AppDialogContext` passam a usar toast (`AppToastContext`).
+
 ### Fixed
 
 - Disponibilidade: dia/hora do expediente extraídos no fuso do Brasil, não UTC do servidor.
