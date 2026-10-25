@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Paper, Typography } from '@mui/material';
-import { DASHBOARD_ITEM_HEIGHT } from './DashboardDetailItem';
+
+const DASHBOARD_ITEM_HEIGHT = 88;
 
 interface DashboardEmptyStateProps {
   message: string;
