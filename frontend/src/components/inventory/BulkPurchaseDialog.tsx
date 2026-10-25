@@ -2,24 +2,19 @@ import { useEffect, useMemo } from 'react';
 import { useFieldArray, useForm, Controller, useWatch } from 'react-hook-form';
 import {
   Alert,
-  Autocomplete,
   Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
-  IconButton,
-  MenuItem,
   Stack,
   TextField,
-  Tooltip,
   Typography,
   alpha,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import PostAddOutlinedIcon from '@mui/icons-material/PostAddOutlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
@@ -31,120 +26,36 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { MoneyField } from '../MoneyField';
 import { dateOnlyToApiIso } from '../../utils/dateOnly';
-import type { InventoryItem } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
+import { ListTableHeader } from '../ListTableHeader';
+import {
+  allocateFreight,
+  defaultValues,
+  emptyLine,
+  lineProductTotal,
+  parseNum,
+  type BulkPurchaseFormValues,
+  type LineForm,
+} from './bulkPurchase';
+import { BULK_LINE_COLUMNS, BulkPurchaseLineRow } from './BulkPurchaseLineRow';
+import { BulkPurchaseTotals } from './BulkPurchaseTotals';
 
 interface BulkPurchaseDialogProps {
   open: boolean;
   onClose: () => void;
 }
 
-type LineMode = 'existing' | 'new';
-
-interface LineForm {
-  mode: LineMode;
-  item: InventoryItem | null;
-  newName: string;
-  newSku: string;
-  newUnit: string;
-  newMinQuantity: number;
-  quantity: number;
-  /** Valor unitário do produto (sem frete) */
-  unitPrice: number | '';
-  expiresAt: string;
-}
-
-interface FormValues {
-  reason: string;
-  freight: number | '';
-  lines: LineForm[];
-}
-
 const DIALOG_MAX_WIDTH = 1180;
 const DIALOG_HEIGHT_DESKTOP = 820;
-const LINE_COLUMNS = '2.3fr 1.15fr .8fr .6fr .75fr .95fr .85fr .95fr 30px';
-
-const unitOptions = [
-  { value: 'un', label: 'Unidade (un)' },
-  { value: 'ml', label: 'Mililitro (ml)' },
-  { value: 'L', label: 'Litro (L)' },
-  { value: 'g', label: 'Grama (g)' },
-  { value: 'kg', label: 'Quilograma (kg)' },
-  { value: 'par', label: 'Par' },
-  { value: 'cx', label: 'Caixa (cx)' },
-  { value: 'pct', label: 'Pacote (pct)' },
-  { value: 'fr', label: 'Frasco (fr)' },
-  { value: 'tb', label: 'Tubo (tb)' },
-  { value: 'amp', label: 'Ampola (amp)' },
-];
-
-const emptyLine = (mode: LineMode = 'existing'): LineForm => ({
-  mode,
-  item: null,
-  newName: '',
-  newSku: '',
-  newUnit: 'un',
-  newMinQuantity: 0,
-  quantity: 1,
-  unitPrice: '',
-  expiresAt: '',
-});
-
-const defaultValues: FormValues = {
-  reason: '',
-  freight: '',
-  lines: [emptyLine()],
-};
-
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const LABEL_SX = { fontSize: fontSizes.sm, fontWeight: 700, mb: 0.9 } as const;
-
-const CELL_TEXT_SX = {
-  minHeight: 32,
-  display: 'flex',
-  alignItems: 'center',
-  fontSize: fontSizes.xs,
-  color: 'text.secondary',
-  fontWeight: 600,
-  minWidth: 0,
-} as const;
-
-const CELL_INPUT_SX = {
-  '& .MuiOutlinedInput-root': { bgcolor: 'background.paper', fontSize: fontSizes.xs },
-  '& input': { px: 1 },
-} as const;
-
-function parseNum(v: unknown): number {
-  if (v === '' || v == null) return 0;
-  if (typeof v === 'number' && Number.isFinite(v)) return v;
-  const n = parseFloat(String(v).replace(',', '.'));
-  return Number.isFinite(n) ? n : 0;
-}
-
-/** Mesmo rateio do backend: proporcional ao valor de cada produto, sobra de centavos no último. */
-function allocateFreight(lines: { productTotal: number }[], freight: number): number[] {
-  const sum = lines.reduce((s, l) => s + l.productTotal, 0);
-  if (sum <= 0 || freight <= 0) return lines.map(() => 0);
-  const shares = lines.map((l) => Math.round(freight * (l.productTotal / sum) * 100) / 100);
-  const allocated = shares.reduce((s, v) => s + v, 0);
-  const diff = Math.round((freight - allocated) * 100) / 100;
-  if (diff !== 0 && shares.length > 0) {
-    shares[shares.length - 1] = Math.round((shares[shares.length - 1] + diff) * 100) / 100;
-  }
-  return shares;
-}
-
-function lineProductTotal(line: Pick<LineForm, 'quantity' | 'unitPrice'>) {
-  return Math.round(parseNum(line.quantity) * parseNum(line.unitPrice) * 100) / 100;
-}
 
 export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
   const toast = useAppToast();
-  const { control, handleSubmit, reset } = useForm<FormValues>({ defaultValues });
+  const { control, handleSubmit, reset } = useForm<BulkPurchaseFormValues>({ defaultValues });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'lines' });
 
@@ -181,7 +92,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
   const grandTotal = Math.round((productsTotal + freight) * 100) / 100;
 
   const mutation = useMutation({
-    mutationFn: (values: FormValues) => {
+    mutationFn: (values: BulkPurchaseFormValues) => {
       const payloadLines = values.lines.map((line) => {
         const base = {
           quantity: Number(line.quantity),
@@ -332,23 +243,9 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
 
               <Box sx={{ border: 1, borderColor: 'divider', borderRadius: '14px', overflowX: 'auto' }}>
                 <Box sx={{ minWidth: 980 }}>
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: LINE_COLUMNS,
-                      gap: 0.9,
-                      px: 1.5,
-                      py: 1.25,
-                      bgcolor: 'grey.50',
-                      borderBottom: 1,
-                      borderColor: 'divider',
-                      fontSize: fontSizes['3xs'],
-                      fontWeight: 700,
-                      color: 'text.disabled',
-                      letterSpacing: '0.3px',
-                      textTransform: 'uppercase',
-                      alignItems: 'center',
-                    }}
+                  <ListTableHeader
+                    columns={BULK_LINE_COLUMNS}
+                    sx={{ gap: 0.9, px: 1.5, py: 1.25, fontSize: fontSizes['3xs'], letterSpacing: '0.3px', alignItems: 'center' }}
                   >
                     <span>Produto</span>
                     <span>Validade do lote</span>
@@ -359,257 +256,22 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
                     <Box component="span" sx={{ textAlign: 'right' }}>Frete rat.</Box>
                     <Box component="span" sx={{ textAlign: 'right' }}>Custo final</Box>
                     <span />
-                  </Box>
+                  </ListTableHeader>
 
-                  {fields.map((f, index) => {
-                    const line = watchedLines[index] ?? f;
-                    // useWatch lags one render behind append(); the new row has no totals yet
-                    const totals = lineTotals[index] ?? { freightShare: 0, unitCost: 0 };
-                    const isNew = line.mode === 'new';
-                    return (
-                      <Box
-                        key={f.id}
-                        sx={{
-                          px: 1.5,
-                          py: 1.1,
-                          borderBottom: index < fields.length - 1 ? 1 : 0,
-                          borderColor: 'grey.100',
-                          bgcolor: isNew ? (t) => alpha(t.palette.primary.main, 0.03) : undefined,
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            display: 'grid',
-                            gridTemplateColumns: LINE_COLUMNS,
-                            gap: 0.9,
-                            alignItems: 'center',
-                          }}
-                        >
-                          {/* Produto */}
-                          <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
-                            {isNew ? (
-                              <Controller
-                                name={`lines.${index}.newName`}
-                                control={control}
-                                rules={{ validate: (v) => v.trim().length > 0 }}
-                                render={({ field }) => (
-                                  <TextField
-                                    {...field}
-                                    size="small"
-                                    fullWidth
-                                    placeholder="Nome do novo produto"
-                                    inputProps={{ 'aria-label': 'Nome do novo produto' }}
-                                    sx={CELL_INPUT_SX}
-                                  />
-                                )}
-                              />
-                            ) : (
-                              <Controller
-                                name={`lines.${index}.item`}
-                                control={control}
-                                rules={{ required: true }}
-                                render={({ field }) => (
-                                  <Autocomplete
-                                    options={items}
-                                    size="small"
-                                    fullWidth
-                                    getOptionLabel={(o) => (o.sku ? `${o.name} (${o.sku})` : o.name)}
-                                    isOptionEqualToValue={(a, b) => a.id === b.id}
-                                    value={field.value}
-                                    onChange={(_, v) => field.onChange(v)}
-                                    noOptionsText="Nenhum produto"
-                                    renderInput={(params) => (
-                                      <TextField
-                                        {...params}
-                                        placeholder="Selecione o produto"
-                                        inputProps={{ ...params.inputProps, 'aria-label': 'Produto' }}
-                                        sx={CELL_INPUT_SX}
-                                      />
-                                    )}
-                                  />
-                                )}
-                              />
-                            )}
-                            {isNew && (
-                              <Box
-                                component="span"
-                                sx={{
-                                  flexShrink: 0,
-                                  px: 0.9,
-                                  py: 0.25,
-                                  borderRadius: '6px',
-                                  fontSize: fontSizes['3xs'],
-                                  fontWeight: 800,
-                                  textTransform: 'uppercase',
-                                  color: 'primary.dark',
-                                  bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
-                                }}
-                              >
-                                novo
-                              </Box>
-                            )}
-                          </Stack>
-
-                          {/* Validade */}
-                          <Controller
-                            name={`lines.${index}.expiresAt`}
-                            control={control}
-                            rules={{ required: true }}
-                            render={({ field }) => (
-                              <TextField
-                                {...field}
-                                type="date"
-                                size="small"
-                                fullWidth
-                                inputProps={{ 'aria-label': 'Validade do lote' }}
-                                sx={CELL_INPUT_SX}
-                              />
-                            )}
-                          />
-
-                          {/* Unidade */}
-                          {isNew ? (
-                            <Controller
-                              name={`lines.${index}.newUnit`}
-                              control={control}
-                              render={({ field }) => (
-                                <TextField
-                                  {...field}
-                                  select
-                                  size="small"
-                                  fullWidth
-                                  inputProps={{ 'aria-label': 'Unidade' }}
-                                  SelectProps={{ renderValue: (v) => String(v || '—') }}
-                                  sx={CELL_INPUT_SX}
-                                >
-                                  {unitOptions.map((opt) => (
-                                    <MenuItem key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </MenuItem>
-                                  ))}
-                                </TextField>
-                              )}
-                            />
-                          ) : (
-                            <Box sx={CELL_TEXT_SX}>{line.item?.unit || '—'}</Box>
-                          )}
-
-                          {/* Quantidade */}
-                          <Controller
-                            name={`lines.${index}.quantity`}
-                            control={control}
-                            rules={{
-                              required: 'Informe a quantidade',
-                              min: { value: 0.001, message: 'Informe uma quantidade maior que zero' },
-                            }}
-                            render={({ field, fieldState }) => (
-                              <TextField
-                                {...field}
-                                type="number"
-                                size="small"
-                                error={!!fieldState.error}
-                                inputProps={{ inputMode: 'decimal', min: 0.001, step: 'any', 'aria-label': 'Quantidade', style: { textAlign: 'center' } }}
-                                sx={CELL_INPUT_SX}
-                              />
-                            )}
-                          />
-
-                          {/* Estoque mínimo */}
-                          {isNew ? (
-                            <Controller
-                              name={`lines.${index}.newMinQuantity`}
-                              control={control}
-                              render={({ field }) => (
-                                <TextField
-                                  {...field}
-                                  type="number"
-                                  size="small"
-                                  inputProps={{ inputMode: 'numeric', min: 0, step: 1, 'aria-label': 'Estoque mínimo', style: { textAlign: 'center' } }}
-                                  sx={CELL_INPUT_SX}
-                                />
-                              )}
-                            />
-                          ) : (
-                            <Box sx={{ ...CELL_TEXT_SX, justifyContent: 'center' }}>
-                              {line.item ? Number(line.item.minQuantity) : '—'}
-                            </Box>
-                          )}
-
-                          {/* Valor unitário */}
-                          <Controller
-                            name={`lines.${index}.unitPrice`}
-                            control={control}
-                            rules={{
-                              required: 'Informe o valor unitário',
-                              min: { value: 0.01, message: 'Informe um valor maior que zero' },
-                            }}
-                            render={({ field, fieldState }) => (
-                              <MoneyField
-                                {...field}
-                                size="small"
-                                error={!!fieldState.error}
-                                InputProps={{ startAdornment: null }}
-                                inputProps={{ 'aria-label': 'Valor unitário', style: { textAlign: 'right' } }}
-                                sx={CELL_INPUT_SX}
-                              />
-                            )}
-                          />
-
-                          <Box sx={{ ...CELL_TEXT_SX, justifyContent: 'flex-end' }}>
-                            {totals.freightShare > 0 ? brl.format(totals.freightShare) : '—'}
-                          </Box>
-                          <Box
-                            sx={{ ...CELL_TEXT_SX, justifyContent: 'flex-end', fontSize: fontSizes.sm, fontWeight: 800, color: 'primary.main' }}
-                            title="Custo unitário com frete"
-                          >
-                            {totals.unitCost > 0 ? brl.format(totals.unitCost) : '—'}
-                          </Box>
-
-                          <Tooltip title={fields.length <= 1 ? 'A compra precisa de ao menos um item' : 'Remover linha'}>
-                            <span>
-                              <IconButton
-                                size="small"
-                                aria-label="Remover linha"
-                                disabled={fields.length <= 1}
-                                onClick={() => remove(index)}
-                                sx={{
-                                  width: 28,
-                                  height: 32,
-                                  borderRadius: '8px',
-                                  color: 'text.disabled',
-                                  '&:hover': { bgcolor: (t) => alpha(t.palette.error.main, 0.14), color: 'error.main' },
-                                }}
-                              >
-                                <DeleteOutlineIcon sx={{ fontSize: 16 }} />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                        </Box>
-
-                        {isNew && (
-                          <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.9, maxWidth: 420 }}>
-                            <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', fontWeight: 600, flexShrink: 0 }}>
-                              SKU / Código
-                            </Typography>
-                            <Controller
-                              name={`lines.${index}.newSku`}
-                              control={control}
-                              render={({ field }) => (
-                                <TextField
-                                  {...field}
-                                  size="small"
-                                  fullWidth
-                                  placeholder="Opcional"
-                                  inputProps={{ 'aria-label': 'SKU do novo produto' }}
-                                  sx={CELL_INPUT_SX}
-                                />
-                              )}
-                            />
-                          </Stack>
-                        )}
-                      </Box>
-                    );
-                  })}
+                  {fields.map((f, index) => (
+                    <BulkPurchaseLineRow
+                      key={f.id}
+                      control={control}
+                      index={index}
+                      // useWatch lags one render behind append(); the new row has no totals yet
+                      line={watchedLines[index] ?? f}
+                      totals={lineTotals[index] ?? { freightShare: 0, unitCost: 0 }}
+                      items={items}
+                      isLast={index === fields.length - 1}
+                      canRemove={fields.length > 1}
+                      onRemove={() => remove(index)}
+                    />
+                  ))}
                 </Box>
               </Box>
 
@@ -665,35 +327,7 @@ export function BulkPurchaseDialog({ open, onClose }: BulkPurchaseDialogProps) {
                 </Typography>
               </Box>
 
-              <Stack
-                spacing={1.4}
-                sx={{ bgcolor: 'grey.50', border: 1, borderColor: 'divider', borderRadius: '14px', px: 2.25, py: 2 }}
-              >
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}>
-                    Subtotal produtos
-                  </Typography>
-                  <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700 }}>{brl.format(productsTotal)}</Typography>
-                </Stack>
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}>
-                    Frete (rateado)
-                  </Typography>
-                  <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700 }}>{brl.format(freight)}</Typography>
-                </Stack>
-                <Box sx={{ height: '1px', bgcolor: 'divider' }} />
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography sx={{ fontSize: fontSizes.md, fontWeight: 800 }}>Total da compra</Typography>
-                  <Typography
-                    sx={{ fontSize: fontSizes['2xl'], fontWeight: 800, color: 'primary.main', letterSpacing: '-0.4px' }}
-                  >
-                    {brl.format(grandTotal)}
-                  </Typography>
-                </Stack>
-                <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary' }}>
-                  Uma despesa será lançada no financeiro ao confirmar.
-                </Typography>
-              </Stack>
+              <BulkPurchaseTotals productsTotal={productsTotal} freight={freight} grandTotal={grandTotal} />
             </Box>
 
             {mutation.isError && (
