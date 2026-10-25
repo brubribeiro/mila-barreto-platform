@@ -372,7 +372,7 @@ export function Documents() {
             placeholder="Buscar documento, paciente..."
           />
           <Tooltip title="Modelos de documento">
-            <IconButton onClick={() => setTemplatesOpen(true)} sx={LIST_HEADER_ICON_BUTTON_SX}>
+            <IconButton aria-label="Modelos de documento" onClick={() => setTemplatesOpen(true)} sx={LIST_HEADER_ICON_BUTTON_SX}>
               <ArticleOutlinedIcon fontSize="small" />
             </IconButton>
           </Tooltip>

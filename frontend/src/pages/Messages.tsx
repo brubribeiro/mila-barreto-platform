@@ -435,6 +435,7 @@ export function Messages() {
                   {canDelete && (
                     <Tooltip title="Excluir modelo">
                       <IconButton
+                        aria-label={`Excluir modelo ${selected.name}`}
                         onClick={() => handleDelete(selected)}
                         sx={{ ...ICON_BUTTON_SX, width: 30, height: 30, borderRadius: '9px' }}
                       >

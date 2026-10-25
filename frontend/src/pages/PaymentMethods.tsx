@@ -30,6 +30,7 @@ import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { PaymentMethodEntry } from '../types';
 import { fontSizes } from '../theme/fontSizes';
+import { clickableProps } from '../utils/a11y';
 import { brl } from '../utils/money';
 
 const ICON_COLORS = ['#15998B', '#E0915B', '#5BA8DE', '#D46B8A', '#9B7BD4', '#4FB3A8'];
@@ -191,6 +192,7 @@ export function PaymentMethods() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar método..."
+              inputProps={{ 'aria-label': 'Buscar método' }}
               sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />
           </Stack>
@@ -240,7 +242,7 @@ export function PaymentMethods() {
             return (
               <Card
                 key={m.id}
-                onClick={canEdit ? () => handleEdit(m) : undefined}
+                {...(canEdit && clickableProps(() => handleEdit(m)))}
                 sx={{
                   p: 2.5,
                   borderRadius: '18px',
@@ -306,6 +308,7 @@ export function PaymentMethods() {
                       {canEdit && (
                         <Tooltip title="Editar">
                           <IconButton
+                            aria-label={`Editar ${m.name}`}
                             onClick={(ev) => {
                               ev.stopPropagation();
                               handleEdit(m);
@@ -319,6 +322,7 @@ export function PaymentMethods() {
                       {canDelete && (
                         <Tooltip title="Excluir">
                           <IconButton
+                            aria-label={`Excluir ${m.name}`}
                             onClick={(ev) => {
                               ev.stopPropagation();
                               handleDelete(m);

@@ -391,14 +391,14 @@ export function Users() {
                 <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                   {canImpersonate && !isSelf && u.active && (
                     <Tooltip title="Personificar">
-                      <IconButton onClick={() => handleImpersonate(u)} sx={ROW_ACTION_SX}>
+                      <IconButton aria-label={`Personificar ${u.name}`} onClick={() => handleImpersonate(u)} sx={ROW_ACTION_SX}>
                         <SwitchAccountIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Tooltip>
                   )}
                   {canEdit && (
                     <Tooltip title="Editar">
-                      <IconButton onClick={() => handleEdit(u)} sx={ROW_ACTION_SX}>
+                      <IconButton aria-label={`Editar ${u.name}`} onClick={() => handleEdit(u)} sx={ROW_ACTION_SX}>
                         <EditIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Tooltip>
@@ -407,6 +407,7 @@ export function Users() {
                     <Tooltip title={isSelf ? 'Você não pode excluir a si mesmo' : 'Excluir'}>
                       <span>
                         <IconButton
+                          aria-label={`Excluir ${u.name}`}
                           disabled={isSelf}
                           onClick={() => handleDelete(u)}
                           sx={{ ...ROW_ACTION_SX, color: 'error.main' }}
@@ -444,6 +445,8 @@ export function Users() {
                     key={i}
                     component="button"
                     type="button"
+                    aria-label={`Página ${i + 1}`}
+                    aria-current={i === current ? 'page' : undefined}
                     onClick={() => setPage(i)}
                     sx={{
                       minWidth: 32,
