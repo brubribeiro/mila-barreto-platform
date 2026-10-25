@@ -3,6 +3,7 @@
  * Uso: npm run prisma:seed-patients
  */
 import { Prisma, PrismaClient } from '@prisma/client';
+import { createScriptClient, runInScriptTenant } from './tenant-script';
 
 import {
   birthDateFromDdMmYyyy,
@@ -11,7 +12,7 @@ import {
   demoPatientsFromImport,
 } from './patient-demo-data';
 
-const prisma = new PrismaClient();
+const prisma = createScriptClient();
 
 export async function seedPatients(client: PrismaClient = prisma) {
   console.log('\n→ Pacientes de demonstração (importação)...');
@@ -85,7 +86,7 @@ async function main() {
   console.log('\nSeed de pacientes concluído.\n');
 }
 
-main()
+runInScriptTenant(prisma, main)
   .catch((e) => {
     console.error(e);
     process.exit(1);

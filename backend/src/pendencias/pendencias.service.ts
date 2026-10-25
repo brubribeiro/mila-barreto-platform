@@ -3,6 +3,7 @@ import { DocumentStatus, PendingCategory, PendingRule, PendingTask, Prisma } fro
 
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { TenantContext } from '../tenancy/tenant-context';
 import { AppointmentsService } from '../appointments/appointments.service';
 import { FinanceService } from '../finance/finance.service';
 import { AuthenticatedUser } from '../common/decorators/current-user.decorator';
@@ -129,7 +130,7 @@ export class PendenciasService {
   // ---------------------------------------------------------------------------
 
   async getRules(): Promise<PendingRuleConfig[]> {
-    const row = await this.prisma.appSetting.findUnique({ where: { key: RULES_SETTING_KEY } });
+    const row = await this.prisma.appSetting.findFirst({ where: { key: RULES_SETTING_KEY } });
     let stored: Partial<Record<PendingRule, Partial<PendingRuleConfig>>> = {};
     try {
       stored = row ? JSON.parse(row.value) : {};
@@ -170,7 +171,7 @@ export class PendenciasService {
 
     const value = JSON.stringify(Object.fromEntries(next.map(({ rule, ...rest }) => [rule, rest])));
     await this.prisma.appSetting.upsert({
-      where: { key: RULES_SETTING_KEY },
+      where: { tenantId_key: { tenantId: TenantContext.requireTenantId(), key: RULES_SETTING_KEY } },
       create: { key: RULES_SETTING_KEY, value },
       update: { value },
     });
@@ -345,7 +346,7 @@ export class PendenciasService {
     user: AuthenticatedUser,
     data: { assigneeId?: string | null; resolvedAt?: Date; resolvedById?: string; resolvedByName?: string },
   ) {
-    const existing = await this.prisma.pendingTask.findUnique({ where: { sourceKey: key }, include: taskInclude });
+    const existing = await this.prisma.pendingTask.findFirst({ where: { sourceKey: key }, include: taskInclude });
     if (existing) {
       const task = await this.prisma.pendingTask.update({ where: { id: existing.id }, data, include: taskInclude });
       await this.logTaskUpdate(existing, task, user);

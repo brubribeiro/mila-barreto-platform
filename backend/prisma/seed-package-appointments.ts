@@ -2,9 +2,10 @@
  * Cria pacotes vendidos e agendamentos vinculados (passado + futuro).
  * Uso: npm run prisma:seed-package-appointments
  */
-import { AppointmentStatus, PrismaClient } from '@prisma/client';
+import { AppointmentStatus } from '@prisma/client';
+import { createScriptClient, demoEmail, runInScriptTenant } from './tenant-script';
 
-const prisma = new PrismaClient();
+const prisma = createScriptClient();
 
 const PACKAGE_NAME = 'Pacote Demo 5x Drenagem';
 const NOTE_PREFIX = 'seedDemo:package-appt';
@@ -112,7 +113,7 @@ async function main() {
   console.log('\n→ Agendamentos demo — com pacote (passado + futuro)...');
 
   const procedure = await prisma.procedure.findFirst({ where: { name: 'Drenagem linfática' } });
-  const professional = await prisma.user.findUnique({ where: { email: 'profissional@mila.com' } });
+  const professional = await prisma.user.findUnique({ where: { email: demoEmail('profissional@mila.com') } });
   const patients = await prisma.patient.findMany({ take: 2, orderBy: { createdAt: 'asc' } });
 
   if (!procedure || !professional) {
@@ -203,7 +204,7 @@ async function main() {
   }
 }
 
-main()
+runInScriptTenant(prisma, main)
   .catch((e) => {
     console.error(e);
     process.exit(1);

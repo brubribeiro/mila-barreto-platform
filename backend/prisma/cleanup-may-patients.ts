@@ -2,9 +2,9 @@
  * Remove agendamentos de maio (ano atual) e todos os pacientes com dados relacionados.
  * Uso: npx ts-node --transpile-only prisma/cleanup-may-patients.ts
  */
-import { PrismaClient } from '@prisma/client';
+import { createScriptClient, runInScriptTenant } from './tenant-script';
 
-const prisma = new PrismaClient();
+const prisma = createScriptClient();
 
 async function main() {
   const year = new Date().getFullYear();
@@ -80,7 +80,7 @@ async function main() {
   console.log('\nConcluído.\n');
 }
 
-main()
+runInScriptTenant(prisma, main)
   .catch((err) => {
     console.error(err);
     process.exit(1);

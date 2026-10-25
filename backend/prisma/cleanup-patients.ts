@@ -2,9 +2,9 @@
  * Remove todos os pacientes e dados vinculados (agendamentos, pacotes, lançamentos).
  * Uso: npm run prisma:cleanup-patients
  */
-import { PrismaClient } from '@prisma/client';
+import { createScriptClient, runInScriptTenant } from './tenant-script';
 
-const prisma = new PrismaClient();
+const prisma = createScriptClient();
 
 async function main() {
   console.log('\n→ Removendo pacientes...');
@@ -55,7 +55,7 @@ async function main() {
   console.log('\nConcluído.\n');
 }
 
-main()
+runInScriptTenant(prisma, main)
   .catch((err) => {
     console.error(err);
     process.exit(1);

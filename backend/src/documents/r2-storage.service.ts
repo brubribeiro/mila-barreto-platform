@@ -9,6 +9,8 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
+import { TenantContext } from '../tenancy/tenant-context';
+
 @Injectable()
 export class R2StorageService implements OnModuleInit {
   private client: S3Client | null = null;
@@ -60,12 +62,14 @@ export class R2StorageService implements OnModuleInit {
   ): Promise<{ key: string; url: string }> {
     if (!this.client) throw new Error('Cloudflare R2 não está configurado.');
 
-    // Gera key única: subfolder/uuid-filename
+    // Gera key única: tenants/<tenantId>/subfolder/uuid-filename
+    // (arquivos anteriores ao multi-tenant ficam nas keys antigas, sem prefixo)
     const uuid = randomUUID().slice(0, 8);
     const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const tenantPrefix = `tenants/${TenantContext.requireTenantId()}`;
     const key = subfolder
-      ? `${subfolder}/${uuid}-${safeName}`
-      : `${uuid}-${safeName}`;
+      ? `${tenantPrefix}/${subfolder}/${uuid}-${safeName}`
+      : `${tenantPrefix}/${uuid}-${safeName}`;
 
     await this.client.send(
       new PutObjectCommand({

@@ -79,7 +79,7 @@ export class MessagesService {
   }
 
   async create(dto: CreateMessageTemplateDto, user?: AuditUser) {
-    const exists = await this.prisma.messageTemplate.findUnique({ where: { name: dto.name } });
+    const exists = await this.prisma.messageTemplate.findFirst({ where: { name: dto.name } });
     if (exists) throw new ConflictException('Já existe um template com esse nome.');
     const created = await this.prisma.messageTemplate.create({ data: dto });
     this.auditLog.logCreate('MessageTemplate', created.id, created as unknown as Record<string, unknown>, user).catch(() => undefined);
@@ -89,7 +89,7 @@ export class MessagesService {
   async update(id: string, dto: UpdateMessageTemplateDto, user?: AuditUser) {
     const oldData = await this.findOne(id);
     if (dto.name) {
-      const exists = await this.prisma.messageTemplate.findUnique({ where: { name: dto.name } });
+      const exists = await this.prisma.messageTemplate.findFirst({ where: { name: dto.name } });
       if (exists && exists.id !== id) {
         throw new ConflictException('Já existe um template com esse nome.');
       }

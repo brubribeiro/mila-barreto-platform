@@ -1,94 +1,10 @@
-﻿import { AppointmentStatus, Prisma, PrismaClient } from '@prisma/client';
+﻿import { AppointmentStatus, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { demoAppointmentNotes } from './demo-appointment-notes';
 import { SKINCARE_DEMO_PRODUCTS, SKINCARE_DEMO_RULES } from './skincare-demo-data';
+import { createScriptClient, demoEmail, runInScriptTenant } from './tenant-script';
 
-const prisma = new PrismaClient();
-
-// Mantém em sincronia com src/common/permissions.ts
-const RESOURCES = [
-  'patients',
-  'appointments',
-  'procedures',
-  'packages',
-  'finance',
-  'inventory',
-  'users',
-  'roles',
-  'messages',
-  'availability',
-  'metrics',
-  'promotions',
-  'payment-methods',
-  'goals',
-  'pendencias',
-  'routines',
-];
-const ACTIONS = ['view', 'create', 'edit', 'delete'];
-const ALL_PERMISSIONS = RESOURCES.flatMap((r) => ACTIONS.map((a) => `${r}:${a}`));
-
-const defaultRoles = [
-  {
-    name: 'Administrador',
-    color: '#15998B',
-    description: 'Acesso total à plataforma',
-    permissions: ALL_PERMISSIONS,
-    isSystem: true,
-    restrictToOwnAppointments: false,
-  },
-  {
-    name: 'Profissional',
-    color: '#9B7BD4',
-    description: 'Vê apenas a própria agenda e edita pacientes',
-    permissions: [
-      'patients:view',
-      'patients:edit',
-      'appointments:view',
-      'appointments:edit',
-      'procedures:view',
-      'packages:view',
-      'inventory:view',
-      'messages:view',
-      'pendencias:view',
-      'routines:view',
-      'routines:create',
-      'routines:edit',
-    ],
-    isSystem: true,
-    restrictToOwnAppointments: true,
-  },
-  {
-    name: 'Recepção',
-    color: '#E0915B',
-    description: 'Gerencia pacientes, agenda, estoque e mensagens (sem financeiro nem profissionais)',
-    permissions: [
-      'patients:view',
-      'patients:create',
-      'patients:edit',
-      'appointments:view',
-      'appointments:create',
-      'appointments:edit',
-      'appointments:delete',
-      'procedures:view',
-      'packages:view',
-      'packages:create',
-      'packages:edit',
-      'inventory:view',
-      'inventory:create',
-      'inventory:edit',
-      'messages:view',
-      'messages:create',
-      'messages:edit',
-      'availability:edit',
-      'pendencias:view',
-      'pendencias:create',
-      'pendencias:edit',
-      'routines:view',
-    ],
-    isSystem: true,
-    restrictToOwnAppointments: false,
-  },
-];
+const prisma = createScriptClient();
 
 const defaultUsers = [
   { name: 'Administrador', email: 'admin@mila.com', password: 'admin123', roleName: 'Administrador', providesAppointments: true },
@@ -407,48 +323,31 @@ ______________________________________
 ];
 
 async function main() {
-  console.log('\n→ Garantindo grupos (roles)...');
-  for (const r of defaultRoles) {
-    const existing = await prisma.role.findUnique({ where: { name: r.name } });
-    if (!existing) {
-      await prisma.role.create({ data: r });
-      console.log(`  ✓ Grupo criado: ${r.name}`);
-    } else if (existing.isSystem) {
-      await prisma.role.update({
-        where: { id: existing.id },
-        data: {
-          permissions: r.permissions,
-          restrictToOwnAppointments: r.restrictToOwnAppointments,
-          description: r.description,
-        },
-      });
-      console.log(`  • Grupo do sistema atualizado: ${r.name}`);
-    }
-  }
-
+  // Grupos de sistema da clínica: criados/atualizados por runInScriptTenant (ensureSystemRoles)
   console.log('\n→ Garantindo usuários...');
   for (const u of defaultUsers) {
-    const role = await prisma.role.findUnique({ where: { name: u.roleName } });
+    const role = await prisma.role.findFirst({ where: { name: u.roleName } });
     if (!role) continue;
-    const exists = await prisma.user.findUnique({ where: { email: u.email } });
+    const email = demoEmail(u.email);
+    const exists = await prisma.user.findUnique({ where: { email } });
     if (!exists) {
       const password = await bcrypt.hash(u.password, 10);
       await prisma.user.create({
         data: {
           name: u.name,
-          email: u.email,
+          email,
           password,
           roleId: role.id,
           providesAppointments: u.providesAppointments,
         },
       });
-      console.log(`  ✓ Usuário criado: ${u.email} / ${u.password} (${u.roleName})`);
+      console.log(`  ✓ Usuário criado: ${email} / ${u.password} (${u.roleName})`);
     } else {
       await prisma.user.update({
-        where: { email: u.email },
+        where: { email },
         data: { providesAppointments: u.providesAppointments },
       });
-      console.log(`  • Usuário já existe: ${u.email}`);
+      console.log(`  • Usuário já existe: ${email}`);
     }
   }
 
@@ -470,7 +369,7 @@ async function main() {
 
   console.log('\n→ Materiais de estoque e vínculos com procedimentos...');
   for (const item of demoInventoryItems) {
-    const existing = await prisma.inventoryItem.findUnique({ where: { sku: item.sku } });
+    const existing = await prisma.inventoryItem.findFirst({ where: { sku: item.sku } });
     if (existing) {
       console.log(`  • Material já existe: ${item.name}`);
       continue;
@@ -504,7 +403,7 @@ async function main() {
 
     let linked = 0;
     for (const m of link.materials) {
-      const inventoryItem = await prisma.inventoryItem.findUnique({ where: { sku: m.sku } });
+      const inventoryItem = await prisma.inventoryItem.findFirst({ where: { sku: m.sku } });
       if (!inventoryItem) {
         console.log(`  • Item ${m.sku} não encontrado para ${link.procedureName}`);
         continue;
@@ -523,7 +422,7 @@ async function main() {
 
   console.log('\n→ Garantindo templates de mensagem...');
   for (const t of defaultTemplates) {
-    const exists = await prisma.messageTemplate.findUnique({ where: { name: t.name } });
+    const exists = await prisma.messageTemplate.findFirst({ where: { name: t.name } });
     if (!exists) {
       await prisma.messageTemplate.create({ data: t });
       console.log(`  ✓ Template criado: ${t.name}`);
@@ -532,7 +431,7 @@ async function main() {
 
   console.log('\n→ Garantindo modelos de documento...');
   for (const t of defaultDocumentTemplates) {
-    const exists = await prisma.documentTemplate.findUnique({ where: { name: t.name } });
+    const exists = await prisma.documentTemplate.findFirst({ where: { name: t.name } });
     if (!exists) {
       await prisma.documentTemplate.create({ data: t });
       console.log(`  ✓ Modelo criado: ${t.name}`);
@@ -557,7 +456,7 @@ async function main() {
     where: { name: 'Drenagem linfática' },
   });
   const drenagemProfessional = await prisma.user.findUnique({
-    where: { email: 'profissional@mila.com' },
+    where: { email: demoEmail('profissional@mila.com') },
   });
   const drenagemPatients = await prisma.patient.findMany({
     take: DEMO_DRENIAGEM_COUNT,
@@ -616,7 +515,7 @@ async function main() {
 
   console.log('\n→ Agendamentos demo — demais procedimentos...');
   const demoProfessional = await prisma.user.findUnique({
-    where: { email: 'profissional@mila.com' },
+    where: { email: demoEmail('profissional@mila.com') },
   });
   const demoPatients = await prisma.patient.findMany({
     orderBy: { createdAt: 'asc' },
@@ -748,7 +647,7 @@ async function main() {
   ];
 
   for (const pm of defaultPaymentMethods) {
-    const exists = await prisma.paymentMethod.findUnique({ where: { name: pm.name } });
+    const exists = await prisma.paymentMethod.findFirst({ where: { name: pm.name } });
     if (!exists) {
       await prisma.paymentMethod.create({ data: { name: pm.name, feePercent: pm.feePercent, active: true } });
       console.log(`  ✓ Forma de pagamento criada: ${pm.name} (taxa ${pm.feePercent}%)`);
@@ -780,7 +679,7 @@ async function main() {
   console.log('\nSeed concluído.\n');
 }
 
-main()
+runInScriptTenant(prisma, main, { create: true })
   .catch((e) => {
     console.error(e);
     process.exit(1);
