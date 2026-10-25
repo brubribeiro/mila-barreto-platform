@@ -26,6 +26,7 @@ import {
   triggerLabel,
   triggerOrder,
 } from '../components/messages/messageTemplateConstants';
+import { useUrlState } from '../hooks/useUrlState';
 import { matchFields } from '../utils/listFilters';
 import { messagesApi } from '../api/messages';
 import { proceduresApi } from '../api/procedures';
@@ -131,7 +132,7 @@ export function Messages() {
   const canEdit = has('messages:edit');
   const canDelete = has('messages:delete');
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlState('busca', '');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MessageTemplate | null>(null);

@@ -4,7 +4,10 @@ import AddIcon from '@mui/icons-material/Add';
 import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { useUrlState } from '../hooks/useUrlState';
 import {
+  ACTIVE_FILTER_CODEC,
+  MAINTENANCE_FILTER_CODEC,
   matchFields,
   matchesActiveFilter,
   type ActiveFilter,
@@ -43,9 +46,9 @@ export function EquipmentPage() {
   const canEdit = has('equipment:edit');
   const canDelete = has('equipment:delete');
 
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
-  const [maintenanceFilter, setMaintenanceFilter] = useState<MaintenanceFilter>('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [activeFilter, setActiveFilter] = useUrlState<ActiveFilter>('status', 'ALL', ACTIVE_FILTER_CODEC);
+  const [maintenanceFilter, setMaintenanceFilter] = useUrlState<MaintenanceFilter>('manutencao', 'ALL', MAINTENANCE_FILTER_CODEC);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Equipment | null>(null);
 
@@ -105,9 +108,7 @@ export function EquipmentPage() {
 
   const { page: current, setPage, pageCount, rows, rangeStart, rangeEnd } = usePagination(
     filteredItems,
-    PAGE_SIZE,
-    [search, activeFilter, maintenanceFilter],
-  );
+    PAGE_SIZE);
 
   const handleEdit = (e: Equipment) => {
     setEditing(e);
@@ -162,7 +163,10 @@ export function EquipmentPage() {
           select
           size="small"
           value={maintenanceFilter}
-          onChange={(e) => setMaintenanceFilter(e.target.value as MaintenanceFilter)}
+          onChange={(e) => {
+            setMaintenanceFilter(e.target.value as MaintenanceFilter);
+            setPage(0);
+          }}
           sx={LIST_HEADER_PAPER_SELECT_SX}
           inputProps={{ 'aria-label': 'Manutenção' }}
         >
@@ -173,7 +177,10 @@ export function EquipmentPage() {
           select
           size="small"
           value={activeFilter}
-          onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
+          onChange={(e) => {
+            setActiveFilter(e.target.value as ActiveFilter);
+            setPage(0);
+          }}
           sx={LIST_HEADER_PAPER_SELECT_SX}
           inputProps={{ 'aria-label': 'Status' }}
         >
@@ -181,7 +188,14 @@ export function EquipmentPage() {
           <MenuItem value="ACTIVE">Ativos</MenuItem>
           <MenuItem value="INACTIVE">Inativos</MenuItem>
         </TextField>
-        <ListSearchField value={search} onChange={setSearch} placeholder="Buscar equipamento..." />
+        <ListSearchField
+          value={search}
+          onChange={(v) => {
+            setSearch(v);
+            setPage(0);
+          }}
+          placeholder="Buscar equipamento..."
+        />
         {canCreate && (
           <Button
             variant="contained"

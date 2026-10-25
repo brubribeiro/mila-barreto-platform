@@ -6,7 +6,13 @@ import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
-import { matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
+import { useUrlState, urlEnum } from '../hooks/useUrlState';
+import {
+  ACTIVE_FILTER_CODEC,
+  matchFields,
+  matchesActiveFilter,
+  type ActiveFilter,
+} from '../utils/listFilters';
 import { recurringExpensesApi } from '../api/recurring-expenses';
 import { HourlyCostCard } from '../components/finance/HourlyCostCard';
 import { RecurringExpenseFormDialog } from '../components/finance/RecurringExpenseFormDialog';
@@ -34,13 +40,16 @@ const PAGE_SIZE = 8;
 
 const PAGE_ARROW_SX = { ...ROW_ACTION_BUTTON_SX, width: 36, height: 36, borderRadius: '10px' } as const;
 
+type ExpenseTypeFilter = 'ALL' | 'FIXED' | 'VARIABLE';
+const TYPE_FILTER_CODEC = urlEnum<ExpenseTypeFilter>(['ALL', 'FIXED', 'VARIABLE']);
+
 export function RecurringExpensesPage() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
-  const [typeFilter, setTypeFilter] = useState<'ALL' | 'FIXED' | 'VARIABLE'>('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [activeFilter, setActiveFilter] = useUrlState<ActiveFilter>('status', 'ALL', ACTIVE_FILTER_CODEC);
+  const [typeFilter, setTypeFilter] = useUrlState<ExpenseTypeFilter>('tipo', 'ALL', TYPE_FILTER_CODEC);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RecurringExpense | null>(null);
 
@@ -127,9 +136,7 @@ export function RecurringExpensesPage() {
 
   const { page: current, setPage, pageCount, rows, rangeStart, rangeEnd } = usePagination(
     filteredItems,
-    PAGE_SIZE,
-    [search, activeFilter, typeFilter],
-  );
+    PAGE_SIZE);
 
   const handleEdit = (expense: RecurringExpense) => {
     setEditing(expense);
@@ -183,7 +190,10 @@ export function RecurringExpensesPage() {
             select
             size="small"
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+            onChange={(e) => {
+              setTypeFilter(e.target.value as ExpenseTypeFilter);
+              setPage(0);
+            }}
             sx={LIST_HEADER_PAPER_SELECT_SX}
             inputProps={{ 'aria-label': 'Tipo' }}
           >
@@ -195,7 +205,10 @@ export function RecurringExpensesPage() {
             select
             size="small"
             value={activeFilter}
-            onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
+            onChange={(e) => {
+              setActiveFilter(e.target.value as ActiveFilter);
+              setPage(0);
+            }}
             sx={LIST_HEADER_PAPER_SELECT_SX}
             inputProps={{ 'aria-label': 'Status' }}
           >
@@ -203,7 +216,15 @@ export function RecurringExpensesPage() {
             <MenuItem value="ACTIVE">Ativas</MenuItem>
             <MenuItem value="INACTIVE">Inativas</MenuItem>
           </TextField>
-          <ListSearchField width={250} value={search} onChange={setSearch} placeholder="Buscar despesa, categoria..." />
+          <ListSearchField
+            width={250}
+            value={search}
+            onChange={(v) => {
+              setSearch(v);
+              setPage(0);
+            }}
+            placeholder="Buscar despesa, categoria..."
+          />
           <Button
             variant="outlined"
             startIcon={<AutorenewIcon />}

@@ -28,11 +28,25 @@ import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
+import { useUrlState, urlPage, type UrlCodec } from '../hooks/useUrlState';
 import type { Patient } from '../types';
 import { fontSizes } from '../theme/fontSizes';
 import { moneyFormatter } from '../utils/money';
 
 const PAGE_SIZE = 8;
+
+const PATIENT_SORT_KEYS: PatientSortKey[] = ['lastVisit', 'totalSpent', 'appointments'];
+
+// ?ordem=-lastVisit (desc) | ?ordem=lastVisit (asc)
+const PATIENT_SORT_CODEC: UrlCodec<PatientSort> = {
+  parse: (raw) => {
+    const key = raw.replace(/^-/, '') as PatientSortKey;
+    if (!PATIENT_SORT_KEYS.includes(key)) return undefined;
+    return { key, dir: raw.startsWith('-') ? 'desc' : 'asc' };
+  },
+  serialize: (value) => (value ? `${value.dir === 'desc' ? '-' : ''}${value.key}` : ''),
+};
+
 const brl = moneyFormatter({ maximumFractionDigits: 0 });
 
 export function Patients() {
@@ -44,16 +58,18 @@ export function Patients() {
   const canEdit = has('patients:edit');
   const canDelete = has('patients:delete');
 
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(0);
+  const [search, setSearch] = useUrlState('busca', '');
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
+  const [searchInput, setSearchInput] = useState(search);
 
   useEffect(() => {
+    if (searchInput === search) return;
     const t = setTimeout(() => {
       setSearch(searchInput);
       setPage(0);
     }, 350);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
   // Reabre o drawer da ficha ao voltar da página estendida (?ficha=<id>)
@@ -68,7 +84,7 @@ export function Patients() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
-  const [sort, setSort] = useState<PatientSort>(null);
+  const [sort, setSort] = useUrlState<PatientSort>('ordem', null, PATIENT_SORT_CODEC);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);

@@ -1,13 +1,12 @@
-import { useEffect, useState, type DependencyList } from 'react';
+import { useUrlState, urlPage } from './useUrlState';
 
 /**
- * Paginação client-side de uma lista já filtrada.
- * `resetDeps`: volta à primeira página quando algum desses valores muda (busca, filtros).
+ * Paginação client-side de uma lista já filtrada. A página fica na URL (`?pagina=2`).
+ * Quem altera busca/filtros deve chamar `setPage(0)` no handler (não há reset por efeito,
+ * senão a página restaurada da URL seria zerada ao montar).
  */
-export function usePagination<T>(items: T[], pageSize: number, resetDeps: DependencyList = []) {
-  const [page, setPage] = useState(0);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => setPage(0), resetDeps);
+export function usePagination<T>(items: T[], pageSize: number) {
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
 
   const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
   const current = Math.min(page, pageCount - 1);
