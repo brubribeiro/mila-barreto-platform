@@ -1,0 +1,293 @@
+import type { ReactNode } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  MenuItem,
+  Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+  alpha,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
+import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
+import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
+import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined';
+
+import { DialogHeader, dialogActionsBorderSx } from '../DialogCloseButton';
+import { LabeledField } from '../LabeledField';
+import { fontSizes } from '../../theme/fontSizes';
+import {
+  AVAILABILITY_DIALOG_CONTENT_SX,
+  UNAVAIL_DATETIME_FIELD_SX,
+  UNAVAIL_REASON_SUGGESTIONS,
+  availabilityDialogPaperSx,
+  type Professional,
+} from './availabilityConfig';
+import { apiMessageOf } from './availabilityUtils';
+import { useUnavailabilityForm } from './useUnavailabilityForm';
+
+export function UnavailabilityDialog({
+  open,
+  onClose,
+  professionals,
+  defaultUserId,
+  canChooseProfessional,
+}: {
+  open: boolean;
+  onClose: () => void;
+  professionals: Professional[];
+  defaultUserId: string;
+  canChooseProfessional: boolean;
+}) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const {
+    allDay,
+    startAt,
+    endAt,
+    startDate,
+    endDate,
+    reason,
+    userId,
+    setReason,
+    setUserId,
+    setEndAt,
+    setEndDate,
+    changeStartAt,
+    changeStartDate,
+    switchMode,
+    presets,
+    dateRangeInvalid,
+    datetimeRangeInvalid,
+    formInvalid,
+    periodError,
+    periodPreview,
+    mutation,
+    handleSubmit,
+  } = useUnavailabilityForm(open, defaultUserId, onClose);
+  const professionalName = professionals.find((p) => p.id === userId)?.name;
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth={false}
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{ sx: availabilityDialogPaperSx(isMobile) }}
+    >
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+      >
+        <DialogHeader
+          onClose={onClose}
+          isMobile={isMobile}
+          title="Novo bloqueio"
+          subtitle={
+            professionalName
+              ? `Bloqueio na agenda de ${professionalName}`
+              : 'Bloqueie horários na agenda'
+          }
+          icon={<EventBusyOutlinedIcon fontSize="small" />}
+        />
+        <DialogContent sx={AVAILABILITY_DIALOG_CONTENT_SX}>
+          <Stack spacing={2}>
+            {canChooseProfessional && professionals.length > 1 && (
+              <LabeledField label="Profissional">
+                <TextField
+                  select
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  inputProps={{ 'aria-label': 'Profissional' }}
+                  fullWidth
+                >
+                  {professionals.map((p) => (
+                    <MenuItem key={p.id} value={p.id}>
+                      {p.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </LabeledField>
+            )}
+
+            <LabeledField label="Motivo">
+              <Stack spacing={1}>
+                <TextField
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Ex.: Congresso, férias, almoço estendido..."
+                  inputProps={{ 'aria-label': 'Motivo' }}
+                  fullWidth
+                />
+                <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 0.75 }}>
+                  {UNAVAIL_REASON_SUGGESTIONS.map((suggestion) => (
+                    <Chip
+                      key={suggestion}
+                      label={suggestion}
+                      size="small"
+                      clickable
+                      color={reason === suggestion ? 'primary' : 'default'}
+                      variant={reason === suggestion ? 'filled' : 'outlined'}
+                      onClick={() => setReason(suggestion)}
+                      sx={{ fontWeight: 600 }}
+                    />
+                  ))}
+                </Stack>
+              </Stack>
+            </LabeledField>
+
+            <LabeledField label="Período">
+              <Stack spacing={1}>
+                <ToggleButtonGroup
+                  exclusive
+                  fullWidth
+                  color="primary"
+                  value={allDay ? 'allDay' : 'partial'}
+                  onChange={(_, val) => {
+                    if (val === 'allDay') switchMode(true);
+                    if (val === 'partial') switchMode(false);
+                  }}
+                  sx={{ '& .MuiToggleButton-root': { textTransform: 'none', fontWeight: 700, py: 1.1 } }}
+                >
+                  <ToggleButton value="partial">Horário específico</ToggleButton>
+                  <ToggleButton value="allDay">Dia(s) inteiro(s)</ToggleButton>
+                </ToggleButtonGroup>
+                <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 0.75 }}>
+                  {presets.map((preset) => (
+                    <Chip
+                      key={preset.label}
+                      label={preset.label}
+                      size="small"
+                      clickable
+                      variant="outlined"
+                      onClick={preset.onClick}
+                      sx={{ fontWeight: 600 }}
+                    />
+                  ))}
+                </Stack>
+              </Stack>
+            </LabeledField>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.75 }}>
+              {allDay ? (
+                <>
+                  <LabeledField label="Início">
+                    <TextField
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => changeStartDate(e.target.value)}
+                      inputProps={{ 'aria-label': 'Início' }}
+                      fullWidth
+                      error={dateRangeInvalid}
+                    />
+                  </LabeledField>
+                  <LabeledField label="Fim">
+                    <TextField
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      inputProps={{ 'aria-label': 'Fim' }}
+                      fullWidth
+                      error={dateRangeInvalid}
+                    />
+                  </LabeledField>
+                </>
+              ) : (
+                <>
+                  <LabeledField label="Início">
+                    <TextField
+                      type="datetime-local"
+                      value={startAt}
+                      onChange={(e) => changeStartAt(e.target.value)}
+                      inputProps={{ 'aria-label': 'Início' }}
+                      fullWidth
+                      error={datetimeRangeInvalid}
+                      sx={UNAVAIL_DATETIME_FIELD_SX}
+                    />
+                  </LabeledField>
+                  <LabeledField label="Fim">
+                    <TextField
+                      type="datetime-local"
+                      value={endAt}
+                      onChange={(e) => setEndAt(e.target.value)}
+                      inputProps={{ 'aria-label': 'Fim' }}
+                      fullWidth
+                      error={datetimeRangeInvalid}
+                      sx={UNAVAIL_DATETIME_FIELD_SX}
+                    />
+                  </LabeledField>
+                </>
+              )}
+            </Box>
+
+            <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', mt: '6px !important' }}>
+              {allDay ? 'Use a mesma data nos dois campos para bloquear um único dia' : ' '}
+            </Typography>
+
+            {periodError ? (
+              <PeriodNotice tone="error" visible>
+                {periodError}
+              </PeriodNotice>
+            ) : (
+              <PeriodNotice tone="primary" visible={!!periodPreview}>
+                Será bloqueado:{' '}
+                <Box component="strong" sx={{ color: 'text.primary' }}>
+                  {periodPreview ?? '—'}
+                </Box>
+              </PeriodNotice>
+            )}
+
+            {mutation.isError && (
+              <Alert severity="error" variant="outlined">
+                {apiMessageOf(mutation.error, 'Erro ao salvar')}
+              </Alert>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
+          <Button onClick={onClose} type="button" disabled={mutation.isPending}>
+            Cancelar
+          </Button>
+          <Button variant="contained" type="submit" disabled={mutation.isPending || formInvalid}>
+            {mutation.isPending ? 'Salvando…' : 'Criar bloqueio'}
+          </Button>
+        </DialogActions>
+      </Box>
+    </Dialog>
+  );
+}
+
+function PeriodNotice({ tone, visible, children }: { tone: 'primary' | 'error'; visible: boolean; children: ReactNode }) {
+  const Icon = tone === 'error' ? ReportProblemOutlinedIcon : EventAvailableOutlinedIcon;
+  return (
+    <Stack
+      direction="row"
+      alignItems="center"
+      spacing={1.375}
+      sx={{
+        px: 1.875,
+        py: 1.625,
+        borderRadius: '12px',
+        border: 1,
+        bgcolor: (t) => alpha(t.palette[tone].main, 0.08),
+        borderColor: (t) => alpha(t.palette[tone].main, 0.2),
+        visibility: visible ? 'visible' : 'hidden',
+      }}
+    >
+      <Icon sx={{ fontSize: 18, color: `${tone}.main`, flexShrink: 0 }} />
+      <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 500, lineHeight: 1.4 }}>
+        {children}
+      </Typography>
+    </Stack>
+  );
+}
