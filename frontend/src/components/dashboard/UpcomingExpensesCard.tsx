@@ -28,6 +28,7 @@ import type { FinancialEntry } from '../../types';
 import { DashboardEmptyState } from './DashboardEmptyState';
 import { AuroraIcon } from '../AuroraIcon';
 import { fontSizes } from '../../theme/fontSizes';
+import { brl } from '../../utils/money';
 
 const LOOKAHEAD_DAYS = 7;
 
@@ -121,7 +122,7 @@ export function UpcomingExpensesCard({ embedded = false }: UpcomingExpensesCardP
   );
 
   const fmt = (v: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+    brl.format(v);
 
   return (
     <Card

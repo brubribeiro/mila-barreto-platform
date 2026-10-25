@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { onlyDigits, maskCPF, maskPhone, maskCEP, isValidCPF } from './masks';
+import {
+  onlyDigits,
+  maskCPF,
+  maskPhone,
+  maskCEP,
+  isValidCPF,
+  isValidPhone,
+  formatMoneyInput,
+  parseMoneyInput,
+} from './masks';
 
 describe('masks', () => {
   describe('onlyDigits', () => {
@@ -53,6 +62,30 @@ describe('masks', () => {
       expect(isValidCPF('111.111.111-11')).toBe(false);
       expect(isValidCPF('123.456.789-00')).toBe(false);
       expect(isValidCPF('12345')).toBe(false);
+    });
+  });
+
+  describe('isValidPhone', () => {
+    it('should accept landline and mobile with DDD', () => {
+      expect(isValidPhone('(11) 4444-5555')).toBe(true);
+      expect(isValidPhone('(11) 99999-0000')).toBe(true);
+      expect(isValidPhone('(11) 9999')).toBe(false);
+    });
+  });
+
+  describe('money input', () => {
+    it('should format numbers as pt-BR without symbol', () => {
+      expect(formatMoneyInput(1234.5)).toBe('1.234,50');
+      expect(formatMoneyInput('80')).toBe('80,00');
+      expect(formatMoneyInput('')).toBe('');
+      expect(formatMoneyInput(null)).toBe('');
+    });
+
+    it('should read typed digits as cents', () => {
+      expect(parseMoneyInput('1')).toBe(0.01);
+      expect(parseMoneyInput('1.234,567')).toBe(12345.67);
+      expect(parseMoneyInput('0,00')).toBe(0);
+      expect(parseMoneyInput('')).toBe('');
     });
   });
 });

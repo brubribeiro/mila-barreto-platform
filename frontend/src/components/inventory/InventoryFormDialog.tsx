@@ -1,7 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import {
   Alert,
-  alpha,
   Box,
   Button,
   Dialog,
@@ -10,7 +9,6 @@ import {
   Grid,
   InputAdornment,
   MenuItem,
-  Paper,
   Stack,
   TextField,
   Typography,
@@ -19,17 +17,17 @@ import {
 } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
-import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
-import WarehouseOutlinedIcon from '@mui/icons-material/WarehouseOutlined';
 import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { inventoryApi, InventoryItemPayload } from '../../api/inventory';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
+import { FormSection } from '../FormSection';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { MoneyField } from '../MoneyField';
 import type { InventoryItem } from '../../types';
-import { fontSizes } from '../../theme/fontSizes';
+import { INVENTORY_UNIT_OPTIONS } from './inventoryUnits';
 
 interface InventoryFormDialogProps {
   open: boolean;
@@ -59,67 +57,6 @@ const empty: FormValues = {
 
 const DIALOG_MAX_WIDTH = 900;
 const DIALOG_HEIGHT_DESKTOP = 650;
-
-const FORM_CARD_SX = {
-  p: { xs: 1.5, sm: 1.75 },
-  borderRadius: 2,
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-  height: '100%',
-} as const;
-
-const unitOptions = [
-  { value: 'un', label: 'Unidade (un)' },
-  { value: 'ml', label: 'Mililitro (ml)' },
-  { value: 'L', label: 'Litro (L)' },
-  { value: 'g', label: 'Grama (g)' },
-  { value: 'kg', label: 'Quilograma (kg)' },
-  { value: 'par', label: 'Par' },
-  { value: 'cx', label: 'Caixa (cx)' },
-  { value: 'pct', label: 'Pacote (pct)' },
-  { value: 'fr', label: 'Frasco (fr)' },
-  { value: 'tb', label: 'Tubo (tb)' },
-  { value: 'amp', label: 'Ampola (amp)' },
-] as const;
-
-function SectionIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
-  return (
-    <Typography
-      sx={{
-        display: 'block',
-        mb: 1.75,
-        fontSize: fontSizes.xs,
-        fontWeight: 800,
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-        color: 'text.disabled',
-      }}
-    >
-      {title}
-    </Typography>
-  );
-}
 
 function SubsectionLabel({ children }: { children: ReactNode }) {
   return (
@@ -203,6 +140,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
         sx={{
           display: 'flex',
@@ -241,8 +179,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
         >
           <Grid container spacing={2.5} alignItems="stretch">
             <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<LabelOutlinedIcon fontSize="small" />} title="Identificação" />
+              <FormSection title="Identificação" sx={{ height: '100%' }}>
                 <Stack spacing={2}>
                   <Controller
                     name="name"
@@ -273,12 +210,11 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                     )}
                   />
                 </Stack>
-              </Paper>
+              </FormSection>
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<WarehouseOutlinedIcon fontSize="small" />} title="Estoque e custo" />
+              <FormSection title="Estoque e custo" sx={{ height: '100%' }}>
                 <Stack spacing={2}>
                   <Box>
                     <SubsectionLabel>Unidade de medida</SubsectionLabel>
@@ -290,7 +226,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                           <MenuItem value="">
                             <em>Nenhuma</em>
                           </MenuItem>
-                          {unitOptions.map((opt) => (
+                          {INVENTORY_UNIT_OPTIONS.map((opt) => (
                             <MenuItem key={opt.value} value={opt.value}>
                               {opt.label}
                             </MenuItem>
@@ -310,7 +246,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                           type="number"
                           label="Estoque mínimo"
                           fullWidth
-                          inputProps={{ min: 0, step: 1 }}
+                          inputProps={{ inputMode: 'numeric', min: 0, step: 1 }}
                           sx={{ flex: 1, minWidth: 0 }}
                         />
                       )}
@@ -319,17 +255,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                       name="costPrice"
                       control={control}
                       render={({ field }) => (
-                        <TextField
-                          {...field}
-                          type="number"
-                          inputProps={{ step: '0.01', min: 0 }}
-                          label="Custo unitário"
-                          fullWidth
-                          InputProps={{
-                            startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                          }}
-                          sx={{ flex: 1, minWidth: 0 }}
-                        />
+                        <MoneyField {...field} label="Custo unitário" fullWidth sx={{ flex: 1, minWidth: 0 }} />
                       )}
                     />
                   </Stack>
@@ -345,7 +271,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                           type="number"
                           label="Notificar antes da validade"
                           fullWidth
-                          inputProps={{ min: 1 }}
+                          inputProps={{ inputMode: 'numeric', min: 1 }}
                           InputProps={{
                             endAdornment: <InputAdornment position="end">dias</InputAdornment>,
                           }}
@@ -363,7 +289,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                       : 'O estoque inicial é zero. Após criar, registre uma entrada para adicionar quantidade.'}
                   </Alert>
                 </Stack>
-              </Paper>
+              </FormSection>
             </Grid>
 
             {mutation.isError && (

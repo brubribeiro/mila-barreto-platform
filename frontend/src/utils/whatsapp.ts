@@ -11,8 +11,10 @@ export interface TemplateVars {
 }
 
 export function renderTemplate(content: string, vars: TemplateVars): string {
+  // {nome} é o nome atual da variável; {paciente_nome} segue aceito nos modelos antigos.
+  const all: Record<string, string | undefined> = { nome: vars.paciente_nome, ...vars };
   return content.replace(/\{(\w+)\}/g, (_, key) => {
-    const v = (vars as any)[key];
+    const v = all[key];
     return v != null ? String(v) : '';
   });
 }

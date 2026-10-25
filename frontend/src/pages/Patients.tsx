@@ -1,109 +1,75 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import {
-  Avatar,
-  Box,
-  Button,
-  Card,
-  IconButton,
-  InputBase,
-  Skeleton,
-  Stack,
-  Tooltip,
-  Typography,
-  alpha,
-} from '@mui/material';
+import { Box, Button, Card, Skeleton, Stack, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
-import SearchIcon from '@mui/icons-material/Search';
-import StarRoundedIcon from '@mui/icons-material/StarRounded';
-import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
-import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
 
 import { patientsApi } from '../api/patients';
 import { PatientFormDialog } from '../components/patients/PatientFormDialog';
 import { AnamnesisFormDialog } from '../components/patients/AnamnesisFormDialog';
 import { PatientDetailDrawer } from '../components/patients/PatientDetailDrawer';
+import {
+  PatientListColumns,
+  type PatientSort,
+  type PatientSortKey,
+} from '../components/patients/PatientListColumns';
+import { PatientListEmptyState } from '../components/patients/PatientListEmptyState';
+import { PatientListPagination } from '../components/patients/PatientListPagination';
+import { PatientListRow } from '../components/patients/PatientListRow';
+import { PatientStatCard } from '../components/patients/PatientStatCard';
 import { SendWhatsAppDialog } from '../components/messages/SendWhatsAppDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
+import {
+  LIST_HEADER_ACTION_SX,
+  ListCardHeader,
+  ListSearchField,
+} from '../components/ListCardHeader';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
-import { maskPhone } from '../utils/masks';
-import { patientInitials } from '../utils/patientPhoto';
-import { clickableProps } from '../utils/a11y';
+import { useUrlState, urlPage, type UrlCodec } from '../hooks/useUrlState';
 import type { Patient } from '../types';
 import { fontSizes } from '../theme/fontSizes';
+import { moneyFormatter } from '../utils/money';
 
 const PAGE_SIZE = 8;
-const AVATAR_COLORS = ['#15998B', '#5BA8DE', '#D46B8A', '#E0915B', '#9B7BD4', '#4FB3A8'];
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 
-function avatarColor(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i += 1) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
+const PATIENT_SORT_KEYS: PatientSortKey[] = ['lastVisit', 'totalSpent', 'appointments'];
 
-function formatCpf(doc?: string) {
-  const raw = doc?.replace(/\D/g, '');
-  if (!raw || raw.length !== 11) return '—';
-  return `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6, 9)}-${raw.slice(9)}`;
-}
+// ?ordem=-lastVisit (desc) | ?ordem=lastVisit (asc)
+const PATIENT_SORT_CODEC: UrlCodec<PatientSort> = {
+  parse: (raw) => {
+    const key = raw.replace(/^-/, '') as PatientSortKey;
+    if (!PATIENT_SORT_KEYS.includes(key)) return undefined;
+    return { key, dir: raw.startsWith('-') ? 'desc' : 'asc' };
+  },
+  serialize: (value) => (value ? `${value.dir === 'desc' ? '-' : ''}${value.key}` : ''),
+};
 
-function scoreTone(v: number) {
-  if (v >= 90) return { main: '#15998B', label: 'Excelente' };
-  if (v >= 75) return { main: '#C98A12', label: 'Bom' };
-  return { main: '#D65A5A', label: 'Atenção' };
-}
-
-const GRID_COLS = '1.8fr 1.1fr 1.2fr 1fr 1fr 0.75fr 0.8fr 120px';
-
-function StatCard({ label, value, loading }: { label: string; value: string; loading?: boolean }) {
-  return (
-    <Card sx={{ p: { xs: 2, sm: 2.25 } }}>
-      {loading ? (
-        <Skeleton variant="text" width={80} sx={{ fontSize: fontSizes['6xl'] }} />
-      ) : (
-        <Typography sx={{ fontSize: { xs: '1.4rem', sm: '1.65rem' }, fontWeight: 800, letterSpacing: '-0.5px' }}>
-          {value}
-        </Typography>
-      )}
-      <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600, mt: 0.25 }}>
-        {label}
-      </Typography>
-    </Card>
-  );
-}
+const brl = moneyFormatter({ maximumFractionDigits: 0 });
 
 export function Patients() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('patients:create');
   const canEdit = has('patients:edit');
   const canDelete = has('patients:delete');
 
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(0);
+  const [search, setSearch] = useUrlState('busca', '');
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
+  const [searchInput, setSearchInput] = useState(search);
 
   useEffect(() => {
+    if (searchInput === search) return;
     const t = setTimeout(() => {
       setSearch(searchInput);
       setPage(0);
     }, 350);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
   // Reabre o drawer da ficha ao voltar da página estendida (?ficha=<id>)
@@ -118,16 +84,12 @@ export function Patients() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
-  const [sort, setSort] = useState<{
-    key: 'lastVisit' | 'totalSpent' | 'appointments';
-    dir: 'asc' | 'desc';
-  } | null>(null);
+  const [sort, setSort] = useUrlState<PatientSort>('ordem', null, PATIENT_SORT_CODEC);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [anamnesisPatientId, setAnamnesisPatientId] = useState<string | null>(null);
   const [whatsappPatient, setWhatsappPatient] = useState<Patient | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: patients = [], isLoading } = useQuery({
     queryKey: ['patients', search],
@@ -168,7 +130,7 @@ export function Patients() {
     });
   }, [patients, sort]);
 
-  const toggleSort = (key: 'lastVisit' | 'totalSpent' | 'appointments') => {
+  const toggleSort = (key: PatientSortKey) => {
     setPage(0);
     setSort((prev) => {
       if (!prev || prev.key !== key) return { key, dir: 'desc' };
@@ -187,24 +149,6 @@ export function Patients() {
   const rangeStart = sortedPatients.length === 0 ? 0 : currentPage * PAGE_SIZE + 1;
   const rangeEnd = Math.min((currentPage + 1) * PAGE_SIZE, sortedPatients.length);
 
-  // Páginas visíveis com reticências: primeira, última, atual e vizinhas
-  const pageItems = useMemo<(number | 'dots')[]>(() => {
-    if (pageCount <= 7) return Array.from({ length: pageCount }, (_, i) => i);
-    const items = new Set<number>([0, pageCount - 1, currentPage]);
-    for (let d = 1; d <= 1; d += 1) {
-      items.add(Math.max(0, currentPage - d));
-      items.add(Math.min(pageCount - 1, currentPage + d));
-    }
-    const sorted = Array.from(items).sort((a, b) => a - b);
-    const result: (number | 'dots')[] = [];
-    let prev = -1;
-    for (const n of sorted) {
-      if (prev !== -1 && n - prev > 1) result.push('dots');
-      result.push(n);
-      prev = n;
-    }
-    return result;
-  }, [pageCount, currentPage]);
 
   const handleDelete = async (patient: Patient) => {
     const ok = await confirm({
@@ -227,144 +171,34 @@ export function Patients() {
           mb: { xs: 2, sm: 2.5 },
         }}
       >
-        <StatCard label="Total de pacientes" value={String(stats?.total ?? 0)} loading={statsLoading} />
-        <StatCard label="Ativos (90 dias)" value={String(stats?.active90 ?? 0)} loading={statsLoading} />
-        <StatCard label="Novos no mês" value={String(stats?.newThisMonth ?? 0)} loading={statsLoading} />
-        <StatCard label="Ticket médio" value={brl.format(stats?.averageTicket ?? 0)} loading={statsLoading} />
+        <PatientStatCard label="Total de pacientes" value={String(stats?.total ?? 0)} loading={statsLoading} />
+        <PatientStatCard label="Ativos (90 dias)" value={String(stats?.active90 ?? 0)} loading={statsLoading} />
+        <PatientStatCard label="Novos no mês" value={String(stats?.newThisMonth ?? 0)} loading={statsLoading} />
+        <PatientStatCard label="Ticket médio" value={brl.format(stats?.averageTicket ?? 0)} loading={statsLoading} />
       </Box>
 
       {/* Tabela */}
       <Card sx={{ p: 0, overflow: 'hidden' }}>
         {/* Cabeçalho da tabela */}
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          alignItems={{ xs: 'stretch', sm: 'center' }}
-          justifyContent="space-between"
-          spacing={1.5}
-          sx={{ px: { xs: 2, sm: 2.75 }, py: 2, borderBottom: 1, borderColor: 'divider' }}
-        >
-          <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>Todos os pacientes</Typography>
-          <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
-            <Stack
-              direction="row"
-              alignItems="center"
-              spacing={1}
-              sx={{
-                height: 38,
-                px: 1.5,
-                borderRadius: '11px',
-                border: 1,
-                borderColor: 'divider',
-                bgcolor: 'grey.50',
-                width: { xs: '100%', sm: 240 },
+        <ListCardHeader title={<Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>Todos os pacientes</Typography>}>
+          <ListSearchField value={searchInput} onChange={setSearchInput} placeholder="Buscar paciente, CPF..." ariaLabel="Buscar paciente por nome, CPF ou telefone" />
+          {canCreate && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
               }}
+              sx={LIST_HEADER_ACTION_SX}
             >
-              <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-              <InputBase
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Buscar paciente, CPF..."
-                inputProps={{ 'aria-label': 'Buscar paciente por nome, CPF ou telefone' }}
-                sx={{ fontSize: fontSizes.sm, flex: 1 }}
-              />
-            </Stack>
-            {isAdmin && (
-              <Tooltip title="Histórico de alterações">
-                <IconButton
-                  aria-label="Histórico de alterações"
-                  onClick={() => setHistoryOpen(true)}
-                  sx={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: '11px',
-                    border: 1,
-                    borderColor: 'divider',
-                    bgcolor: 'grey.50',
-                    color: 'text.secondary',
-                  }}
-                >
-                  <HistoryIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-            {canCreate && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
-                }}
-                sx={{ height: 38, borderRadius: '11px' }}
-              >
-                Adicionar paciente
-              </Button>
-            )}
-          </Stack>
-        </Stack>
+              Adicionar paciente
+            </Button>
+          )}
+        </ListCardHeader>
 
         {/* Cabeçalho de colunas */}
-        <Box
-          sx={{
-            display: { xs: 'none', md: 'grid' },
-            gridTemplateColumns: GRID_COLS,
-            gap: 1.5,
-            px: 2.75,
-            py: 1.5,
-            borderBottom: 1,
-            borderColor: 'divider',
-            bgcolor: 'grey.50',
-            fontSize: fontSizes['2xs'],
-            fontWeight: 800,
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase',
-            color: 'text.secondary',
-          }}
-        >
-          <span>Paciente</span>
-          <span>CPF</span>
-          <span>Telefone</span>
-          {(['lastVisit', 'totalSpent', 'appointments'] as const).map((key) => {
-            const active = sort?.key === key;
-            const label =
-              key === 'lastVisit' ? 'Última visita' : key === 'totalSpent' ? 'Total gasto' : 'Agend.';
-            return (
-              <Box
-                key={key}
-                component="button"
-                type="button"
-                onClick={() => toggleSort(key)}
-                sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 0.4,
-                  p: 0,
-                  border: 0,
-                  bgcolor: 'transparent',
-                  cursor: 'pointer',
-                  font: 'inherit',
-                  letterSpacing: 'inherit',
-                  textTransform: 'inherit',
-                  color: active ? 'text.primary' : 'inherit',
-                  fontWeight: 800,
-                  '&:hover': { color: 'text.primary' },
-                }}
-              >
-                {label}
-                <ArrowUpwardRoundedIcon
-                  sx={{
-                    fontSize: 13,
-                    opacity: active ? 1 : 0.35,
-                    transform: active && sort?.dir === 'desc' ? 'rotate(180deg)' : 'none',
-                    transition: 'transform 0.12s',
-                  }}
-                />
-              </Box>
-            );
-          })}
-          <span style={{ textAlign: 'right' }}>Score</span>
-          <span />
-        </Box>
+        <PatientListColumns sort={sort} onToggleSort={toggleSort} />
 
         {/* Linhas */}
         {isLoading ? (
@@ -376,304 +210,43 @@ export function Patients() {
             </Stack>
           </Box>
         ) : patients.length === 0 ? (
-          <Stack alignItems="center" spacing={1.5} sx={{ px: 3, py: 7, textAlign: 'center' }}>
-            <Box
-              sx={{
-                width: 56,
-                height: 56,
-                borderRadius: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
-                color: 'primary.main',
-              }}
-            >
-              <SearchIcon />
-            </Box>
-            <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 800 }}>
-              {search ? 'Nenhum paciente encontrado' : 'Nenhum paciente cadastrado'}
-            </Typography>
-            <Typography sx={{ fontSize: fontSizes.md, color: 'text.secondary', maxWidth: 380 }}>
-              {search
-                ? 'Não encontramos ninguém com esse nome, CPF ou telefone. Confira a grafia ou cadastre um novo paciente.'
-                : 'Comece adicionando o primeiro paciente à sua base.'}
-            </Typography>
-            {canCreate && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
-                }}
-                sx={{ mt: 0.5, borderRadius: '11px', boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
-              >
-                Adicionar paciente
-              </Button>
-            )}
-          </Stack>
+          <PatientListEmptyState
+            search={search}
+            canCreate={canCreate}
+            onCreate={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+          />
         ) : (
-          pageRows.map((p) => {
-            const score = p.reliabilityPercent ?? 100;
-            const tone = scoreTone(score);
-            const color = avatarColor(p.name);
-            return (
-              <Box
-                key={p.id}
-                {...clickableProps(() => setDetailId(p.id), `Abrir ficha de ${p.name}`)}
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr auto', md: GRID_COLS },
-                  gap: 1.5,
-                  px: { xs: 2, md: 2.75 },
-                  py: 1.5,
-                  borderBottom: 1,
-                  borderColor: 'divider',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.12s',
-                  '&:hover': { bgcolor: 'grey.50' },
-                  '&:last-of-type': { borderBottom: 0 },
-                }}
-              >
-                {/* Paciente */}
-                <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
-                  <Avatar
-                    src={p.photoUrl ?? undefined}
-                    alt=""
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: '11px',
-                      fontSize: fontSizes.sm,
-                      fontWeight: 700,
-                      color: '#fff',
-                      bgcolor: color,
-                      flexShrink: 0,
-                    }}
-                    variant="rounded"
-                  >
-                    {patientInitials(p.name)}
-                  </Avatar>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700 }} noWrap title={p.name}>
-                      {p.name}
-                    </Typography>
-                    <Typography
-                      sx={{ display: { md: 'none' }, fontSize: fontSizes.xs, color: 'text.secondary' }}
-                      noWrap
-                    >
-                      {p.phone ? maskPhone(p.phone) : formatCpf(p.document)}
-                    </Typography>
-                  </Box>
-                </Stack>
-
-                {/* CPF */}
-                <Typography
-                  sx={{
-                    display: { xs: 'none', md: 'block' },
-                    fontSize: fontSizes.sm,
-                    color: 'text.secondary',
-                    fontWeight: 600,
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
-                >
-                  {formatCpf(p.document)}
-                </Typography>
-
-                {/* Telefone */}
-                <Typography
-                  sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}
-                >
-                  {p.phone ? maskPhone(p.phone) : '—'}
-                </Typography>
-
-                {/* Última visita */}
-                <Typography
-                  sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 600 }}
-                >
-                  {p.lastVisit ? dayjs(p.lastVisit).format('DD MMM YYYY') : '—'}
-                </Typography>
-
-                {/* Total gasto */}
-                <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: fontSizes.md, fontWeight: 800 }}>
-                  {p.totalSpent ? brl.format(p.totalSpent) : '—'}
-                </Typography>
-
-                {/* Agendamentos */}
-                <Typography
-                  sx={{
-                    display: { xs: 'none', md: 'block' },
-                    fontSize: fontSizes.md,
-                    fontWeight: 700,
-                    color: 'text.secondary',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
-                >
-                  {p.appointmentsCount ?? 0}
-                </Typography>
-
-                {/* Score */}
-                <Box sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'flex-end' }}>
-                  <Box
-                    component="span"
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 0.5,
-                      px: 1.1,
-                      py: 0.5,
-                      borderRadius: '9px',
-                      fontSize: fontSizes.xs,
-                      fontWeight: 800,
-                      color: tone.main,
-                      bgcolor: alpha(tone.main, 0.12),
-                    }}
-                  >
-                    <StarRoundedIcon sx={{ fontSize: 14 }} />
-                    {score}
-                  </Box>
-                </Box>
-
-                {/* Ações */}
-                <Stack
-                  direction="row"
-                  spacing={0.25}
-                  justifyContent="flex-end"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Tooltip title={p.phone ? 'WhatsApp' : 'Sem telefone'}>
-                    <span>
-                      <IconButton
-                        size="small"
-                        aria-label={`Enviar WhatsApp para ${p.name}`}
-                        disabled={!p.phone}
-                        onClick={() => setWhatsappPatient(p)}
-                        sx={{ color: '#25D366' }}
-                      >
-                        <WhatsAppIcon fontSize="small" />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                  {canEdit && (
-                    <Tooltip title="Anamnese">
-                      <IconButton
-                        size="small"
-                        aria-label={`Anamnese de ${p.name}`}
-                        onClick={() => setAnamnesisPatientId(p.id)}
-                      >
-                        <AssignmentOutlinedIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  {canEdit && (
-                    <Tooltip title="Editar">
-                      <IconButton
-                        size="small"
-                        aria-label={`Editar ${p.name}`}
-                        onClick={() => {
-                          setEditing(p);
-                          setFormOpen(true);
-                        }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  {canDelete && (
-                    <Tooltip title="Excluir">
-                      <IconButton
-                        size="small"
-                        aria-label={`Excluir ${p.name}`}
-                        onClick={() => handleDelete(p)}
-                        sx={{ color: 'error.main' }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Stack>
-              </Box>
-            );
-          })
+          pageRows.map((p) => (
+            <PatientListRow
+              key={p.id}
+              patient={p}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              onOpen={() => setDetailId(p.id)}
+              onWhatsApp={() => setWhatsappPatient(p)}
+              onAnamnesis={() => setAnamnesisPatientId(p.id)}
+              onEdit={() => {
+                setEditing(p);
+                setFormOpen(true);
+              }}
+              onDelete={() => handleDelete(p)}
+            />
+          ))
         )}
 
         {/* Paginação */}
         {!isLoading && patients.length > 0 && (
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            flexWrap="wrap"
-            spacing={1.5}
-            sx={{ px: 2.75, py: 1.75, borderTop: 1, borderColor: 'divider' }}
-          >
-            <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600 }}>
-              {rangeStart}–{rangeEnd} de {patients.length}
-            </Typography>
-            <Stack direction="row" alignItems="center" spacing={0.75}>
-              <IconButton
-                size="small"
-                aria-label="Página anterior"
-                disabled={currentPage === 0}
-                onClick={() => setPage((v) => Math.max(0, v - 1))}
-                sx={{ border: 1, borderColor: 'divider', borderRadius: '9px' }}
-              >
-                <ChevronLeftIcon fontSize="small" />
-              </IconButton>
-              {pageItems.map((item, idx) =>
-                item === 'dots' ? (
-                  <Box
-                    key={`dots-${idx}`}
-                    sx={{
-                      minWidth: 24,
-                      textAlign: 'center',
-                      color: 'text.disabled',
-                      fontSize: fontSizes.xs,
-                      fontWeight: 700,
-                    }}
-                  >
-                    …
-                  </Box>
-                ) : (
-                  <Box
-                    key={item}
-                    component="button"
-                    type="button"
-                    aria-label={`Página ${item + 1}`}
-                    aria-current={item === currentPage ? 'page' : undefined}
-                    onClick={() => setPage(item)}
-                    sx={{
-                      minWidth: 30,
-                      height: 30,
-                      px: 0.5,
-                      borderRadius: '9px',
-                      border: 1,
-                      borderColor: item === currentPage ? 'primary.main' : 'divider',
-                      bgcolor: item === currentPage ? 'primary.main' : 'background.paper',
-                      color: item === currentPage ? '#fff' : 'text.secondary',
-                      fontSize: fontSizes.xs,
-                      fontWeight: 700,
-                      fontFamily: 'inherit',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {item + 1}
-                  </Box>
-                ),
-              )}
-              <IconButton
-                size="small"
-                aria-label="Próxima página"
-                disabled={currentPage >= pageCount - 1}
-                onClick={() => setPage((v) => Math.min(pageCount - 1, v + 1))}
-                sx={{ border: 1, borderColor: 'divider', borderRadius: '9px' }}
-              >
-                <ChevronRightIcon fontSize="small" />
-              </IconButton>
-            </Stack>
-          </Stack>
+          <PatientListPagination
+            pageCount={pageCount}
+            currentPage={currentPage}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            total={patients.length}
+            setPage={setPage}
+          />
         )}
       </Card>
 
@@ -695,12 +268,6 @@ export function Patients() {
         patientId={whatsappPatient?.id}
         vars={{ paciente_nome: whatsappPatient?.name?.split(' ')[0] }}
         title={`Enviar mensagem para ${whatsappPatient?.name ?? ''}`}
-      />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="Patient"
-        title="Pacientes"
       />
     </Box>
   );

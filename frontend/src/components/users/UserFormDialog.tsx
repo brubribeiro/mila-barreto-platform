@@ -5,6 +5,8 @@ import {
   Avatar,
   Box,
   Button,
+  Checkbox,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -15,9 +17,9 @@ import {
   Switch,
   TextField,
   Tooltip,
-  Typography,
   useMediaQuery,
   useTheme,
+  alpha,
 } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
@@ -30,6 +32,8 @@ import { usersApi, UserPayload } from '../../api/users';
 import { rolesApi } from '../../api/roles';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
+import { LabeledField } from '../LabeledField';
+import { EMAIL_PATTERN } from '../../utils/masks';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import type { UserSummary } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
@@ -197,7 +201,12 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
         },
       }}
     >
-      <Box component="form" onSubmit={handleSubmit((v) => mutation.mutate(v))}>
+      <Box
+        component="form"
+        noValidate
+        onSubmit={handleSubmit((v) => mutation.mutate(v))}
+        sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+      >
         <DialogHeader
           onClose={onClose}
           isMobile={isMobile}
@@ -206,38 +215,52 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
           icon={user ? <EditOutlinedIcon fontSize="small" /> : <PersonAddOutlinedIcon fontSize="small" />}
         />
 
-        <DialogContent dividers sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 2.5 } }}>
-          <Stack spacing={2.25}>
+        <DialogContent
+          sx={{
+            px: { xs: 2, sm: 3 },
+            pb: { xs: 2, sm: 2.5 },
+            flex: 1,
+            minHeight: 0,
+            overflow: 'auto',
+            bgcolor: 'background.paper',
+            // MUI zera o padding-top quando o content segue o DialogTitle; força o espaçamento
+            '&.MuiDialogContent-root': { pt: { xs: 2.75, sm: 3 } },
+          }}
+        >
+          <Stack spacing={2}>
             <Controller
               name="providesAppointments"
               control={control}
               render={({ field }) => (
-                <TextField
-                  select
-                  label="Vínculo"
-                  value={field.value ? 'PRO' : 'ADM'}
-                  onChange={(e) => {
-                    const pro = e.target.value === 'PRO';
-                    field.onChange(pro);
-                    if (!pro) setValue('isPrimary', false);
-                  }}
-                  fullWidth
-                >
-                  <MenuItem value="PRO">Profissional (realiza atendimentos)</MenuItem>
-                  <MenuItem value="ADM">Administrativo (recepção, financeiro etc.)</MenuItem>
-                </TextField>
+                <LabeledField label="Vínculo">
+                  <TextField
+                    select
+                    value={field.value ? 'PRO' : 'ADM'}
+                    onChange={(e) => {
+                      const pro = e.target.value === 'PRO';
+                      field.onChange(pro);
+                      if (!pro) setValue('isPrimary', false);
+                    }}
+                    fullWidth
+                  >
+                    <MenuItem value="PRO">Profissional (realiza atendimentos)</MenuItem>
+                    <MenuItem value="ADM">Administrativo (recepção, financeiro etc.)</MenuItem>
+                  </TextField>
+                </LabeledField>
               )}
             />
 
             {isProfessional && (
               <>
-                <Grid container spacing={2}>
+                <Grid container spacing={1.75}>
                   <Grid item xs={12} sm={6}>
                     <Controller
                       name="specialty"
                       control={control}
                       render={({ field }) => (
-                        <TextField {...field} label="Função" fullWidth placeholder="Ex.: Dermatologista" />
+                        <LabeledField label="Função">
+                          <TextField {...field} fullWidth placeholder="Ex.: Dermatologista" />
+                        </LabeledField>
                       )}
                     />
                   </Grid>
@@ -246,60 +269,72 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
                       name="councilRegister"
                       control={control}
                       render={({ field }) => (
-                        <TextField {...field} label="Registro profissional" fullWidth placeholder="Ex.: CRM-SP 00.000" />
+                        <LabeledField label="Registro profissional">
+                          <TextField {...field} fullWidth placeholder="Ex.: CRM-SP 00.000" />
+                        </LabeledField>
                       )}
                     />
                   </Grid>
                 </Grid>
 
-                <Box>
-                  <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
-                    Especialidades
-                  </Typography>
+                <LabeledField label="Especialidades">
                   <Controller
                     name="specialties"
                     control={control}
                     render={({ field }) => (
-                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                        {SPECIALTY_OPTIONS.map((opt) => {
-                          const selected = field.value.includes(opt);
-                          return (
-                            <Box
-                              key={opt}
-                              component="button"
-                              type="button"
-                              onClick={() =>
-                                field.onChange(
-                                  selected ? field.value.filter((v) => v !== opt) : [...field.value, opt],
-                                )
-                              }
-                              sx={{
-                                px: 1.25,
-                                height: 30,
-                                cursor: 'pointer',
-                                fontFamily: 'inherit',
-                                fontSize: fontSizes.xs,
-                                fontWeight: 600,
-                                borderRadius: '999px',
-                                border: 1,
-                                borderColor: selected ? 'primary.main' : 'divider',
-                                color: selected ? 'primary.contrastText' : 'text.secondary',
-                                bgcolor: selected ? 'primary.main' : 'grey.50',
-                              }}
-                            >
-                              {selected ? opt : `+ ${opt}`}
-                            </Box>
-                          );
-                        })}
-                      </Stack>
+                      <TextField
+                        select
+                        fullWidth
+                        value={field.value}
+                        onChange={(e) => {
+                          const v = e.target.value as unknown as string | string[];
+                          field.onChange(typeof v === 'string' ? v.split(',') : v);
+                        }}
+                        SelectProps={{
+                          multiple: true,
+                          displayEmpty: true,
+                          renderValue: (selected) => {
+                            const values = selected as string[];
+                            if (values.length === 0) {
+                              return (
+                                <Box component="span" sx={{ color: 'text.disabled' }}>
+                                  Selecione as especialidades
+                                </Box>
+                              );
+                            }
+                            return (
+                              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                                {values.map((v) => (
+                                  <Chip
+                                    key={v}
+                                    size="small"
+                                    label={v}
+                                    sx={{
+                                      height: 22,
+                                      fontSize: fontSizes.xs,
+                                      fontWeight: 600,
+                                      bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
+                                      color: 'primary.dark',
+                                    }}
+                                  />
+                                ))}
+                              </Stack>
+                            );
+                          },
+                        }}
+                      >
+                        {SPECIALTY_OPTIONS.map((opt) => (
+                          <MenuItem key={opt} value={opt}>
+                            <Checkbox size="small" checked={field.value.includes(opt)} sx={{ py: 0, ml: -0.5, mr: 1 }} />
+                            {opt}
+                          </MenuItem>
+                        ))}
+                      </TextField>
                     )}
                   />
-                </Box>
+                </LabeledField>
 
-                <Box>
-                  <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
-                    Cor na agenda
-                  </Typography>
+                <LabeledField label="Cor na agenda">
                   <Controller
                     name="calendarColor"
                     control={control}
@@ -335,70 +370,74 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
                       </Stack>
                     )}
                   />
-                </Box>
+                </LabeledField>
 
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <Avatar
-                    src={photoPreview ?? undefined}
-                    variant="rounded"
-                    sx={{ width: 56, height: 56, borderRadius: '14px', bgcolor: calendarColor || 'primary.main', fontWeight: 700 }}
-                  >
-                    {(nameValue || '?').trim().charAt(0).toUpperCase()}
-                  </Avatar>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    hidden
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) photoUpload.mutate(file);
-                      e.target.value = '';
-                    }}
-                  />
-                  <Tooltip title={user ? '' : 'Salve o usuário para adicionar a foto'}>
-                    <span>
+                <LabeledField label="Foto">
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar
+                      src={photoPreview ?? undefined}
+                      variant="rounded"
+                      sx={{ width: 56, height: 56, borderRadius: '14px', bgcolor: calendarColor || 'primary.main', fontWeight: 700 }}
+                    >
+                      {(nameValue || '?').trim().charAt(0).toUpperCase()}
+                    </Avatar>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      hidden
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) photoUpload.mutate(file);
+                        e.target.value = '';
+                      }}
+                    />
+                    <Tooltip title={user ? '' : 'Salve o usuário para adicionar a foto'}>
+                      <span>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<PhotoCameraOutlinedIcon />}
+                          disabled={!user || photoBusy}
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          {photoPreview ? 'Trocar foto' : 'Enviar foto'}
+                        </Button>
+                      </span>
+                    </Tooltip>
+                    {photoPreview && user && (
                       <Button
                         size="small"
-                        variant="outlined"
-                        startIcon={<PhotoCameraOutlinedIcon />}
-                        disabled={!user || photoBusy}
-                        onClick={() => fileInputRef.current?.click()}
+                        color="error"
+                        startIcon={<DeleteOutlineIcon />}
+                        disabled={photoBusy}
+                        onClick={() => photoRemove.mutate()}
                       >
-                        {photoPreview ? 'Trocar foto' : 'Enviar foto'}
+                        Remover
                       </Button>
-                    </span>
-                  </Tooltip>
-                  {photoPreview && user && (
-                    <Button
-                      size="small"
-                      color="error"
-                      startIcon={<DeleteOutlineIcon />}
-                      disabled={photoBusy}
-                      onClick={() => photoRemove.mutate()}
-                    >
-                      Remover
-                    </Button>
-                  )}
-                </Stack>
+                    )}
+                  </Stack>
+                </LabeledField>
               </>
             )}
 
-            <Grid container spacing={2}>
+            <Grid container spacing={1.75}>
               <Grid item xs={12} sm={6}>
                 <Controller
                   name="name"
                   control={control}
                   rules={{ required: 'Nome é obrigatório' }}
                   render={({ field, fieldState }) => (
-                    <TextField
-                      {...field}
-                      label="Nome completo"
-                      fullWidth
-                      required
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
-                    />
+                    <LabeledField label="Nome completo" required>
+                      <TextField
+                        {...field}
+                        fullWidth
+                        placeholder="Ex.: Larissa Nunes"
+                        autoFocus={!user}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                      />
+                    </LabeledField>
                   )}
                 />
               </Grid>
@@ -406,17 +445,22 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
                 <Controller
                   name="email"
                   control={control}
-                  rules={{ required: 'E-mail é obrigatório' }}
+                  rules={{
+                    required: 'E-mail é obrigatório',
+                    pattern: { value: EMAIL_PATTERN, message: 'E-mail inválido' },
+                  }}
                   render={({ field, fieldState }) => (
-                    <TextField
-                      {...field}
-                      type="email"
-                      label="E-mail"
-                      fullWidth
-                      required
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
-                    />
+                    <LabeledField label="E-mail" required>
+                      <TextField
+                        {...field}
+                        type="email"
+                        fullWidth
+                        placeholder="email@clinica.com"
+                        inputProps={{ inputMode: 'email', autoComplete: 'off' }}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                      />
+                    </LabeledField>
                   )}
                 />
               </Grid>
@@ -427,21 +471,21 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
               control={control}
               rules={{ required: 'Selecione um grupo' }}
               render={({ field, fieldState }) => (
-                <TextField
-                  {...field}
-                  select
-                  label="Grupo de permissão"
-                  fullWidth
-                  required
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message ?? 'Define quais telas e ações este usuário pode acessar.'}
-                >
-                  {roles.map((r) => (
-                    <MenuItem key={r.id} value={r.id}>
-                      {r.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <LabeledField label="Grupo de permissão" required>
+                  <TextField
+                    {...field}
+                    select
+                    fullWidth
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message ?? 'Define quais telas e ações este usuário pode acessar.'}
+                  >
+                    {roles.map((r) => (
+                      <MenuItem key={r.id} value={r.id}>
+                        {r.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </LabeledField>
               )}
             />
 

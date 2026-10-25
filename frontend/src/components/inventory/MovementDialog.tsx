@@ -1,17 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
   Alert,
+  Autocomplete,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   Grid,
-  InputAdornment,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
-  Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -21,7 +20,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { inventoryApi, MovementType } from '../../api/inventory';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
-import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { DialogHeader, dialogPaperSx } from '../DialogCloseButton';
+import { MoneyField } from '../MoneyField';
 import { dateOnlyToApiIso } from '../../utils/dateOnly';
 import type { InventoryItem } from '../../types';
 
@@ -29,6 +29,8 @@ interface MovementDialogProps {
   open: boolean;
   onClose: () => void;
   item: InventoryItem | null;
+  /** Quando `item` é nulo, permite escolher o produto na própria modal. */
+  items?: InventoryItem[];
 }
 
 interface FormValues {
@@ -43,12 +45,19 @@ const empty: FormValues = { type: 'IN', quantity: 1, totalPrice: '', reason: '',
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
-export function MovementDialog({ open, onClose, item }: MovementDialogProps) {
+export function MovementDialog({ open, onClose, item: fixedItem, items }: MovementDialogProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
   const toast = useAppToast();
   const { control, handleSubmit, reset, watch } = useForm<FormValues>({ defaultValues: empty });
+  const [pickedItem, setPickedItem] = useState<InventoryItem | null>(null);
+  const item = fixedItem ?? pickedItem;
+  const showPicker = !fixedItem && !!items;
+
+  useEffect(() => {
+    if (open) setPickedItem(null);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -99,7 +108,7 @@ export function MovementDialog({ open, onClose, item }: MovementDialogProps) {
     },
   });
 
-  if (!item) return null;
+  if (!item && !showPicker) return null;
 
   return (
     <Dialog
@@ -110,16 +119,33 @@ export function MovementDialog({ open, onClose, item }: MovementDialogProps) {
       fullScreen={isMobile}
       PaperProps={{ sx: dialogPaperSx(isMobile) }}
     >
-      <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
+      <form noValidate onSubmit={handleSubmit((v) => mutation.mutate(v))}>
         <DialogHeader
           onClose={onClose}
           isMobile={isMobile}
           title="Movimentar estoque"
-          subtitle={`${item.name} · atual: ${item.quantity} ${item.unit ?? ''}`}
+          subtitle={
+            item
+              ? `${item.name} · atual: ${item.quantity} ${item.unit ?? ''}`
+              : 'Escolha o produto e o tipo de movimentação'
+          }
           icon={<SwapHorizOutlinedIcon fontSize="small" />}
         />
         <DialogContent dividers sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 2.5 } }}>
           <Grid container spacing={2}>
+            {showPicker && (
+              <Grid item xs={12}>
+                <Autocomplete
+                  options={items}
+                  getOptionLabel={(o) => (o.sku ? `${o.name} (${o.sku})` : o.name)}
+                  isOptionEqualToValue={(a, b) => a.id === b.id}
+                  value={pickedItem}
+                  onChange={(_, v) => setPickedItem(v)}
+                  noOptionsText="Nenhum produto"
+                  renderInput={(params) => <TextField {...params} label="Produto" required autoFocus />}
+                />
+              </Grid>
+            )}
             <Grid item xs={12}>
               <Controller
                 name="type"
@@ -144,20 +170,26 @@ export function MovementDialog({ open, onClose, item }: MovementDialogProps) {
               <Controller
                 name="quantity"
                 control={control}
-                rules={{ required: true, min: 1 }}
-                render={({ field }) => (
+                rules={{
+                  required: 'Informe a quantidade',
+                  min: { value: 1, message: 'A quantidade mínima é 1' },
+                }}
+                render={({ field, fieldState }) => (
                   <TextField
                     {...field}
                     type="number"
                     label={type === 'ADJUSTMENT' ? 'Nova quantidade total' : 'Quantidade'}
                     fullWidth
                     required
+                    autoFocus
+                    inputProps={{ inputMode: 'numeric', min: 1 }}
                     helperText={
-                      type === 'ADJUSTMENT'
+                      fieldState.error?.message ??
+                      (type === 'ADJUSTMENT'
                         ? `O estoque ficará com ${quantity} unidades`
-                        : `Quantidade resultante: ${newQuantity}`
+                        : `Quantidade resultante: ${newQuantity}`)
                     }
-                    error={newQuantity < 0}
+                    error={!!fieldState.error || newQuantity < 0}
                   />
                 )}
               />
@@ -193,10 +225,8 @@ export function MovementDialog({ open, onClose, item }: MovementDialogProps) {
                       min: { value: 0.01, message: 'Informe um valor maior que zero' },
                     }}
                     render={({ field, fieldState }) => (
-                      <TextField
+                      <MoneyField
                         {...field}
-                        type="number"
-                        inputProps={{ step: '0.01', min: 0.01 }}
                         label="Valor total da compra"
                         fullWidth
                         required
@@ -207,9 +237,6 @@ export function MovementDialog({ open, onClose, item }: MovementDialogProps) {
                             ? `Custo unitário: ${brl.format(calculatedUnitPrice)} · gera despesa no financeiro`
                             : 'Gera uma despesa no financeiro ao confirmar')
                         }
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                        }}
                       />
                     )}
                   />
@@ -246,7 +273,8 @@ export function MovementDialog({ open, onClose, item }: MovementDialogProps) {
             {mutation.isError && (
               <Grid item xs={12}>
                 <Alert severity="error">
-                  {(mutation.error as any)?.response?.data?.message ?? 'Erro ao registrar movimento'}
+                  {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+                    'Erro ao registrar movimento'}
                 </Alert>
               </Grid>
             )}
@@ -259,6 +287,7 @@ export function MovementDialog({ open, onClose, item }: MovementDialogProps) {
             variant="contained"
             disabled={
               mutation.isPending ||
+              !item ||
               newQuantity < 0 ||
               (type === 'IN' && totalPrice <= 0)
             }

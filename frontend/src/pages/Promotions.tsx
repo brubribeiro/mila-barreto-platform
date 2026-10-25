@@ -18,17 +18,16 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
 import SearchIcon from '@mui/icons-material/Search';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
+import { urlPage, useUrlState } from '../hooks/useUrlState';
 import { getPromotionStatusKey, isPromotionActive } from '../utils/listFilters';
 import { promotionsApi } from '../api/promotions';
 import { PromotionFormDialog } from '../components/promotions/PromotionFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
@@ -67,17 +66,16 @@ export function Promotions() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('promotions:create');
   const canEdit = has('promotions:edit');
   const canDelete = has('promotions:delete');
 
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(0);
+  const [search, setSearch] = useUrlState('busca', '');
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Promotion | null>(null);
   const [initialCommemorativeDate, setInitialCommemorativeDate] = useState<string | undefined>();
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
@@ -122,8 +120,6 @@ export function Promotions() {
         (p.commemorativeDate ?? '').toLowerCase().includes(q),
     );
   }, [promotions, search]);
-
-  useEffect(() => setPage(0), [search]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
@@ -200,23 +196,15 @@ export function Promotions() {
             <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
             <InputBase
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
               placeholder="Buscar campanha..."
               inputProps={{ 'aria-label': 'Buscar campanha' }}
               sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />
           </Stack>
-          {isAdmin && (
-            <Tooltip title="Histórico de alterações">
-              <IconButton
-                aria-label="Histórico de alterações"
-                onClick={() => setHistoryOpen(true)}
-                sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
-              >
-                <HistoryIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
           {canCreate && (
             <Button
               variant="contained"
@@ -456,12 +444,6 @@ export function Promotions() {
         }}
         editing={editing}
         initialCommemorativeDate={initialCommemorativeDate}
-      />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="Promotion"
-        title="Promoções"
       />
     </Box>
   );
