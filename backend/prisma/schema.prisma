@@ -105,7 +105,7 @@ model Plan {
 // Não é dado de clínica: sem tenantId, fora do escopo automático; a clínica alvo fica em targetTenantId.
 model PlatformAuditLog {
   id             String   @id @default(uuid())
-  // TENANT_*, PLAN_*, CATALOG_*, TENANT_PLAN_CHANGE, TENANT_FEATURES_CHANGE
+  // TENANT_*, PLAN_*, CATALOG_*, TENANT_PLAN_CHANGE, TENANT_FEATURES_CHANGE, FEEDBACK_STATUS_CHANGE
   // (planos/catálogos: targetTenantId nulo, targetName = plano ou item)
   action         String
   actorId        String
@@ -1046,6 +1046,13 @@ enum FeedbackType {
   SUGGESTION
 }
 
+// Triagem pelo super-admin na central de reports (/admin/reports)
+enum FeedbackStatus {
+  OPEN
+  TRIAGED
+  CLOSED
+}
+
 model FeedbackReport {
   id          String       @id @default(uuid())
   tenantId    String       @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
@@ -1054,6 +1061,9 @@ model FeedbackReport {
   description String
   pageUrl     String?
   userId      String
+  status      FeedbackStatus @default(OPEN)
+  // Última troca de status (quem/quando fica na platform_audit_logs)
+  statusChangedAt DateTime?
   createdAt   DateTime     @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
@@ -1062,6 +1072,7 @@ model FeedbackReport {
   @@index([userId])
   @@index([createdAt])
   @@index([type])
+  @@index([status])
   @@index([tenantId])
   @@map("feedback_reports")
 }

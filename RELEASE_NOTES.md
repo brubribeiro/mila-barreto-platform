@@ -217,7 +217,9 @@ A versão aparece no menu lateral e na tela de login.
 - **Planos**: página no painel para criar, editar, ativar e desativar planos (já vêm **Essencial**, **Profissional** e **Enterprise**), com **preço de referência**, **módulos** (agenda, pacientes, financeiro, etc.) e limites de usuários, pacientes e armazenamento. Não há cobrança automática; os limites ainda são só informativos, mas os **módulos passam a valer**: o menu esconde o que não está no plano e a API bloqueia o acesso.
 - Cada clínica pode ter um **plano** e, no detalhe, **extras** (módulos além do plano) ou **removidos** (módulos do plano que aquela clínica não tem). Plano desativado some das opções, mas quem já tem continua com ele.
 - **Catálogos**: página no painel para gerenciar as opções compartilhadas por todas as clínicas (tipos de documento, categorias e gatilhos de mensagem, sugestões de categoria de procedimento e unidades de estoque). Não há lista diferente por clínica — o que vale na plataforma vale para todas.
-- **Auditoria da plataforma**: criação/edição/suspensão/reativação/entrada em clínica, mudanças de plano e de módulos, criar/editar/ativar/desativar planos e itens de catálogo ficam registrados com quem fez e quando.
+- **Uso**: página no painel com o uso de cada módulo (agenda, pacientes, financeiro, estoque, documentos…) no período escolhido e no total, quantas clínicas têm o módulo e quantas o usaram, além de usuários ativos, último acesso e armazenamento. Dá para ver todas as clínicas juntas ou uma só; são apenas contagens, sem nenhum dado de paciente ou agenda.
+- **Reports**: central com os bugs e sugestões enviados por todas as clínicas (clínica, tipo, título, autor, data e página), com filtros por status, tipo, clínica e busca. No detalhe dá para **marcar em triagem**, **resolver** ou **reabrir**; cada mudança fica na auditoria da plataforma.
+- **Auditoria da plataforma**: criação/edição/suspensão/reativação/entrada em clínica, mudanças de plano e de módulos, criar/editar/ativar/desativar planos e itens de catálogo e mudanças de status dos reports ficam registrados com quem fez e quando.
 
 ### Correções
 

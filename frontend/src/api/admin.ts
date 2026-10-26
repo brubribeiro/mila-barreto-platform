@@ -1,5 +1,6 @@
 import { api } from './client';
 import type {
+  AdminFeedbackReport,
   AdminPlan,
   AdminTenant,
   AdminTenantDetail,
@@ -7,6 +8,9 @@ import type {
   PlatformAuditLog,
   PlatformCatalogItem,
   PlatformCatalogKind,
+  PlatformUsage,
+  FeedbackStatus,
+  FeedbackType,
 } from '../types';
 
 export type TenantStatusFilter = 'active' | 'suspended';
@@ -53,6 +57,27 @@ export interface PlatformAuditPage {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+export interface AdminFeedbackQuery {
+  tenantId?: string;
+  type?: FeedbackType;
+  status?: FeedbackStatus;
+  search?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface AdminFeedbackPage {
+  data: AdminFeedbackReport[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  /** Por status, com os demais filtros aplicados. */
+  counts: Record<FeedbackStatus, number>;
 }
 
 /** Painel do super-admin (rotas /admin, só para isSuperAdmin). */
@@ -141,6 +166,26 @@ export const adminApi = {
     const { data } = await api.post<PlatformCatalogItem>(
       `/admin/catalogs/${id}/${active ? 'activate' : 'deactivate'}`,
     );
+    return data;
+  },
+
+  getUsage: async (params: { from?: string; to?: string; tenantId?: string } = {}): Promise<PlatformUsage> => {
+    const { data } = await api.get<PlatformUsage>('/admin/usage', { params });
+    return data;
+  },
+
+  listFeedback: async (params: AdminFeedbackQuery = {}): Promise<AdminFeedbackPage> => {
+    const { data } = await api.get<AdminFeedbackPage>('/admin/feedback', { params });
+    return data;
+  },
+
+  getFeedback: async (id: string): Promise<AdminFeedbackReport> => {
+    const { data } = await api.get<AdminFeedbackReport>(`/admin/feedback/${id}`);
+    return data;
+  },
+
+  setFeedbackStatus: async (id: string, status: FeedbackStatus): Promise<AdminFeedbackReport> => {
+    const { data } = await api.patch<AdminFeedbackReport>(`/admin/feedback/${id}/status`, { status });
     return data;
   },
 };

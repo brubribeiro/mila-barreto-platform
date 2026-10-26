@@ -71,5 +71,11 @@ describe('adminUi', () => {
         ),
       ).toBe('Extras: Nenhum → Mensagens · Removidos: Nenhum → Financeiro');
     });
+
+    it('status de report', () => {
+      expect(
+        auditDetailsText(entry('FEEDBACK_STATUS_CHANGE', { title: 'Botão não salva', old: 'OPEN', new: 'CLOSED' })),
+      ).toBe('Botão não salva: Aberto → Fechado');
+    });
   });
 });
