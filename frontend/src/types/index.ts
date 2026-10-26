@@ -104,7 +104,33 @@ export type PlatformAuditAction =
   | 'CATALOG_UPDATE'
   | 'CATALOG_ACTIVATE'
   | 'CATALOG_DEACTIVATE'
-  | 'FEEDBACK_STATUS_CHANGE';
+  | 'FEEDBACK_STATUS_CHANGE'
+  | 'ANNOUNCEMENT_GENERATE'
+  | 'ANNOUNCEMENT_CREATE'
+  | 'ANNOUNCEMENT_UPDATE'
+  | 'ANNOUNCEMENT_DELETE'
+  | 'ANNOUNCEMENT_SCHEDULE'
+  | 'ANNOUNCEMENT_UNSCHEDULE'
+  | 'ANNOUNCEMENT_SEND';
+
+/** Aviso de novidades/correções do super-admin para as clínicas (vira notificação no sino). */
+export type AnnouncementKind = 'FEATURE' | 'FIX';
+export type AnnouncementStatus = 'DRAFT' | 'SCHEDULED' | 'SENT';
+
+export interface PlatformAnnouncement {
+  id: string;
+  /** Versão do release de origem; null = escrito à mão. */
+  version: string | null;
+  kind: AnnouncementKind;
+  title: string;
+  body: string;
+  status: AnnouncementStatus;
+  scheduledAt: string | null;
+  sentAt: string | null;
+  recipientCount: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface PlatformAuditLog {
   id: string;
@@ -581,7 +607,8 @@ export type NotificationType =
   | 'PATIENT_RETURN_DUE'
   | 'PATIENT_REACTIVATION'
   | 'USER_CREATED'
-  | 'EQUIPMENT_MAINTENANCE';
+  | 'EQUIPMENT_MAINTENANCE'
+  | 'PLATFORM_ANNOUNCEMENT';
 
 export interface Notification {
   id: string;

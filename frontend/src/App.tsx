@@ -40,6 +40,7 @@ import { AdminCatalogs } from './pages/admin/AdminCatalogs';
 import { AdminPlans } from './pages/admin/AdminPlans';
 import { AdminUsage } from './pages/admin/AdminUsage';
 import { AdminFeedback } from './pages/admin/AdminFeedback';
+import { AdminAnnouncements } from './pages/admin/AdminAnnouncements';
 
 export default function App() {
   return (
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="catalogos" element={<AdminCatalogs />} />
         <Route path="uso" element={<AdminUsage />} />
         <Route path="reports" element={<AdminFeedback />} />
+        <Route path="anuncios" element={<AdminAnnouncements />} />
         <Route path="auditoria" element={<AdminAudit />} />
         <Route path="*" element={<Navigate to="clinicas" replace />} />
       </Route>

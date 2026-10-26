@@ -18,6 +18,7 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
       { label: 'Catálogos', path: '/admin/catalogos', icon: <AuroraIcon name="documentos" /> },
       { label: 'Uso', path: '/admin/uso', icon: <AuroraIcon name="relatorios" /> },
       { label: 'Reports', path: '/admin/reports', icon: <AuroraIcon name="feedback" /> },
+      { label: 'Anúncios', path: '/admin/anuncios', icon: <AuroraIcon name="bell" /> },
       { label: 'Auditoria', path: '/admin/auditoria', icon: <AuroraIcon name="clock" /> },
     ],
   },
@@ -40,6 +41,11 @@ const ADMIN_PAGE_META: { path: string; title: string; subtitle: string }[] = [
     path: '/admin/reports',
     title: 'Central de reports',
     subtitle: 'Bugs e sugestões enviados pelas clínicas',
+  },
+  {
+    path: '/admin/anuncios',
+    title: 'Anúncios de release',
+    subtitle: 'Avise as clínicas sobre novidades e correções (aparece no sino)',
   },
   {
     path: '/admin/auditoria',
