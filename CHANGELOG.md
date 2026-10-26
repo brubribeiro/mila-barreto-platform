@@ -4,8 +4,6 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
-## [0.2.2] - 2026-10-26
-
 ### Security
 
 - Agenda (#35): `PATCH /appointments/:id/start|finish|resume` passam a aplicar `restrictToOwnAppointments` (mesma regra de ownership de `findOne`/`update`).
