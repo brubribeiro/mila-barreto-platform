@@ -8,6 +8,19 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 - Clínica: rota `/auditoria` e item em Configurações (Administrador) para o histórico global de alterações (`AuditLogs` + `GET /audit-logs`).
 
+### Security
+
+- Agenda (#35): `PATCH /appointments/:id/start|finish|resume` passam a aplicar `restrictToOwnAppointments` (mesma regra de ownership de `findOne`/`update`).
+- Auth (#36): sessão em cookie HttpOnly (`access_token` / `admin_token`) com `withCredentials`; o painel deixa de persistir JWT em `localStorage` (XSS não lê mais o token no storage). Em produção: `SameSite=None; Secure` (cross-origin Vercel↔API). Bearer no header continua aceito para clientes que já enviam.
+- Auth (#37): `POST /auth/logout` incrementa `User.tokenVersion`; JWT leva `tv` e o `JwtStrategy` rejeita versão antiga (logout invalida o token no servidor). `POST /auth/stop-impersonating` restaura o cookie do admin sem JS ler o token.
+- Auth (#38): fail-fast no bootstrap se `GOOGLE_CLIENT_ID` estiver ausente/curto demais — garante audience obrigatória em `verifyIdToken`.
+- Documentos/R2 (#39): uploads deixam de gravar/expor `fileUrl` pública; acesso só via URL assinada de curta duração (`GET /documents/:id/access-url`). Objetos gravados com `Content-Disposition: attachment`.
+- Upload (#40): validação por magic bytes (`file-magic.util`) além do MIME declarado — documentos, fotos de paciente e de usuário.
+- Dependência (#41): `multer` atualizado para `^2.5.0` (com `overrides`) — corrige advisories HIGH da linha ≤2.4.x.
+- Auth (#42): `JwtStrategy` e emissão com allowlist `algorithms`/`algorithm: HS256`.
+- Multi-tenant (#43): `$queryRaw`/`$executeRaw` (e *Unsafe) só com tenant no contexto ou `TenantContext.runUnscoped`; keep-alive do scheduler usa `runUnscoped`.
+- R2 (#44): `remove`/`getPresignedUrl`/`download` recusam `storageKey` de outro tenant (`tenants/<id>/...`); keys legadas sem prefixo continuam permitidas com tenant ativo.
+
 ## [0.2.1] - 2026-10-26
 
 ### Security
@@ -17,6 +30,11 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Added
 
+- Admin — anúncios de release: model `PlatformAnnouncement` (sem `tenantId`; `version`, `kind` FEATURE|FIX, `status` DRAFT|SCHEDULED|SENT, `scheduledAt`, `sentAt`, `recipientCount`; único por `version`+`kind`) e `NotificationType.PLATFORM_ANNOUNCEMENT` (migration `20261026194057_platform_announcements`). `POST /admin/announcements/draft-from-release` lê a seção da versão de `VERSION` no `RELEASE_NOTES.md` (`### Novidades` → FEATURE, `### Correções…` → FIX) e cria os rascunhos que faltam; o boot da API faz o mesmo uma vez por versão. CRUD em `/admin/announcements`, `GET audience`, `POST :id/send`, `:id/schedule` e `:id/unschedule`; timer de 1 min envia os agendados vencidos. O envio cria uma `Notification` por usuário ativo das clínicas ativas (sem super-admin, respeitando o opt-out em `NotificationPreference`) e é idempotente (`updateMany` condicional antes de entregar). Auditoria `ANNOUNCEMENT_*` na `PlatformAuditLog` (ações automáticas com autor "Sistema").
+- Frontend admin: página Aurora `/admin/anuncios` (filtro por status, gerar do release, novo/editar com prévia do sino, enviar agora com contagem de destinatários, agendar/reagendar/cancelar, excluir), item Anúncios no `AdminLayout` e rótulos das ações na auditoria; no app da clínica, preferência "Novidades da plataforma" e texto em várias linhas no sino.
+- Admin — uso por funcionalidade: `GET /admin/usage?from&to&tenantId` (SuperAdminGuard, `UsageService`) com contagens por módulo do catálogo `PLATFORM_FEATURES` (`MODULE_USAGE_SOURCES`: model + campo de data por módulo; `groupBy` por `tenantId`, período em dias do Brasil e total), clínicas com o módulo habilitado/em uso, usuários ativos, acessos no período (`lastAccessAt`), armazenamento (documentos + fotos). Só contagens agregadas, sem dados clínicos.
+- Admin — central de reports: `FeedbackStatus` (OPEN|TRIAGED|CLOSED) e `statusChangedAt` em `FeedbackReport` (migration `20261026180000_feedback_status`); `GET /admin/feedback` (filtros tipo/status/clínica/busca/período, paginação, contadores por status), `GET /admin/feedback/:id` e `PATCH /admin/feedback/:id/status` com auditoria `FEEDBACK_STATUS_CHANGE` na `PlatformAuditLog`.
+- Frontend admin: páginas Aurora `/admin/uso` e `/admin/reports` (detalhe em `FeedbackDetailDialog`), itens Uso e Reports no `AdminLayout`, rótulo da nova ação na auditoria.
 - Catálogos globais da plataforma: model Prisma `PlatformCatalogItem` (kinds `document_category`, `message_category`, `message_trigger`, `procedure_category`, `inventory_unit`; sem `tenantId`), migration `20261026160000_platform_catalogs`, seed com os valores que o front usava hardcoded; CRUD ` /admin/catalogs` (SuperAdminGuard) com auditoria `CATALOG_*`; leitura autenticada `GET /catalogs` (só ativos) para o app da clínica.
 - Frontend admin: página Aurora `/admin/catalogos` para gerenciar itens por tipo; menu Catálogos no painel super-admin.
 - Frontend clínica: selects de documentos, mensagens (categoria/gatilho), sugestões de procedimento e unidades de estoque passam a consumir o catálogo via React Query (fallback local enquanto carrega).

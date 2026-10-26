@@ -105,8 +105,8 @@ model Plan {
 // Não é dado de clínica: sem tenantId, fora do escopo automático; a clínica alvo fica em targetTenantId.
 model PlatformAuditLog {
   id             String   @id @default(uuid())
-  // TENANT_*, PLAN_*, CATALOG_*, TENANT_PLAN_CHANGE, TENANT_FEATURES_CHANGE
-  // (planos/catálogos: targetTenantId nulo, targetName = plano ou item)
+  // TENANT_*, PLAN_*, CATALOG_*, TENANT_PLAN_CHANGE, TENANT_FEATURES_CHANGE, FEEDBACK_STATUS_CHANGE, ANNOUNCEMENT_*
+  // (planos/catálogos/avisos: targetTenantId nulo, targetName = plano, item ou título do aviso)
   action         String
   actorId        String
   actorName      String
@@ -122,6 +122,39 @@ model PlatformAuditLog {
   @@index([targetTenantId])
   @@index([createdAt])
   @@map("platform_audit_logs")
+}
+
+enum AnnouncementKind {
+  FEATURE // novidade
+  FIX // correção
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+}
+
+// Aviso do super-admin às clínicas (novidades/correções de um release). Não é dado de clínica:
+// sem tenantId. Ao enviar, vira uma Notification PLATFORM_ANNOUNCEMENT para cada usuário das
+// clínicas ativas; rascunhos podem ser gerados do RELEASE_NOTES.md (version + kind).
+model PlatformAnnouncement {
+  id             String             @id @default(uuid())
+  // Versão do release de origem (null = aviso escrito à mão)
+  version        String?
+  kind           AnnouncementKind
+  title          String
+  body           String
+  status         AnnouncementStatus @default(DRAFT)
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  recipientCount Int?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([version, kind])
+  @@index([status, scheduledAt])
+  @@map("platform_announcements")
 }
 
 // Catálogo global da plataforma (sem tenantId): categorias de documento/mensagem,
@@ -213,6 +246,8 @@ model User {
   photoUrl             String? // URL pública/derivada da foto
   // Última requisição autenticada (atualizada no máximo a cada poucos minutos); métrica do painel admin
   lastAccessAt         DateTime?
+  // Incrementado no logout: JWTs com tv antigo deixam de ser aceitos (revogação de sessão)
+  tokenVersion         Int      @default(0)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -422,6 +457,8 @@ enum NotificationType {
   PATIENT_REACTIVATION
   USER_CREATED
   EQUIPMENT_MAINTENANCE
+  // Novidades/correções enviadas pelo super-admin (PlatformAnnouncement)
+  PLATFORM_ANNOUNCEMENT
 }
 
 model Notification {
@@ -1046,6 +1083,13 @@ enum FeedbackType {
   SUGGESTION
 }
 
+// Triagem pelo super-admin na central de reports (/admin/reports)
+enum FeedbackStatus {
+  OPEN
+  TRIAGED
+  CLOSED
+}
+
 model FeedbackReport {
   id          String       @id @default(uuid())
   tenantId    String       @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
@@ -1054,6 +1098,9 @@ model FeedbackReport {
   description String
   pageUrl     String?
   userId      String
+  status      FeedbackStatus @default(OPEN)
+  // Última troca de status (quem/quando fica na platform_audit_logs)
+  statusChangedAt DateTime?
   createdAt   DateTime     @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
@@ -1062,6 +1109,7 @@ model FeedbackReport {
   @@index([userId])
   @@index([createdAt])
   @@index([type])
+  @@index([status])
   @@index([tenantId])
   @@map("feedback_reports")
 }
