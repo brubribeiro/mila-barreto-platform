@@ -70,6 +70,7 @@ model User {
   notificationPreferences NotificationPreference[]
   workingHours            WorkingHours[]
   unavailabilities        Unavailability[]
+  feedbackReports         FeedbackReport[]
 
   @@map("users")
 }
@@ -733,6 +734,32 @@ model AuditLog {
   @@index([userId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// =========================
+// FEEDBACK / REPORTES DE USUÁRIOS
+// =========================
+
+enum FeedbackType {
+  BUG
+  SUGGESTION
+}
+
+model FeedbackReport {
+  id          String       @id @default(uuid())
+  type        FeedbackType
+  title       String
+  description String
+  pageUrl     String?
+  userId      String
+  createdAt   DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([type])
+  @@map("feedback_reports")
 }
 
 enum MovementType {

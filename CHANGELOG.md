@@ -6,6 +6,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Added
 
+- Feedback: model Prisma `FeedbackReport` (BUG|SUGGESTION), migration `20261026010000_feedback_reports`, `POST /feedback` (qualquer autenticado) e `GET /feedback` (`feedback:view` / Administrador).
+- Feedback: dialog no menu do usuário (sidebar) para escolher tipo, preencher título/descrição e enviar; página mínima `/feedback` para leitura admin.
 - Pacientes: lista Aurora com cards de estatísticas (`GET /patients/stats`), score de confiabilidade, última visita, total gasto e paginação.
 - Ficha do paciente redesenhada (abas Geral, Agendamentos, Pacotes, Anamnese, Fotos).
 - Fotos **antes/depois** por paciente vinculadas a agendamento (`PatientPhoto`, upload R2 comprimido).

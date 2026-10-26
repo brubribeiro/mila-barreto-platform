@@ -23,6 +23,7 @@ import { Packages } from './pages/Packages';
 import { Metrics } from './pages/Metrics';
 import { Promotions } from './pages/Promotions';
 import { PaymentMethods } from './pages/PaymentMethods';
+import { FeedbackReports } from './pages/FeedbackReports';
 import { Layout } from './components/Layout';
 import { PrivateRoute } from './components/PrivateRoute';
 import { PermissionRoute } from './components/PermissionRoute';
@@ -183,6 +184,14 @@ export default function App() {
           element={
             <PermissionRoute permission="payment-methods:view">
               <PaymentMethods />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="/feedback"
+          element={
+            <PermissionRoute permission="feedback:view">
+              <FeedbackReports />
             </PermissionRoute>
           }
         />

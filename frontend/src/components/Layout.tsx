@@ -6,12 +6,15 @@ import {
   Avatar,
   Box,
   Button,
+  Divider,
   Drawer,
   IconButton,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Menu,
+  MenuItem,
   Stack,
   Toolbar,
   Tooltip,
@@ -19,6 +22,8 @@ import {
   useTheme,
 } from '@mui/material';
 import SwitchAccountIcon from '@mui/icons-material/SwitchAccount';
+import FeedbackOutlinedIcon from '@mui/icons-material/FeedbackOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/usePermissions';
@@ -26,6 +31,7 @@ import { useAppointmentDialog } from '../contexts/AppointmentDialogContext';
 import type { Permission } from '../contexts/permissions';
 import { NotificationsBell } from './notifications/NotificationsBell';
 import { AuroraIcon } from './AuroraIcon';
+import { FeedbackReportDialog } from './feedback/FeedbackReportDialog';
 import { fontSizes } from '../theme/fontSizes';
 
 const DRAWER_WIDTH = 258;
@@ -101,6 +107,7 @@ const navGrouped: NavGroup[] = [
     items: [
       { label: 'Mensagens', path: '/mensagens', icon: <AuroraIcon name="mensagens" />, permission: 'messages:view' },
       { label: 'Grupos', path: '/grupos', icon: <AuroraIcon name="permissoes" />, permission: 'roles:view' },
+      { label: 'Feedback', path: '/feedback', icon: <AuroraIcon name="feedback" />, permission: 'feedback:view' },
     ],
   },
 ];
@@ -129,6 +136,7 @@ const PAGE_META: (PageMeta & { path: string; exact?: boolean })[] = [
   { path: '/documentos', title: 'Documentos', subtitle: 'Arquivos e modelos' },
   { path: '/equipamentos', title: 'Equipamentos', subtitle: 'Aparelhos e manutenção' },
   { path: '/metricas', title: 'Métricas', subtitle: 'Indicadores e relatórios' },
+  { path: '/feedback', title: 'Feedback', subtitle: 'Bugs e sugestões da equipe' },
 ];
 
 function getPageMeta(pathname: string): PageMeta {
@@ -141,12 +149,15 @@ function getPageMeta(pathname: string): PageMeta {
 export function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, stopImpersonating } = useAuth();
   const isImpersonating = user?.impersonating === true;
   const { has } = usePermissions();
   const { openAppointmentDialog } = useAppointmentDialog();
+  const userMenuOpen = Boolean(userMenuAnchor);
 
   const visibleGroups = useMemo(() => {
     return navGrouped
@@ -415,6 +426,10 @@ export function Layout() {
             <Tooltip title={`${user?.name ?? 'Usuário'}${user?.roleName ? ` · ${user.roleName}` : ''}`} placement="right">
               <Avatar
                 variant="rounded"
+                onClick={(e) => setUserMenuAnchor(e.currentTarget)}
+                aria-haspopup="menu"
+                aria-expanded={userMenuOpen ? 'true' : undefined}
+                aria-label="Menu do usuário"
                 sx={{
                   width: 38,
                   height: 38,
@@ -423,6 +438,7 @@ export function Layout() {
                   color: '#CFECE7',
                   fontSize: fontSizes.xs,
                   fontWeight: 700,
+                  cursor: 'pointer',
                 }}
               >
                 {userInitials}
@@ -447,30 +463,57 @@ export function Layout() {
           </Stack>
         ) : (
           <Stack direction="row" spacing={1.25} alignItems="center">
-            <Avatar
-              variant="rounded"
+            <Box
+              component="button"
+              type="button"
+              onClick={(e) => setUserMenuAnchor(e.currentTarget)}
+              aria-haspopup="menu"
+              aria-expanded={userMenuOpen ? 'true' : undefined}
+              aria-label="Menu do usuário"
               sx={{
-                width: 38,
-                height: 38,
-                borderRadius: '11px',
-                background: 'linear-gradient(135deg,#3A6B64,#1F4A45)',
-                color: '#CFECE7',
-                fontSize: fontSizes.xs,
-                fontWeight: 700,
-                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.25,
+                minWidth: 0,
+                flex: 1,
+                p: 0,
+                m: 0,
+                border: 0,
+                bgcolor: 'transparent',
+                cursor: 'pointer',
+                textAlign: 'left',
+                borderRadius: '12px',
+                '&:hover .user-menu-avatar': {
+                  boxShadow: '0 0 0 2px rgba(21,153,139,0.45)',
+                },
               }}
             >
-              {userInitials}
-            </Avatar>
-            <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography noWrap sx={{ fontSize: fontSizes.sm, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
-                {user?.name ?? 'Usuário'}
-              </Typography>
-              {user?.roleName && (
-                <Typography noWrap sx={{ fontSize: fontSizes['2xs'], color: SIDEBAR_TEXT, lineHeight: 1.2 }}>
-                  {user.roleName}
+              <Avatar
+                className="user-menu-avatar"
+                variant="rounded"
+                sx={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: '11px',
+                  background: 'linear-gradient(135deg,#3A6B64,#1F4A45)',
+                  color: '#CFECE7',
+                  fontSize: fontSizes.xs,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+              >
+                {userInitials}
+              </Avatar>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography noWrap sx={{ fontSize: fontSizes.sm, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
+                  {user?.name ?? 'Usuário'}
                 </Typography>
-              )}
+                {user?.roleName && (
+                  <Typography noWrap sx={{ fontSize: fontSizes['2xs'], color: SIDEBAR_TEXT, lineHeight: 1.2 }}>
+                    {user.roleName}
+                  </Typography>
+                )}
+              </Box>
             </Box>
             <Tooltip title="Sair">
               <IconButton
@@ -730,6 +773,58 @@ export function Layout() {
         {isImpersonating && <Box sx={{ height: 40 }} />}
         <Outlet />
       </Box>
+
+      <Menu
+        anchorEl={userMenuAnchor}
+        open={userMenuOpen}
+        onClose={() => setUserMenuAnchor(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        slotProps={{
+          paper: {
+            sx: {
+              mt: -1,
+              minWidth: 220,
+              borderRadius: '14px',
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: '0 10px 30px rgba(14,41,38,0.12)',
+            },
+          },
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            setUserMenuAnchor(null);
+            setFeedbackOpen(true);
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 36 }}>
+            <FeedbackOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary="Reportar bug ou sugestão"
+            primaryTypographyProps={{ fontSize: fontSizes.sm, fontWeight: 600 }}
+          />
+        </MenuItem>
+        <Divider sx={{ my: 0.5 }} />
+        <MenuItem
+          onClick={() => {
+            setUserMenuAnchor(null);
+            logout();
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 36 }}>
+            <LogoutOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary="Sair"
+            primaryTypographyProps={{ fontSize: fontSizes.sm, fontWeight: 600 }}
+          />
+        </MenuItem>
+      </Menu>
+
+      <FeedbackReportDialog open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </Box>
   );
 }
