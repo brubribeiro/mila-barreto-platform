@@ -18,6 +18,9 @@ export interface JwtPayload {
   impersonatorId?: string;
 }
 
+/** Duração do token de "entrar como" uma clínica (super-admin). */
+export const TENANT_ACCESS_EXPIRES_IN = '2h';
+
 @Injectable()
 export class AuthService {
   private readonly googleClient: OAuth2Client;
@@ -85,7 +88,25 @@ export class AuthService {
     };
   }
 
+  /**
+   * Token do super-admin agindo como administrador da clínica tenantId ("entrar como" do
+   * painel admin). Vale menos que a sessão normal; quem chama registra a auditoria.
+   */
+  signTenantAccess(superAdmin: AuthenticatedUser, tenantId: string) {
+    const payload: JwtPayload = {
+      sub: superAdmin.id,
+      email: superAdmin.email,
+      tenantId,
+      impersonatorId: superAdmin.id,
+    };
+    return this.jwt.signAsync(payload, { expiresIn: TENANT_ACCESS_EXPIRES_IN });
+  }
+
   async impersonate(targetUserId: string, admin: AuthenticatedUser) {
+    // Super-admin dentro de uma clínica não personifica: sairia da trilha de auditoria da plataforma.
+    if (admin.isSuperAdmin) {
+      throw new ForbiddenException('O super-admin não pode personificar usuários da clínica.');
+    }
     if (admin.roleName !== SYSTEM_ADMIN_ROLE_NAME) {
       throw new ForbiddenException('Apenas administradores podem personificar usuários.');
     }

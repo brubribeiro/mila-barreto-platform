@@ -64,8 +64,31 @@ model Tenant {
   skincareProducts        SkincareProduct[]
   skincareRules           SkincareRule[]
   skincareRoutines        SkincareRoutine[]
+  platformAuditLogs       PlatformAuditLog[]
 
   @@map("tenants")
+}
+
+// Ações do super-admin no painel da plataforma (criar/editar/suspender clínicas, "entrar como").
+// Não é dado de clínica: sem tenantId, fora do escopo automático; a clínica alvo fica em targetTenantId.
+model PlatformAuditLog {
+  id             String   @id @default(uuid())
+  // TENANT_CREATE, TENANT_UPDATE, TENANT_SUSPEND, TENANT_REACTIVATE, TENANT_ENTER
+  action         String
+  actorId        String
+  actorName      String
+  actorEmail     String
+  targetTenantId String?
+  // Nome da clínica no momento da ação (continua legível se ela for renomeada)
+  targetName     String?
+  details        Json?
+  createdAt      DateTime @default(now())
+
+  targetTenant Tenant? @relation(fields: [targetTenantId], references: [id], onDelete: SetNull)
+
+  @@index([targetTenantId])
+  @@index([createdAt])
+  @@map("platform_audit_logs")
 }
 
 // =========================
@@ -133,6 +156,8 @@ model User {
   bio                  String? // descrição/bio curta
   photoStorageKey      String? // chave da foto no Cloudflare R2
   photoUrl             String? // URL pública/derivada da foto
+  // Última requisição autenticada (atualizada no máximo a cada poucos minutos); métrica do painel admin
+  lastAccessAt         DateTime?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

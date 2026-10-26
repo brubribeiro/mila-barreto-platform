@@ -6,6 +6,8 @@ export interface AuthenticatedUser {
   email: string;
   /** Clínica do usuário. Null só para super-admin. */
   tenantId: string | null;
+  /** Nome da clínica quando o super-admin está "entrando como" ela pelo painel admin. */
+  tenantName?: string;
   /** Super-admin da plataforma: sem clínica e sem grupo; só usa rotas com SuperAdminGuard. */
   isSuperAdmin: boolean;
   roleId: string | null;

@@ -6,9 +6,11 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload } from './auth.service';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
-import { effectivePermissions } from '../common/permissions';
+import { effectivePermissions, SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
 import { TenantContext } from '../tenancy/tenant-context';
 import { assertTenantActive } from '../tenancy/tenant-status';
+
+const LAST_ACCESS_INTERVAL_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -35,11 +37,37 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user || !user.active) {
       throw new UnauthorizedException('Usuário inativo ou inexistente.');
     }
+
+    // Super-admin "entrando como" uma clínica (painel admin): age como administrador dela.
+    if (user.isSuperAdmin && payload.tenantId && payload.impersonatorId === user.id) {
+      const tenant = await TenantContext.runUnscoped(() =>
+        this.prisma.tenant.findUnique({ where: { id: payload.tenantId! } }),
+      );
+      if (!tenant) throw new UnauthorizedException('Clínica não encontrada.');
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+        isSuperAdmin: true,
+        active: user.active,
+        roleId: null,
+        roleName: SYSTEM_ADMIN_ROLE_NAME,
+        permissions: effectivePermissions(SYSTEM_ADMIN_ROLE_NAME, []),
+        restrictToOwnAppointments: false,
+        providesAppointments: false,
+        impersonatorId: user.id,
+      };
+    }
+
     // Token anterior ao multi-tenant (sem tenantId) ou de outra clínica: exige novo login.
     if (payload.tenantId === undefined || payload.tenantId !== user.tenantId) {
       throw new UnauthorizedException('Sessão inválida. Entre novamente.');
     }
     assertTenantActive(user.tenant);
+
+    if (!payload.impersonatorId) await this.touchLastAccess(user.id, user.lastAccessAt);
 
     return {
       id: user.id,
@@ -55,5 +83,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       providesAppointments: user.providesAppointments,
       ...(payload.impersonatorId ? { impersonatorId: payload.impersonatorId } : {}),
     };
+  }
+
+  /** Último acesso (métrica do painel admin), gravado no máximo a cada LAST_ACCESS_INTERVAL_MS. */
+  private async touchLastAccess(userId: string, lastAccessAt: Date | null) {
+    if (lastAccessAt && Date.now() - lastAccessAt.getTime() < LAST_ACCESS_INTERVAL_MS) return;
+    await TenantContext.runUnscoped(() =>
+      this.prisma.user.update({ where: { id: userId }, data: { lastAccessAt: new Date() } }),
+    ).catch(() => undefined);
   }
 }
