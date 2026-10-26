@@ -18,6 +18,7 @@ describe('JwtStrategy', () => {
     role: null,
     providesAppointments: false,
     lastAccessAt: null,
+    tokenVersion: 0,
   };
   const clinicUser = {
     ...superAdmin,
@@ -37,6 +38,7 @@ describe('JwtStrategy', () => {
     roleId: 'role-1',
     role: { name: 'Recepção', permissions: ['patients:view'], restrictToOwnAppointments: false },
     lastAccessAt: new Date(),
+    tokenVersion: 2,
   };
 
   let prisma: { user: { findUnique: jest.Mock; update: jest.Mock }; tenant: { findUnique: jest.Mock } };
@@ -68,6 +70,7 @@ describe('JwtStrategy', () => {
         sub: 'root-1',
         email: superAdmin.email,
         tenantId: 'tenant-2',
+        tv: 0,
         impersonatorId: 'root-1',
       });
 
@@ -94,7 +97,13 @@ describe('JwtStrategy', () => {
       });
 
       await expect(
-        strategy.validate({ sub: 'root-1', email: superAdmin.email, tenantId: 'tenant-2', impersonatorId: 'root-1' }),
+        strategy.validate({
+          sub: 'root-1',
+          email: superAdmin.email,
+          tenantId: 'tenant-2',
+          tv: 0,
+          impersonatorId: 'root-1',
+        }),
       ).resolves.toMatchObject({ tenantId: 'tenant-2' });
     });
 
@@ -103,7 +112,13 @@ describe('JwtStrategy', () => {
       prisma.tenant.findUnique.mockResolvedValue(null);
 
       await expect(
-        strategy.validate({ sub: 'root-1', email: superAdmin.email, tenantId: 'x', impersonatorId: 'root-1' }),
+        strategy.validate({
+          sub: 'root-1',
+          email: superAdmin.email,
+          tenantId: 'x',
+          tv: 0,
+          impersonatorId: 'root-1',
+        }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -111,9 +126,33 @@ describe('JwtStrategy', () => {
       prisma.user.findUnique.mockResolvedValue(clinicUser);
 
       await expect(
-        strategy.validate({ sub: 'user-1', email: clinicUser.email, tenantId: 'tenant-2', impersonatorId: 'user-1' }),
+        strategy.validate({
+          sub: 'user-1',
+          email: clinicUser.email,
+          tenantId: 'tenant-2',
+          tv: 2,
+          impersonatorId: 'user-1',
+        }),
       ).rejects.toThrow(UnauthorizedException);
       expect(prisma.tenant.findUnique).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('tokenVersion (logout)', () => {
+    it('recusa JWT com tv diferente do banco', async () => {
+      prisma.user.findUnique.mockResolvedValue(clinicUser);
+
+      await expect(
+        strategy.validate({ sub: 'user-1', email: clinicUser.email, tenantId: 'tenant-1', tv: 1 }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('recusa JWT sem tv', async () => {
+      prisma.user.findUnique.mockResolvedValue(clinicUser);
+
+      await expect(
+        strategy.validate({ sub: 'user-1', email: clinicUser.email, tenantId: 'tenant-1' } as any),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -121,7 +160,12 @@ describe('JwtStrategy', () => {
     it('grava lastAccessAt quando o último registro é antigo', async () => {
       prisma.user.findUnique.mockResolvedValue({ ...clinicUser, lastAccessAt: new Date(Date.now() - 10 * 60_000) });
 
-      const user = await strategy.validate({ sub: 'user-1', email: clinicUser.email, tenantId: 'tenant-1' });
+      const user = await strategy.validate({
+        sub: 'user-1',
+        email: clinicUser.email,
+        tenantId: 'tenant-1',
+        tv: 2,
+      });
 
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-1' },
@@ -129,12 +173,13 @@ describe('JwtStrategy', () => {
       });
       // Sem plano: catálogo completo (legado)
       expect(user.features).toEqual([...PLATFORM_FEATURES]);
+      expect(user.tokenVersion).toBe(2);
     });
 
     it('não grava de novo dentro do intervalo', async () => {
       prisma.user.findUnique.mockResolvedValue(clinicUser);
 
-      await strategy.validate({ sub: 'user-1', email: clinicUser.email, tenantId: 'tenant-1' });
+      await strategy.validate({ sub: 'user-1', email: clinicUser.email, tenantId: 'tenant-1', tv: 2 });
 
       expect(prisma.user.update).not.toHaveBeenCalled();
     });
@@ -142,7 +187,13 @@ describe('JwtStrategy', () => {
     it('não conta personificação como acesso do usuário', async () => {
       prisma.user.findUnique.mockResolvedValue({ ...clinicUser, lastAccessAt: null });
 
-      await strategy.validate({ sub: 'user-1', email: clinicUser.email, tenantId: 'tenant-1', impersonatorId: 'admin-1' });
+      await strategy.validate({
+        sub: 'user-1',
+        email: clinicUser.email,
+        tenantId: 'tenant-1',
+        tv: 2,
+        impersonatorId: 'admin-1',
+      });
 
       expect(prisma.user.update).not.toHaveBeenCalled();
     });

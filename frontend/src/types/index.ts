@@ -103,7 +103,34 @@ export type PlatformAuditAction =
   | 'CATALOG_CREATE'
   | 'CATALOG_UPDATE'
   | 'CATALOG_ACTIVATE'
-  | 'CATALOG_DEACTIVATE';
+  | 'CATALOG_DEACTIVATE'
+  | 'FEEDBACK_STATUS_CHANGE'
+  | 'ANNOUNCEMENT_GENERATE'
+  | 'ANNOUNCEMENT_CREATE'
+  | 'ANNOUNCEMENT_UPDATE'
+  | 'ANNOUNCEMENT_DELETE'
+  | 'ANNOUNCEMENT_SCHEDULE'
+  | 'ANNOUNCEMENT_UNSCHEDULE'
+  | 'ANNOUNCEMENT_SEND';
+
+/** Aviso de novidades/correções do super-admin para as clínicas (vira notificação no sino). */
+export type AnnouncementKind = 'FEATURE' | 'FIX';
+export type AnnouncementStatus = 'DRAFT' | 'SCHEDULED' | 'SENT';
+
+export interface PlatformAnnouncement {
+  id: string;
+  /** Versão do release de origem; null = escrito à mão. */
+  version: string | null;
+  kind: AnnouncementKind;
+  title: string;
+  body: string;
+  status: AnnouncementStatus;
+  scheduledAt: string | null;
+  sentAt: string | null;
+  recipientCount: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface PlatformAuditLog {
   id: string;
@@ -510,6 +537,7 @@ export interface DocumentFile {
   status: DocumentStatus;
   signedAt?: string | null;
   storageKey?: string | null;
+  /** Sempre null na API — abrir via `documentsApi.getAccessUrl` (presign). */
   fileUrl?: string | null;
   mimeType?: string | null;
   size?: number | null;
@@ -580,7 +608,8 @@ export type NotificationType =
   | 'PATIENT_RETURN_DUE'
   | 'PATIENT_REACTIVATION'
   | 'USER_CREATED'
-  | 'EQUIPMENT_MAINTENANCE';
+  | 'EQUIPMENT_MAINTENANCE'
+  | 'PLATFORM_ANNOUNCEMENT';
 
 export interface Notification {
   id: string;
@@ -601,6 +630,63 @@ export interface NotificationPreference {
 }
 
 export type FeedbackType = 'BUG' | 'SUGGESTION';
+
+export type FeedbackStatus = 'OPEN' | 'TRIAGED' | 'CLOSED';
+
+/** Report na central do super-admin (todas as clínicas). */
+export interface AdminFeedbackReport {
+  id: string;
+  type: FeedbackType;
+  status: FeedbackStatus;
+  title: string;
+  pageUrl: string | null;
+  createdAt: string;
+  statusChangedAt: string | null;
+  tenant: { id: string; name: string };
+  user: { id: string; name: string; email: string };
+  /** Só no detalhe. */
+  description?: string;
+}
+
+export interface PlatformModuleUsage {
+  key: string;
+  label: string;
+  /** null = módulo sem registro próprio (ex.: Métricas). */
+  metricLabel: string | null;
+  enabledTenants: number;
+  activeTenants: number | null;
+  periodCount: number | null;
+  totalCount: number | null;
+}
+
+export interface PlatformTenantUsage {
+  id: string;
+  name: string;
+  slug: string;
+  active: boolean;
+  plan: { id: string; name: string } | null;
+  features: string[];
+  activeUsers: number;
+  usersAccessedInPeriod: number;
+  lastAccessAt: string | null;
+  storageBytes: number;
+  files: number;
+  usage: Record<string, { period: number; total: number } | null>;
+}
+
+export interface PlatformUsage {
+  range: { from: string; to: string };
+  totals: {
+    tenants: number;
+    activeTenants: number;
+    activeUsers: number;
+    usersAccessedInPeriod: number;
+    storageBytes: number;
+    files: number;
+  };
+  modules: PlatformModuleUsage[];
+  tenants: PlatformTenantUsage[];
+}
 
 export interface FeedbackReport {
   id: string;

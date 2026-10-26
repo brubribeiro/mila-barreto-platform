@@ -16,6 +16,9 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
       { label: 'Clínicas', path: '/admin/clinicas', icon: <AuroraIcon name="dashboard" /> },
       { label: 'Planos', path: '/admin/planos', icon: <AuroraIcon name="pacotes" /> },
       { label: 'Catálogos', path: '/admin/catalogos', icon: <AuroraIcon name="documentos" /> },
+      { label: 'Uso', path: '/admin/uso', icon: <AuroraIcon name="relatorios" /> },
+      { label: 'Reports', path: '/admin/reports', icon: <AuroraIcon name="feedback" /> },
+      { label: 'Anúncios', path: '/admin/anuncios', icon: <AuroraIcon name="bell" /> },
       { label: 'Auditoria', path: '/admin/auditoria', icon: <AuroraIcon name="clock" /> },
     ],
   },
@@ -28,6 +31,21 @@ const ADMIN_PAGE_META: { path: string; title: string; subtitle: string }[] = [
     path: '/admin/catalogos',
     title: 'Catálogos',
     subtitle: 'Opções globais compartilhadas por todas as clínicas',
+  },
+  {
+    path: '/admin/uso',
+    title: 'Uso por funcionalidade',
+    subtitle: 'Uso dos módulos por clínica e no total (só contagens, sem dados clínicos)',
+  },
+  {
+    path: '/admin/reports',
+    title: 'Central de reports',
+    subtitle: 'Bugs e sugestões enviados pelas clínicas',
+  },
+  {
+    path: '/admin/anuncios',
+    title: 'Anúncios de release',
+    subtitle: 'Avise as clínicas sobre novidades e correções (aparece no sino)',
   },
   {
     path: '/admin/auditoria',

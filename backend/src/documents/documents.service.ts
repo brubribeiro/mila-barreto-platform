@@ -6,6 +6,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { R2StorageService } from './r2-storage.service';
 import { CompressionService } from './compression.service';
 import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
+import { assertAllowedFileContent } from '../common/utils/file-magic.util';
+import { DOCUMENT_ALLOWED_MIMES } from './upload-allowlist';
 
 export class CreateDocumentDto {
   @IsString()
@@ -118,7 +120,7 @@ export class DocumentsService {
       orderBy: { createdAt: 'desc' },
       include: DOC_INCLUDE,
     });
-    return docs.map(({ content, ...d }) => ({ ...d, hasContent: !!content }));
+    return docs.map((d) => this.withoutContent(d));
   }
 
   async findOne(id: string) {
@@ -127,11 +129,31 @@ export class DocumentsService {
       include: DOC_INCLUDE,
     });
     if (!d) throw new NotFoundException('Documento não encontrado');
+    // Resposta ao cliente: nunca devolver fileUrl pública persistida (usar getAccessUrl).
+    return this.withoutFileUrl(d);
+  }
+
+  /** Interno: registro completo (auditoria / replace de arquivo). */
+  private async findOneRaw(id: string) {
+    const d = await this.prisma.document.findUnique({
+      where: { id },
+      include: DOC_INCLUDE,
+    });
+    if (!d) throw new NotFoundException('Documento não encontrado');
     return d;
   }
 
-  private withoutContent<T extends { content: string | null }>({ content, ...d }: T) {
-    return { ...d, hasContent: !!content };
+  /** Não expoe URL pública durável — acesso só via presign (`getAccessUrl`). */
+  private withoutFileUrl<T extends { fileUrl?: string | null }>(doc: T): T {
+    return { ...doc, fileUrl: null };
+  }
+
+  private withoutContent<T extends { content: string | null; fileUrl?: string | null }>({
+    content,
+    fileUrl: _fileUrl,
+    ...d
+  }: T) {
+    return { ...d, fileUrl: null, hasContent: !!content };
   }
 
   /** Gera um documento a partir de um modelo, substituindo os placeholders pelos dados do paciente. */
@@ -180,7 +202,7 @@ export class DocumentsService {
   }
 
   async update(id: string, dto: UpdateDocumentDto, user?: AuditUser) {
-    const before = await this.findOne(id);
+    const before = await this.findOneRaw(id);
     const updated = await this.prisma.document.update({
       where: { id },
       data: {
@@ -212,20 +234,21 @@ export class DocumentsService {
     if (!this.r2.isConfigured) {
       throw new BadRequestException('Cloudflare R2 não está configurado. Verifique as variáveis de ambiente.');
     }
-    const before = await this.findOne(id);
-    const compressed = await this.compression.compress(file.buffer, file.mimetype);
+    const before = await this.findOneRaw(id);
+    const mimeType = assertAllowedFileContent(file.buffer, file.mimetype, DOCUMENT_ALLOWED_MIMES);
+    const compressed = await this.compression.compress(file.buffer, mimeType);
     const subfolder = before.patient
       ? `pacientes/${slug(before.patient.name)}`
       : before.equipment
         ? `equipamentos/${slug(before.equipment.name)}`
         : undefined;
-    const { key, url } = await this.r2.upload(before.name, compressed.mimeType, compressed.buffer, subfolder);
+    const { key } = await this.r2.upload(before.name, compressed.mimeType, compressed.buffer, subfolder);
 
     const updated = await this.prisma.document.update({
       where: { id },
       data: {
         storageKey: key,
-        fileUrl: url,
+        fileUrl: null,
         mimeType: compressed.mimeType,
         size: compressed.compressedSize,
         ...statusData(DocumentStatus.SIGNED, before),
@@ -251,7 +274,7 @@ export class DocumentsService {
 
   /** URL temporária assinada para arquivo privado no R2. */
   async getAccessUrl(id: string): Promise<{ url: string }> {
-    const doc = await this.findOne(id);
+    const doc = await this.findOneRaw(id);
 
     if (!doc.storageKey) {
       throw new NotFoundException('Arquivo não disponível para visualização.');
@@ -286,10 +309,10 @@ export class DocumentsService {
       if (equip) subfolder = `equipamentos/${slug(equip.name)}`;
     }
 
-    // Comprimir arquivo antes do upload
-    const compressed = await this.compression.compress(file.buffer, file.mimetype);
+    const mimeType = assertAllowedFileContent(file.buffer, file.mimetype, DOCUMENT_ALLOWED_MIMES);
+    const compressed = await this.compression.compress(file.buffer, mimeType);
 
-    const { key, url } = await this.r2.upload(
+    const { key } = await this.r2.upload(
       dto.name || file.originalname,
       compressed.mimeType,
       compressed.buffer,
@@ -302,7 +325,7 @@ export class DocumentsService {
         category: dto.category,
         notes: dto.notes,
         storageKey: key,
-        fileUrl: url,
+        fileUrl: null,
         mimeType: compressed.mimeType,
         size: compressed.compressedSize,
         patientId: dto.patientId,
@@ -321,7 +344,7 @@ export class DocumentsService {
   }
 
   async remove(id: string, user?: AuditUser) {
-    const d = await this.findOne(id);
+    const d = await this.findOneRaw(id);
     if (d.storageKey) {
       await this.r2.remove(d.storageKey);
     }
