@@ -153,7 +153,7 @@ function PlanCard({
     { label: 'Usuários', value: plan.limits?.maxUsers != null ? formatNumber(plan.limits.maxUsers) : null },
     { label: 'Pacientes', value: plan.limits?.maxPatients != null ? formatNumber(plan.limits.maxPatients) : null },
     {
-      label: 'Armazenamento',
+      label: 'Espaço',
       value: plan.limits?.storageGb != null ? `${formatNumber(plan.limits.storageGb)} GB` : null,
     },
   ];
