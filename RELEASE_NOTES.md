@@ -185,6 +185,12 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 **Termos de Uso**
 - Página de Termos de Uso no estilo Aurora: cabeçalho fixo com botão **Voltar ao login**, texto em um card único mais legível e link para a **Política de Privacidade** no rodapé. O conteúdo dos termos não mudou.
 
+**Várias clínicas na mesma plataforma**
+- A plataforma passa a atender várias clínicas, cada uma vendo só os próprios pacientes, agendamentos, financeiro, estoque, profissionais e configurações. Todos os dados atuais ficam na clínica **Mila Barreto**, sem nenhuma mudança para quem já usa.
+- Cada clínica tem os próprios grupos (Administrador, Profissional, Recepção), formas de pagamento, modelos de mensagem e documentos.
+- Se o acesso de uma clínica for suspenso, os usuários dela veem uma mensagem explicando a suspensão ao entrar.
+- Depois desta atualização, todos precisam **entrar de novo** uma vez.
+
 ### Correções
 
 **Acessibilidade**
