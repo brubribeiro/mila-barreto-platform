@@ -11,13 +11,9 @@ import { TenantContext } from '../tenancy/tenant-context';
 import { provisionTenant } from '../tenancy/system-roles';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
+import { recordPlatformAudit, type PlatformAuditAction } from './platform-audit';
 
-export type PlatformAuditAction =
-  | 'TENANT_CREATE'
-  | 'TENANT_UPDATE'
-  | 'TENANT_SUSPEND'
-  | 'TENANT_REACTIVATE'
-  | 'TENANT_ENTER';
+export type { PlatformAuditAction };
 
 export type TenantStatusFilter = 'active' | 'suspended';
 
@@ -260,16 +256,6 @@ export class AdminService {
     tenant: Pick<Tenant, 'id' | 'name'>,
     details?: Record<string, unknown>,
   ) {
-    await this.prisma.platformAuditLog.create({
-      data: {
-        action,
-        actorId: actor.id,
-        actorName: actor.name,
-        actorEmail: actor.email,
-        targetTenantId: tenant.id,
-        targetName: tenant.name,
-        ...(details ? { details: details as Prisma.InputJsonValue } : {}),
-      },
-    });
+    await recordPlatformAudit(this.prisma, actor, action, { tenantId: tenant.id, name: tenant.name }, details);
   }
 }

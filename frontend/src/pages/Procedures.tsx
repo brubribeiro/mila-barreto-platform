@@ -20,6 +20,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { urlPage, useUrlState } from '../hooks/useUrlState';
+import { usePlatformCatalog } from '../hooks/usePlatformCatalog';
 import { proceduresApi } from '../api/procedures';
 import { ProcedureFormDialog } from '../components/procedures/ProcedureFormDialog';
 import {
@@ -41,8 +42,6 @@ const PAGE_SIZE = 8;
 const AVATAR_COLORS = ['#15998B', '#5BA8DE', '#D46B8A', '#E0915B', '#9B7BD4', '#4FB3A8'];
 const GRID_COLS = '2fr 1fr 0.7fr 0.7fr 0.9fr 0.9fr 0.9fr 0.95fr 0.95fr 0.75fr 52px';
 const GRID_MIN_WIDTH = PAGE_MAX_WIDTH;
-const CATEGORY_SUGGESTIONS = ['Facial', 'Injetáveis', 'Laser', 'Corporal', 'Peeling', 'Depilação', 'Capilar'];
-
 function colorFor(text: string) {
   let hash = 0;
   for (let i = 0; i < text.length; i += 1) hash = text.charCodeAt(i) + ((hash << 5) - hash);
@@ -64,6 +63,7 @@ export function Procedures() {
   const canCreate = has('procedures:create');
   const canEdit = has('procedures:edit');
   const canDelete = has('procedures:delete');
+  const procedureCategorySuggestions = usePlatformCatalog('procedure_category');
 
   const [search, setSearch] = useUrlState('busca', '');
   const [category, setCategory] = useUrlState('categoria', 'Todos');
@@ -86,10 +86,10 @@ export function Procedures() {
   });
 
   const categories = useMemo(() => {
-    const set = new Set<string>(CATEGORY_SUGGESTIONS);
+    const set = new Set<string>(procedureCategorySuggestions.map((c) => c.value));
     procedures.forEach((p) => p.category?.trim() && set.add(p.category.trim()));
     return ['Todos', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
-  }, [procedures]);
+  }, [procedures, procedureCategorySuggestions]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

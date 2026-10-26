@@ -27,7 +27,8 @@ import {
   TemplateVars,
   varsFromAppointment,
 } from '../../utils/whatsapp';
-import { triggerForCategory, triggerLabel } from './messageTemplateConstants';
+import { triggerForCategory, triggerLabelMap } from './messageTemplateConstants';
+import { usePlatformCatalog } from '../../hooks/usePlatformCatalog';
 import type { Appointment, MessageTrigger } from '../../types';
 
 interface SendWhatsAppDialogProps {
@@ -69,6 +70,9 @@ export function SendWhatsAppDialog({
 }: SendWhatsAppDialogProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  usePlatformCatalog('message_category');
+  usePlatformCatalog('message_trigger');
+  const triggerLabel = triggerLabelMap();
   const [templateId, setTemplateId] = useState<string>('');
   const [message, setMessage] = useState('');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -115,7 +119,7 @@ export function SendWhatsAppDialog({
   useEffect(() => {
     if (!open) return;
     if (templates.length === 0) return;
-    const preferredTrigger = preferredCategory ? triggerForCategory[preferredCategory] : undefined;
+    const preferredTrigger = preferredCategory ? triggerForCategory(preferredCategory) : undefined;
     const preferred = preferredCategory
       ? (templates.find((t) => t.trigger === preferredTrigger) ??
         templates.find((t) => t.category === preferredCategory))

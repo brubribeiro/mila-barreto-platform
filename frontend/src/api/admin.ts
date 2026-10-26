@@ -1,5 +1,11 @@
 import { api } from './client';
-import type { AdminTenant, AdminTenantDetail, PlatformAuditLog } from '../types';
+import type {
+  AdminTenant,
+  AdminTenantDetail,
+  PlatformAuditLog,
+  PlatformCatalogItem,
+  PlatformCatalogKind,
+} from '../types';
 
 export type TenantStatusFilter = 'active' | 'suspended';
 
@@ -13,6 +19,15 @@ export interface CreateTenantPayload {
 export interface UpdateTenantPayload {
   name?: string;
   slug?: string;
+}
+
+export interface CatalogItemPayload {
+  kind: PlatformCatalogKind;
+  value: string;
+  label: string;
+  sortOrder?: number;
+  meta?: Record<string, unknown> | null;
+  active?: boolean;
 }
 
 export interface PlatformAuditPage {
@@ -62,6 +77,33 @@ export const adminApi = {
 
   listAudit: async (params: { tenantId?: string; page?: number; limit?: number } = {}): Promise<PlatformAuditPage> => {
     const { data } = await api.get<PlatformAuditPage>('/admin/audit', { params });
+    return data;
+  },
+
+  listCatalogs: async (kind?: PlatformCatalogKind): Promise<PlatformCatalogItem[]> => {
+    const { data } = await api.get<PlatformCatalogItem[]>('/admin/catalogs', {
+      params: kind ? { kind } : undefined,
+    });
+    return data;
+  },
+
+  createCatalogItem: async (payload: CatalogItemPayload): Promise<PlatformCatalogItem> => {
+    const { data } = await api.post<PlatformCatalogItem>('/admin/catalogs', payload);
+    return data;
+  },
+
+  updateCatalogItem: async (
+    id: string,
+    payload: Partial<Omit<CatalogItemPayload, 'kind'>>,
+  ): Promise<PlatformCatalogItem> => {
+    const { data } = await api.patch<PlatformCatalogItem>(`/admin/catalogs/${id}`, payload);
+    return data;
+  },
+
+  setCatalogItemActive: async (id: string, active: boolean): Promise<PlatformCatalogItem> => {
+    const { data } = await api.post<PlatformCatalogItem>(
+      `/admin/catalogs/${id}/${active ? 'activate' : 'deactivate'}`,
+    );
     return data;
   },
 };

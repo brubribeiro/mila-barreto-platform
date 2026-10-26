@@ -14,6 +14,8 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     title: 'Plataforma',
     items: [
       { label: 'Clínicas', path: '/admin/clinicas', icon: <AuroraIcon name="dashboard" /> },
+      // Ao mergear com #48 (Planos), manter os dois itens: Planos e Catálogos
+      { label: 'Catálogos', path: '/admin/catalogos', icon: <AuroraIcon name="documentos" /> },
       { label: 'Auditoria', path: '/admin/auditoria', icon: <AuroraIcon name="clock" /> },
     ],
   },
@@ -21,7 +23,12 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
 
 const ADMIN_PAGE_META: { path: string; title: string; subtitle: string }[] = [
   { path: '/admin/clinicas', title: 'Clínicas', subtitle: 'Clínicas da plataforma, acesso e uso' },
-  { path: '/admin/auditoria', title: 'Auditoria da plataforma', subtitle: 'Ações do super-admin nas clínicas' },
+  {
+    path: '/admin/catalogos',
+    title: 'Catálogos',
+    subtitle: 'Opções globais compartilhadas por todas as clínicas',
+  },
+  { path: '/admin/auditoria', title: 'Auditoria da plataforma', subtitle: 'Ações do super-admin nas clínicas e nos catálogos' },
 ];
 
 function adminPageMeta(pathname: string) {

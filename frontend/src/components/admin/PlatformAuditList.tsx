@@ -11,9 +11,20 @@ export const PLATFORM_AUDIT_LABELS: Record<PlatformAuditAction, { label: string;
   TENANT_SUSPEND: { label: 'Suspendeu', color: '#C25A4C' },
   TENANT_REACTIVATE: { label: 'Reativou', color: '#15998B' },
   TENANT_ENTER: { label: 'Entrou como', color: '#9B7BD4' },
+  CATALOG_CREATE: { label: 'Criou no catálogo', color: '#15998B' },
+  CATALOG_UPDATE: { label: 'Editou o catálogo', color: '#5BA8DE' },
+  CATALOG_ACTIVATE: { label: 'Ativou no catálogo', color: '#15998B' },
+  CATALOG_DEACTIVATE: { label: 'Desativou no catálogo', color: '#C25A4C' },
 };
 
-const FIELD_LABELS: Record<string, string> = { name: 'nome', slug: 'identificador' };
+const FIELD_LABELS: Record<string, string> = {
+  name: 'nome',
+  slug: 'identificador',
+  value: 'valor',
+  label: 'rótulo',
+  sortOrder: 'ordem',
+  meta: 'meta',
+};
 
 /** Resumo legível dos detalhes gravados em cada ação. */
 export function auditDetailsText(entry: PlatformAuditLog): string | null {
@@ -29,10 +40,24 @@ export function auditDetailsText(entry: PlatformAuditLog): string | null {
           return `${FIELD_LABELS[field] ?? field}: ${String(c.old)} → ${String(c.new)}`;
         })
         .join(' · ');
+    case 'CATALOG_UPDATE': {
+      const parts = Object.entries(d)
+        .filter(([, change]) => change && typeof change === 'object' && 'old' in (change as object))
+        .map(([field, change]) => {
+          const c = change as { old?: unknown; new?: unknown };
+          return `${FIELD_LABELS[field] ?? field}: ${String(c.old)} → ${String(c.new)}`;
+        });
+      return parts.join(' · ') || null;
+    }
     case 'TENANT_SUSPEND':
       return d.reason ? `Motivo: ${String(d.reason)}` : null;
     case 'TENANT_ENTER':
       return d.suspended ? 'Clínica estava suspensa' : null;
+    case 'CATALOG_CREATE':
+      return [d.kind, d.value, d.label].filter(Boolean).map(String).join(' · ') || null;
+    case 'CATALOG_ACTIVATE':
+    case 'CATALOG_DEACTIVATE':
+      return typeof d.kind === 'string' ? String(d.kind) : null;
     default:
       return null;
   }

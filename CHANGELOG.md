@@ -6,6 +6,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Added
 
+- Catálogos globais da plataforma: model Prisma `PlatformCatalogItem` (kinds `document_category`, `message_category`, `message_trigger`, `procedure_category`, `inventory_unit`; sem `tenantId`), migration `20261026160000_platform_catalogs`, seed com os valores que o front usava hardcoded; CRUD ` /admin/catalogs` (SuperAdminGuard) com auditoria `CATALOG_*`; leitura autenticada `GET /catalogs` (só ativos) para o app da clínica.
+- Frontend admin: página Aurora `/admin/catalogos` para gerenciar itens por tipo; menu Catálogos no painel super-admin.
+- Frontend clínica: selects de documentos, mensagens (categoria/gatilho), sugestões de procedimento e unidades de estoque passam a consumir o catálogo via React Query (fallback local enquanto carrega).
 - Feedback: model Prisma `FeedbackReport` (BUG|SUGGESTION) com `tenantId` (FK Tenant, índice, escopo automático e trigger same-tenant em `userId`), migration `20261026010000_feedback_reports`, `POST /feedback` (qualquer autenticado) e `GET /feedback` (`feedback:view` / Administrador da própria clínica).
 - Feedback: dialog no menu do usuário (sidebar) para escolher tipo, preencher título/descrição e enviar; página mínima `/feedback` para leitura admin.
 - Header Aurora: "Novo agendamento" preenchido, relógio global de histórico (`AuditHistoryDialog` pela rota, substitui os 16 botões por tela) e olho para ocultar valores (`utils/money.ts`).

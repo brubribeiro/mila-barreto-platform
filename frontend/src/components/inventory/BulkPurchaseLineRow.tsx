@@ -5,7 +5,7 @@ import type { InventoryItem } from '../../types';
 import { MoneyField } from '../MoneyField';
 import { fontSizes } from '../../theme/fontSizes';
 import type { BulkPurchaseFormValues, LineForm } from './bulkPurchase';
-import { INVENTORY_UNIT_OPTIONS } from './inventoryUnits';
+import { usePlatformCatalog } from '../../hooks/usePlatformCatalog';
 
 export const BULK_LINE_COLUMNS = '2.3fr 1.15fr .8fr .6fr .75fr .95fr .85fr .95fr 30px';
 
@@ -49,6 +49,7 @@ export function BulkPurchaseLineRow({
   onRemove,
 }: BulkPurchaseLineRowProps) {
   const isNew = line.mode === 'new';
+  const unitOptions = usePlatformCatalog('inventory_unit');
   return (
       <Box
         sx={{
@@ -164,7 +165,7 @@ export function BulkPurchaseLineRow({
                   SelectProps={{ renderValue: (v) => String(v || '—') }}
                   sx={CELL_INPUT_SX}
                 >
-                  {INVENTORY_UNIT_OPTIONS.map((opt) => (
+                  {unitOptions.map((opt) => (
                     <MenuItem key={opt.value} value={opt.value}>
                       {opt.label}
                     </MenuItem>

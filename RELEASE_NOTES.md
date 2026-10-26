@@ -203,7 +203,8 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - **Suspender** e **reativar** clínicas, sempre com confirmação; nenhum dado é apagado.
 - **Detalhe da clínica** com métricas de uso (inclusive o espaço usado por documentos e fotos), administradores e histórico.
 - **Entrar como**: abre a clínica como administrador para dar suporte, com a faixa "Você está visualizando como…" e o botão **Voltar ao painel**.
-- **Auditoria da plataforma**: toda criação, edição, suspensão, reativação e entrada em clínica fica registrada com quem fez e quando.
+- **Catálogos**: página no painel para gerenciar as opções compartilhadas por todas as clínicas (tipos de documento, categorias e gatilhos de mensagem, sugestões de categoria de procedimento e unidades de estoque). Não há lista diferente por clínica — o que vale na plataforma vale para todas.
+- **Auditoria da plataforma**: criação/edição/suspensão/reativação/entrada em clínica e criar/editar/ativar/desativar itens de catálogo ficam registrados com quem fez e quando.
 
 ### Correções
 
