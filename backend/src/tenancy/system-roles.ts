@@ -104,14 +104,24 @@ export async function ensureSystemRoles(prisma: RoleClient, tenantId: string) {
   return roles;
 }
 
-/** Cria uma clínica nova já com os grupos de sistema. Usar com o client base (sem escopo). */
+/**
+ * Cria uma clínica nova já com os grupos de sistema e, se informado, o primeiro usuário
+ * (no grupo Administrador). Tudo numa transação. Usar com o client base (sem escopo).
+ */
 export async function provisionTenant(
   prisma: PrismaClient,
   data: { name: string; slug: string },
+  admin?: { name: string; email: string; password: string },
 ): Promise<Tenant> {
   return prisma.$transaction(async (tx) => {
     const tenant = await tx.tenant.create({ data });
-    await ensureSystemRoles(tx, tenant.id);
+    const roles = await ensureSystemRoles(tx, tenant.id);
+    if (admin) {
+      const adminRole = roles.find((r) => r.name === SYSTEM_ADMIN_ROLE_NAME)!;
+      await tx.user.create({
+        data: { ...admin, tenantId: tenant.id, roleId: adminRole.id },
+      });
+    }
     return tenant;
   });
 }

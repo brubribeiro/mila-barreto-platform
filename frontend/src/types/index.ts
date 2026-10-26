@@ -24,6 +24,56 @@ export interface User {
   /** true quando um admin está personificando este usuário */
   impersonating?: boolean;
   impersonatorName?: string;
+  /** Clínica do usuário; null para o super-admin fora de uma clínica */
+  tenantId?: string | null;
+  /** Dono da plataforma: usa só a área /admin (ou "entra como" uma clínica) */
+  isSuperAdmin?: boolean;
+  /** Nome da clínica quando o super-admin "entrou como" ela */
+  tenantName?: string;
+}
+
+// ===== Painel administrativo da plataforma (super-admin) =====
+
+export interface AdminTenantMetrics {
+  activeUsers: number;
+  patients: number;
+  appointmentsThisMonth: number;
+  lastAccessAt: string | null;
+}
+
+export interface AdminTenant {
+  id: string;
+  name: string;
+  slug: string;
+  active: boolean;
+  suspendedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  metrics: AdminTenantMetrics;
+}
+
+export interface AdminTenantDetail extends Omit<AdminTenant, 'metrics'> {
+  admins: { id: string; name: string; email: string; active: boolean; lastAccessAt: string | null }[];
+  metrics: AdminTenantMetrics & { totalUsers: number; storageBytes: number; files: number };
+}
+
+export type PlatformAuditAction =
+  | 'TENANT_CREATE'
+  | 'TENANT_UPDATE'
+  | 'TENANT_SUSPEND'
+  | 'TENANT_REACTIVATE'
+  | 'TENANT_ENTER';
+
+export interface PlatformAuditLog {
+  id: string;
+  action: PlatformAuditAction;
+  actorId: string;
+  actorName: string;
+  actorEmail: string;
+  targetTenantId: string | null;
+  targetName: string | null;
+  details: Record<string, unknown> | null;
+  createdAt: string;
 }
 
 export interface UserSummary {
