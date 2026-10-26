@@ -306,8 +306,9 @@ export class AppointmentsService {
   }
 
   /** Inicia o atendimento: marca startedAt e muda status para IN_PROGRESS */
-  async start(id: string) {
+  async start(id: string, user?: AuthenticatedUser) {
     const appt = await this.findByIdOrThrow(id);
+    assertOwnAppointmentAccess(appt.professionalId, user);
     if (
       appt.status !== AppointmentStatus.SCHEDULED &&
       appt.status !== AppointmentStatus.CONFIRMED
@@ -323,8 +324,9 @@ export class AppointmentsService {
   }
 
   /** Finaliza o atendimento: marca finishedAt. A conclusão completa (COMPLETED) continua pelo update normal. */
-  async finish(id: string) {
+  async finish(id: string, user?: AuthenticatedUser) {
     const appt = await this.findByIdOrThrow(id);
+    assertOwnAppointmentAccess(appt.professionalId, user);
     if (appt.status !== AppointmentStatus.IN_PROGRESS) {
       throw new BadRequestException(
         'Só é possível finalizar atendimentos com status Em Atendimento.',
@@ -334,8 +336,9 @@ export class AppointmentsService {
   }
 
   /** Retoma o atendimento: limpa finishedAt para continuar o cronômetro */
-  async resume(id: string) {
+  async resume(id: string, user?: AuthenticatedUser) {
     const appt = await this.findByIdOrThrow(id);
+    assertOwnAppointmentAccess(appt.professionalId, user);
     if (appt.status !== AppointmentStatus.IN_PROGRESS) {
       throw new BadRequestException(
         'Só é possível retomar atendimentos com status Em Atendimento.',

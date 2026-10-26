@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import type { Request } from 'express';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload } from './auth.service';
@@ -10,6 +11,7 @@ import { effectivePermissions, SYSTEM_ADMIN_ROLE_NAME } from '../common/permissi
 import { featuresFromTenant } from '../common/platform-features';
 import { TenantContext } from '../tenancy/tenant-context';
 import { assertTenantActive } from '../tenancy/tenant-status';
+import { extractAccessToken } from './auth-cookies';
 
 const LAST_ACCESS_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -24,9 +26,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly prisma: PrismaService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        (req: Request) => extractAccessToken(req),
+      ]),
       ignoreExpiration: false,
       secretOrKey: config.get<string>('JWT_SECRET'),
+      algorithms: ['HS256'],
     });
   }
 
@@ -41,6 +46,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     );
     if (!user || !user.active) {
       throw new UnauthorizedException('Usuário inativo ou inexistente.');
+    }
+
+    if (typeof payload.tv !== 'number' || payload.tv !== user.tokenVersion) {
+      throw new UnauthorizedException('Sessão encerrada. Entre novamente.');
     }
 
     // Super-admin "entrando como" uma clínica (painel admin): age como administrador dela.
@@ -63,6 +72,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         restrictToOwnAppointments: false,
         providesAppointments: false,
         features: featuresFromTenant(tenant),
+        tokenVersion: user.tokenVersion,
         impersonatorId: user.id,
       };
     }
@@ -88,6 +98,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       restrictToOwnAppointments: user.role?.restrictToOwnAppointments ?? false,
       providesAppointments: user.providesAppointments,
       features: featuresFromTenant(user.tenant),
+      tokenVersion: user.tokenVersion,
       ...(payload.impersonatorId ? { impersonatorId: payload.impersonatorId } : {}),
     };
   }

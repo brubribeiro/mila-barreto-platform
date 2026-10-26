@@ -21,6 +21,8 @@ export interface AuthenticatedUser {
    * Sem plano = catálogo completo. Super-admin fora de clínica: [].
    */
   features: string[];
+  /** Versão de sessão atual (User.tokenVersion); usada ao emitir novos JWTs. */
+  tokenVersion: number;
   /** Preenchido quando um admin está personificando este usuário */
   impersonatorId?: string;
 }
