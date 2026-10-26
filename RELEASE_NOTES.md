@@ -188,8 +188,17 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 **Várias clínicas na mesma plataforma**
 - A plataforma passa a atender várias clínicas, cada uma vendo só os próprios pacientes, agendamentos, financeiro, estoque, profissionais e configurações. Todos os dados atuais ficam na clínica **Mila Barreto**, sem nenhuma mudança para quem já usa.
 - Cada clínica tem os próprios grupos (Administrador, Profissional, Recepção), formas de pagamento, modelos de mensagem e documentos.
-- Se o acesso de uma clínica for suspenso, os usuários dela veem uma mensagem explicando a suspensão ao entrar.
+- Se o acesso de uma clínica for suspenso, os usuários dela veem o aviso **Clínica suspensa** na tela de login, inclusive quem já estava usando o sistema.
 - Depois desta atualização, todos precisam **entrar de novo** uma vez.
+
+**Painel da plataforma (dono do sistema)**
+- Área própria em **/admin**, só para o super-admin, que entra direto nela; usuários das clínicas não a veem.
+- **Clínicas**: lista com busca e filtro por status, usuários ativos, pacientes, agendamentos do mês e último acesso de cada clínica.
+- **Nova clínica**: informe o nome e o e-mail do primeiro administrador; a clínica já nasce com os grupos padrão e esse administrador entra com o Google do e-mail.
+- **Suspender** e **reativar** clínicas, sempre com confirmação; nenhum dado é apagado.
+- **Detalhe da clínica** com métricas de uso (inclusive o espaço usado por documentos e fotos), administradores e histórico.
+- **Entrar como**: abre a clínica como administrador para dar suporte, com a faixa "Você está visualizando como…" e o botão **Voltar ao painel**.
+- **Auditoria da plataforma**: toda criação, edição, suspensão, reativação e entrada em clínica fica registrada com quem fez e quando.
 
 ### Correções
 

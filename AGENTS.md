@@ -60,6 +60,7 @@ mila-barreto-platform/
   - `$queryRaw`/`$executeRaw` **não** são escopados: filtre `"tenantId"` manualmente.
   - Fora de requisição (jobs, scripts) use `TenantContext.run(tenantId, fn)`; `TenantContext.runUnscoped` só para login, super-admin e jobs que percorrem as clínicas. Scripts de `prisma/` usam `prisma/tenant-script.ts`.
   - `User.email` é único no sistema todo; super-admin (`isSuperAdmin`, sem clínica) só usa rotas com `SuperAdminGuard`.
+  - Painel do super-admin: `src/admin/` (backend) e `/admin` (frontend). Ações dele vão para `PlatformAuditLog` (sem `tenantId`), não para `AuditLog`. O "Entrar como" é um token do super-admin com `tenantId` da clínica e `impersonatorId` igual ao próprio id (ver `JwtStrategy`).
 
 ---
 
