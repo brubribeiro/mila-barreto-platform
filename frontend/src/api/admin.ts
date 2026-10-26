@@ -5,6 +5,8 @@ import type {
   AdminTenant,
   AdminTenantDetail,
   PlanLimits,
+  PlatformAnnouncement,
+  AnnouncementKind,
   PlatformAuditLog,
   PlatformCatalogItem,
   PlatformCatalogKind,
@@ -49,6 +51,18 @@ export interface CatalogItemPayload {
   sortOrder?: number;
   meta?: Record<string, unknown> | null;
   active?: boolean;
+}
+
+export interface AnnouncementPayload {
+  title: string;
+  body: string;
+  kind: AnnouncementKind;
+}
+
+export interface DraftFromReleaseResult {
+  version: string;
+  created: PlatformAnnouncement[];
+  skipped: AnnouncementKind[];
 }
 
 export interface PlatformAuditPage {
@@ -186,6 +200,50 @@ export const adminApi = {
 
   setFeedbackStatus: async (id: string, status: FeedbackStatus): Promise<AdminFeedbackReport> => {
     const { data } = await api.patch<AdminFeedbackReport>(`/admin/feedback/${id}/status`, { status });
+    return data;
+  },
+
+  listAnnouncements: async (): Promise<PlatformAnnouncement[]> => {
+    const { data } = await api.get<PlatformAnnouncement[]>('/admin/announcements');
+    return data;
+  },
+
+  getAnnouncementAudience: async (): Promise<{ users: number; tenants: number }> => {
+    const { data } = await api.get<{ users: number; tenants: number }>('/admin/announcements/audience');
+    return data;
+  },
+
+  createAnnouncement: async (payload: AnnouncementPayload): Promise<PlatformAnnouncement> => {
+    const { data } = await api.post<PlatformAnnouncement>('/admin/announcements', payload);
+    return data;
+  },
+
+  updateAnnouncement: async (id: string, payload: Partial<AnnouncementPayload>): Promise<PlatformAnnouncement> => {
+    const { data } = await api.patch<PlatformAnnouncement>(`/admin/announcements/${id}`, payload);
+    return data;
+  },
+
+  deleteAnnouncement: async (id: string): Promise<void> => {
+    await api.delete(`/admin/announcements/${id}`);
+  },
+
+  draftAnnouncementsFromRelease: async (): Promise<DraftFromReleaseResult> => {
+    const { data } = await api.post<DraftFromReleaseResult>('/admin/announcements/draft-from-release');
+    return data;
+  },
+
+  sendAnnouncement: async (id: string): Promise<PlatformAnnouncement> => {
+    const { data } = await api.post<PlatformAnnouncement>(`/admin/announcements/${id}/send`);
+    return data;
+  },
+
+  scheduleAnnouncement: async (id: string, scheduledAt: string): Promise<PlatformAnnouncement> => {
+    const { data } = await api.post<PlatformAnnouncement>(`/admin/announcements/${id}/schedule`, { scheduledAt });
+    return data;
+  },
+
+  unscheduleAnnouncement: async (id: string): Promise<PlatformAnnouncement> => {
+    const { data } = await api.post<PlatformAnnouncement>(`/admin/announcements/${id}/unschedule`);
     return data;
   },
 };

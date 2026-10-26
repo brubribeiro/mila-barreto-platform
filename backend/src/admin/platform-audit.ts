@@ -19,7 +19,14 @@ export type PlatformAuditAction =
   | 'CATALOG_UPDATE'
   | 'CATALOG_ACTIVATE'
   | 'CATALOG_DEACTIVATE'
-  | 'FEEDBACK_STATUS_CHANGE';
+  | 'FEEDBACK_STATUS_CHANGE'
+  | 'ANNOUNCEMENT_GENERATE'
+  | 'ANNOUNCEMENT_CREATE'
+  | 'ANNOUNCEMENT_UPDATE'
+  | 'ANNOUNCEMENT_DELETE'
+  | 'ANNOUNCEMENT_SCHEDULE'
+  | 'ANNOUNCEMENT_UNSCHEDULE'
+  | 'ANNOUNCEMENT_SEND';
 
 /** Grava uma ação do super-admin em platform_audit_logs. Em ações de plano/catálogo, `tenantId` é nulo. */
 export async function recordPlatformAudit(

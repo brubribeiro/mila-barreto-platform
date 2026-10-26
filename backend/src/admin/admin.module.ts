@@ -3,6 +3,8 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { CatalogsReadController } from '../catalogs/catalogs-read.controller';
 import { AdminController } from './admin.controller';
+import { AnnouncementsController } from './announcements.controller';
+import { AnnouncementsService } from './announcements.service';
 import { AdminService } from './admin.service';
 import { CatalogsController } from './catalogs.controller';
 import { CatalogsService } from './catalogs.service';
@@ -14,9 +16,10 @@ import { UsageService } from './usage.service';
 
 @Module({
   imports: [AuthModule],
-  providers: [AdminService, CatalogsService, PlansService, UsageService, FeedbackAdminService],
+  providers: [AdminService, AnnouncementsService, CatalogsService, PlansService, UsageService, FeedbackAdminService],
   controllers: [
     AdminController,
+    AnnouncementsController,
     CatalogsController,
     CatalogsReadController,
     PlansController,
