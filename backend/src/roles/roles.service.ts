@@ -9,8 +9,14 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
-import { ALL_PERMISSIONS, isValidPermission, SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
-import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
+import {
+  ALL_PERMISSIONS,
+  isClinicAdministrator,
+  isValidPermission,
+  SYSTEM_ADMIN_ROLE_NAME,
+} from '../common/permissions';
+import { AuditLogService } from '../audit-log/audit-log.service';
+import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 @Injectable()
 export class RolesService {
@@ -24,6 +30,18 @@ export class RolesService {
       return { ...role, permissions: [...ALL_PERMISSIONS] };
     }
     return role;
+  }
+
+  /**
+   * Impede escalação via roles:edit (#34): só o Administrador da clínica
+   * cria/edita/exclui grupos e permissões.
+   */
+  private assertCanManageRoles(actor?: AuthenticatedUser) {
+    if (!isClinicAdministrator(actor?.roleName)) {
+      throw new ForbiddenException(
+        'Apenas administradores podem gerenciar grupos e permissões.',
+      );
+    }
   }
 
   list() {
@@ -51,7 +69,8 @@ export class RolesService {
     }
   }
 
-  async create(dto: CreateRoleDto, user?: AuditUser) {
+  async create(dto: CreateRoleDto, actor?: AuthenticatedUser) {
+    this.assertCanManageRoles(actor);
     this.validatePermissions(dto.permissions);
 
     const exists = await this.prisma.role.findFirst({ where: { name: dto.name } });
@@ -67,11 +86,12 @@ export class RolesService {
         isSystem: false,
       },
     });
-    this.auditLog.logCreate('Role', created.id, created as unknown as Record<string, unknown>, user).catch(() => undefined);
+    this.auditLog.logCreate('Role', created.id, created as unknown as Record<string, unknown>, actor).catch(() => undefined);
     return created;
   }
 
-  async update(id: string, dto: UpdateRoleDto, user?: AuditUser) {
+  async update(id: string, dto: UpdateRoleDto, actor?: AuthenticatedUser) {
+    this.assertCanManageRoles(actor);
     const role = await this.findOne(id);
 
     // Roles do sistema: pode editar permissões mas não pode mudar nome nem desativar
@@ -81,6 +101,7 @@ export class RolesService {
       }
     }
 
+    // Administrador sempre fica com o catálogo completo (não esvazia a hierarquia).
     if (role.isSystem && role.name === SYSTEM_ADMIN_ROLE_NAME) {
       dto.permissions = [...ALL_PERMISSIONS];
     } else if (dto.permissions) {
@@ -102,11 +123,12 @@ export class RolesService {
         restrictToOwnAppointments: dto.restrictToOwnAppointments,
       },
     });
-    this.auditLog.logUpdate('Role', id, role as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, user).catch(() => undefined);
+    this.auditLog.logUpdate('Role', id, role as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, actor).catch(() => undefined);
     return this.normalizeRole(updated);
   }
 
-  async remove(id: string, user?: AuditUser) {
+  async remove(id: string, actor?: AuthenticatedUser) {
+    this.assertCanManageRoles(actor);
     const role = await this.findOne(id);
     if (role.isSystem) {
       throw new ForbiddenException('Grupos do sistema não podem ser excluídos.');
@@ -117,7 +139,7 @@ export class RolesService {
       );
     }
     await this.prisma.role.delete({ where: { id } });
-    this.auditLog.logDelete('Role', id, role as unknown as Record<string, unknown>, user).catch(() => undefined);
+    this.auditLog.logDelete('Role', id, role as unknown as Record<string, unknown>, actor).catch(() => undefined);
     return { ok: true };
   }
 

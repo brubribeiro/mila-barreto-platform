@@ -4,6 +4,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-26
+
+### Security
+
+- RBAC (#33): `users:create`/`users:edit` não podem atribuir nem remover o grupo Administrador a menos que o ator já seja Administrador; ninguém pode alterar o próprio `roleId` (bloqueia auto-promoção).
+- RBAC (#34): `roles:create`/`roles:edit`/`roles:delete` restritos a Administradores da clínica; o grupo Administrador continua forçado ao catálogo completo de permissões (não esvazia a hierarquia).
+
 ### Added
 
 - Catálogos globais da plataforma: model Prisma `PlatformCatalogItem` (kinds `document_category`, `message_category`, `message_trigger`, `procedure_category`, `inventory_unit`; sem `tenantId`), migration `20261026160000_platform_catalogs`, seed com os valores que o front usava hardcoded; CRUD ` /admin/catalogs` (SuperAdminGuard) com auditoria `CATALOG_*`; leitura autenticada `GET /catalogs` (só ativos) para o app da clínica.
