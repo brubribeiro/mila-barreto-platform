@@ -34,6 +34,7 @@ describe('AppointmentsService', () => {
     materialsDeducted: false,
     financeGenerated: false,
     patientPackageId: null,
+    sessionIndex: null,
     patient: { name: 'João' },
     procedure: { name: 'Botox' },
     professional: { id: 'user-1', name: 'Dra. Ana' },
