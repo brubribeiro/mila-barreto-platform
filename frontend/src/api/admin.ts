@@ -1,12 +1,18 @@
 import { api } from './client';
 import type {
+  AdminFeedbackReport,
   AdminPlan,
   AdminTenant,
   AdminTenantDetail,
   PlanLimits,
+  PlatformAnnouncement,
+  AnnouncementKind,
   PlatformAuditLog,
   PlatformCatalogItem,
   PlatformCatalogKind,
+  PlatformUsage,
+  FeedbackStatus,
+  FeedbackType,
 } from '../types';
 
 export type TenantStatusFilter = 'active' | 'suspended';
@@ -47,12 +53,45 @@ export interface CatalogItemPayload {
   active?: boolean;
 }
 
+export interface AnnouncementPayload {
+  title: string;
+  body: string;
+  kind: AnnouncementKind;
+}
+
+export interface DraftFromReleaseResult {
+  version: string;
+  created: PlatformAnnouncement[];
+  skipped: AnnouncementKind[];
+}
+
 export interface PlatformAuditPage {
   data: PlatformAuditLog[];
   total: number;
   page: number;
   limit: number;
   totalPages: number;
+}
+
+export interface AdminFeedbackQuery {
+  tenantId?: string;
+  type?: FeedbackType;
+  status?: FeedbackStatus;
+  search?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface AdminFeedbackPage {
+  data: AdminFeedbackReport[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  /** Por status, com os demais filtros aplicados. */
+  counts: Record<FeedbackStatus, number>;
 }
 
 /** Painel do super-admin (rotas /admin, só para isSuperAdmin). */
@@ -141,6 +180,70 @@ export const adminApi = {
     const { data } = await api.post<PlatformCatalogItem>(
       `/admin/catalogs/${id}/${active ? 'activate' : 'deactivate'}`,
     );
+    return data;
+  },
+
+  getUsage: async (params: { from?: string; to?: string; tenantId?: string } = {}): Promise<PlatformUsage> => {
+    const { data } = await api.get<PlatformUsage>('/admin/usage', { params });
+    return data;
+  },
+
+  listFeedback: async (params: AdminFeedbackQuery = {}): Promise<AdminFeedbackPage> => {
+    const { data } = await api.get<AdminFeedbackPage>('/admin/feedback', { params });
+    return data;
+  },
+
+  getFeedback: async (id: string): Promise<AdminFeedbackReport> => {
+    const { data } = await api.get<AdminFeedbackReport>(`/admin/feedback/${id}`);
+    return data;
+  },
+
+  setFeedbackStatus: async (id: string, status: FeedbackStatus): Promise<AdminFeedbackReport> => {
+    const { data } = await api.patch<AdminFeedbackReport>(`/admin/feedback/${id}/status`, { status });
+    return data;
+  },
+
+  listAnnouncements: async (): Promise<PlatformAnnouncement[]> => {
+    const { data } = await api.get<PlatformAnnouncement[]>('/admin/announcements');
+    return data;
+  },
+
+  getAnnouncementAudience: async (): Promise<{ users: number; tenants: number }> => {
+    const { data } = await api.get<{ users: number; tenants: number }>('/admin/announcements/audience');
+    return data;
+  },
+
+  createAnnouncement: async (payload: AnnouncementPayload): Promise<PlatformAnnouncement> => {
+    const { data } = await api.post<PlatformAnnouncement>('/admin/announcements', payload);
+    return data;
+  },
+
+  updateAnnouncement: async (id: string, payload: Partial<AnnouncementPayload>): Promise<PlatformAnnouncement> => {
+    const { data } = await api.patch<PlatformAnnouncement>(`/admin/announcements/${id}`, payload);
+    return data;
+  },
+
+  deleteAnnouncement: async (id: string): Promise<void> => {
+    await api.delete(`/admin/announcements/${id}`);
+  },
+
+  draftAnnouncementsFromRelease: async (): Promise<DraftFromReleaseResult> => {
+    const { data } = await api.post<DraftFromReleaseResult>('/admin/announcements/draft-from-release');
+    return data;
+  },
+
+  sendAnnouncement: async (id: string): Promise<PlatformAnnouncement> => {
+    const { data } = await api.post<PlatformAnnouncement>(`/admin/announcements/${id}/send`);
+    return data;
+  },
+
+  scheduleAnnouncement: async (id: string, scheduledAt: string): Promise<PlatformAnnouncement> => {
+    const { data } = await api.post<PlatformAnnouncement>(`/admin/announcements/${id}/schedule`, { scheduledAt });
+    return data;
+  },
+
+  unscheduleAnnouncement: async (id: string): Promise<PlatformAnnouncement> => {
+    const { data } = await api.post<PlatformAnnouncement>(`/admin/announcements/${id}/unschedule`);
     return data;
   },
 };

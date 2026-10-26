@@ -4,7 +4,9 @@ import { Box, Link, Skeleton, Stack, Typography, alpha } from '@mui/material';
 import { fontSizes } from '../../theme/fontSizes';
 import { formatDateTime, formatPlanLimits } from './adminUi';
 import { formatFeatureList, formatPlanPrice } from '../../features/platformFeatures';
-import type { PlanLimits, PlatformAuditAction, PlatformAuditLog } from '../../types';
+import { FEEDBACK_STATUS_META } from './feedbackUi';
+import { ANNOUNCEMENT_KIND_LABELS } from './announcementUi';
+import type { AnnouncementKind, FeedbackStatus, PlanLimits, PlatformAuditAction, PlatformAuditLog } from '../../types';
 
 export const PLATFORM_AUDIT_LABELS: Record<PlatformAuditAction, { label: string; color: string }> = {
   TENANT_CREATE: { label: 'Criou a clínica', color: '#15998B' },
@@ -22,6 +24,14 @@ export const PLATFORM_AUDIT_LABELS: Record<PlatformAuditAction, { label: string;
   CATALOG_UPDATE: { label: 'Editou o catálogo', color: '#5BA8DE' },
   CATALOG_ACTIVATE: { label: 'Ativou no catálogo', color: '#15998B' },
   CATALOG_DEACTIVATE: { label: 'Desativou no catálogo', color: '#C25A4C' },
+  FEEDBACK_STATUS_CHANGE: { label: 'Mudou o status do report', color: '#5BA8DE' },
+  ANNOUNCEMENT_GENERATE: { label: 'Gerou avisos do release', color: '#9B7BD4' },
+  ANNOUNCEMENT_CREATE: { label: 'Criou o aviso', color: '#15998B' },
+  ANNOUNCEMENT_UPDATE: { label: 'Editou o aviso', color: '#5BA8DE' },
+  ANNOUNCEMENT_DELETE: { label: 'Excluiu o aviso', color: '#C25A4C' },
+  ANNOUNCEMENT_SCHEDULE: { label: 'Agendou o aviso', color: '#D49A3A' },
+  ANNOUNCEMENT_UNSCHEDULE: { label: 'Cancelou o agendamento', color: '#C25A4C' },
+  ANNOUNCEMENT_SEND: { label: 'Enviou o aviso', color: '#15998B' },
 };
 
 const FIELD_LABELS: Record<string, string> = {
@@ -101,6 +111,32 @@ export function auditDetailsText(entry: PlatformAuditLog): string | null {
       return d.suspended ? 'Clínica estava suspensa' : null;
     case 'CATALOG_CREATE':
       return [d.kind, d.value, d.label].filter(Boolean).map(String).join(' · ') || null;
+    case 'FEEDBACK_STATUS_CHANGE': {
+      const status = (v: unknown) => FEEDBACK_STATUS_META[v as FeedbackStatus]?.label ?? String(v);
+      return `${String(d.title ?? '')}: ${status(d.old)} → ${status(d.new)}`;
+    }
+    case 'ANNOUNCEMENT_GENERATE': {
+      const created = (d.created as string[] | undefined) ?? [];
+      return created.length ? `Versão ${String(d.version)}: ${created.join(', ')}` : `Versão ${String(d.version)}: nada novo`;
+    }
+    case 'ANNOUNCEMENT_UPDATE': {
+      const parts = [
+        d.title ? `título: ${String((d.title as { old: unknown }).old)} → ${String((d.title as { new: unknown }).new)}` : null,
+        d.kind
+          ? `tipo: ${ANNOUNCEMENT_KIND_LABELS[(d.kind as { old: AnnouncementKind }).old]} → ${ANNOUNCEMENT_KIND_LABELS[(d.kind as { new: AnnouncementKind }).new]}`
+          : null,
+        d.bodyChanged ? 'texto alterado' : null,
+      ].filter(Boolean);
+      return parts.join(' · ') || null;
+    }
+    case 'ANNOUNCEMENT_SCHEDULE':
+      return `Para ${formatDateTime(d.scheduledAt as string)}`;
+    case 'ANNOUNCEMENT_SEND': {
+      const users = Number(d.recipientCount ?? 0);
+      const tenants = Number(d.tenantCount ?? 0);
+      const base = `${users} ${users === 1 ? 'usuário' : 'usuários'} em ${tenants} ${tenants === 1 ? 'clínica' : 'clínicas'}`;
+      return d.scheduledAt ? `${base} · agendado` : base;
+    }
     case 'CATALOG_ACTIVATE':
     case 'CATALOG_DEACTIVATE':
       return typeof d.kind === 'string' ? String(d.kind) : null;
