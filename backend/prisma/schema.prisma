@@ -12,13 +12,98 @@ datasource db {
 }
 
 // =========================
-// CONFIGURAÇÕES DO SISTEMA (chave-valor)
+// CLÍNICAS (TENANTS)
+// =========================
+
+// Cada clínica é um tenant. Todos os dados da clínica têm tenantId; o client Prisma
+// (src/tenancy) injeta e filtra o tenantId da requisição automaticamente.
+// O default dbgenerated de tenantId nos models só existe para o client aceitar o create
+// sem o campo: sem contexto de tenant ele vira NULL e o insert falha (NOT NULL).
+model Tenant {
+  id          String    @id @default(uuid())
+  name        String
+  slug        String    @unique
+  // false = clínica suspensa: login e requisições dos usuários dela são recusados
+  active      Boolean   @default(true)
+  suspendedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  appSettings             AppSetting[]
+  roles                   Role[]
+  users                   User[]
+  workingHours            WorkingHours[]
+  unavailabilities        Unavailability[]
+  equipments              Equipment[]
+  documents               Document[]
+  documentTemplates       DocumentTemplate[]
+  messageTemplates        MessageTemplate[]
+  notifications           Notification[]
+  notificationPreferences NotificationPreference[]
+  patients                Patient[]
+  patientPhotos           PatientPhoto[]
+  procedures              Procedure[]
+  procedureEquipments     ProcedureEquipment[]
+  procedureMaterials      ProcedureMaterial[]
+  packages                Package[]
+  packageItems            PackageItem[]
+  patientPackages         PatientPackage[]
+  promotions              Promotion[]
+  promotionProcedures     PromotionProcedure[]
+  promotionPackages       PromotionPackage[]
+  appointments            Appointment[]
+  appointmentMaterials    AppointmentMaterial[]
+  paymentMethods          PaymentMethod[]
+  financialEntries        FinancialEntry[]
+  recurringExpenses       RecurringExpense[]
+  inventoryItems          InventoryItem[]
+  auditLogs               AuditLog[]
+  inventoryMovements      InventoryMovement[]
+  goals                   Goal[]
+  pendingTasks            PendingTask[]
+  skincareProducts        SkincareProduct[]
+  skincareRules           SkincareRule[]
+  skincareRoutines        SkincareRoutine[]
+  feedbackReports         FeedbackReport[]
+  platformAuditLogs       PlatformAuditLog[]
+
+  @@map("tenants")
+}
+
+// Ações do super-admin no painel da plataforma (criar/editar/suspender clínicas, "entrar como").
+// Não é dado de clínica: sem tenantId, fora do escopo automático; a clínica alvo fica em targetTenantId.
+model PlatformAuditLog {
+  id             String   @id @default(uuid())
+  // TENANT_CREATE, TENANT_UPDATE, TENANT_SUSPEND, TENANT_REACTIVATE, TENANT_ENTER
+  action         String
+  actorId        String
+  actorName      String
+  actorEmail     String
+  targetTenantId String?
+  // Nome da clínica no momento da ação (continua legível se ela for renomeada)
+  targetName     String?
+  details        Json?
+  createdAt      DateTime @default(now())
+
+  targetTenant Tenant? @relation(fields: [targetTenantId], references: [id], onDelete: SetNull)
+
+  @@index([targetTenantId])
+  @@index([createdAt])
+  @@map("platform_audit_logs")
+}
+
+// =========================
+// CONFIGURAÇÕES DO SISTEMA (chave-valor, por clínica)
 // =========================
 model AppSetting {
-  key       String   @id
+  tenantId  String   @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  key       String
   value     String
   updatedAt DateTime @updatedAt
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@id([tenantId, key])
   @@map("app_settings")
 }
 
@@ -30,8 +115,11 @@ model AppSetting {
 // Roles com isSystem=true não podem ser excluídas (seed garante 1 admin sempre).
 model Role {
   id                        String   @id @default(uuid())
-  name                      String   @unique
+  tenantId                  String   @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  name                      String
   description               String?
+  // Cor de identificação do grupo na tela de permissões (hex #RRGGBB).
+  color                     String?
   permissions               String[]
   isSystem                  Boolean  @default(false)
   // Quando true, usuários desse grupo só veem/editam os próprios agendamentos.
@@ -41,15 +129,23 @@ model Role {
 
   users User[]
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, name])
   @@map("roles")
 }
 
 model User {
   id                   String   @id @default(uuid())
+  // Null apenas para super-admin (isSuperAdmin = true), que não pertence a nenhuma clínica
+  tenantId             String?
   name                 String
+  // E-mail continua único no sistema inteiro: o login acha o usuário (e a clínica) pelo e-mail
   email                String   @unique
   password             String
-  roleId               String
+  // Null apenas para super-admin
+  roleId               String?
+  isSuperAdmin         Boolean  @default(false)
   active               Boolean  @default(true)
   providesAppointments Boolean  @default(true) // false = não aparece em agendamentos (ex.: recepção)
   isPrimary            Boolean  @default(false) // profissional principal (usado para cálculo de custo/hora)
@@ -61,16 +157,22 @@ model User {
   bio                  String? // descrição/bio curta
   photoStorageKey      String? // chave da foto no Cloudflare R2
   photoUrl             String? // URL pública/derivada da foto
+  // Última requisição autenticada (atualizada no máximo a cada poucos minutos); métrica do painel admin
+  lastAccessAt         DateTime?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  role                    Role                     @relation(fields: [roleId], references: [id])
+  tenant                  Tenant?                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  role                    Role?                    @relation(fields: [roleId], references: [id], onDelete: Restrict)
   appointments            Appointment[]            @relation("ProfessionalAppointments")
   notifications           Notification[]
   notificationPreferences NotificationPreference[]
   workingHours            WorkingHours[]
   unavailabilities        Unavailability[]
+  feedbackReports         FeedbackReport[]
+  pendingTasks            PendingTask[]            @relation("PendingTaskAssignee")
 
+  @@index([tenantId])
   @@map("users")
 }
 
@@ -82,6 +184,7 @@ model User {
 // dayOfWeek: 0 = domingo, 1 = segunda, ..., 6 = sábado.
 model WorkingHours {
   id        String @id @default(uuid())
+  tenantId  String @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   userId    String
   dayOfWeek Int // 0..6
   startTime String // "08:00"
@@ -89,13 +192,17 @@ model WorkingHours {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@unique([userId, dayOfWeek])
+  @@index([tenantId])
   @@map("working_hours")
 }
 
 // Bloqueios pontuais de agenda: férias, folga, compromisso, etc.
 model Unavailability {
   id        String   @id @default(uuid())
+  tenantId  String   @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   userId    String
   startAt   DateTime
   endAt     DateTime
@@ -104,7 +211,10 @@ model Unavailability {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@index([userId, startAt, endAt])
+  @@index([tenantId])
   @@map("unavailabilities")
 }
 
@@ -113,6 +223,7 @@ model Unavailability {
 // =========================
 model Equipment {
   id                          String    @id @default(uuid())
+  tenantId                    String    @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   name                        String
   brand                       String?
   model                       String?
@@ -140,6 +251,9 @@ model Equipment {
   financialEntries    FinancialEntry[]
   procedureEquipments ProcedureEquipment[]
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
   @@map("equipment")
 }
 
@@ -147,25 +261,62 @@ model Equipment {
 // DOCUMENTOS (contratos, vigilância, certificados)
 // =========================
 model Document {
-  id           String   @id @default(uuid())
-  name         String
-  category     String? // "contrato", "vigilancia", "certificado", "livre"
-  storageKey   String? @map("driveFileId") // chave no Cloudflare R2
-  fileUrl      String? @map("driveViewUrl") // URL pública do arquivo
-  mimeType     String?
-  size         Int? // bytes
-  notes        String?
+  id          String         @id @default(uuid())
+  tenantId    String         @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  name        String
+  category    String? // ver DOCUMENT_CATEGORIES no frontend (consentimento, anamnese, contrato, ...)
+  status      DocumentStatus @default(PENDING)
+  signedAt    DateTime?
+  storageKey  String?        @map("driveFileId") // chave no Cloudflare R2
+  fileUrl     String?        @map("driveViewUrl") // URL pública do arquivo
+  mimeType    String?
+  size        Int? // bytes
+  notes       String?
+  // Texto gerado a partir de um modelo (placeholders já substituídos)
+  content     String?
+  templateId  String?
   // Vínculo opcional com paciente ou equipamento
-  patientId    String?
-  equipmentId  String?
-  createdAt    DateTime @default(now())
+  patientId   String?
+  equipmentId String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @default(now()) @updatedAt
 
-  patient   Patient?   @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  equipment Equipment? @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+  patient   Patient?          @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  equipment Equipment?        @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+  template  DocumentTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([patientId])
   @@index([equipmentId])
+  @@index([status])
+  @@index([tenantId])
   @@map("documents")
+}
+
+enum DocumentStatus {
+  PENDING // aguardando assinatura
+  SENT // enviado ao paciente
+  SIGNED // assinado / arquivo final
+}
+
+// Modelos de documento (termos, fichas, contratos) com placeholders {{paciente}}, {{cpf}}...
+model DocumentTemplate {
+  id        String   @id @default(uuid())
+  tenantId  String   @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  name      String
+  category  String?
+  content   String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents Document[]
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, name])
+  @@map("document_templates")
 }
 
 // =========================
@@ -174,17 +325,33 @@ model Document {
 
 // Templates reutilizáveis para envio de mensagens.
 // Suporta variáveis no formato {paciente_nome}, {data}, {hora}, {procedimento}, {profissional}.
+/// Momento em que o modelo é usado (sugerido no envio pelo WhatsApp).
+enum MessageTrigger {
+  ON_BOOKING
+  DAY_BEFORE
+  BIRTHDAY
+  AFTER_APPOINTMENT
+  INACTIVE_90_DAYS
+  MANUAL
+}
+
 model MessageTemplate {
-  id          String   @id @default(uuid())
-  name        String   @unique
+  id          String         @id @default(uuid())
+  tenantId    String         @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  name        String
   category    String? // "confirmacao", "lembrete", "retorno", "aniversario", "livre"
+  trigger     MessageTrigger @default(MANUAL)
+  active      Boolean        @default(true)
   content     String
   procedureId String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   procedure Procedure? @relation(fields: [procedureId], references: [id], onDelete: SetNull)
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, name])
   @@map("message_templates")
 }
 
@@ -205,6 +372,7 @@ enum NotificationType {
 
 model Notification {
   id        String           @id @default(uuid())
+  tenantId  String           @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   userId    String
   type      NotificationType
   title     String
@@ -217,21 +385,28 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@index([userId, read])
   @@index([createdAt])
+  @@index([tenantId])
   @@map("notifications")
 }
 
 // Preferência por usuário e tipo. Default (quando não existe registro) = habilitado.
 model NotificationPreference {
-  id      String           @id @default(uuid())
-  userId  String
-  type    NotificationType
-  enabled Boolean          @default(true)
+  id       String           @id @default(uuid())
+  tenantId String           @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  userId   String
+  type     NotificationType
+  enabled  Boolean          @default(true)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@unique([userId, type])
+  @@index([tenantId])
   @@map("notification_preferences")
 }
 
@@ -239,13 +414,14 @@ model NotificationPreference {
 // PACIENTES
 // =========================
 model Patient {
-  id        String    @id @default(uuid())
-  name      String
-  email     String?
-  phone     String?
-  birthDate DateTime?
-  sex       String? // "M" ou "F"
-  document  String? // CPF
+  id                  String    @id @default(uuid())
+  tenantId            String    @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  name                String
+  email               String?
+  phone               String?
+  birthDate           DateTime?
+  sex                 String? // "M" ou "F"
+  document            String? // CPF
   cep                 String? // apenas dígitos persistidos pela API/front
   addressStreet       String?
   addressNeighborhood String?
@@ -259,16 +435,20 @@ model Patient {
   referralSourceOther String? // detalhe quando referralSource = OTHER
   photoStorageKey     String? // chave no Cloudflare R2
   photoUrl            String? // URL pública da foto
-  anamnesis Json? // anamnese estruturada
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  anamnesis           Json? // anamnese estruturada
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   appointments     Appointment[]
   financialEntries FinancialEntry[]
   documents        Document[]
   packages         PatientPackage[]
   photos           PatientPhoto[]
+  skincareRoutines SkincareRoutine[]
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
   @@map("patients")
 }
 
@@ -280,6 +460,7 @@ enum PatientPhotoPhase {
 
 model PatientPhoto {
   id            String            @id @default(uuid())
+  tenantId      String            @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   patientId     String
   appointmentId String // sempre vinculada a um atendimento
   phase         PatientPhotoPhase
@@ -294,8 +475,11 @@ model PatientPhoto {
   patient     Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@index([patientId])
   @@index([appointmentId])
+  @@index([tenantId])
   @@map("patient_photos")
 }
 
@@ -304,6 +488,7 @@ model PatientPhoto {
 // =========================
 model Procedure {
   id              String   @id @default(uuid())
+  tenantId        String   @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   name            String
   description     String?
   category        String? // categoria livre (ex.: Facial, Injetáveis, Laser...)
@@ -324,12 +509,16 @@ model Procedure {
   packageItems     PackageItem[]
   promotions       PromotionProcedure[]
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
   @@map("procedures")
 }
 
 // Equipamentos usados num procedimento, com custo por uso informado manualmente.
 model ProcedureEquipment {
   id          String  @id @default(uuid())
+  tenantId    String  @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   procedureId String
   equipmentId String
   // Custo estimado por uso (R$), informado ao vincular
@@ -338,8 +527,11 @@ model ProcedureEquipment {
   procedure Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
   equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@index([procedureId])
   @@index([equipmentId])
+  @@index([tenantId])
   @@map("procedure_equipment")
 }
 
@@ -348,6 +540,7 @@ model ProcedureEquipment {
 // quando cancelado/marcado como faltou, são devolvidos.
 model ProcedureMaterial {
   id          String  @id @default(uuid())
+  tenantId    String  @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   procedureId String
   itemId      String
   // Permite frações (ex: 0.5ml de hialurônico, 2.5g de pomada)
@@ -356,7 +549,10 @@ model ProcedureMaterial {
   procedure Procedure     @relation(fields: [procedureId], references: [id], onDelete: Cascade)
   item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@unique([procedureId, itemId])
+  @@index([tenantId])
   @@map("procedure_materials")
 }
 
@@ -379,6 +575,7 @@ enum PatientPackageStatus {
 // Template/catálogo de pacote — define o que o pacote contém e condições.
 model Package {
   id              String      @id @default(uuid())
+  tenantId        String      @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   name            String
   description     String?
   type            PackageType
@@ -400,12 +597,16 @@ model Package {
   patientPackages PatientPackage[]
   promotions      PromotionPackage[]
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
   @@map("packages")
 }
 
 // Procedimentos que compõem o pacote.
 model PackageItem {
   id          String @id @default(uuid())
+  tenantId    String @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   packageId   String
   procedureId String
   // Quantidade de sessões deste procedimento dentro do pacote
@@ -416,37 +617,44 @@ model PackageItem {
   package   Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
   procedure Procedure @relation(fields: [procedureId], references: [id], onDelete: Restrict)
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@unique([packageId, procedureId])
+  @@index([tenantId])
   @@map("package_items")
 }
 
 // Vínculo de um pacote com um paciente (a "venda" / ativação).
 model PatientPackage {
-  id            String               @id @default(uuid())
-  patientId     String
-  packageId     String
-  status        PatientPackageStatus @default(ACTIVE)
+  id               String               @id @default(uuid())
+  tenantId         String               @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  patientId        String
+  packageId        String
+  status           PatientPackageStatus @default(ACTIVE)
   // Preço efetivamente pago
-  totalPaid     Decimal              @db.Decimal(10, 2)
-  paymentMethod String?
-  purchaseDate  DateTime             @default(now())
+  totalPaid        Decimal              @db.Decimal(10, 2)
+  paymentMethod    String?
+  purchaseDate     DateTime             @default(now())
   // Data de expiração (calculada: purchaseDate + package.validityDays)
-  expiresAt     DateTime?
+  expiresAt        DateTime?
   // Controle de sessões consumidas
-  sessionsTotal Int
-  sessionsUsed  Int                  @default(0)
-  notes         String?
+  sessionsTotal    Int
+  sessionsUsed     Int                  @default(0)
+  notes            String?
   // Receita do pacote já lançada no financeiro (antecipada ou no 1º atendimento concluído)
-  financeGenerated Boolean           @default(false)
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  financeGenerated Boolean              @default(false)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
   patient      Patient       @relation(fields: [patientId], references: [id])
   package      Package       @relation(fields: [packageId], references: [id])
   appointments Appointment[]
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@index([patientId])
   @@index([status])
+  @@index([tenantId])
   @@map("patient_packages")
 }
 
@@ -465,6 +673,7 @@ enum DiscountType {
 // no lançamento financeiro ao completar um agendamento.
 model Promotion {
   id                String       @id @default(uuid())
+  tenantId          String       @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   name              String
   description       String?
   // Data comemorativa associada (ex: "Dia das Mães", "Black Friday")
@@ -482,34 +691,45 @@ model Promotion {
   packages     PromotionPackage[]
   appointments Appointment[]
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@index([startAt, endAt])
   @@index([active])
+  @@index([tenantId])
   @@map("promotions")
 }
 
 // Procedimentos participantes da promoção
 model PromotionProcedure {
   id          String @id @default(uuid())
+  tenantId    String @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   promotionId String
   procedureId String
 
   promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
   procedure Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@unique([promotionId, procedureId])
+  @@index([tenantId])
   @@map("promotion_procedures")
 }
 
 // Pacotes participantes da promoção
 model PromotionPackage {
   id          String @id @default(uuid())
+  tenantId    String @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   promotionId String
   packageId   String
 
   promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
   package   Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@unique([promotionId, packageId])
+  @@index([tenantId])
   @@map("promotion_packages")
 }
 
@@ -533,6 +753,7 @@ enum AppointmentKind {
 
 model Appointment {
   id                String            @id @default(uuid())
+  tenantId          String            @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   patientId         String
   // Procedimento é opcional para Avaliação/Retorno (mas obrigatório quando kind = PROCEDURE)
   procedureId       String?
@@ -565,15 +786,19 @@ model Appointment {
   extraMaterials   AppointmentMaterial[]
   photos           PatientPhoto[]
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@index([startAt])
   @@index([patientId])
   @@index([patientPackageId])
+  @@index([tenantId])
   @@map("appointments")
 }
 
 // Materiais extras utilizados em um agendamento específico (além do previsto no procedimento).
 model AppointmentMaterial {
   id            String  @id @default(uuid())
+  tenantId      String  @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   appointmentId String
   itemId        String
   quantity      Decimal @db.Decimal(12, 3)
@@ -581,7 +806,10 @@ model AppointmentMaterial {
   appointment Appointment   @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
   item        InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@unique([appointmentId, itemId])
+  @@index([tenantId])
   @@map("appointment_materials")
 }
 
@@ -597,7 +825,8 @@ enum FinancialType {
 // O valor líquido (netAmount) é calculado automaticamente ao gerar lançamento.
 model PaymentMethod {
   id         String   @id @default(uuid())
-  name       String   @unique
+  tenantId   String   @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  name       String
   // Taxa percentual cobrada pela operadora/maquininha (0 = sem taxa, ex: dinheiro/PIX)
   feePercent Decimal  @default(0) @db.Decimal(5, 2)
   active     Boolean  @default(true)
@@ -606,6 +835,9 @@ model PaymentMethod {
 
   financialEntries FinancialEntry[]
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, name])
   @@map("payment_methods")
 }
 
@@ -617,6 +849,7 @@ enum ExpenseType {
 
 model FinancialEntry {
   id                 String        @id @default(uuid())
+  tenantId           String        @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   type               FinancialType
   description        String
   // Valor bruto do serviço/despesa
@@ -646,11 +879,14 @@ model FinancialEntry {
   recurringExpense RecurringExpense? @relation(fields: [recurringExpenseId], references: [id])
   paymentMethod    PaymentMethod?    @relation(fields: [paymentMethodId], references: [id])
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@index([paidAt])
   @@index([appointmentId])
   @@index([equipmentId])
   @@index([recurringExpenseId])
   @@index([paymentMethodId])
+  @@index([tenantId])
   @@map("financial_entries")
 }
 
@@ -662,6 +898,7 @@ model FinancialEntry {
 // O sistema gera automaticamente um FinancialEntry para cada mês.
 model RecurringExpense {
   id          String      @id @default(uuid())
+  tenantId    String      @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   name        String
   description String?
   amount      Decimal     @db.Decimal(10, 2)
@@ -675,6 +912,9 @@ model RecurringExpense {
 
   generatedEntries FinancialEntry[]
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
   @@map("recurring_expenses")
 }
 
@@ -683,8 +923,9 @@ model RecurringExpense {
 // =========================
 model InventoryItem {
   id                     String    @id @default(uuid())
+  tenantId               String    @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   name                   String
-  sku                    String?   @unique
+  sku                    String?
   description            String?
   // Quantidades agora aceitam fracionados (ex: 5.5 ml restantes de um pote de 100ml)
   quantity               Decimal   @default(0) @db.Decimal(12, 3)
@@ -701,6 +942,9 @@ model InventoryItem {
   procedureUsages   ProcedureMaterial[]
   appointmentUsages AppointmentMaterial[]
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, sku])
   @@map("inventory_items")
 }
 
@@ -715,24 +959,57 @@ enum AuditAction {
 }
 
 model AuditLog {
-  id         String      @id @default(uuid())
+  id        String      @id @default(uuid())
+  tenantId  String      @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   // Qual entidade foi alterada (ex: "Patient", "Appointment")
-  entity     String
+  entity    String
   // ID do registro alterado
-  entityId   String
-  action     AuditAction
+  entityId  String
+  action    AuditAction
   // Diff das alterações: { campo: { old: valor_anterior, new: valor_novo } }
   // Para CREATE: apenas new. Para DELETE: apenas old.
-  changes    Json?
+  changes   Json?
   // Usuário que realizou a alteração
-  userId     String?
-  userName   String?
-  createdAt  DateTime    @default(now())
+  userId    String?
+  userName  String?
+  createdAt DateTime    @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([entity, entityId])
   @@index([userId])
   @@index([createdAt])
+  @@index([tenantId])
   @@map("audit_logs")
+}
+
+// =========================
+// FEEDBACK / REPORTES DE USUÁRIOS
+// =========================
+
+enum FeedbackType {
+  BUG
+  SUGGESTION
+}
+
+model FeedbackReport {
+  id          String       @id @default(uuid())
+  tenantId    String       @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  type        FeedbackType
+  title       String
+  description String
+  pageUrl     String?
+  userId      String
+  createdAt   DateTime     @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([type])
+  @@index([tenantId])
+  @@map("feedback_reports")
 }
 
 enum MovementType {
@@ -743,6 +1020,7 @@ enum MovementType {
 
 model InventoryMovement {
   id        String       @id @default(uuid())
+  tenantId  String       @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   itemId    String
   type      MovementType
   quantity  Decimal      @db.Decimal(12, 3)
@@ -754,6 +1032,196 @@ model InventoryMovement {
 
   item InventoryItem @relation(fields: [itemId], references: [id])
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@index([itemId])
+  @@index([tenantId])
   @@map("inventory_movements")
+}
+
+// =========================
+// METAS
+// =========================
+
+// Indicador acompanhado pela meta. MANUAL = valor atual informado pelo usuário;
+// os demais são calculados a partir dos dados do período (ver goals.service.ts).
+enum GoalMetric {
+  REVENUE // faturamento (receitas lançadas no financeiro)
+  NEW_PATIENTS // pacientes cadastrados no período
+  PROCEDURES // procedimentos realizados (agendamentos concluídos)
+  AVERAGE_TICKET // faturamento ÷ atendimentos concluídos
+  OCCUPANCY // % do expediente da equipe ocupado por agendamentos
+  RETURN_RATE // % dos pacientes atendidos que já tinham atendimento anterior
+  MANUAL
+}
+
+enum GoalFormat {
+  CURRENCY
+  NUMBER
+  PERCENT
+}
+
+enum GoalPeriodType {
+  MONTH
+  QUARTER
+  YEAR
+}
+
+model Goal {
+  id          String         @id @default(uuid())
+  tenantId    String         @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  name        String
+  metric      GoalMetric     @default(MANUAL)
+  format      GoalFormat     @default(NUMBER)
+  target      Decimal        @db.Decimal(12, 2)
+  // Valor atual informado manualmente (usado só quando metric = MANUAL)
+  manualValue Decimal?       @db.Decimal(12, 2)
+  periodType  GoalPeriodType @default(MONTH)
+  // Primeiro dia do período (mês, trimestre ou ano), sem horário
+  periodStart DateTime       @db.Date
+  color       String         @default("#15998B")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([periodStart])
+  @@index([tenantId])
+  @@map("goals")
+}
+
+// =========================
+// CENTRAL DE PENDÊNCIAS
+// =========================
+
+/// Regras que geram pendências automaticamente a partir das outras telas.
+enum PendingRule {
+  LOW_STOCK
+  EXPIRING_STOCK
+  BILLS_DUE
+  APPOINTMENT_NO_OUTCOME
+  EQUIPMENT_MAINTENANCE
+  DOCUMENT_UNSIGNED
+  COMMEMORATIVE_DATE
+}
+
+enum PendingCategory {
+  ADMINISTRATIVE
+  FINANCE
+  INVENTORY
+  OPERATIONAL
+  MAINTENANCE
+  HEALTH_SURVEILLANCE
+  MARKETING
+  TEAM
+  PATIENTS
+  MANAGEMENT
+}
+
+/// Pendência manual, ou o estado (responsável/resolução) de uma pendência gerada por regra.
+model PendingTask {
+  id             String          @id @default(uuid())
+  tenantId       String          @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  // Null = pendência manual
+  rule           PendingRule?
+  // Identifica a ocorrência gerada pela regra (ex.: "DOCUMENT:<id>"); muda quando a situação se repete
+  sourceKey      String?
+  title          String
+  description    String?
+  category       PendingCategory
+  dueDate        DateTime?       @db.Date
+  urgent         Boolean         @default(false)
+  link           String?
+  assigneeId     String?
+  resolvedAt     DateTime?
+  resolvedById   String?
+  resolvedByName String?
+  createdById    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  assignee User? @relation("PendingTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, sourceKey])
+  @@index([resolvedAt])
+  @@index([assigneeId])
+  @@map("pending_tasks")
+}
+
+// =========================
+// ROTINAS DE SKINCARE (anamnese de pele)
+// =========================
+
+/// Produto do catálogo usado para montar as rotinas.
+model SkincareProduct {
+  id               String   @id @default(uuid())
+  tenantId         String   @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  name             String
+  brand            String?
+  activeIngredient String?
+  // manha | noite | semanal
+  moments          String[] @default([])
+  // limpeza | tratamento | hidratacao | protetor | olhos | esfoliacao | mascara
+  step             String
+  // Características usadas pelas restrições das regras (acido, acido-alto, retinoide, fragrancia, oleo)
+  tags             String[] @default([])
+  howTo            String?
+  note             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@map("skincare_products")
+}
+
+/// Regra: quando a resposta da anamnese bate com field/value, inclui produtos, evita características e soma uma orientação.
+model SkincareRule {
+  id         String   @id @default(uuid())
+  tenantId   String   @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  // pele | afeccao | olheira | idade
+  field      String
+  value      String
+  productIds String[] @default([])
+  avoidTags  String[] @default([])
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@map("skincare_rules")
+}
+
+/// Anamnese de pele salva na ficha da paciente, com a rotina gerada (produtos copiados no momento do salvamento).
+model SkincareRoutine {
+  id            String   @id @default(uuid())
+  tenantId      String   @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  patientId     String
+  consultDate   DateTime @db.Date
+  // { pele, afec[], afecOutra, olheira, olheiraTipo, idade }
+  answers       Json
+  // [{ moment, step, productId, name, brand, activeIngredient, howTo, note }]
+  items         Json     @default("[]")
+  // [{ productId, name, reason }]
+  avoided       Json     @default("[]")
+  // [{ text, source }]
+  guidelines    Json     @default("[]")
+  notes         String?
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([patientId, consultDate])
+  @@index([tenantId])
+  @@map("skincare_routines")
 }

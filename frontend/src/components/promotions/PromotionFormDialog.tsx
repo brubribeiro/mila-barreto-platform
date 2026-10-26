@@ -29,6 +29,7 @@ import { promotionsApi, CreatePromotionPayload } from '../../api/promotions';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { MoneyField } from '../MoneyField';
 import { LabeledField } from '../LabeledField';
 import { dateInputValueFromApi, dateOnlyToApiIso } from '../../utils/dateOnly';
 import { proceduresApi } from '../../api/procedures';
@@ -260,6 +261,7 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit(onSubmit)}
         sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
       >
@@ -352,14 +354,14 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
                 />
               </LabeledField>
 
-              <LabeledField label="Valor">
+              <LabeledField label="Valor" required={!isCombo}>
                 <Controller
                   name="discountValue"
                   control={control}
                   rules={{
                     validate: (v) => {
                       if (isCombo) return true;
-                      if (v === '' || Number(v) <= 0) return 'Informe o valor';
+                      if (v === '' || Number(v) <= 0) return 'Informe o valor do desconto';
                       if (discountType === 'PERCENTAGE' && Number(v) > 100) return 'Máximo 100%';
                       return true;
                     },
@@ -367,20 +369,23 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
                   render={({ field, fieldState }) =>
                     isCombo ? (
                       <TextField fullWidth disabled sx={DISABLED_FIELD_SX} value="—" />
+                    ) : discountType === 'FIXED' ? (
+                      <MoneyField
+                        {...field}
+                        fullWidth
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                      />
                     ) : (
                       <TextField
                         {...field}
                         type="number"
                         fullWidth
-                        placeholder={discountType === 'PERCENTAGE' ? '20%' : '0,00'}
+                        placeholder="20"
                         error={!!fieldState.error}
                         helperText={fieldState.error?.message}
-                        inputProps={{ step: discountType === 'PERCENTAGE' ? 1 : 0.01, min: 0, max: discountType === 'PERCENTAGE' ? 100 : undefined }}
-                        InputProps={
-                          discountType === 'FIXED'
-                            ? { startAdornment: <InputAdornment position="start">R$</InputAdornment> }
-                            : { endAdornment: <InputAdornment position="end">%</InputAdornment> }
-                        }
+                        inputProps={{ inputMode: 'decimal', step: 1, min: 0, max: 100 }}
+                        InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
                       />
                     )
                   }

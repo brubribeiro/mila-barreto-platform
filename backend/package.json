@@ -13,6 +13,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:tenancy": "jest --config ./test/jest-integration.json --runInBand",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
@@ -22,7 +23,8 @@
     "prisma:seed-promotions": "ts-node --transpile-only prisma/seed-promotions.ts",
     "prisma:seed-packages": "ts-node --transpile-only prisma/seed-packages.ts",
     "prisma:cleanup-patients": "ts-node --transpile-only prisma/cleanup-patients.ts",
-    "prisma:import-patients": "ts-node --transpile-only prisma/import-patients.ts"
+    "prisma:import-patients": "ts-node --transpile-only prisma/import-patients.ts",
+    "prisma:create-super-admin": "ts-node --transpile-only prisma/create-super-admin.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.500.0",

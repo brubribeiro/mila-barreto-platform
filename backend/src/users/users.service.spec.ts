@@ -9,6 +9,7 @@ import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { R2StorageService } from '../documents/r2-storage.service';
 
 jest.mock('bcrypt', () => ({
   hash: jest.fn().mockResolvedValue('hashed-password'),
@@ -66,6 +67,7 @@ describe('UsersService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationsService, useValue: notifications },
         { provide: AuditLogService, useValue: auditLog },
+        { provide: R2StorageService, useValue: { upload: jest.fn(), remove: jest.fn(), getPresignedUrl: jest.fn() } },
       ],
     }).compile();
 
@@ -73,12 +75,12 @@ describe('UsersService', () => {
   });
 
   describe('findByEmail', () => {
-    it('should return user with role', async () => {
+    it('should return user with role and clinic', async () => {
       const result = await service.findByEmail('ana@clinic.com');
       expect(result).toEqual(mockUser);
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'ana@clinic.com' },
-        include: { role: true },
+        include: { role: true, tenant: true },
       });
     });
   });

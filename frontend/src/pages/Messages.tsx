@@ -3,89 +3,139 @@ import {
   Box,
   Button,
   Card,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  MenuItem,
+  IconButton,
+  InputBase,
+  alpha,
+  Skeleton,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
-import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
+import type { Theme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import VisibilityIcon from '@mui/icons-material/Visibility';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import SearchIcon from '@mui/icons-material/Search';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { PageHeader } from '../components/PageHeader';
-import { DialogHeader, dialogPaperSx } from '../components/DialogCloseButton';
-import { ListFiltersBar } from '../components/ListFiltersBar';
-import { AppDataGrid } from '../components/AppDataGrid';
 import { MessageTemplateFormDialog } from '../components/messages/MessageTemplateFormDialog';
 import { WhatsAppPreview } from '../components/messages/WhatsAppPreview';
-import { categoryLabel, categoryOptions } from '../components/messages/messageTemplateConstants';
-import { FILTER_FIELD_SX, matchFields } from '../utils/listFilters';
+import { VariableChip } from '../components/messages/VariableChip';
+import {
+  categoryLabel,
+  TEMPLATE_VARIABLES,
+  triggerLabel,
+  triggerOrder,
+} from '../components/messages/messageTemplateConstants';
+import { useUrlState } from '../hooks/useUrlState';
+import { matchFields } from '../utils/listFilters';
 import { messagesApi } from '../api/messages';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { proceduresApi } from '../api/procedures';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { MessageTemplate } from '../types';
+import { fontSizes } from '../theme/fontSizes';
 
-function PreviewDialog({
-  open,
-  onClose,
-  template,
-}: {
-  open: boolean;
-  onClose: () => void;
-  template: MessageTemplate | null;
-}) {
-  if (!template) return null;
+const WHATSAPP_GREEN = '#1DAE53';
+
+const selectedRowBg = (th: Theme) => alpha(th.palette.primary.main, 0.09);
+
+const CARD_SX = { borderRadius: '18px', overflow: 'hidden' } as const;
+
+const ICON_BUTTON_SX = {
+  flexShrink: 0,
+  width: 36,
+  height: 36,
+  borderRadius: '10px',
+  border: 1,
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+  color: 'text.secondary',
+} as const;
+
+function ChatIcon() {
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: dialogPaperSx(false) }}>
-      <DialogHeader
-        onClose={onClose}
-        title={`Preview — ${template.name}`}
-        subtitle={template.category ?? 'Visualização do template'}
-        icon={<VisibilityOutlinedIcon fontSize="small" />}
-      />
-      <DialogContent>
-        <WhatsAppPreview
-          content={template.content}
-          category={template.category ?? undefined}
-          procedure={template.procedure ?? null}
-        />
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Fechar</Button>
-      </DialogActions>
-    </Dialog>
+    <Box
+      component="span"
+      sx={{
+        width: 38,
+        height: 38,
+        borderRadius: '11px',
+        bgcolor: 'rgba(37,211,102,.14)',
+        color: WHATSAPP_GREEN,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}
+    >
+      <svg
+        width="19"
+        height="19"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M20.5 11.5a7.5 7.5 0 0 1-10.8 6.7L4 20l1.8-5.2A7.5 7.5 0 1 1 20.5 11.5z" />
+        <path d="M8.5 11h7M8.5 8.5h4" />
+      </svg>
+    </Box>
   );
+}
+
+function StatusBadge({
+  active,
+  onClick,
+  disabled,
+}: {
+  active: boolean;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  const badge = (
+    <Box
+      component={onClick ? 'button' : 'span'}
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      disabled={onClick ? disabled : undefined}
+      sx={{
+        fontFamily: 'inherit',
+        fontSize: fontSizes.xs,
+        fontWeight: 700,
+        color: active ? WHATSAPP_GREEN : 'text.secondary',
+        bgcolor: active ? 'rgba(37,211,102,.13)' : 'grey.100',
+        px: 1.5,
+        py: 0.625,
+        border: 'none',
+        borderRadius: '8px',
+        whiteSpace: 'nowrap',
+        cursor: onClick ? 'pointer' : 'default',
+      }}
+    >
+      {active ? 'Ativa' : 'Inativa'}
+    </Box>
+  );
+  if (!onClick) return badge;
+  return <Tooltip title={active ? 'Clique para desativar' : 'Clique para ativar'}>{badge}</Tooltip>;
 }
 
 export function Messages() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('messages:create');
   const canEdit = has('messages:edit');
   const canDelete = has('messages:delete');
 
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MessageTemplate | null>(null);
-  const [previewTemplate, setPreviewTemplate] = useState<MessageTemplate | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ['message-templates'],
@@ -101,209 +151,341 @@ export function Messages() {
     mutationFn: (id: string) => messagesApi.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['message-templates'] });
-      toast.success('Template excluído.');
+      setSelectedId(null);
+      toast.success('Modelo excluído.');
     },
     onError: (err) => {
-      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o template.'));
+      toast.error(getApiErrorMessage(err, 'Não foi possível excluir o modelo.'));
     },
   });
 
+  const toggleMutation = useMutation({
+    mutationFn: (t: MessageTemplate) => messagesApi.update(t.id, { active: !t.active }),
+    onMutate: async (t) => {
+      await queryClient.cancelQueries({ queryKey: ['message-templates'] });
+      const previous = queryClient.getQueryData<MessageTemplate[]>(['message-templates']);
+      queryClient.setQueryData<MessageTemplate[]>(['message-templates'], (old) =>
+        old?.map((x) => (x.id === t.id ? { ...x, active: !t.active } : x)),
+      );
+      return { previous };
+    },
+    onSuccess: (saved) => {
+      toast.success(saved.active ? 'Modelo ativado.' : 'Modelo desativado.');
+    },
+    onError: (err, _t, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(['message-templates'], ctx.previous);
+      toast.error(getApiErrorMessage(err, 'Não foi possível alterar o status.'));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['message-templates'] });
+    },
+  });
+
+  // Ordem da jornada do paciente (gatilho), inativos por último.
+  const sortedTemplates = useMemo(
+    () =>
+      [...templates].sort(
+        (a, b) =>
+          Number(b.active) - Number(a.active) ||
+          triggerOrder[a.trigger] - triggerOrder[b.trigger] ||
+          a.name.localeCompare(b.name, 'pt-BR'),
+      ),
+    [templates],
+  );
+
   const filteredTemplates = useMemo(
     () =>
-      templates.filter((t) => {
-        if (categoryFilter !== 'ALL' && (t.category ?? '') !== categoryFilter) return false;
-        return matchFields(
+      sortedTemplates.filter((t) =>
+        matchFields(
           search,
           t.name,
           t.content,
+          triggerLabel[t.trigger],
           t.category ? categoryLabel[t.category] : undefined,
           t.procedure?.name,
-        );
-      }),
-    [templates, search, categoryFilter],
+        ),
+      ),
+    [sortedTemplates, search],
   );
 
-  const columns = useMemo<GridColDef<MessageTemplate>[]>(
-    () => [
-      { field: 'name', headerName: 'Nome', flex: 1, minWidth: 180 },
-      {
-        field: 'category',
-        headerName: 'Categoria',
-        flex: 0.5,
-        minWidth: 120,
-        renderCell: (params) => {
-          const cat = params.row.category;
-          return cat ? (
-            <Chip size="small" label={categoryLabel[cat] ?? cat} variant="outlined" />
-          ) : (
-            '—'
-          );
-        },
-      },
-      {
-        field: 'content',
-        headerName: 'Conteúdo',
-        flex: 1.2,
-        minWidth: 200,
-        valueGetter: (params) => {
-          const c = params.row.content ?? '';
-          return c.length > 60 ? c.slice(0, 60) + '...' : c;
-        },
-      },
-      {
-        field: 'actions',
-        type: 'actions',
-        headerName: 'Ações',
-        width: 170,
-        getActions: (params) => {
-          const actions = [
-            <GridActionsCellItem
-              key="preview"
-              icon={
-                <Tooltip title="Preview">
-                  <VisibilityIcon fontSize="small" />
-                </Tooltip>
-              }
-              label="Preview"
-              onClick={() => setPreviewTemplate(params.row)}
-            />,
-          ];
-          if (canEdit) {
-            actions.push(
-              <GridActionsCellItem
-                key="edit"
-                icon={
-                  <Tooltip title="Editar">
-                    <EditIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Editar"
-                onClick={() => {
-                  setEditing(params.row);
-                  setFormOpen(true);
-                }}
-              />,
-            );
-          }
-          if (canDelete) {
-            actions.push(
-              <GridActionsCellItem
-                key="delete"
-                icon={
-                  <Tooltip title="Excluir">
-                    <DeleteIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Excluir"
-                onClick={async () => {
-                  const ok = await confirm({
-                    title: 'Excluir template',
-                    message: `Excluir template ${params.row.name}?`,
-                    confirmLabel: 'Excluir',
-                    confirmColor: 'error',
-                  });
-                  if (ok) deleteMutation.mutate(params.row.id);
-                }}
-              />,
-            );
-          }
-          return actions;
-        },
-      },
-    ],
-    [confirm, deleteMutation, canEdit, canDelete],
-  );
+  const selected =
+    filteredTemplates.find((t) => t.id === selectedId) ?? filteredTemplates[0] ?? null;
+
+  const openCreate = () => {
+    setEditing(null);
+    setFormOpen(true);
+  };
+
+  const openEdit = (t: MessageTemplate) => {
+    setEditing(t);
+    setFormOpen(true);
+  };
+
+  const handleDelete = async (t: MessageTemplate) => {
+    const ok = await confirm({
+      title: 'Excluir modelo',
+      message: `Excluir o modelo ${t.name}?`,
+      confirmLabel: 'Excluir',
+      confirmColor: 'error',
+    });
+    if (ok) deleteMutation.mutate(t.id);
+  };
 
   return (
     <Box>
-      <PageHeader
-        title="Mensagens"
-        subtitle="Templates de mensagens WhatsApp"
-        action={
-          <Stack direction="row" spacing={1}>
-            {isAdmin && (
-              <Button
-                variant="outlined"
-                startIcon={<HistoryIcon />}
-                onClick={() => setHistoryOpen(true)}
-              >
-                Histórico
-              </Button>
-            )}
-            {canCreate && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: '1fr 1.1fr' },
+          gap: { xs: 2, sm: 2.25 },
+          alignItems: 'start',
+        }}
+      >
+        {/* Lista de modelos */}
+        <Card sx={CARD_SX}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+            justifyContent="space-between"
+            spacing={1.5}
+            sx={{ px: { xs: 2, sm: 2.75 }, py: 2.25, borderBottom: 1, borderColor: 'divider' }}
+          >
+            <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700, whiteSpace: 'nowrap' }}>
+              Modelos de mensagem
+            </Typography>
+            <Stack direction="row" alignItems="center" spacing={1.125} sx={{ minWidth: 0 }}>
+              <Stack
+                direction="row"
+                alignItems="center"
+                spacing={1}
+                sx={{
+                  height: 36,
+                  px: 1.5,
+                  borderRadius: '10px',
+                  border: 1,
+                  borderColor: 'divider',
+                  bgcolor: 'grey.50',
+                  width: { xs: '100%', sm: 170 },
+                  minWidth: 0,
                 }}
               >
-                Novo template
-              </Button>
-            )}
+                <SearchIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+                <InputBase
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar modelo..."
+                  inputProps={{ 'aria-label': 'Buscar modelo' }}
+                  sx={{ fontSize: fontSizes.sm, flex: 1, minWidth: 0 }}
+                />
+              </Stack>
+              {canCreate && (
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={openCreate}
+                  sx={{
+                    flexShrink: 0,
+                    height: 36,
+                    px: 1.75,
+                    borderRadius: '10px',
+                    fontSize: fontSizes.sm,
+                    fontWeight: 700,
+                  }}
+                >
+                  Novo
+                </Button>
+              )}
+            </Stack>
           </Stack>
-        }
-      />
 
-      <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
-        <ListFiltersBar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Buscar por nome ou conteúdo"
-          filteredCount={filteredTemplates.length}
-          totalCount={templates.length}
-          countLabel={filteredTemplates.length === 1 ? 'template' : 'templates'}
-        >
-          <TextField
-            select
-            size="small"
-            label="Categoria"
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            sx={FILTER_FIELD_SX}
-          >
-            <MenuItem value="ALL">Todas</MenuItem>
-            {categoryOptions
-              .filter((c) => c.value)
-              .map((c) => (
-                <MenuItem key={c.value} value={c.value}>
-                  {c.label}
-                </MenuItem>
-              ))}
-          </TextField>
-        </ListFiltersBar>
+          {isLoading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <Stack
+                key={i}
+                direction="row"
+                alignItems="center"
+                spacing={1.5}
+                sx={{ px: 2.75, py: 1.75, borderBottom: 1, borderColor: 'grey.100' }}
+              >
+                <Skeleton variant="rounded" width={38} height={38} sx={{ borderRadius: '11px' }} />
+                <Box sx={{ flex: 1 }}>
+                  <Skeleton variant="text" width="55%" />
+                  <Skeleton variant="text" width="35%" />
+                </Box>
+              </Stack>
+            ))
+          ) : filteredTemplates.length === 0 ? (
+            <Box sx={{ px: 3, py: 6, textAlign: 'center' }}>
+              <Typography sx={{ fontWeight: 700 }}>
+                {templates.length === 0 ? 'Nenhum modelo cadastrado' : 'Nenhum modelo encontrado'}
+              </Typography>
+              <Typography color="text.secondary" sx={{ fontSize: fontSizes.md, mt: 0.5 }}>
+                {templates.length === 0
+                  ? 'Crie modelos para agilizar confirmações, lembretes e aniversários.'
+                  : 'Tente outra busca.'}
+              </Typography>
+            </Box>
+          ) : (
+            filteredTemplates.map((t) => {
+              const isSelected = t.id === selected?.id;
+              return (
+                <Box
+                  key={t.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isSelected}
+                  onClick={() => setSelectedId(t.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedId(t.id);
+                    }
+                  }}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    px: { xs: 2, sm: 2.75 },
+                    py: 1.75,
+                    borderBottom: 1,
+                    borderColor: 'grey.100',
+                    cursor: 'pointer',
+                    bgcolor: isSelected ? selectedRowBg : 'transparent',
+                    '&:last-of-type': { borderBottom: 0 },
+                    '&:hover': { bgcolor: isSelected ? selectedRowBg : 'grey.50' },
+                    outline: 'none',
+                    '&:focus-visible': { boxShadow: (th) => `inset 0 0 0 2px ${th.palette.primary.main}` },
+                  }}
+                >
+                  <Box sx={{ opacity: t.active ? 1 : 0.5, display: 'flex' }}>
+                    <ChatIcon />
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: 0, lineHeight: 1.3 }}>
+                    <Typography
+                      noWrap
+                      sx={{
+                        fontSize: fontSizes.md,
+                        fontWeight: 700,
+                        color: t.active ? 'text.primary' : 'text.secondary',
+                      }}
+                    >
+                      {t.name}
+                    </Typography>
+                    <Typography noWrap sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
+                      Gatilho: {triggerLabel[t.trigger]}
+                      {!t.active && ' · Inativa'}
+                    </Typography>
+                  </Box>
+                  {isSelected && (
+                    <Box
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        bgcolor: 'primary.main',
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+                </Box>
+              );
+            })
+          )}
+        </Card>
 
-        <AppDataGrid
-          rows={filteredTemplates}
-          columns={columns}
-          loading={isLoading}
-          localeText={{
-            noRowsLabel:
-              templates.length === 0
-                ? 'Nenhum template cadastrado'
-                : 'Nenhum template encontrado com os filtros',
-            footerRowSelected: (count) => `${count} selecionado(s)`,
-          }}
-        />
-      </Card>
+        {/* Detalhe do modelo selecionado */}
+        <Card sx={{ ...CARD_SX, p: { xs: 2, sm: 2.75 }, position: { md: 'sticky' }, top: { md: 16 } }}>
+          {isLoading ? (
+            <>
+              <Skeleton variant="text" width="45%" sx={{ fontSize: fontSizes.xl }} />
+              <Skeleton variant="text" width="30%" sx={{ mb: 2 }} />
+              <Skeleton variant="rounded" height={170} sx={{ borderRadius: '16px' }} />
+            </>
+          ) : !selected ? (
+            <Box sx={{ py: 6, textAlign: 'center' }}>
+              <Typography sx={{ fontWeight: 700 }}>Nenhum modelo selecionado</Typography>
+              <Typography color="text.secondary" sx={{ fontSize: fontSizes.md, mt: 0.5 }}>
+                Escolha um modelo na lista para ver a prévia.
+              </Typography>
+            </Box>
+          ) : (
+            <>
+              <Stack
+                direction="row"
+                alignItems="flex-start"
+                justifyContent="space-between"
+                spacing={1.5}
+                sx={{ mb: 2 }}
+              >
+                <Box sx={{ minWidth: 0, lineHeight: 1.3 }}>
+                  <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>
+                    {selected.name}
+                  </Typography>
+                  <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>
+                    Enviada: {triggerLabel[selected.trigger]}
+                    {selected.category && ` · ${categoryLabel[selected.category] ?? selected.category}`}
+                  </Typography>
+                </Box>
+                <Stack direction="row" alignItems="center" spacing={0.75} sx={{ flexShrink: 0 }}>
+                  <StatusBadge
+                    active={selected.active}
+                    onClick={canEdit ? () => toggleMutation.mutate(selected) : undefined}
+                    disabled={toggleMutation.isPending}
+                  />
+                  {canDelete && (
+                    <Tooltip title="Excluir modelo">
+                      <IconButton
+                        aria-label={`Excluir modelo ${selected.name}`}
+                        onClick={() => handleDelete(selected)}
+                        sx={{ ...ICON_BUTTON_SX, width: 30, height: 30, borderRadius: '9px' }}
+                      >
+                        <DeleteOutlineIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Stack>
+              </Stack>
+
+              <WhatsAppPreview
+                content={selected.content}
+                category={selected.category}
+                procedure={selected.procedure}
+              />
+
+              <Box sx={{ mt: 2.25 }}>
+                <Typography
+                  sx={{ fontSize: fontSizes.xs, fontWeight: 700, color: 'text.secondary', mb: 1.125 }}
+                >
+                  Variáveis disponíveis
+                </Typography>
+                <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 0.875 }}>
+                  {TEMPLATE_VARIABLES.map((v) => (
+                    <VariableChip key={v} label={v} />
+                  ))}
+                </Stack>
+              </Box>
+
+              {canEdit && (
+                <Button
+                  fullWidth
+                  variant="contained"
+                  onClick={() => openEdit(selected)}
+                  sx={{ mt: 2.5, height: 44, borderRadius: '12px', fontSize: fontSizes.md, fontWeight: 700 }}
+                >
+                  Editar mensagem
+                </Button>
+              )}
+            </>
+          )}
+        </Card>
+      </Box>
 
       <MessageTemplateFormDialog
         open={formOpen}
         onClose={() => setFormOpen(false)}
         template={editing}
         procedures={procedures}
-      />
-      <PreviewDialog
-        open={!!previewTemplate}
-        onClose={() => setPreviewTemplate(null)}
-        template={previewTemplate}
-      />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="MessageTemplate"
-        title="Mensagens"
+        onSaved={(saved) => setSelectedId(saved.id)}
       />
     </Box>
   );

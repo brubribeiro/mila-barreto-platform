@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Alert,
   Box,
@@ -12,12 +12,13 @@ import {
   Typography,
 } from '@mui/material';
 import HistoryIcon from '@mui/icons-material/History';
-import { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
+import { GridColDef } from '@mui/x-data-grid';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
 import { auditLogsApi, type AuditLogFilters } from '../api/auditLogs';
 import { AppDataGrid } from '../components/AppDataGrid';
+import { useUrlGridState, useUrlState, urlDate } from '../hooks/useUrlState';
 import {
   actionConfig,
   flattenAuditLogs,
@@ -32,6 +33,12 @@ const ENTITY_OPTIONS: { value: string; label: string }[] = [
   { value: 'FinancialEntry', label: 'Financeiro' },
   { value: 'RecurringExpense', label: 'Despesa recorrente' },
   { value: 'PaymentMethod', label: 'Forma de pagamento' },
+  { value: 'Goal', label: 'Meta' },
+  { value: 'PendingTask', label: 'Pendência' },
+  { value: 'PendingRules', label: 'Regras de pendência' },
+  { value: 'SkincareRoutine', label: 'Rotina de skincare' },
+  { value: 'SkincareProduct', label: 'Produto de skincare' },
+  { value: 'SkincareRule', label: 'Regra de skincare' },
   { value: 'Promotion', label: 'Promoção' },
   { value: 'InventoryItem', label: 'Estoque' },
   { value: 'InventoryMovement', label: 'Movimentação de estoque' },
@@ -43,6 +50,7 @@ const ENTITY_OPTIONS: { value: string; label: string }[] = [
   { value: 'PatientPackage', label: 'Pacote do paciente' },
   { value: 'Procedure', label: 'Procedimento' },
   { value: 'Document', label: 'Documento' },
+  { value: 'DocumentTemplate', label: 'Modelo de documento' },
 ];
 
 const ACTION_OPTIONS: { value: string; label: string }[] = [
@@ -56,19 +64,19 @@ const entityLabel = (entity: string) =>
   ENTITY_OPTIONS.find((e) => e.value === entity)?.label ?? entity;
 
 export function AuditLogs() {
-  const [filters, setFilters] = useState<AuditLogFilters>({
-    page: 1,
-    limit: 25,
-  });
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
-    page: 0,
-    pageSize: 25,
-  });
+  const [entity, setEntity] = useUrlState('entidade', '');
+  const [action, setAction] = useUrlState('acao', '');
+  const [startDate, setStartDate] = useUrlState('de', '', urlDate);
+  const [endDate, setEndDate] = useUrlState('ate', '', urlDate);
+  const { gridProps, resetPage } = useUrlGridState(25);
 
   const queryFilters: AuditLogFilters = {
-    ...filters,
-    page: paginationModel.page + 1,
-    limit: paginationModel.pageSize,
+    entity: entity || undefined,
+    action: action || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    page: gridProps.paginationModel.page + 1,
+    limit: gridProps.paginationModel.pageSize,
   };
 
   const { data, isLoading, error } = useQuery({
@@ -190,13 +198,14 @@ export function AuditLogs() {
         sx={{ mb: 2.5 }}
       >
         <FormControl size="small" sx={{ minWidth: 180 }}>
-          <InputLabel>Entidade</InputLabel>
+          <InputLabel id="audit-entity-label">Entidade</InputLabel>
           <Select
+            labelId="audit-entity-label"
             label="Entidade"
-            value={filters.entity ?? ''}
+            value={entity}
             onChange={(e) => {
-              setFilters((f) => ({ ...f, entity: e.target.value || undefined }));
-              setPaginationModel((p) => ({ ...p, page: 0 }));
+              setEntity(e.target.value);
+              resetPage();
             }}
           >
             {ENTITY_OPTIONS.map((o) => (
@@ -208,13 +217,14 @@ export function AuditLogs() {
         </FormControl>
 
         <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Ação</InputLabel>
+          <InputLabel id="audit-action-label">Ação</InputLabel>
           <Select
+            labelId="audit-action-label"
             label="Ação"
-            value={filters.action ?? ''}
+            value={action}
             onChange={(e) => {
-              setFilters((f) => ({ ...f, action: e.target.value || undefined }));
-              setPaginationModel((p) => ({ ...p, page: 0 }));
+              setAction(e.target.value);
+              resetPage();
             }}
           >
             {ACTION_OPTIONS.map((o) => (
@@ -230,10 +240,10 @@ export function AuditLogs() {
           type="date"
           label="De"
           InputLabelProps={{ shrink: true }}
-          value={filters.startDate ?? ''}
+          value={startDate}
           onChange={(e) => {
-            setFilters((f) => ({ ...f, startDate: e.target.value || undefined }));
-            setPaginationModel((p) => ({ ...p, page: 0 }));
+            setStartDate(e.target.value);
+            resetPage();
           }}
           sx={{ minWidth: 150 }}
         />
@@ -243,10 +253,10 @@ export function AuditLogs() {
           type="date"
           label="Até"
           InputLabelProps={{ shrink: true }}
-          value={filters.endDate ?? ''}
+          value={endDate}
           onChange={(e) => {
-            setFilters((f) => ({ ...f, endDate: e.target.value || undefined }));
-            setPaginationModel((p) => ({ ...p, page: 0 }));
+            setEndDate(e.target.value);
+            resetPage();
           }}
           sx={{ minWidth: 150 }}
         />
@@ -266,8 +276,7 @@ export function AuditLogs() {
         getRowId={(row) => row.id}
         paginationMode="server"
         rowCount={data?.total ?? 0}
-        paginationModel={paginationModel}
-        onPaginationModelChange={setPaginationModel}
+        {...gridProps}
         pageSizeOptions={[10, 25, 50]}
         localeText={{
           noRowsLabel: 'Nenhuma alteração encontrada',

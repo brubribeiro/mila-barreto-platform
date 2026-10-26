@@ -1,79 +1,10 @@
-﻿import { AppointmentStatus, Prisma, PrismaClient } from '@prisma/client';
+﻿import { AppointmentStatus, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { demoAppointmentNotes } from './demo-appointment-notes';
+import { SKINCARE_DEMO_PRODUCTS, SKINCARE_DEMO_RULES } from './skincare-demo-data';
+import { createScriptClient, demoEmail, runInScriptTenant } from './tenant-script';
 
-const prisma = new PrismaClient();
-
-// Mantém em sincronia com src/common/permissions.ts
-const RESOURCES = [
-  'patients',
-  'appointments',
-  'procedures',
-  'packages',
-  'finance',
-  'inventory',
-  'users',
-  'roles',
-  'messages',
-  'availability',
-  'metrics',
-  'promotions',
-  'payment-methods',
-];
-const ACTIONS = ['view', 'create', 'edit', 'delete'];
-const ALL_PERMISSIONS = RESOURCES.flatMap((r) => ACTIONS.map((a) => `${r}:${a}`));
-
-const defaultRoles = [
-  {
-    name: 'Administrador',
-    description: 'Acesso total à plataforma',
-    permissions: ALL_PERMISSIONS,
-    isSystem: true,
-    restrictToOwnAppointments: false,
-  },
-  {
-    name: 'Profissional',
-    description: 'Vê apenas a própria agenda e edita pacientes',
-    permissions: [
-      'patients:view',
-      'patients:edit',
-      'appointments:view',
-      'appointments:edit',
-      'procedures:view',
-      'packages:view',
-      'inventory:view',
-      'messages:view',
-    ],
-    isSystem: true,
-    restrictToOwnAppointments: true,
-  },
-  {
-    name: 'Recepção',
-    description: 'Gerencia pacientes, agenda, estoque e mensagens (sem financeiro nem profissionais)',
-    permissions: [
-      'patients:view',
-      'patients:create',
-      'patients:edit',
-      'appointments:view',
-      'appointments:create',
-      'appointments:edit',
-      'appointments:delete',
-      'procedures:view',
-      'packages:view',
-      'packages:create',
-      'packages:edit',
-      'inventory:view',
-      'inventory:create',
-      'inventory:edit',
-      'messages:view',
-      'messages:create',
-      'messages:edit',
-      'availability:edit',
-    ],
-    isSystem: true,
-    restrictToOwnAppointments: false,
-  },
-];
+const prisma = createScriptClient();
 
 const defaultUsers = [
   { name: 'Administrador', email: 'admin@mila.com', password: 'admin123', roleName: 'Administrador', providesAppointments: true },
@@ -85,19 +16,36 @@ const defaultTemplates = [
   {
     name: 'Confirmação de agendamento',
     category: 'confirmacao',
+    trigger: 'ON_BOOKING' as const,
     content:
-      'Olá, {paciente_nome}! Confirmando seu agendamento de {procedimento} no dia {data} às {hora} com {profissional}. Pode confirmar respondendo essa mensagem? 💆',
+      'Olá, {nome}! Seu horário para {procedimento} está confirmado para {data} às {hora} com {profissional}. Até breve! 💚',
   },
   {
-    name: 'Lembrete de retorno',
-    category: 'retorno',
+    name: 'Lembrete 24h',
+    category: 'lembrete',
+    trigger: 'DAY_BEFORE' as const,
     content:
-      'Oi, {paciente_nome}! Já faz um tempinho da nossa última sessão de {procedimento}. Que tal agendarmos seu retorno? 💚',
+      'Oi, {nome}! Passando para lembrar do seu {procedimento} amanhã às {hora}. Pode confirmar a presença? Responda SIM 😊',
   },
   {
     name: 'Aniversário',
     category: 'aniversario',
-    content: 'Feliz aniversário, {paciente_nome}! 🎉 Que esse novo ciclo traga muito bem-estar.',
+    trigger: 'BIRTHDAY' as const,
+    content: 'Feliz aniversário, {nome}! 🎉 Que esse novo ciclo traga muito bem-estar.',
+  },
+  {
+    name: 'Pós-procedimento',
+    category: 'retorno',
+    trigger: 'AFTER_APPOINTMENT' as const,
+    content:
+      '{nome}, foi um prazer te atender! Lembre dos cuidados pós {procedimento}. Qualquer dúvida, estamos por aqui. 💧',
+  },
+  {
+    name: 'Lembrete de retorno',
+    category: 'retorno',
+    trigger: 'INACTIVE_90_DAYS' as const,
+    content:
+      'Oi, {nome}! Já faz um tempinho da nossa última sessão de {procedimento}. Que tal agendarmos seu retorno? 💚',
   },
 ];
 
@@ -319,49 +267,87 @@ function demoProcedureStatus(startAt: Date, slotIndex: number): AppointmentStatu
   return 'SCHEDULED';
 }
 
-async function main() {
-  console.log('\n→ Garantindo grupos (roles)...');
-  for (const r of defaultRoles) {
-    const existing = await prisma.role.findUnique({ where: { name: r.name } });
-    if (!existing) {
-      await prisma.role.create({ data: r });
-      console.log(`  ✓ Grupo criado: ${r.name}`);
-    } else if (existing.isSystem) {
-      await prisma.role.update({
-        where: { id: existing.id },
-        data: {
-          permissions: r.permissions,
-          restrictToOwnAppointments: r.restrictToOwnAppointments,
-          description: r.description,
-        },
-      });
-      console.log(`  • Grupo do sistema atualizado: ${r.name}`);
-    }
-  }
+const defaultDocumentTemplates = [
+  {
+    name: 'Modelo padrão — Consentimento Toxina',
+    category: 'consentimento',
+    content: `TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO — TOXINA BOTULÍNICA
 
+Eu, {{paciente}}, CPF {{cpf}}, nascido(a) em {{nascimento}}, declaro que fui informado(a) pelo(a) profissional {{profissional}} sobre o procedimento de aplicação de toxina botulínica, seus objetivos, benefícios esperados, riscos e possíveis efeitos adversos (como dor no local, hematomas, assimetrias temporárias e cefaleia).
+
+Declaro que informei corretamente meu histórico de saúde, uso de medicamentos e alergias, e que tive a oportunidade de esclarecer todas as minhas dúvidas.
+
+Autorizo a realização do procedimento.
+
+Data: {{data}}
+
+______________________________________
+{{paciente}}`,
+  },
+  {
+    name: 'Modelo padrão — Anamnese facial',
+    category: 'anamnese',
+    content: `FICHA DE ANAMNESE FACIAL
+
+Paciente: {{paciente}}
+CPF: {{cpf}}    Nascimento: {{nascimento}}
+Telefone: {{telefone}}    E-mail: {{email}}
+
+1. Possui alergias? ( ) Não ( ) Sim: ______________________
+2. Faz uso de medicamentos? ( ) Não ( ) Sim: ______________
+3. Está gestante ou amamentando? ( ) Não ( ) Sim
+4. Já realizou procedimentos estéticos na face? ( ) Não ( ) Sim: ____
+5. Tem histórico de herpes, queloides ou doenças autoimunes? ( ) Não ( ) Sim
+
+Declaro que as informações acima são verdadeiras.
+
+Data: {{data}}
+
+______________________________________
+{{paciente}}`,
+  },
+  {
+    name: 'Modelo padrão — Autorização de imagem',
+    category: 'autorizacao_imagem',
+    content: `TERMO DE AUTORIZAÇÃO DE USO DE IMAGEM
+
+Eu, {{paciente}}, CPF {{cpf}}, autorizo a clínica a registrar e utilizar fotografias do antes e depois dos meus procedimentos para fins de prontuário e, de forma anônima, para divulgação científica e institucional.
+
+Esta autorização pode ser revogada a qualquer momento mediante solicitação por escrito.
+
+Data: {{data}}
+
+______________________________________
+{{paciente}}`,
+  },
+];
+
+async function main() {
+  // Grupos de sistema da clínica: criados/atualizados por runInScriptTenant (ensureSystemRoles)
   console.log('\n→ Garantindo usuários...');
   for (const u of defaultUsers) {
-    const role = await prisma.role.findUnique({ where: { name: u.roleName } });
+    const role = await prisma.role.findFirst({ where: { name: u.roleName } });
     if (!role) continue;
-    const exists = await prisma.user.findUnique({ where: { email: u.email } });
+    const email = demoEmail(u.email);
+    const exists = await prisma.user.findUnique({ where: { email } });
     if (!exists) {
       const password = await bcrypt.hash(u.password, 10);
       await prisma.user.create({
         data: {
           name: u.name,
-          email: u.email,
+          email,
           password,
           roleId: role.id,
           providesAppointments: u.providesAppointments,
         },
       });
-      console.log(`  ✓ Usuário criado: ${u.email} / ${u.password} (${u.roleName})`);
+      console.log(`  ✓ Usuário criado: ${email} / ${u.password} (${u.roleName})`);
     } else {
       await prisma.user.update({
-        where: { email: u.email },
+        where: { email },
         data: { providesAppointments: u.providesAppointments },
       });
-      console.log(`  • Usuário já existe: ${u.email}`);
+      console.log(`  • Usuário já existe: ${email}`);
     }
   }
 
@@ -383,7 +369,7 @@ async function main() {
 
   console.log('\n→ Materiais de estoque e vínculos com procedimentos...');
   for (const item of demoInventoryItems) {
-    const existing = await prisma.inventoryItem.findUnique({ where: { sku: item.sku } });
+    const existing = await prisma.inventoryItem.findFirst({ where: { sku: item.sku } });
     if (existing) {
       console.log(`  • Material já existe: ${item.name}`);
       continue;
@@ -417,7 +403,7 @@ async function main() {
 
     let linked = 0;
     for (const m of link.materials) {
-      const inventoryItem = await prisma.inventoryItem.findUnique({ where: { sku: m.sku } });
+      const inventoryItem = await prisma.inventoryItem.findFirst({ where: { sku: m.sku } });
       if (!inventoryItem) {
         console.log(`  • Item ${m.sku} não encontrado para ${link.procedureName}`);
         continue;
@@ -436,10 +422,19 @@ async function main() {
 
   console.log('\n→ Garantindo templates de mensagem...');
   for (const t of defaultTemplates) {
-    const exists = await prisma.messageTemplate.findUnique({ where: { name: t.name } });
+    const exists = await prisma.messageTemplate.findFirst({ where: { name: t.name } });
     if (!exists) {
       await prisma.messageTemplate.create({ data: t });
       console.log(`  ✓ Template criado: ${t.name}`);
+    }
+  }
+
+  console.log('\n→ Garantindo modelos de documento...');
+  for (const t of defaultDocumentTemplates) {
+    const exists = await prisma.documentTemplate.findFirst({ where: { name: t.name } });
+    if (!exists) {
+      await prisma.documentTemplate.create({ data: t });
+      console.log(`  ✓ Modelo criado: ${t.name}`);
     }
   }
 
@@ -461,7 +456,7 @@ async function main() {
     where: { name: 'Drenagem linfática' },
   });
   const drenagemProfessional = await prisma.user.findUnique({
-    where: { email: 'profissional@mila.com' },
+    where: { email: demoEmail('profissional@mila.com') },
   });
   const drenagemPatients = await prisma.patient.findMany({
     take: DEMO_DRENIAGEM_COUNT,
@@ -520,7 +515,7 @@ async function main() {
 
   console.log('\n→ Agendamentos demo — demais procedimentos...');
   const demoProfessional = await prisma.user.findUnique({
-    where: { email: 'profissional@mila.com' },
+    where: { email: demoEmail('profissional@mila.com') },
   });
   const demoPatients = await prisma.patient.findMany({
     orderBy: { createdAt: 'asc' },
@@ -652,7 +647,7 @@ async function main() {
   ];
 
   for (const pm of defaultPaymentMethods) {
-    const exists = await prisma.paymentMethod.findUnique({ where: { name: pm.name } });
+    const exists = await prisma.paymentMethod.findFirst({ where: { name: pm.name } });
     if (!exists) {
       await prisma.paymentMethod.create({ data: { name: pm.name, feePercent: pm.feePercent, active: true } });
       console.log(`  ✓ Forma de pagamento criada: ${pm.name} (taxa ${pm.feePercent}%)`);
@@ -661,10 +656,30 @@ async function main() {
     }
   }
 
+  console.log('\n→ Rotinas de skincare (produtos e regras da anamnese de pele)...');
+  if ((await prisma.skincareProduct.count()) === 0) {
+    const idByKey = new Map<string, string>();
+    for (const { key, ...product } of SKINCARE_DEMO_PRODUCTS) {
+      const created = await prisma.skincareProduct.create({ data: product });
+      idByKey.set(key, created.id);
+    }
+    if ((await prisma.skincareRule.count()) === 0) {
+      await prisma.skincareRule.createMany({
+        data: SKINCARE_DEMO_RULES.map(({ productKeys, ...rule }) => ({
+          ...rule,
+          productIds: productKeys.map((k) => idByKey.get(k)).filter((id): id is string => !!id),
+        })),
+      });
+    }
+    console.log(`  ✓ ${SKINCARE_DEMO_PRODUCTS.length} produtos e ${SKINCARE_DEMO_RULES.length} regras criados.`);
+  } else {
+    console.log('  • Produtos já existem, pulando.');
+  }
+
   console.log('\nSeed concluído.\n');
 }
 
-main()
+runInScriptTenant(prisma, main, { create: true })
   .catch((e) => {
     console.error(e);
     process.exit(1);

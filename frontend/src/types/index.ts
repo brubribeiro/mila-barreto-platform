@@ -2,6 +2,7 @@ export interface Role {
   id: string;
   name: string;
   description?: string;
+  color?: string | null;
   permissions: string[];
   isSystem: boolean;
   restrictToOwnAppointments: boolean;
@@ -23,6 +24,56 @@ export interface User {
   /** true quando um admin está personificando este usuário */
   impersonating?: boolean;
   impersonatorName?: string;
+  /** Clínica do usuário; null para o super-admin fora de uma clínica */
+  tenantId?: string | null;
+  /** Dono da plataforma: usa só a área /admin (ou "entra como" uma clínica) */
+  isSuperAdmin?: boolean;
+  /** Nome da clínica quando o super-admin "entrou como" ela */
+  tenantName?: string;
+}
+
+// ===== Painel administrativo da plataforma (super-admin) =====
+
+export interface AdminTenantMetrics {
+  activeUsers: number;
+  patients: number;
+  appointmentsThisMonth: number;
+  lastAccessAt: string | null;
+}
+
+export interface AdminTenant {
+  id: string;
+  name: string;
+  slug: string;
+  active: boolean;
+  suspendedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  metrics: AdminTenantMetrics;
+}
+
+export interface AdminTenantDetail extends Omit<AdminTenant, 'metrics'> {
+  admins: { id: string; name: string; email: string; active: boolean; lastAccessAt: string | null }[];
+  metrics: AdminTenantMetrics & { totalUsers: number; storageBytes: number; files: number };
+}
+
+export type PlatformAuditAction =
+  | 'TENANT_CREATE'
+  | 'TENANT_UPDATE'
+  | 'TENANT_SUSPEND'
+  | 'TENANT_REACTIVATE'
+  | 'TENANT_ENTER';
+
+export interface PlatformAuditLog {
+  id: string;
+  action: PlatformAuditAction;
+  actorId: string;
+  actorName: string;
+  actorEmail: string;
+  targetTenantId: string | null;
+  targetName: string | null;
+  details: Record<string, unknown> | null;
+  createdAt: string;
 }
 
 export interface UserSummary {
@@ -323,10 +374,20 @@ export interface RecurringExpense {
   _count?: { generatedEntries: number };
 }
 
+export type MessageTrigger =
+  | 'ON_BOOKING'
+  | 'DAY_BEFORE'
+  | 'BIRTHDAY'
+  | 'AFTER_APPOINTMENT'
+  | 'INACTIVE_90_DAYS'
+  | 'MANUAL';
+
 export interface MessageTemplate {
   id: string;
   name: string;
-  category?: string;
+  category?: string | null;
+  trigger: MessageTrigger;
+  active: boolean;
   content: string;
   procedureId?: string | null;
   procedure?: { id: string; name: string; price: number | string } | null;
@@ -373,20 +434,42 @@ export interface Equipment {
   createdAt?: string;
 }
 
+export type DocumentStatus = 'PENDING' | 'SENT' | 'SIGNED';
+
 export interface DocumentFile {
   id: string;
   name: string;
-  category?: string;
-  storageKey?: string;
-  fileUrl?: string;
-  mimeType?: string;
-  size?: number;
-  notes?: string;
-  patientId?: string;
-  equipmentId?: string;
+  category?: string | null;
+  status: DocumentStatus;
+  signedAt?: string | null;
+  storageKey?: string | null;
+  fileUrl?: string | null;
+  mimeType?: string | null;
+  size?: number | null;
+  notes?: string | null;
+  /** Texto gerado a partir de um modelo; só vem em GET /documents/:id */
+  content?: string | null;
+  /** Indica se há texto gerado (a listagem não traz `content`) */
+  hasContent?: boolean;
+  templateId?: string | null;
+  patientId?: string | null;
+  equipmentId?: string | null;
   createdAt: string;
-  patient?: { id: string; name: string };
-  equipment?: { id: string; name: string };
+  updatedAt?: string;
+  patient?: { id: string; name: string } | null;
+  equipment?: { id: string; name: string } | null;
+  template?: { id: string; name: string } | null;
+}
+
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  category?: string | null;
+  content: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { documents: number };
 }
 
 export interface InventoryItem {
@@ -448,4 +531,206 @@ export interface Notification {
 export interface NotificationPreference {
   type: NotificationType;
   enabled: boolean;
+}
+
+export type FeedbackType = 'BUG' | 'SUGGESTION';
+
+export interface FeedbackReport {
+  id: string;
+  type: FeedbackType;
+  title: string;
+  description: string;
+  pageUrl?: string | null;
+  userId: string;
+  createdAt: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export type GoalMetric =
+  | 'REVENUE'
+  | 'NEW_PATIENTS'
+  | 'PROCEDURES'
+  | 'AVERAGE_TICKET'
+  | 'OCCUPANCY'
+  | 'RETURN_RATE'
+  | 'MANUAL';
+export type GoalFormat = 'CURRENCY' | 'NUMBER' | 'PERCENT';
+export type GoalPeriodType = 'MONTH' | 'QUARTER' | 'YEAR';
+
+export interface Goal {
+  id: string;
+  name: string;
+  metric: GoalMetric;
+  format: GoalFormat;
+  target: number;
+  manualValue: number | null;
+  periodType: GoalPeriodType;
+  /** Primeiro dia do período (YYYY-MM-DD). */
+  periodStart: string;
+  /** Último dia do período (YYYY-MM-DD). */
+  periodEnd: string;
+  color: string;
+  currentValue: number;
+  /** Percentual do objetivo (pode passar de 100). */
+  progress: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type PendingRule =
+  | 'LOW_STOCK'
+  | 'EXPIRING_STOCK'
+  | 'BILLS_DUE'
+  | 'APPOINTMENT_NO_OUTCOME'
+  | 'EQUIPMENT_MAINTENANCE'
+  | 'DOCUMENT_UNSIGNED'
+  | 'COMMEMORATIVE_DATE';
+
+export type PendingCategory =
+  | 'ADMINISTRATIVE'
+  | 'FINANCE'
+  | 'INVENTORY'
+  | 'OPERATIONAL'
+  | 'MAINTENANCE'
+  | 'HEALTH_SURVEILLANCE'
+  | 'MARKETING'
+  | 'TEAM'
+  | 'PATIENTS'
+  | 'MANAGEMENT';
+
+export type PendingGroup = 'URGENT' | 'OVERDUE' | 'UPCOMING';
+
+export interface PendingItem {
+  /** `MANUAL:<id>` para pendências manuais; chave da origem para as geradas por regra. */
+  key: string;
+  taskId: string | null;
+  rule: PendingRule | null;
+  category: PendingCategory;
+  group: PendingGroup;
+  title: string;
+  subtitle: string;
+  description: string | null;
+  deadlineLabel: string;
+  dueDate: string | null;
+  urgent: boolean;
+  link: string | null;
+  assignee: { id: string; name: string } | null;
+}
+
+export interface PendingList {
+  items: PendingItem[];
+  resolvedCount: number;
+  activeRules: number;
+  totalRules: number;
+}
+
+export interface PendingTask {
+  id: string;
+  rule: PendingRule | null;
+  sourceKey: string | null;
+  title: string;
+  description: string | null;
+  category: PendingCategory;
+  dueDate: string | null;
+  urgent: boolean;
+  link: string | null;
+  assigneeId: string | null;
+  assignee: { id: string; name: string } | null;
+  resolvedAt: string | null;
+  resolvedByName: string | null;
+  createdAt: string;
+}
+
+export interface PendingRuleConfig {
+  rule: PendingRule;
+  enabled: boolean;
+  param: number | null;
+  assigneeId: string | null;
+}
+
+// =========================
+// ROTINAS DE SKINCARE (anamnese de pele)
+// =========================
+
+export type SkincareMoment = 'manha' | 'noite' | 'semanal';
+export type SkincareStep = 'limpeza' | 'tratamento' | 'hidratacao' | 'protetor' | 'olhos' | 'esfoliacao' | 'mascara';
+export type SkincareTag = 'acido' | 'acido-alto' | 'retinoide' | 'fragrancia' | 'oleo';
+export type SkincareRuleField = 'pele' | 'afeccao' | 'olheira' | 'idade';
+
+export interface SkincareProduct {
+  id: string;
+  name: string;
+  brand: string | null;
+  activeIngredient: string | null;
+  moments: SkincareMoment[];
+  step: SkincareStep;
+  tags: SkincareTag[];
+  howTo: string | null;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SkincareRule {
+  id: string;
+  field: SkincareRuleField;
+  value: string;
+  productIds: string[];
+  avoidTags: SkincareTag[];
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Respostas da anamnese de pele. */
+export interface SkinAnswers {
+  pele: string;
+  afec: string[];
+  afecOutra: string;
+  olheira: '' | 'sim' | 'nao';
+  olheiraTipo: string;
+  idade: string;
+}
+
+/** Produto na rotina, copiado do catálogo no momento em que a rotina foi gerada. */
+export interface SkincareRoutineItem {
+  moment: SkincareMoment;
+  step: SkincareStep;
+  productId: string | null;
+  name: string;
+  brand: string | null;
+  activeIngredient: string | null;
+  howTo: string | null;
+  note: string | null;
+}
+
+export interface SkincareAvoided {
+  productId: string | null;
+  name: string;
+  reason: string;
+}
+
+export interface SkincareGuideline {
+  text: string;
+  source: string;
+}
+
+export interface SkincareRoutine {
+  id: string;
+  patientId: string;
+  patient?: { id: string; name: string; phone?: string | null; email?: string | null };
+  consultDate: string;
+  answers: SkinAnswers;
+  items: SkincareRoutineItem[];
+  avoided: SkincareAvoided[];
+  guidelines: SkincareGuideline[];
+  notes: string | null;
+  createdById: string | null;
+  createdByName: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
