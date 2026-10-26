@@ -1,55 +1,107 @@
 import { useState } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
-import {
-  Alert,
-  Avatar,
-  Box,
-  CircularProgress,
-  Divider,
-  Link as MuiLink,
-  Paper,
-  Stack,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from '@mui/material';
-import { alpha } from '@mui/material/styles';
-import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
-import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
-import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import { Alert, Box, CircularProgress, Link as MuiLink, Stack, Typography } from '@mui/material';
+import { keyframes } from '@mui/system';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
+import { AuroraIcon } from '../components/AuroraIcon';
 import { APP_VERSION } from '../version';
 import { fontSizes } from '../theme/fontSizes';
 
-const FEATURES = [
-  {
-    icon: CalendarMonthOutlinedIcon,
-    title: 'Agenda integrada',
-    description: 'Horários, indisponibilidades e atendimentos em um só lugar.',
-  },
-  {
-    icon: GroupsOutlinedIcon,
-    title: 'Gestão de pacientes',
-    description: 'Cadastro, histórico e comunicação organizados.',
-  },
-  {
-    icon: InsightsOutlinedIcon,
-    title: 'Visão do negócio',
-    description: 'Financeiro, estoque e métricas para decisões rápidas.',
-  },
-] as const;
+// Painel de marca Aurora (mesmo verde-escuro do menu lateral)
+const BRAND_BG = '#0E2926';
+const BRAND_TAGLINE = '#8FAAA4';
+const BRAND_SUBTITLE = '#A9C4BE';
+const BRAND_FOOTER = '#7C928D';
+const TEXT_SOFT = '#94A4A0';
+const LINK_UNDERLINE = '#C9D6D2';
+
+const auroraFloat = keyframes`
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(14px, -22px) scale(1.06); }
+`;
+const auroraFloat2 = keyframes`
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-18px, 16px) scale(1.08); }
+`;
+
+function BrandLogo({ dark = false }: { dark?: boolean }) {
+  return (
+    <Stack direction="row" alignItems="center" sx={{ gap: '14px' }}>
+      <Box
+        sx={{
+          width: 48,
+          height: 48,
+          borderRadius: '14px',
+          background: 'linear-gradient(135deg,#22BBAA,#0E7C7B)',
+          boxShadow: '0 8px 22px -4px rgba(15,124,123,.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+          <path d="M12 3c4.2 5 6.2 8.2 6.2 11.2A6.2 6.2 0 0 1 5.8 14.2C5.8 11.2 7.8 8 12 3z" />
+        </svg>
+      </Box>
+      <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1.05, minWidth: 0 }}>
+        <Box
+          component="span"
+          sx={{
+            fontWeight: 800,
+            fontSize: fontSizes['3xl'],
+            letterSpacing: '-0.4px',
+            color: dark ? '#fff' : 'text.primary',
+          }}
+        >
+          Mila Barreto
+        </Box>
+        <Box
+          component="span"
+          sx={{
+            fontWeight: 700,
+            fontSize: fontSizes['3xs'],
+            letterSpacing: '1.6px',
+            textTransform: 'uppercase',
+            color: dark ? BRAND_TAGLINE : 'text.secondary',
+          }}
+        >
+          Estética avançada
+        </Box>
+      </Box>
+    </Stack>
+  );
+}
+
+function GoogleGIcon() {
+  return (
+    <svg width="23" height="23" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"
+      />
+      <path fill="#FBBC05" d="M5.84 14.11a6.6 6.6 0 0 1 0-4.22V7.05H2.18a11 11 0 0 0 0 9.9l3.66-2.84z" />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.05l3.66 2.84c.87-2.6 3.3-4.51 6.16-4.51z"
+      />
+    </svg>
+  );
+}
 
 export function Login() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
+  const adminEmail = import.meta.env.VITE_ADMIN_CONTACT_EMAIL ?? '';
 
   if (user) return <Navigate to="/" replace />;
 
@@ -70,261 +122,289 @@ export function Login() {
     }
   }
 
+  const year = new Date().getFullYear();
+
   const brandingPanel = (
     <Box
       sx={{
+        flex: 1.05,
         position: 'relative',
-        flex: { md: '1 1 52%' },
-        display: 'flex',
+        display: { xs: 'none', md: 'flex' },
         flexDirection: 'column',
-        justifyContent: 'center',
-        px: { xs: 3, sm: 5, md: 6, lg: 8 },
-        py: { xs: 5, md: 6 },
-        color: 'primary.contrastText',
-        background: `linear-gradient(145deg,
-          ${theme.palette.primary.dark} 0%,
-          ${theme.palette.primary.main} 42%,
-          ${alpha(theme.palette.primary.light, 0.95)} 100%)`,
+        justifyContent: 'space-between',
+        gap: 6,
+        p: '54px 56px',
+        background: `linear-gradient(155deg, ${BRAND_BG} 0%, #0E3F39 52%, #0E7C7B 130%)`,
         overflow: 'hidden',
+        '@media (prefers-reduced-motion: reduce)': {
+          '& .aurora-orb': { animation: 'none' },
+        },
       }}
     >
       <Box
+        className="aurora-orb"
         sx={{
           position: 'absolute',
-          width: 420,
-          height: 420,
+          width: 440,
+          height: 440,
           borderRadius: '50%',
-          top: -140,
-          right: -100,
-          bgcolor: alpha('#fff', 0.08),
+          background: 'radial-gradient(circle at 30% 30%, rgba(55,207,190,.42), transparent 68%)',
+          top: -120,
+          right: -90,
+          filter: 'blur(18px)',
+          animation: `${auroraFloat} 13s ease-in-out infinite`,
+        }}
+      />
+      <Box
+        className="aurora-orb"
+        sx={{
+          position: 'absolute',
+          width: 380,
+          height: 380,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle at 50% 50%, rgba(21,153,139,.4), transparent 70%)',
+          bottom: -130,
+          left: -80,
+          filter: 'blur(20px)',
+          animation: `${auroraFloat2} 16s ease-in-out infinite`,
         }}
       />
       <Box
         sx={{
           position: 'absolute',
-          width: 280,
-          height: 280,
-          borderRadius: '50%',
-          bottom: -80,
-          left: -60,
-          bgcolor: alpha('#fff', 0.06),
+          inset: 0,
+          backgroundImage: 'radial-gradient(rgba(255,255,255,.045) 1px, transparent 1px)',
+          backgroundSize: '26px 26px',
         }}
       />
 
-      <Stack spacing={4} sx={{ position: 'relative', zIndex: 1, maxWidth: 440 }}>
-        <Stack direction="row" spacing={2} alignItems="center">
-          <Avatar
-            variant="rounded"
-            sx={{
-              width: 56,
-              height: 56,
-              borderRadius: 2.5,
-              bgcolor: alpha('#fff', 0.2),
-              color: 'inherit',
-              fontWeight: 800,
-              fontSize: fontSizes['2xl'],
-              border: `1px solid ${alpha('#fff', 0.35)}`,
-              boxShadow: `0 8px 24px ${alpha('#000', 0.15)}`,
-            }}
-          >
-            MB
-          </Avatar>
-          <Box>
-            <Typography variant="h4" fontWeight={800} sx={{ letterSpacing: '-0.03em', lineHeight: 1.15 }}>
-              Mila Barreto
-            </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.25 }}>
-              Plataforma de gestão da clínica
-            </Typography>
-          </Box>
-        </Stack>
+      <Box sx={{ position: 'relative' }}>
+        <BrandLogo dark />
+      </Box>
 
-        {!isMobile && (
-          <Stack spacing={2.5}>
-            {FEATURES.map(({ icon: Icon, title, description }) => (
-              <Stack key={title} direction="row" spacing={2} alignItems="flex-start">
-                <Box
-                  sx={{
-                    mt: 0.25,
-                    p: 1,
-                    borderRadius: 2,
-                    bgcolor: alpha('#fff', 0.14),
-                    display: 'flex',
-                  }}
-                >
-                  <Icon sx={{ fontSize: 22 }} />
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2" fontWeight={700}>
-                    {title}
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.88, mt: 0.25, lineHeight: 1.5 }}>
-                    {description}
-                  </Typography>
-                </Box>
-              </Stack>
-            ))}
-          </Stack>
-        )}
-      </Stack>
+      <Box sx={{ position: 'relative', maxWidth: 430 }}>
+        <Typography
+          component="h1"
+          sx={{
+            m: '0 0 18px',
+            fontSize: fontSizes['8xl'],
+            lineHeight: 1.16,
+            fontWeight: 800,
+            color: '#fff',
+            letterSpacing: '-1px',
+            textWrap: 'balance',
+            // 430px a 38px do design: em em, para quebrar igual quando a fonte raiz encolhe
+            maxWidth: '11.3em',
+          }}
+        >
+          A gestão completa da sua clínica em um só lugar.
+        </Typography>
+        <Typography sx={{ fontSize: fontSizes.lg, lineHeight: 1.6, color: BRAND_SUBTITLE, fontWeight: 500 }}>
+          Agenda, prontuários, financeiro e estoque — tudo conectado, com a inteligência que a sua
+          estética merece.
+        </Typography>
+      </Box>
+
+      <Typography sx={{ position: 'relative', fontSize: fontSizes.xs, color: BRAND_FOOTER, fontWeight: 500 }}>
+        © {year} Mila Barreto Estética Avançada · Todos os direitos reservados · v{APP_VERSION}
+      </Typography>
+    </Box>
+  );
+
+  const googleButton = (
+    <Box
+      sx={{
+        position: 'relative',
+        height: 56,
+        borderRadius: '14px',
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        color: 'text.primary',
+        fontSize: fontSizes.lg,
+        fontWeight: 700,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '12px',
+        overflow: 'hidden',
+        cursor: googleClientId ? 'pointer' : 'default',
+        opacity: googleClientId ? 1 : 0.55,
+        boxShadow: '0 2px 8px -2px rgba(16,40,37,.1)',
+        transition: 'border-color .15s, box-shadow .15s',
+        ...(googleClientId && {
+          '&:hover': {
+            borderColor: 'primary.main',
+            boxShadow: '0 6px 20px -6px rgba(21,153,139,.4)',
+          },
+        }),
+        '&:focus-within': {
+          outline: '2px solid',
+          outlineColor: 'primary.main',
+          outlineOffset: 2,
+        },
+      }}
+    >
+      {submitting ? (
+        <>
+          <CircularProgress size={20} />
+          <Box component="span" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+            Verificando acesso...
+          </Box>
+        </>
+      ) : (
+        <>
+          <GoogleGIcon />
+          Entrar com o Google
+        </>
+      )}
+
+      {/* O backend valida o ID token do Google: o botão oficial fica invisível por cima do visual Aurora e recebe o clique. */}
+      {googleClientId && !submitting && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            opacity: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            '& > div': { transform: 'scale(1.1, 1.45)' },
+          }}
+        >
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError('Erro ao conectar com o Google')}
+            text="signin_with"
+            shape="rectangular"
+            size="large"
+            width="400"
+            locale="pt-BR"
+          />
+        </Box>
+      )}
     </Box>
   );
 
   const loginPanel = (
     <Box
       sx={{
-        flex: { md: '1 1 48%' },
+        flex: 0.95,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        px: { xs: 2.5, sm: 4 },
-        py: { xs: 4, md: 6 },
+        gap: 5,
+        p: { xs: 3, sm: 5 },
         bgcolor: 'background.default',
-        position: 'relative',
       }}
     >
-      {isMobile && (
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3, alignSelf: 'stretch' }}>
-          <Avatar
-            variant="rounded"
-            sx={{
-              width: 44,
-              height: 44,
-              borderRadius: 2,
-              bgcolor: 'primary.main',
-              fontWeight: 800,
-              fontSize: fontSizes.lg,
-            }}
-          >
-            MB
-          </Avatar>
-          <Box>
-            <Typography variant="h6" fontWeight={800} sx={{ letterSpacing: '-0.02em' }}>
-              Mila Barreto
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Gestão da clínica
-            </Typography>
-          </Box>
-        </Stack>
-      )}
+      <Box sx={{ display: { xs: 'block', md: 'none' }, width: '100%', maxWidth: 392 }}>
+        <BrandLogo />
+      </Box>
 
-      <Paper
-        elevation={0}
-        sx={{
-          width: '100%',
-          maxWidth: 420,
-          p: { xs: 3, sm: 4 },
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: alpha(theme.palette.divider, 0.9),
-          boxShadow: `0 20px 50px ${alpha(theme.palette.primary.main, 0.08)},
-            0 4px 16px ${alpha('#000', 0.04)}`,
-          position: 'relative',
-        }}
-      >
-        {submitting && (
-          <Box
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 2,
-              borderRadius: 3,
-              bgcolor: alpha(theme.palette.background.paper, 0.72),
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 1.5,
-            }}
+      <Box sx={{ width: '100%', maxWidth: 392, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ mb: '34px' }}>
+          <Typography
+            component="h2"
+            sx={{ m: '0 0 9px', fontSize: fontSizes['6xl'], fontWeight: 800, color: 'text.primary', letterSpacing: '-0.6px' }}
           >
-            <CircularProgress size={36} />
-            <Typography variant="body2" color="text.secondary" fontWeight={500}>
-              Verificando acesso...
-            </Typography>
-          </Box>
-        )}
-
-        <Stack spacing={0.5} sx={{ mb: 3 }}>
-          <Typography variant="h5" fontWeight={700} sx={{ letterSpacing: '-0.02em' }}>
-            Bem-vinda de volta
+            Bem-vindo de volta
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Entre com a conta Google autorizada pela clínica.
+          <Typography sx={{ fontSize: fontSizes.md, color: 'text.secondary', fontWeight: 500, lineHeight: 1.5 }}>
+            Acesse a plataforma com sua conta Google corporativa.
           </Typography>
-        </Stack>
+        </Box>
 
-        {googleClientId ? (
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              '& iframe': { maxWidth: '100%' },
-            }}
-          >
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => setError('Erro ao conectar com o Google')}
-              text="signin_with"
-              shape="rectangular"
-              size="large"
-              width={isMobile ? '300' : '352'}
-              locale="pt-BR"
-            />
-          </Box>
-        ) : (
-          <Alert severity="warning">
+        {googleButton}
+
+        {!googleClientId && (
+          <Alert severity="warning" sx={{ mt: 2 }}>
             Configure <strong>VITE_GOOGLE_CLIENT_ID</strong> no arquivo .env para habilitar o login.
           </Alert>
         )}
 
-        <Divider sx={{ my: 2.5 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ px: 1 }}>
-            acesso restrito
-          </Typography>
-        </Divider>
-
-        <Stack direction="row" spacing={1.25} alignItems="flex-start">
-          <LockOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary', mt: 0.15 }} />
-          <Typography variant="caption" color="text.secondary" lineHeight={1.55}>
-            Apenas usuários cadastrados pela administração podem acessar. Em caso de dúvida, fale com o
-            responsável da clínica.
-          </Typography>
-        </Stack>
-
         {error && (
-          <Alert severity="error" sx={{ mt: 2.5 }}>
+          <Alert severity="error" sx={{ mt: 2 }}>
             {error}
           </Alert>
         )}
-      </Paper>
 
-      <Stack spacing={0.5} sx={{ mt: 3, textAlign: 'center' }}>
-        <Typography variant="caption" color="text.secondary">
-          © {new Date().getFullYear()} Mila Barreto · Uso interno da clínica · v{APP_VERSION}
+        <Stack
+          direction="row"
+          alignItems="center"
+          sx={{
+            gap: '10px',
+            mt: '22px',
+            p: '13px 15px',
+            borderRadius: '12px',
+            bgcolor: 'grey.50',
+            border: '1px solid',
+            borderColor: 'divider',
+            color: 'primary.main',
+          }}
+        >
+          <Box sx={{ display: 'flex', flexShrink: 0 }}>
+            <AuroraIcon name="lock" size={17} strokeWidth={2} />
+          </Box>
+          <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 500, lineHeight: 1.45 }}>
+            Acesso exclusivo por conta Google autorizada pela clínica.
+          </Typography>
+        </Stack>
+
+        <Typography
+          sx={{ mt: '26px', textAlign: 'center', fontSize: fontSizes.sm, color: 'text.secondary', fontWeight: 500 }}
+        >
+          Não tem acesso?{' '}
+          {adminEmail ? (
+            <MuiLink href={`mailto:${adminEmail}`} underline="none" sx={{ color: 'primary.main', fontWeight: 700 }}>
+              Fale com o administrador
+            </MuiLink>
+          ) : (
+            <Box component="span" sx={{ color: 'text.primary', fontWeight: 700 }}>
+              Fale com o administrador da clínica.
+            </Box>
+          )}
         </Typography>
-        <Stack direction="row" spacing={1} justifyContent="center">
-          <MuiLink component={Link} to="/termos" variant="caption" color="text.secondary">
+
+        <Typography
+          sx={{
+            mt: '22px',
+            textAlign: 'center',
+            fontSize: fontSizes.xs,
+            color: TEXT_SOFT,
+            fontWeight: 500,
+            lineHeight: 1.6,
+            '& a': {
+              color: 'text.secondary',
+              fontWeight: 700,
+              textDecoration: 'none',
+              borderBottom: `1px solid ${LINK_UNDERLINE}`,
+            },
+          }}
+        >
+          Ao entrar, você concorda com os{' '}
+          <MuiLink component={Link} to="/termos">
             Termos de Uso
-          </MuiLink>
-          <Typography variant="caption" color="text.secondary">·</Typography>
-          <MuiLink component={Link} to="/privacidade" variant="caption" color="text.secondary">
+          </MuiLink>{' '}
+          e a{' '}
+          <MuiLink component={Link} to="/privacidade">
             Política de Privacidade
           </MuiLink>
-        </Stack>
-      </Stack>
+          .
+        </Typography>
+      </Box>
+
+      <Typography
+        sx={{ display: { xs: 'block', md: 'none' }, fontSize: fontSizes.xs, color: TEXT_SOFT, textAlign: 'center' }}
+      >
+        © {year} Mila Barreto · v{APP_VERSION}
+      </Typography>
     </Box>
   );
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: { xs: 'column', md: 'row' },
-      }}
-    >
+    <Box sx={{ display: 'flex', minHeight: '100vh', width: '100%', bgcolor: 'background.default' }}>
       {brandingPanel}
       {loginPanel}
     </Box>

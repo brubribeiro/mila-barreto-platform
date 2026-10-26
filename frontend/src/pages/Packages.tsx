@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -16,22 +16,21 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
 import SearchIcon from '@mui/icons-material/Search';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { urlPage, useUrlState } from '../hooks/useUrlState';
 import { packagesApi } from '../api/packages';
 import { PackageFormDialog } from '../components/packages/PackageFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Package } from '../types';
 import { fontSizes } from '../theme/fontSizes';
+import { brl } from '../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const ICON_COLORS = ['#15998B', '#E0915B', '#5BA8DE', '#D46B8A', '#9B7BD4', '#4FB3A8'];
 const PAGE_SIZE = 8;
 
@@ -45,14 +44,13 @@ export function Packages() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canManage = has('packages:edit');
   const canCreate = has('packages:create');
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlState('busca', '');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Package | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: packages = [], isLoading } = useQuery({
     queryKey: ['packages'],
@@ -84,8 +82,7 @@ export function Packages() {
     );
   }, [packages, search]);
 
-  const [page, setPage] = useState(0);
-  useEffect(() => setPage(0), [search]);
+  const [page, setPage] = useUrlState('pagina', 0, urlPage);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
@@ -161,21 +158,15 @@ export function Packages() {
             <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
             <InputBase
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
               placeholder="Buscar pacote..."
+              inputProps={{ 'aria-label': 'Buscar pacote' }}
               sx={{ fontSize: fontSizes.sm, flex: 1 }}
             />
           </Stack>
-          {isAdmin && (
-            <Tooltip title="Histórico de alterações">
-              <IconButton
-                onClick={() => setHistoryOpen(true)}
-                sx={{ flexShrink: 0, width: 38, height: 38, borderRadius: '12px', border: 1, borderColor: 'divider', bgcolor: 'background.paper', color: 'text.secondary' }}
-              >
-                <HistoryIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
           {canCreate && (
             <Button
               variant="contained"
@@ -317,6 +308,7 @@ export function Packages() {
                     <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
                       <Tooltip title="Editar">
                         <IconButton
+                          aria-label={`Editar ${p.name}`}
                           onClick={() => handleEdit(p)}
                           sx={{ width: 30, height: 30, borderRadius: '9px', border: 1, borderColor: 'divider', color: 'text.secondary' }}
                         >
@@ -325,6 +317,7 @@ export function Packages() {
                       </Tooltip>
                       <Tooltip title="Excluir">
                         <IconButton
+                          aria-label={`Excluir ${p.name}`}
                           onClick={() => handleDelete(p)}
                           sx={{
                             width: 30,
@@ -442,6 +435,8 @@ export function Packages() {
                     key={i}
                     component="button"
                     type="button"
+                    aria-label={`Página ${i + 1}`}
+                    aria-current={activePage ? 'page' : undefined}
                     onClick={() => setPage(i)}
                     sx={{
                       minWidth: 38,
@@ -469,12 +464,6 @@ export function Packages() {
       )}
 
       <PackageFormDialog open={formOpen} onClose={() => setFormOpen(false)} pkg={editing} />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="Package"
-        title="Pacotes"
-      />
     </Box>
   );
 }

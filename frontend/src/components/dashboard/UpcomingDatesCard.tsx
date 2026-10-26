@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
+import { Box, Button, Card, CardContent, Stack, Typography, alpha } from '@mui/material';
 import dayjs from 'dayjs';
 import { usePermissions } from '../../contexts/usePermissions';
 import { DashboardEmptyState } from './DashboardEmptyState';
@@ -190,7 +190,7 @@ export function UpcomingDatesCard({ embedded = false }: UpcomingDatesCardProps) 
               width: 36,
               height: 36,
               borderRadius: '10px',
-              bgcolor: '#EAF6F4',
+              bgcolor: (t) => alpha(t.palette.primary.main, 0.09),
               color: 'primary.main',
               display: 'flex',
               alignItems: 'center',
@@ -275,8 +275,8 @@ export function UpcomingDatesCard({ embedded = false }: UpcomingDatesCardProps) 
                         py: 0.4,
                         borderRadius: '8px',
                         border: '1px solid',
-                        borderColor: '#D8EFEB',
-                        bgcolor: '#EAF6F4',
+                        borderColor: (t) => alpha(t.palette.primary.main, 0.17),
+                        bgcolor: (t) => alpha(t.palette.primary.main, 0.09),
                         color: 'primary.main',
                         '& .MuiButton-startIcon': { mr: 0.5 },
                         '&:hover': { bgcolor: 'primary.main', color: '#fff' },
