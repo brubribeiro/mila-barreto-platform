@@ -48,12 +48,13 @@ export function Layout() {
         ...group,
         items: group.items.filter(
           (item) =>
+            (!item.adminOnly || isAdmin) &&
             (!item.permission || has(item.permission)) &&
             (!item.feature || features.includes(item.feature)),
         ),
       }))
       .filter((group) => group.items.length > 0);
-  }, [has, userFeatures]);
+  }, [has, isAdmin, userFeatures]);
 
   const theme = useTheme();
 

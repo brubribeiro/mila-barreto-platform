@@ -27,7 +27,9 @@ import { SkincareRoutines } from './pages/SkincareRoutines';
 import { Promotions } from './pages/Promotions';
 import { PaymentMethods } from './pages/PaymentMethods';
 import { FeedbackReports } from './pages/FeedbackReports';
+import { AuditLogs } from './pages/AuditLogs';
 import { Layout } from './components/Layout';
+import { AdminRoute } from './components/AdminRoute';
 import { PrivateRoute } from './components/PrivateRoute';
 import { PermissionRoute } from './components/PermissionRoute';
 import { FeatureRoute } from './components/FeatureRoute';
@@ -286,6 +288,14 @@ export default function App() {
             <PermissionRoute permission="feedback:view">
               <FeedbackReports />
             </PermissionRoute>
+          }
+        />
+        <Route
+          path="/auditoria"
+          element={
+            <AdminRoute>
+              <AuditLogs />
+            </AdminRoute>
           }
         />
       </Route>

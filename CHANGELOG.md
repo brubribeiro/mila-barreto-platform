@@ -4,6 +4,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+### Added
+
+- Clínica: rota `/auditoria` e item em Configurações (Administrador) para o histórico global de alterações (`AuditLogs` + `GET /audit-logs`).
+
 ## [0.2.1] - 2026-10-26
 
 ### Security
