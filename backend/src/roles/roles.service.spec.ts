@@ -30,6 +30,7 @@ describe('RolesService', () => {
       role: {
         findMany: jest.fn().mockResolvedValue([mockRole]),
         findUnique: jest.fn().mockResolvedValue(mockRole),
+        findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue(mockRole),
         update: jest.fn().mockResolvedValue(mockRole),
         delete: jest.fn().mockResolvedValue(mockRole),
@@ -68,14 +69,14 @@ describe('RolesService', () => {
     });
 
     it('should throw ConflictException for duplicate name', async () => {
-      prisma.role.findUnique.mockResolvedValue(mockRole);
+      prisma.role.findFirst.mockResolvedValue(mockRole);
       await expect(
         service.create({ name: 'Profissional', permissions: ['appointments:view'] } as any),
       ).rejects.toThrow(ConflictException);
     });
 
     it('should create role when valid', async () => {
-      prisma.role.findUnique.mockResolvedValue(null);
+      prisma.role.findFirst.mockResolvedValue(null);
       await service.create({
         name: 'Novo Grupo',
         permissions: ['appointments:view'],

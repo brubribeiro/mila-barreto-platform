@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
-import { Alert, Box, CircularProgress, Link as MuiLink, Stack, Typography } from '@mui/material';
+import { Alert, AlertTitle, Box, CircularProgress, Link as MuiLink, Stack, Typography } from '@mui/material';
 import { keyframes } from '@mui/system';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 import { AuroraIcon } from '../components/AuroraIcon';
 import { APP_VERSION } from '../version';
 import { fontSizes } from '../theme/fontSizes';
+import { clearAuthNotice, readAuthNotice, tenantSuspendedMessage } from '../utils/authNotice';
 
 // Painel de marca Aurora (mesmo verde-escuro do menu lateral)
 const BRAND_BG = '#0E2926';
@@ -98,6 +99,9 @@ export function Login() {
   const { user, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  // Clínica suspensa: vem da sessão derrubada (interceptor) ou da tentativa de login
+  const [suspendedNotice, setSuspendedNotice] = useState<string | null>(readAuthNotice);
+  useEffect(clearAuthNotice, []);
   const [submitting, setSubmitting] = useState(false);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
@@ -108,11 +112,17 @@ export function Login() {
   async function handleGoogleSuccess(response: CredentialResponse) {
     if (!response.credential) return;
     setError(null);
+    setSuspendedNotice(null);
     setSubmitting(true);
     try {
       await loginWithGoogle(response.credential);
       navigate('/');
     } catch (err: any) {
+      const suspended = tenantSuspendedMessage(err);
+      if (suspended) {
+        setSuspendedNotice(suspended);
+        return;
+      }
       setError(
         err?.response?.data?.message ??
           'Falha ao autenticar com Google. Verifique se seu e-mail está cadastrado.',
@@ -321,6 +331,13 @@ export function Login() {
         {!googleClientId && (
           <Alert severity="warning" sx={{ mt: 2 }}>
             Configure <strong>VITE_GOOGLE_CLIENT_ID</strong> no arquivo .env para habilitar o login.
+          </Alert>
+        )}
+
+        {suspendedNotice && (
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            <AlertTitle>Clínica suspensa</AlertTitle>
+            {suspendedNotice}
           </Alert>
         )}
 

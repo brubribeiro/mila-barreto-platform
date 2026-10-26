@@ -3,7 +3,7 @@ import { UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 
-import { AuthService } from './auth.service';
+import { AuthService, TENANT_ACCESS_EXPIRES_IN } from './auth.service';
 import { UsersService } from '../users/users.service';
 
 // Mock google-auth-library
@@ -22,6 +22,9 @@ describe('AuthService', () => {
     id: 'user-1',
     name: 'Maria',
     email: 'maria@clinic.com',
+    tenantId: 'tenant-1',
+    isSuperAdmin: false,
+    tenant: { id: 'tenant-1', name: 'Clínica Um', active: true },
     roleId: 'role-1',
     active: true,
     providesAppointments: true,
@@ -105,10 +108,28 @@ describe('AuthService', () => {
       expect(result.access_token).toBe('jwt-token');
       expect(result.user.id).toBe('user-1');
       expect(result.user.email).toBe('maria@clinic.com');
+      expect(result.user.tenantId).toBe('tenant-1');
       expect(jwtService.signAsync).toHaveBeenCalledWith({
         sub: 'user-1',
         email: 'maria@clinic.com',
+        tenantId: 'tenant-1',
       });
+    });
+
+    it('should refuse login when the clinic is suspended', async () => {
+      const googleClient = (service as any).googleClient;
+      googleClient.verifyIdToken.mockResolvedValue({
+        getPayload: () => ({ email: 'maria@clinic.com' }),
+      });
+      usersService.findByEmail.mockResolvedValue({
+        ...mockUser,
+        tenant: { ...mockUser.tenant, active: false },
+      } as any);
+
+      await expect(service.loginWithGoogle({ credential: 'token' })).rejects.toThrow(
+        'O acesso da clínica Clínica Um está suspenso',
+      );
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
     });
   });
 
@@ -117,7 +138,8 @@ describe('AuthService', () => {
       id: 'admin-1',
       name: 'Admin',
       email: 'admin@clinic.com',
-      roleName: 'Administrador do Sistema',
+      roleName: 'Administrador',
+      tenantId: 'tenant-1',
       permissions: [],
       restrictToOwnAppointments: false,
     };
@@ -128,6 +150,15 @@ describe('AuthService', () => {
       await expect(
         service.impersonate('user-1', nonAdmin as any),
       ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should not let a super-admin acting as a clinic impersonate its users', async () => {
+      const superAdmin = { ...admin, id: 'root-1', isSuperAdmin: true, impersonatorId: 'root-1' };
+
+      await expect(
+        service.impersonate('user-1', superAdmin as any),
+      ).rejects.toThrow(ForbiddenException);
+      expect(usersService.findById).not.toHaveBeenCalled();
     });
 
     it('should throw if trying to impersonate self', async () => {
@@ -163,8 +194,21 @@ describe('AuthService', () => {
       expect(jwtService.signAsync).toHaveBeenCalledWith({
         sub: 'user-1',
         email: 'maria@clinic.com',
+        tenantId: 'tenant-1',
         impersonatorId: 'admin-1',
       });
+    });
+  });
+
+  describe('signTenantAccess', () => {
+    it('signs a short-lived token of the super-admin with the target tenant', async () => {
+      const superAdmin = { id: 'root-1', email: 'root@platform.dev', tenantId: null, isSuperAdmin: true };
+
+      await expect(service.signTenantAccess(superAdmin as any, 'tenant-2')).resolves.toBe('jwt-token');
+      expect(jwtService.signAsync).toHaveBeenCalledWith(
+        { sub: 'root-1', email: 'root@platform.dev', tenantId: 'tenant-2', impersonatorId: 'root-1' },
+        { expiresIn: TENANT_ACCESS_EXPIRES_IN },
+      );
     });
   });
 });

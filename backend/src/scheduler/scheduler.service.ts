@@ -4,6 +4,7 @@ import { NotificationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EquipmentService } from '../equipment/equipment.service';
+import { TenantContext } from '../tenancy/tenant-context';
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const KEEP_ALIVE_INTERVAL_MS = 4.5 * 60 * 1000;
@@ -42,7 +43,19 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     if (this.keepAliveRef) clearInterval(this.keepAliveRef);
   }
 
+  /** Roda as verificações uma clínica por vez, cada uma no próprio contexto de tenant. */
   private async runAll() {
+    const tenants = await TenantContext.runUnscoped(() =>
+      this.prisma.tenant.findMany({ where: { active: true }, select: { id: true, slug: true } }),
+    );
+    for (const tenant of tenants) {
+      await TenantContext.run(tenant.id, () => this.runAllForTenant()).catch((e) =>
+        this.logger.error(`Scheduler error (clínica ${tenant.slug})`, e),
+      );
+    }
+  }
+
+  private async runAllForTenant() {
     await Promise.allSettled([
       this.checkEquipmentMaintenance(),
       this.checkInventoryExpiring(),
