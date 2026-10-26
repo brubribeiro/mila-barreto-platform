@@ -4,8 +4,6 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
-## [0.2.2] - 2026-10-26
-
 ### Security
 
 - Documentos/R2 (#39): uploads deixam de gravar/expor `fileUrl` pública; acesso só via URL assinada de curta duração (`GET /documents/:id/access-url`). Objetos gravados com `Content-Disposition: attachment`.
