@@ -9,6 +9,7 @@ jest.mock('../tenancy/system-roles', () => ({ provisionTenant: jest.fn() }));
 describe('AdminService', () => {
   const actor = { id: 'root-1', name: 'Dono', email: 'root@platform.dev', isSuperAdmin: true } as any;
   const tenant = { id: 'tenant-1', name: 'Clínica Um', slug: 'clinica-um', active: true, suspendedAt: null };
+  const plan = { id: '7f1c2a9e-4b1d-4c55-9a1e-3f0b6f1f2a10', name: 'Profissional', slug: 'profissional', active: true };
 
   let prisma: any;
   let auth: { signTenantAccess: jest.Mock };
@@ -23,6 +24,7 @@ describe('AdminService', () => {
       document: { aggregate: jest.fn() },
       patientPhoto: { aggregate: jest.fn() },
       platformAuditLog: { create: jest.fn(), findMany: jest.fn(), count: jest.fn() },
+      plan: { findUnique: jest.fn() },
     };
     auth = { signTenantAccess: jest.fn().mockResolvedValue('acting-token') };
     service = new AdminService(prisma, auth as any);
@@ -130,7 +132,7 @@ describe('AdminService', () => {
 
       expect(provisionTenant).toHaveBeenCalledWith(
         prisma,
-        { name: dto.name, slug: 'clinica-bela-pele' },
+        { name: dto.name, slug: 'clinica-bela-pele', planId: null },
         { name: 'Ana', email: 'ana@belapele.com', password: expect.any(String) },
       );
       expect(lastAudit()).toMatchObject({
@@ -139,6 +141,33 @@ describe('AdminService', () => {
         targetTenantId: 'tenant-2',
         details: { slug: 'clinica-bela-pele', adminEmail: 'ana@belapele.com' },
       });
+    });
+
+    it('atribui o plano escolhido e registra na auditoria', async () => {
+      prisma.tenant.findUnique.mockResolvedValue(null);
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.plan.findUnique.mockResolvedValue(plan);
+      (provisionTenant as jest.Mock).mockResolvedValue({ id: 'tenant-2', name: dto.name, planId: plan.id });
+
+      const result = await service.createTenant({ ...dto, planId: plan.id }, actor);
+
+      expect((provisionTenant as jest.Mock).mock.calls[0][1]).toEqual({
+        name: dto.name,
+        slug: 'clinica-bela-pele',
+        planId: plan.id,
+      });
+      expect(lastAudit().details).toMatchObject({ plan: { id: plan.id, name: 'Profissional' } });
+      expect(result.plan).toEqual(plan);
+    });
+
+    it('recusa plano desativado ou inexistente', async () => {
+      prisma.tenant.findUnique.mockResolvedValue(null);
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.plan.findUnique.mockResolvedValue({ ...plan, active: false });
+      await expect(service.createTenant({ ...dto, planId: plan.id }, actor)).rejects.toThrow(BadRequestException);
+      prisma.plan.findUnique.mockResolvedValue(null);
+      await expect(service.createTenant({ ...dto, planId: plan.id }, actor)).rejects.toThrow(NotFoundException);
+      expect(provisionTenant).not.toHaveBeenCalled();
     });
 
     it('recusa identificador já usado', async () => {
@@ -171,6 +200,48 @@ describe('AdminService', () => {
         targetName: 'Clínica Nova',
         details: { name: { old: 'Clínica Um', new: 'Clínica Nova' } },
       });
+    });
+
+    it('troca o plano e audita de/para', async () => {
+      const essencial = { id: 'plan-1', name: 'Essencial' };
+      prisma.tenant.findUnique.mockResolvedValue({ ...tenant, planId: essencial.id });
+      prisma.plan.findUnique
+        .mockResolvedValueOnce(plan) // plano novo (validação)
+        .mockResolvedValueOnce(essencial); // plano antigo (auditoria)
+      prisma.tenant.update.mockResolvedValue({ ...tenant, planId: plan.id, plan });
+
+      const result = await service.updateTenant('tenant-1', { planId: plan.id }, actor);
+
+      expect(prisma.tenant.update.mock.calls[0][0].data).toMatchObject({ planId: plan.id });
+      expect(lastAudit()).toMatchObject({
+        action: 'TENANT_PLAN_CHANGE',
+        targetTenantId: 'tenant-1',
+        details: { old: essencial, new: { id: plan.id, name: 'Profissional' } },
+      });
+      expect(prisma.platformAuditLog.create).toHaveBeenCalledTimes(1);
+      expect(result.plan).toEqual(plan);
+    });
+
+    it('null remove o plano', async () => {
+      prisma.tenant.findUnique.mockResolvedValue({ ...tenant, planId: plan.id });
+      prisma.plan.findUnique.mockResolvedValue({ id: plan.id, name: plan.name });
+      prisma.tenant.update.mockResolvedValue({ ...tenant, planId: null, plan: null });
+
+      await service.updateTenant('tenant-1', { planId: null }, actor);
+
+      expect(prisma.tenant.update.mock.calls[0][0].data).toMatchObject({ planId: null });
+      expect(lastAudit()).toMatchObject({ action: 'TENANT_PLAN_CHANGE', details: { new: null } });
+    });
+
+    it('mesmo plano não troca nem audita (vale para plano já desativado)', async () => {
+      prisma.tenant.findUnique.mockResolvedValue({ ...tenant, planId: plan.id });
+      prisma.tenant.update.mockResolvedValue({ ...tenant, planId: plan.id });
+
+      await service.updateTenant('tenant-1', { planId: plan.id }, actor);
+
+      expect(prisma.plan.findUnique).not.toHaveBeenCalled();
+      expect(prisma.tenant.update.mock.calls[0][0].data).not.toHaveProperty('planId');
+      expect(prisma.platformAuditLog.create).not.toHaveBeenCalled();
     });
 
     it('não audita quando nada mudou', async () => {

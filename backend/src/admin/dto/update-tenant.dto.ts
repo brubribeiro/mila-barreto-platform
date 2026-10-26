@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from 'class-validator';
 
 import { SLUG_MESSAGE, SLUG_PATTERN, trimToUndefined } from './create-tenant.dto';
 
@@ -18,6 +18,12 @@ export class UpdateTenantDto {
   @Matches(SLUG_PATTERN, { message: SLUG_MESSAGE })
   @MaxLength(60)
   slug?: string;
+
+  /** Troca de plano (só planos ativos); null remove o plano da clínica. */
+  @Transform(({ value }) => (value === '' ? null : value))
+  @IsOptional()
+  @IsUUID('all', { message: 'Plano inválido.' })
+  planId?: string | null;
 }
 
 export class SuspendTenantDto {

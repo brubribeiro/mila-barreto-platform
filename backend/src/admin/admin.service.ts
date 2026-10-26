@@ -11,13 +11,9 @@ import { TenantContext } from '../tenancy/tenant-context';
 import { provisionTenant } from '../tenancy/system-roles';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
+import { recordPlatformAudit, type PlatformAuditAction } from './platform-audit';
 
-export type PlatformAuditAction =
-  | 'TENANT_CREATE'
-  | 'TENANT_UPDATE'
-  | 'TENANT_SUSPEND'
-  | 'TENANT_REACTIVATE'
-  | 'TENANT_ENTER';
+const PLAN_SUMMARY_SELECT = { id: true, name: true, slug: true, active: true } as const;
 
 export type TenantStatusFilter = 'active' | 'suspended';
 
@@ -77,7 +73,10 @@ export class AdminService {
       const tenants = await this.prisma.tenant.findMany({
         where,
         orderBy: { name: 'asc' },
-        include: { _count: { select: { users: { where: { active: true } }, patients: true } } },
+        include: {
+          plan: { select: PLAN_SUMMARY_SELECT },
+          _count: { select: { users: { where: { active: true } }, patients: true } },
+        },
       });
       const ids = tenants.map((t) => t.id);
       const [lastAccess, appointments] = await Promise.all([
@@ -147,6 +146,7 @@ export class AdminService {
     return TenantContext.runUnscoped(async () => {
       const slug = dto.slug ?? slugify(dto.name);
       await this.assertSlugFree(slug);
+      const plan = dto.planId ? await this.findAssignablePlan(dto.planId) : null;
       if (await this.prisma.user.findUnique({ where: { email: dto.adminEmail } })) {
         throw new ConflictException('Este e-mail já pertence a um usuário da plataforma.');
       }
@@ -155,15 +155,16 @@ export class AdminService {
       const password = await bcrypt.hash(randomBytes(32).toString('hex'), 10);
       const tenant = await provisionTenant(
         this.prisma as unknown as PrismaClient,
-        { name: dto.name, slug },
+        { name: dto.name, slug, planId: plan?.id ?? null },
         { name: dto.adminName, email: dto.adminEmail, password },
       );
       await this.audit(actor, 'TENANT_CREATE', tenant, {
         slug,
         adminName: dto.adminName,
         adminEmail: dto.adminEmail,
+        ...(plan ? { plan: { id: plan.id, name: plan.name } } : {}),
       });
-      return tenant;
+      return { ...tenant, plan };
     });
   }
 
@@ -171,14 +172,30 @@ export class AdminService {
     return TenantContext.runUnscoped(async () => {
       const before = await this.findTenantOrThrow(id);
       if (dto.slug && dto.slug !== before.slug) await this.assertSlugFree(dto.slug);
+      // undefined = não mexe no plano; null = remove o plano
+      const planChanged = dto.planId !== undefined && dto.planId !== before.planId;
+      const newPlan = planChanged && dto.planId ? await this.findAssignablePlan(dto.planId) : null;
 
-      const updated = await this.prisma.tenant.update({ where: { id }, data: dto });
+      const { plan, ...updated } = await this.prisma.tenant.update({
+        where: { id },
+        data: { name: dto.name, slug: dto.slug, ...(planChanged ? { planId: newPlan?.id ?? null } : {}) },
+        include: { plan: { select: PLAN_SUMMARY_SELECT } },
+      });
       const changes: Record<string, { old: string; new: string }> = {};
       for (const key of ['name', 'slug'] as const) {
         if (before[key] !== updated[key]) changes[key] = { old: before[key], new: updated[key] };
       }
       if (Object.keys(changes).length) await this.audit(actor, 'TENANT_UPDATE', updated, changes);
-      return updated;
+      if (planChanged) {
+        const oldPlan = before.planId
+          ? await this.prisma.plan.findUnique({ where: { id: before.planId }, select: { id: true, name: true } })
+          : null;
+        await this.audit(actor, 'TENANT_PLAN_CHANGE', updated, {
+          old: oldPlan,
+          new: newPlan ? { id: newPlan.id, name: newPlan.name } : null,
+        });
+      }
+      return { ...updated, plan };
     });
   }
 
@@ -241,8 +258,16 @@ export class AdminService {
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
-  private async findTenantOrThrow(id: string): Promise<Tenant> {
-    const tenant = await this.prisma.tenant.findUnique({ where: { id } });
+  /** Só planos ativos podem ser atribuídos (desativado continua com quem já tem). */
+  private async findAssignablePlan(planId: string) {
+    const plan = await this.prisma.plan.findUnique({ where: { id: planId }, select: PLAN_SUMMARY_SELECT });
+    if (!plan) throw new NotFoundException('Plano não encontrado.');
+    if (!plan.active) throw new BadRequestException(`O plano "${plan.name}" está desativado.`);
+    return plan;
+  }
+
+  private async findTenantOrThrow(id: string) {
+    const tenant = await this.prisma.tenant.findUnique({ where: { id }, include: { plan: { select: PLAN_SUMMARY_SELECT } } });
     if (!tenant) throw new NotFoundException('Clínica não encontrada.');
     return tenant;
   }
@@ -254,22 +279,12 @@ export class AdminService {
     }
   }
 
-  private async audit(
+  private audit(
     actor: AuthenticatedUser,
     action: PlatformAuditAction,
     tenant: Pick<Tenant, 'id' | 'name'>,
     details?: Record<string, unknown>,
   ) {
-    await this.prisma.platformAuditLog.create({
-      data: {
-        action,
-        actorId: actor.id,
-        actorName: actor.name,
-        actorEmail: actor.email,
-        targetTenantId: tenant.id,
-        targetName: tenant.name,
-        ...(details ? { details: details as Prisma.InputJsonValue } : {}),
-      },
-    });
+    return recordPlatformAudit(this.prisma, actor, action, { tenantId: tenant.id, name: tenant.name }, details);
   }
 }

@@ -26,9 +26,12 @@ model Tenant {
   // false = clínica suspensa: login e requisições dos usuários dela são recusados
   active      Boolean   @default(true)
   suspendedAt DateTime?
+  // Plano contratado (só cadastro; sem cobrança nem bloqueio por limite)
+  planId      String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  plan                    Plan?                    @relation(fields: [planId], references: [id], onDelete: SetNull)
   appSettings             AppSetting[]
   roles                   Role[]
   users                   User[]
@@ -67,14 +70,34 @@ model Tenant {
   feedbackReports         FeedbackReport[]
   platformAuditLogs       PlatformAuditLog[]
 
+  @@index([planId])
   @@map("tenants")
+}
+
+// Planos da plataforma (painel super-admin). Não é dado de clínica: sem tenantId.
+model Plan {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  // Limites/recursos informativos, ex.: { "maxUsers": 5, "maxPatients": 500, "storageGb": 5 } (null = ilimitado)
+  limits      Json?
+  // false = não pode ser atribuído a novas clínicas; quem já tem continua com ele
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenants Tenant[]
+
+  @@map("plans")
 }
 
 // Ações do super-admin no painel da plataforma (criar/editar/suspender clínicas, "entrar como").
 // Não é dado de clínica: sem tenantId, fora do escopo automático; a clínica alvo fica em targetTenantId.
 model PlatformAuditLog {
   id             String   @id @default(uuid())
-  // TENANT_CREATE, TENANT_UPDATE, TENANT_SUSPEND, TENANT_REACTIVATE, TENANT_ENTER
+  // TENANT_CREATE, TENANT_UPDATE, TENANT_SUSPEND, TENANT_REACTIVATE, TENANT_ENTER, TENANT_PLAN_CHANGE,
+  // PLAN_CREATE, PLAN_UPDATE, PLAN_ACTIVATE, PLAN_DEACTIVATE (planos: targetTenantId nulo, targetName = plano)
   action         String
   actorId        String
   actorName      String

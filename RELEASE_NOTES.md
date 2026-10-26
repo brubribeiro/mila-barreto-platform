@@ -203,7 +203,9 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - **Suspender** e **reativar** clínicas, sempre com confirmação; nenhum dado é apagado.
 - **Detalhe da clínica** com métricas de uso (inclusive o espaço usado por documentos e fotos), administradores e histórico.
 - **Entrar como**: abre a clínica como administrador para dar suporte, com a faixa "Você está visualizando como…" e o botão **Voltar ao painel**.
-- **Auditoria da plataforma**: toda criação, edição, suspensão, reativação e entrada em clínica fica registrada com quem fez e quando.
+- **Planos**: nova página no painel para criar, editar, ativar e desativar planos (já vêm **Essencial**, **Profissional** e **Enterprise**), com descrição e limites de usuários, pacientes e armazenamento. Nesta versão não há cobrança e os limites são só informativos.
+- Cada clínica pode ter um **plano**: escolha ao criar ou editar a clínica, ou direto no detalhe dela; a lista de clínicas mostra o plano de cada uma. Plano desativado some das opções, mas quem já tem continua com ele.
+- **Auditoria da plataforma**: toda criação, edição, suspensão, reativação e entrada em clínica fica registrada com quem fez e quando, assim como criar, editar, ativar ou desativar planos e trocar o plano de uma clínica.
 
 ### Correções
 

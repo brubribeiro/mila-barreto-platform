@@ -2,8 +2,8 @@ import { Link as RouterLink } from 'react-router-dom';
 import { Box, Link, Skeleton, Stack, Typography, alpha } from '@mui/material';
 
 import { fontSizes } from '../../theme/fontSizes';
-import { formatDateTime } from './adminUi';
-import type { PlatformAuditAction, PlatformAuditLog } from '../../types';
+import { formatDateTime, formatPlanLimits } from './adminUi';
+import type { PlanLimits, PlatformAuditAction, PlatformAuditLog } from '../../types';
 
 export const PLATFORM_AUDIT_LABELS: Record<PlatformAuditAction, { label: string; color: string }> = {
   TENANT_CREATE: { label: 'Criou a clínica', color: '#15998B' },
@@ -11,24 +11,52 @@ export const PLATFORM_AUDIT_LABELS: Record<PlatformAuditAction, { label: string;
   TENANT_SUSPEND: { label: 'Suspendeu', color: '#C25A4C' },
   TENANT_REACTIVATE: { label: 'Reativou', color: '#15998B' },
   TENANT_ENTER: { label: 'Entrou como', color: '#9B7BD4' },
+  TENANT_PLAN_CHANGE: { label: 'Trocou o plano', color: '#D49A3A' },
+  PLAN_CREATE: { label: 'Criou o plano', color: '#15998B' },
+  PLAN_UPDATE: { label: 'Editou o plano', color: '#5BA8DE' },
+  PLAN_ACTIVATE: { label: 'Ativou o plano', color: '#15998B' },
+  PLAN_DEACTIVATE: { label: 'Desativou o plano', color: '#C25A4C' },
 };
 
-const FIELD_LABELS: Record<string, string> = { name: 'nome', slug: 'identificador' };
+const FIELD_LABELS: Record<string, string> = {
+  name: 'nome',
+  slug: 'identificador',
+  description: 'descrição',
+  limits: 'limites',
+};
+
+type PlanRef = { name?: string } | null | undefined;
+
+function changeValue(field: string, value: unknown): string {
+  if (field === 'limits') return formatPlanLimits(value as PlanLimits | null);
+  return value == null || value === '' ? '—' : String(value);
+}
 
 /** Resumo legível dos detalhes gravados em cada ação. */
 export function auditDetailsText(entry: PlatformAuditLog): string | null {
   const d = entry.details;
   if (!d) return null;
   switch (entry.action) {
-    case 'TENANT_CREATE':
-      return d.adminEmail ? `Administrador: ${d.adminName ?? ''} <${d.adminEmail}>` : null;
+    case 'TENANT_CREATE': {
+      const parts = [
+        d.adminEmail ? `Administrador: ${d.adminName ?? ''} <${d.adminEmail}>` : null,
+        (d.plan as PlanRef)?.name ? `Plano: ${(d.plan as PlanRef)!.name}` : null,
+      ].filter(Boolean);
+      return parts.length ? parts.join(' · ') : null;
+    }
     case 'TENANT_UPDATE':
+    case 'PLAN_UPDATE':
       return Object.entries(d)
+        .filter(([field]) => field !== 'planId')
         .map(([field, change]) => {
           const c = change as { old?: unknown; new?: unknown };
-          return `${FIELD_LABELS[field] ?? field}: ${String(c.old)} → ${String(c.new)}`;
+          return `${FIELD_LABELS[field] ?? field}: ${changeValue(field, c.old)} → ${changeValue(field, c.new)}`;
         })
         .join(' · ');
+    case 'TENANT_PLAN_CHANGE':
+      return `Plano: ${(d.old as PlanRef)?.name ?? 'sem plano'} → ${(d.new as PlanRef)?.name ?? 'sem plano'}`;
+    case 'PLAN_CREATE':
+      return `Limites: ${formatPlanLimits(d.limits as PlanLimits | null)}`;
     case 'TENANT_SUSPEND':
       return d.reason ? `Motivo: ${String(d.reason)}` : null;
     case 'TENANT_ENTER':

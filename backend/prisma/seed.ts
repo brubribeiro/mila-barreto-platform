@@ -267,6 +267,28 @@ function demoProcedureStatus(startAt: Date, slotIndex: number): AppointmentStatu
   return 'SCHEDULED';
 }
 
+// Planos da plataforma (sem preço/cobrança). Limites informativos; ausente = ilimitado.
+const defaultPlans = [
+  {
+    slug: 'essencial',
+    name: 'Essencial',
+    description: 'Para quem atende sozinha ou com uma pequena equipe.',
+    limits: { maxUsers: 3, maxPatients: 500, storageGb: 5 },
+  },
+  {
+    slug: 'profissional',
+    name: 'Profissional',
+    description: 'Para clínicas em crescimento, com equipe e agenda cheia.',
+    limits: { maxUsers: 10, maxPatients: 3000, storageGb: 25 },
+  },
+  {
+    slug: 'enterprise',
+    name: 'Enterprise',
+    description: 'Para redes e clínicas grandes; limites sob medida.',
+    limits: undefined,
+  },
+];
+
 const defaultDocumentTemplates = [
   {
     name: 'Modelo padrão — Consentimento Toxina',
@@ -323,6 +345,12 @@ ______________________________________
 ];
 
 async function main() {
+  console.log('\n→ Garantindo planos da plataforma...');
+  // Só cria: planos editados no painel super-admin não são sobrescritos
+  for (const plan of defaultPlans) {
+    await prisma.plan.upsert({ where: { slug: plan.slug }, update: {}, create: plan });
+  }
+
   // Grupos de sistema da clínica: criados/atualizados por runInScriptTenant (ensureSystemRoles)
   console.log('\n→ Garantindo usuários...');
   for (const u of defaultUsers) {

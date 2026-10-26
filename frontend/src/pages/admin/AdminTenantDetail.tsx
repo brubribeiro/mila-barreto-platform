@@ -6,13 +6,15 @@ import EditIcon from '@mui/icons-material/Edit';
 import LoginIcon from '@mui/icons-material/Login';
 import BlockIcon from '@mui/icons-material/Block';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { adminApi } from '../../api/admin';
 import { StatCard } from '../../components/StatCard';
 import { TenantFormDialog } from '../../components/admin/TenantFormDialog';
 import { PlatformAuditList } from '../../components/admin/PlatformAuditList';
 import { useTenantActions } from '../../components/admin/useTenantActions';
+import { PlanSelect } from '../../components/admin/PlanSelect';
+import { useAppToast } from '../../contexts/AppToastContext';
 import {
   TenantStatusPill,
   formatBytes,
@@ -42,6 +44,8 @@ const SECTION_TITLE_SX = {
 export function AdminTenantDetail() {
   const { id = '' } = useParams();
   const actions = useTenantActions();
+  const queryClient = useQueryClient();
+  const toast = useAppToast();
   const [editOpen, setEditOpen] = useState(false);
 
   const { data: tenant, isLoading, error } = useQuery({
@@ -54,6 +58,18 @@ export function AdminTenantDetail() {
     queryKey: ['admin', 'audit', { tenantId: id }],
     queryFn: () => adminApi.listAudit({ tenantId: id, limit: 10 }),
     enabled: !!id,
+  });
+
+  const planMutation = useMutation({
+    mutationFn: (planId: string) => adminApi.updateTenant(id, { planId: planId || null }),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tenant', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'audit'] });
+      toast.success(updated.plan ? `Plano alterado para ${updated.plan.name}.` : 'Plano removido da clínica.');
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Não foi possível trocar o plano.')),
   });
 
   if (error) {
@@ -96,6 +112,22 @@ export function AdminTenantDetail() {
                   {tenant.slug} · criada em {formatDate(tenant.createdAt)}
                   {!tenant.active && tenant.suspendedAt && ` · suspensa em ${formatDateTime(tenant.suspendedAt)}`}
                 </Typography>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1.5 }}>
+                  <Typography component="span" sx={{ fontSize: fontSizes.sm, fontWeight: 700, color: 'text.secondary' }}>
+                    Plano
+                  </Typography>
+                  <PlanSelect
+                    size="small"
+                    value={tenant.planId ?? ''}
+                    onChange={(planId) => {
+                      if (planId !== (tenant.planId ?? '')) planMutation.mutate(planId);
+                    }}
+                    currentPlan={tenant.plan}
+                    disabled={planMutation.isPending}
+                    inputProps={{ 'aria-label': 'Plano da clínica' }}
+                    sx={{ minWidth: 200 }}
+                  />
+                </Stack>
               </>
             )}
           </Box>
