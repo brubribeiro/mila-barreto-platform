@@ -6,9 +6,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Security
 
+- Agenda (#35): `PATCH /appointments/:id/start|finish|resume` passam a aplicar `restrictToOwnAppointments` (mesma regra de ownership de `findOne`/`update`).
+- Auth (#36): sessão em cookie HttpOnly (`access_token` / `admin_token`) com `withCredentials`; o painel deixa de persistir JWT em `localStorage` (XSS não lê mais o token no storage). Em produção: `SameSite=None; Secure` (cross-origin Vercel↔API). Bearer no header continua aceito para clientes que já enviam.
+- Auth (#37): `POST /auth/logout` incrementa `User.tokenVersion`; JWT leva `tv` e o `JwtStrategy` rejeita versão antiga (logout invalida o token no servidor). `POST /auth/stop-impersonating` restaura o cookie do admin sem JS ler o token.
+- Auth (#38): fail-fast no bootstrap se `GOOGLE_CLIENT_ID` estiver ausente/curto demais — garante audience obrigatória em `verifyIdToken`.
 - Documentos/R2 (#39): uploads deixam de gravar/expor `fileUrl` pública; acesso só via URL assinada de curta duração (`GET /documents/:id/access-url`). Objetos gravados com `Content-Disposition: attachment`.
 - Upload (#40): validação por magic bytes (`file-magic.util`) além do MIME declarado — documentos, fotos de paciente e de usuário.
 - Dependência (#41): `multer` atualizado para `^2.5.0` (com `overrides`) — corrige advisories HIGH da linha ≤2.4.x.
+- Auth (#42): `JwtStrategy` e emissão com allowlist `algorithms`/`algorithm: HS256`.
 - Multi-tenant (#43): `$queryRaw`/`$executeRaw` (e *Unsafe) só com tenant no contexto ou `TenantContext.runUnscoped`; keep-alive do scheduler usa `runUnscoped`.
 - R2 (#44): `remove`/`getPresignedUrl`/`download` recusam `storageKey` de outro tenant (`tenants/<id>/...`); keys legadas sem prefixo continuam permitidas com tenant ativo.
 
