@@ -42,13 +42,13 @@ const USER_AVATAR_SX = {
   fontWeight: 700,
 } as const;
 
-const LOGOUT_BUTTON_SX = {
+const REPORT_BUTTON_SX = {
   width: 34,
   height: 34,
   borderRadius: '10px',
   bgcolor: SIDEBAR_HOVER,
   color: SIDEBAR_TEXT,
-  '&:hover': { color: '#F08A8A', bgcolor: 'rgba(214,90,90,.18)' },
+  '&:hover': { color: '#fff', bgcolor: 'rgba(21,153,139,.28)' },
 } as const;
 
 function userInitials(name: string | undefined) {
@@ -319,9 +319,14 @@ export function SidebarContent({ collapsed: isCollapsed, groups, pathname, onNav
                 {initials}
               </Avatar>
             </Tooltip>
-            <Tooltip title="Sair" placement="right">
-              <IconButton aria-label="Sair" size="small" onClick={onLogout} sx={LOGOUT_BUTTON_SX}>
-                <AuroraIcon name="logout" size={18} strokeWidth={2} />
+            <Tooltip title="Reportar bug ou sugestão" placement="right">
+              <IconButton
+                aria-label="Reportar bug ou sugestão"
+                size="small"
+                onClick={() => setFeedbackOpen(true)}
+                sx={REPORT_BUTTON_SX}
+              >
+                <AuroraIcon name="feedback" size={18} strokeWidth={2} />
               </IconButton>
             </Tooltip>
           </Stack>
@@ -366,9 +371,14 @@ export function SidebarContent({ collapsed: isCollapsed, groups, pathname, onNav
                 )}
               </Box>
             </Box>
-            <Tooltip title="Sair">
-              <IconButton aria-label="Sair" size="small" onClick={onLogout} sx={{ ...LOGOUT_BUTTON_SX, flexShrink: 0 }}>
-                <AuroraIcon name="logout" size={18} strokeWidth={2} />
+            <Tooltip title="Reportar bug ou sugestão">
+              <IconButton
+                aria-label="Reportar bug ou sugestão"
+                size="small"
+                onClick={() => setFeedbackOpen(true)}
+                sx={{ ...REPORT_BUTTON_SX, flexShrink: 0 }}
+              >
+                <AuroraIcon name="feedback" size={18} strokeWidth={2} />
               </IconButton>
             </Tooltip>
           </Stack>
