@@ -9,12 +9,16 @@ import { effectivePermissions, SYSTEM_ADMIN_ROLE_NAME } from '../common/permissi
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { featuresFromTenant } from '../common/platform-features';
 import { assertTenantActive } from '../tenancy/tenant-status';
+import { TenantContext } from '../tenancy/tenant-context';
+import { PrismaService } from '../prisma/prisma.service';
 
 export interface JwtPayload {
   sub: string;
   email: string;
   /** Clínica do usuário (null para super-admin). Conferida contra o banco a cada requisição. */
   tenantId: string | null;
+  /** Versão de sessão; deve bater com User.tokenVersion (logout incrementa). */
+  tv: number;
   /** ID do admin original quando em modo de personificação */
   impersonatorId?: string;
 }
@@ -25,15 +29,16 @@ export const TENANT_ACCESS_EXPIRES_IN = '2h';
 @Injectable()
 export class AuthService {
   private readonly googleClient: OAuth2Client;
+  private readonly googleClientId: string;
 
   constructor(
     private readonly users: UsersService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
   ) {
-    this.googleClient = new OAuth2Client(
-      this.config.get<string>('GOOGLE_CLIENT_ID'),
-    );
+    this.googleClientId = (this.config.get<string>('GOOGLE_CLIENT_ID') ?? '').trim();
+    this.googleClient = new OAuth2Client(this.googleClientId || undefined);
   }
 
   private buildUserResponse(user: any) {
@@ -56,11 +61,19 @@ export class AuthService {
     };
   }
 
+  private async signAccessToken(payload: JwtPayload, expiresIn?: string) {
+    return this.jwt.signAsync(payload, expiresIn ? { expiresIn } : undefined);
+  }
+
   async loginWithGoogle(dto: GoogleLoginDto) {
-    // Verifica o token recebido do Google
+    if (!this.googleClientId) {
+      throw new UnauthorizedException('Login Google não configurado no servidor.');
+    }
+
+    // Verifica o token recebido do Google (audience obrigatória — sem omitir a checagem)
     const ticket = await this.googleClient.verifyIdToken({
       idToken: dto.credential,
-      audience: this.config.get<string>('GOOGLE_CLIENT_ID'),
+      audience: this.googleClientId,
     });
 
     const googlePayload = ticket.getPayload();
@@ -82,10 +95,15 @@ export class AuthService {
     }
     assertTenantActive(user.tenant);
 
-    const payload: JwtPayload = { sub: user.id, email: user.email, tenantId: user.tenantId };
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      tenantId: user.tenantId,
+      tv: user.tokenVersion ?? 0,
+    };
 
     return {
-      access_token: await this.jwt.signAsync(payload),
+      access_token: await this.signAccessToken(payload),
       user: this.buildUserResponse(user),
     };
   }
@@ -99,9 +117,10 @@ export class AuthService {
       sub: superAdmin.id,
       email: superAdmin.email,
       tenantId,
+      tv: superAdmin.tokenVersion,
       impersonatorId: superAdmin.id,
     };
-    return this.jwt.signAsync(payload, { expiresIn: TENANT_ACCESS_EXPIRES_IN });
+    return this.signAccessToken(payload, TENANT_ACCESS_EXPIRES_IN);
   }
 
   async impersonate(targetUserId: string, admin: AuthenticatedUser) {
@@ -125,16 +144,47 @@ export class AuthService {
       sub: target.id,
       email: target.email,
       tenantId: target.tenantId,
+      tv: target.tokenVersion ?? 0,
       impersonatorId: admin.id,
     };
 
     return {
-      access_token: await this.jwt.signAsync(payload),
+      access_token: await this.signAccessToken(payload),
       user: {
         ...this.buildUserResponse(target),
         impersonating: true,
         impersonatorName: admin.name,
       },
     };
+  }
+
+  /**
+   * Invalida a sessão atual (e a do admin guardada na personificação, se houver)
+   * incrementando User.tokenVersion. Tokens com `tv` antigo passam a ser rejeitados.
+   */
+  async revokeSessions(userIds: string[]) {
+    const unique = [...new Set(userIds.filter(Boolean))];
+    if (unique.length === 0) return;
+    await TenantContext.runUnscoped(() =>
+      Promise.all(
+        unique.map((id) =>
+          this.prisma.user.update({
+            where: { id },
+            data: { tokenVersion: { increment: 1 } },
+          }),
+        ),
+      ),
+    );
+  }
+
+  /** Decodifica payload sem validar assinatura (só para ler sub/tv de cookie admin no logout). */
+  peekPayload(token: string): JwtPayload | null {
+    try {
+      const payload = this.jwt.decode(token);
+      if (!payload || typeof payload !== 'object') return null;
+      return payload as JwtPayload;
+    } catch {
+      return null;
+    }
   }
 }

@@ -4,6 +4,18 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ---
 
+## v0.2.2 — 26 out 2026
+
+### Correções de segurança
+
+- Profissionais restritos à própria agenda não conseguem mais iniciar, finalizar ou retomar atendimento de outra pessoa.
+- A sessão fica em cookie protegido (não mais no armazenamento local do navegador); ao sair, o token deixa de valer no servidor na hora.
+- Login com Google exige configuração correta do Client ID no servidor.
+
+A versão aparece no menu lateral e na tela de login.
+
+---
+
 ## v0.2.1 — 26 out 2026
 
 ### Correções de segurança

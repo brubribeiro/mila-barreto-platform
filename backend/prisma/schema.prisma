@@ -213,6 +213,8 @@ model User {
   photoUrl             String? // URL pública/derivada da foto
   // Última requisição autenticada (atualizada no máximo a cada poucos minutos); métrica do painel admin
   lastAccessAt         DateTime?
+  // Incrementado no logout: JWTs com tv antigo deixam de ser aceitos (revogação de sessão)
+  tokenVersion         Int      @default(0)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

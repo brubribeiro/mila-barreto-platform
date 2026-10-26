@@ -4,6 +4,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-26
+
+### Security
+
+- Agenda (#35): `PATCH /appointments/:id/start|finish|resume` passam a aplicar `restrictToOwnAppointments` (mesma regra de ownership de `findOne`/`update`).
+- Auth (#36): sessão em cookie HttpOnly (`access_token` / `admin_token`) com `withCredentials`; o painel deixa de persistir JWT em `localStorage` (XSS não lê mais o token no storage). Em produção: `SameSite=None; Secure` (cross-origin Vercel↔API). Bearer no header continua aceito para clientes que já enviam.
+- Auth (#37): `POST /auth/logout` incrementa `User.tokenVersion`; JWT leva `tv` e o `JwtStrategy` rejeita versão antiga (logout invalida o token no servidor). `POST /auth/stop-impersonating` restaura o cookie do admin sem JS ler o token.
+- Auth (#38): fail-fast no bootstrap se `GOOGLE_CLIENT_ID` estiver ausente/curto demais — garante audience obrigatória em `verifyIdToken`.
+- Auth (#42): `JwtStrategy` e emissão com allowlist `algorithms`/`algorithm: HS256`.
+
 ## [0.2.1] - 2026-10-26
 
 ### Security

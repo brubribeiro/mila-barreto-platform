@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 
 import { AuthService, TENANT_ACCESS_EXPIRES_IN } from './auth.service';
 import { UsersService } from '../users/users.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 // Mock google-auth-library
 jest.mock('google-auth-library', () => ({
@@ -16,7 +17,8 @@ jest.mock('google-auth-library', () => ({
 describe('AuthService', () => {
   let service: AuthService;
   let usersService: jest.Mocked<Pick<UsersService, 'findByEmail' | 'findById'>>;
-  let jwtService: jest.Mocked<Pick<JwtService, 'signAsync'>>;
+  let jwtService: jest.Mocked<Pick<JwtService, 'signAsync' | 'decode'>>;
+  let prisma: { user: { update: jest.Mock } };
 
   const mockUser = {
     id: 'user-1',
@@ -28,6 +30,7 @@ describe('AuthService', () => {
     roleId: 'role-1',
     active: true,
     providesAppointments: true,
+    tokenVersion: 3,
     role: {
       name: 'Admin',
       permissions: ['users:view'],
@@ -43,6 +46,11 @@ describe('AuthService', () => {
 
     jwtService = {
       signAsync: jest.fn().mockResolvedValue('jwt-token'),
+      decode: jest.fn(),
+    };
+
+    prisma = {
+      user: { update: jest.fn().mockResolvedValue({}) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -52,8 +60,9 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: jwtService },
         {
           provide: ConfigService,
-          useValue: { get: jest.fn().mockReturnValue('google-client-id') },
+          useValue: { get: jest.fn().mockReturnValue('google-client-id-abcdefghijklmnop') },
         },
+        { provide: PrismaService, useValue: prisma },
       ],
     }).compile();
 
@@ -109,10 +118,18 @@ describe('AuthService', () => {
       expect(result.user.id).toBe('user-1');
       expect(result.user.email).toBe('maria@clinic.com');
       expect(result.user.tenantId).toBe('tenant-1');
-      expect(jwtService.signAsync).toHaveBeenCalledWith({
-        sub: 'user-1',
-        email: 'maria@clinic.com',
-        tenantId: 'tenant-1',
+      expect(jwtService.signAsync).toHaveBeenCalledWith(
+        {
+          sub: 'user-1',
+          email: 'maria@clinic.com',
+          tenantId: 'tenant-1',
+          tv: 3,
+        },
+        undefined,
+      );
+      expect(googleClient.verifyIdToken).toHaveBeenCalledWith({
+        idToken: 'token',
+        audience: 'google-client-id-abcdefghijklmnop',
       });
     });
 
@@ -142,6 +159,7 @@ describe('AuthService', () => {
       tenantId: 'tenant-1',
       permissions: [],
       restrictToOwnAppointments: false,
+      tokenVersion: 1,
     };
 
     it('should throw ForbiddenException if caller is not admin', async () => {
@@ -191,24 +209,55 @@ describe('AuthService', () => {
       expect(result.access_token).toBe('jwt-token');
       expect(result.user.impersonating).toBe(true);
       expect(result.user.impersonatorName).toBe('Admin');
-      expect(jwtService.signAsync).toHaveBeenCalledWith({
-        sub: 'user-1',
-        email: 'maria@clinic.com',
-        tenantId: 'tenant-1',
-        impersonatorId: 'admin-1',
-      });
+      expect(jwtService.signAsync).toHaveBeenCalledWith(
+        {
+          sub: 'user-1',
+          email: 'maria@clinic.com',
+          tenantId: 'tenant-1',
+          tv: 3,
+          impersonatorId: 'admin-1',
+        },
+        undefined,
+      );
     });
   });
 
   describe('signTenantAccess', () => {
     it('signs a short-lived token of the super-admin with the target tenant', async () => {
-      const superAdmin = { id: 'root-1', email: 'root@platform.dev', tenantId: null, isSuperAdmin: true };
+      const superAdmin = {
+        id: 'root-1',
+        email: 'root@platform.dev',
+        tenantId: null,
+        isSuperAdmin: true,
+        tokenVersion: 7,
+      };
 
       await expect(service.signTenantAccess(superAdmin as any, 'tenant-2')).resolves.toBe('jwt-token');
       expect(jwtService.signAsync).toHaveBeenCalledWith(
-        { sub: 'root-1', email: 'root@platform.dev', tenantId: 'tenant-2', impersonatorId: 'root-1' },
+        {
+          sub: 'root-1',
+          email: 'root@platform.dev',
+          tenantId: 'tenant-2',
+          tv: 7,
+          impersonatorId: 'root-1',
+        },
         { expiresIn: TENANT_ACCESS_EXPIRES_IN },
       );
+    });
+  });
+
+  describe('revokeSessions', () => {
+    it('increments tokenVersion for each distinct user id', async () => {
+      await service.revokeSessions(['user-1', 'user-1', 'admin-1']);
+      expect(prisma.user.update).toHaveBeenCalledTimes(2);
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { tokenVersion: { increment: 1 } },
+      });
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'admin-1' },
+        data: { tokenVersion: { increment: 1 } },
+      });
     });
   });
 });
