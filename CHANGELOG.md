@@ -4,6 +4,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+### Fixed
+
+- Banco: CHECK `users_tenant_or_super_admin_check` passa a aceitar super-admin dual (`isSuperAdmin` com `tenantId` e `roleId` da clínica), alinhado ao `prisma:create-super-admin` após #74.
+
 ### Added
 
 - Login Google: mesmo e-mail pode ser usuário de clínica e super-admin; após autenticar, tela `/escolher-painel` (Painel da clínica vs painel da plataforma). `POST /auth/select-panel` emite JWT com `tenantId` da sessão escolhida; item **Trocar painel** no menu do usuário para contas dual.

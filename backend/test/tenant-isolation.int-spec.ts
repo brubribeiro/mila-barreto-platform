@@ -370,9 +370,36 @@ describe('tenant isolation', () => {
       }
     });
 
+    it('database allows dual super-admin with clinic tenant and role', async () => {
+      try {
+        await base.user.update({ where: { id: A.admin.id }, data: { isSuperAdmin: true } });
+        const dual = await base.user.findUniqueOrThrow({ where: { id: A.admin.id } });
+        expect(dual).toMatchObject({
+          isSuperAdmin: true,
+          tenantId: A.tenant.id,
+          roleId: A.adminRole.id,
+        });
+      } finally {
+        await base.user.update({ where: { id: A.admin.id }, data: { isSuperAdmin: false } });
+      }
+    });
+
     it('database refuses a clinic user without tenant', async () => {
       await expect(
         base.user.create({ data: { name: 'Sem clínica', email: `orphan-${suffix}@isolamento.test`, password: 'x' } }),
+      ).rejects.toThrow(/users_tenant_or_super_admin_check/);
+    });
+
+    it('database refuses a clinic user without role', async () => {
+      await expect(
+        base.user.create({
+          data: {
+            name: 'Sem grupo',
+            email: `norole-${suffix}@isolamento.test`,
+            password: 'x',
+            tenantId: A.tenant.id,
+          },
+        }),
       ).rejects.toThrow(/users_tenant_or_super_admin_check/);
     });
   });
