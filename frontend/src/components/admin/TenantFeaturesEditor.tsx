@@ -1,14 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Box,
-  Button,
-  Checkbox,
-  Chip,
-  FormControlLabel,
-  FormGroup,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Box, Button, Chip, Stack, Typography, alpha } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { adminApi } from '../../api/admin';
@@ -19,6 +10,7 @@ import {
   PLATFORM_FEATURE_LABELS,
   type PlatformFeature,
 } from '../../features/platformFeatures';
+import { FeatureModuleChip, FeatureModuleChipGrid } from './FeatureModuleChips';
 import { fontSizes } from '../../theme/fontSizes';
 import type { AdminTenantDetail } from '../../types';
 
@@ -77,20 +69,24 @@ export function TenantFeaturesEditor({ tenant }: Props) {
     onError: (err) => toast.error(getApiErrorMessage(err, 'Não foi possível salvar os módulos.')),
   });
 
-  const toggleExtra = (f: PlatformFeature, checked: boolean) => {
-    setExtra((prev) => (checked ? [...prev, f] : prev.filter((x) => x !== f)));
-    if (checked) setDenied((prev) => prev.filter((x) => x !== f));
+  const toggleExtra = (f: PlatformFeature) => {
+    const on = !extra.includes(f);
+    setExtra((prev) => (on ? [...prev, f] : prev.filter((x) => x !== f)));
+    if (on) setDenied((prev) => prev.filter((x) => x !== f));
   };
 
-  const toggleDenied = (f: PlatformFeature, checked: boolean) => {
-    setDenied((prev) => (checked ? [...prev, f] : prev.filter((x) => x !== f)));
-    if (checked) setExtra((prev) => prev.filter((x) => x !== f));
+  const toggleDenied = (f: PlatformFeature) => {
+    const on = !denied.includes(f);
+    setDenied((prev) => (on ? [...prev, f] : prev.filter((x) => x !== f)));
+    if (on) setExtra((prev) => prev.filter((x) => x !== f));
   };
 
   const effective = tenant.effectiveFeatures ?? [];
+  const notInPlan = PLATFORM_FEATURES.filter((f) => !planFeatures.has(f));
+  const inPlan = PLATFORM_FEATURES.filter((f) => planFeatures.has(f));
 
   return (
-    <Stack spacing={2} sx={{ px: 2.5, py: 2 }}>
+    <Stack spacing={2.25} sx={{ px: 2.5, py: 2 }}>
       <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary' }}>
         {tenant.plan
           ? `Plano ${tenant.plan.name}: ${(tenant.plan.features ?? []).length} módulos. Abaixo você pode acrescentar ou remover em relação ao plano.`
@@ -98,7 +94,16 @@ export function TenantFeaturesEditor({ tenant }: Props) {
       </Typography>
 
       <Box>
-        <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 800, textTransform: 'uppercase', color: 'text.disabled', mb: 1 }}>
+        <Typography
+          sx={{
+            fontSize: fontSizes.xs,
+            fontWeight: 800,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: 'text.disabled',
+            mb: 1,
+          }}
+        >
           Efetivos agora ({effective.length})
         </Typography>
         <Stack direction="row" flexWrap="wrap" useFlexGap spacing={0.75}>
@@ -108,7 +113,14 @@ export function TenantFeaturesEditor({ tenant }: Props) {
                 key={f}
                 size="small"
                 label={PLATFORM_FEATURE_LABELS[f as PlatformFeature] ?? f}
-                sx={{ fontWeight: 600 }}
+                sx={(t) => ({
+                  fontWeight: 700,
+                  borderRadius: '9px',
+                  bgcolor: alpha(t.palette.primary.main, 0.1),
+                  color: 'primary.dark',
+                  border: '1px solid',
+                  borderColor: alpha(t.palette.primary.main, 0.28),
+                })}
               />
             ))
           ) : (
@@ -123,62 +135,100 @@ export function TenantFeaturesEditor({ tenant }: Props) {
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-          gap: 2,
+          gap: 2.25,
+          alignItems: 'stretch',
         }}
       >
-        <Box>
-          <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 700, mb: 0.75 }}>
+        <Box
+          sx={{
+            p: { xs: 1.75, sm: 2 },
+            borderRadius: '16px',
+            border: 1,
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            minHeight: 200,
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: fontSizes.xs,
+              fontWeight: 800,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: 'text.disabled',
+              mb: 0.5,
+            }}
+          >
             Extras (além do plano)
           </Typography>
-          <FormGroup>
-            {PLATFORM_FEATURES.map((f) => {
-              const inPlan = planFeatures.has(f);
-              return (
-                <FormControlLabel
-                  key={f}
-                  disabled={inPlan}
-                  control={
-                    <Checkbox
-                      size="small"
-                      checked={extra.includes(f) || inPlan}
-                      onChange={(_, c) => toggleExtra(f, c)}
-                    />
-                  }
-                  label={
-                    <Typography sx={{ fontSize: fontSizes.sm }}>
-                      {PLATFORM_FEATURE_LABELS[f]}
-                      {inPlan ? ' (no plano)' : ''}
-                    </Typography>
-                  }
-                />
-              );
-            })}
-          </FormGroup>
-        </Box>
-        <Box>
-          <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 700, mb: 0.75 }}>
-            Removidos (do plano)
+          <Typography sx={{ fontSize: fontSizes.xs, color: 'text.disabled', mb: 1.25 }}>
+            Módulos que o plano não traz
           </Typography>
-          <FormGroup>
-            {PLATFORM_FEATURES.filter((f) => planFeatures.has(f)).map((f) => (
-              <FormControlLabel
+          <FeatureModuleChipGrid aria-label="Módulos extras">
+            {notInPlan.map((f) => (
+              <FeatureModuleChip
                 key={f}
-                control={
-                  <Checkbox
-                    size="small"
-                    checked={denied.includes(f)}
-                    onChange={(_, c) => toggleDenied(f, c)}
-                  />
-                }
-                label={<Typography sx={{ fontSize: fontSizes.sm }}>{PLATFORM_FEATURE_LABELS[f]}</Typography>}
+                feature={f}
+                selected={extra.includes(f)}
+                onClick={() => toggleExtra(f)}
               />
             ))}
-            {!planFeatures.size && (
-              <Typography color="text.secondary" sx={{ fontSize: fontSizes.sm }}>
-                Atribua um plano para negar módulos dele.
-              </Typography>
-            )}
-          </FormGroup>
+            {inPlan.map((f) => (
+              <FeatureModuleChip
+                key={`plan-${f}`}
+                feature={f}
+                selected
+                disabled
+                tone="muted"
+                hint="plano"
+              />
+            ))}
+          </FeatureModuleChipGrid>
+          {!PLATFORM_FEATURES.length && null}
+        </Box>
+
+        <Box
+          sx={{
+            p: { xs: 1.75, sm: 2 },
+            borderRadius: '16px',
+            border: 1,
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            minHeight: 200,
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: fontSizes.xs,
+              fontWeight: 800,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: 'text.disabled',
+              mb: 0.5,
+            }}
+          >
+            Removidos (do plano)
+          </Typography>
+          <Typography sx={{ fontSize: fontSizes.xs, color: 'text.disabled', mb: 1.25 }}>
+            Desliga um módulo que o plano inclui
+          </Typography>
+          {planFeatures.size ? (
+            <FeatureModuleChipGrid aria-label="Módulos removidos">
+              {inPlan.map((f) => (
+                <FeatureModuleChip
+                  key={f}
+                  feature={f}
+                  selected={denied.includes(f)}
+                  tone="danger"
+                  onClick={() => toggleDenied(f)}
+                />
+              ))}
+            </FeatureModuleChipGrid>
+          ) : (
+            <Typography color="text.secondary" sx={{ fontSize: fontSizes.sm }}>
+              Atribua um plano para negar módulos dele.
+            </Typography>
+          )}
         </Box>
       </Box>
 

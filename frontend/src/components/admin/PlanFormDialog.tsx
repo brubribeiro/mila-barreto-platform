@@ -3,13 +3,11 @@ import {
   Alert,
   Box,
   Button,
-  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
-  FormControlLabel,
-  FormGroup,
   TextField,
+  Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -24,21 +22,27 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { FormSection } from '../FormSection';
 import { LabeledField } from '../LabeledField';
+import { MoneyField } from '../MoneyField';
+import { FeatureModuleChip, FeatureModuleChipGrid } from './FeatureModuleChips';
 import {
   PLATFORM_FEATURES,
-  PLATFORM_FEATURE_LABELS,
   type PlatformFeature,
 } from '../../features/platformFeatures';
+import { fontSizes } from '../../theme/fontSizes';
 import type { AdminPlan, PlanLimits } from '../../types';
 
-const DIALOG_MAX_WIDTH = 860;
+const DIALOG_MAX_WIDTH = 760;
+/** Corpo com altura estável: plano + limites + grade de módulos sem saltar ao abrir. */
+const CONTENT_MIN_HEIGHT = 520;
+const MODULES_GRID_MIN_HEIGHT = 168;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 interface FormValues {
   name: string;
   slug: string;
   description: string;
-  priceReais: string;
+  /** Reais (MoneyField); '' = sem preço. */
+  priceReais: number | '';
   maxUsers: string;
   maxPatients: string;
   storageGb: string;
@@ -66,19 +70,9 @@ function limitError(value: string, integer: boolean): string | true {
   return true;
 }
 
-/** "" = sem preço; valor em reais → centavos. */
-function parsePriceCents(value: string): number | null {
-  const v = value.trim().replace(',', '.');
-  if (!v) return null;
-  const n = Number(v);
-  if (!Number.isFinite(n) || n < 0) return NaN;
-  return Math.round(n * 100);
-}
-
-function priceError(value: string): string | true {
-  const cents = parsePriceCents(value);
-  if (cents === null) return true;
-  if (Number.isNaN(cents)) return 'Informe um valor válido (ex.: 97 ou 97,00)';
+function priceError(value: number | ''): string | true {
+  if (value === '') return true;
+  if (!Number.isFinite(value) || value < 0) return 'Informe um valor válido';
   return true;
 }
 
@@ -116,7 +110,8 @@ export function PlanFormDialog({ open, onClose, editing }: Props) {
         const n = parseLimit(values[f.name]);
         if (n !== undefined) limits[f.name] = n;
       }
-      const priceCents = parsePriceCents(values.priceReais);
+      const priceCents =
+        values.priceReais === '' ? null : Math.round(Number(values.priceReais) * 100);
       const payload = {
         name: values.name.trim(),
         slug: values.slug.trim() || undefined,
@@ -148,8 +143,7 @@ export function PlanFormDialog({ open, onClose, editing }: Props) {
       name: editing?.name ?? '',
       slug: editing?.slug ?? '',
       description: editing?.description ?? '',
-      priceReais:
-        editing?.priceCents != null ? (editing.priceCents / 100).toFixed(2).replace('.', ',') : '',
+      priceReais: editing?.priceCents != null ? editing.priceCents / 100 : '',
       maxUsers: l?.maxUsers != null ? String(l.maxUsers) : '',
       maxPatients: l?.maxPatients != null ? String(l.maxPatients) : '',
       storageGb: l?.storageGb != null ? String(l.storageGb).replace('.', ',') : '',
@@ -175,7 +169,12 @@ export function PlanFormDialog({ open, onClose, editing }: Props) {
           width: '100%',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
-            : { maxWidth: DIALOG_MAX_WIDTH, maxHeight: '94dvh', overflow: 'hidden' }),
+            : {
+                maxWidth: DIALOG_MAX_WIDTH,
+                width: DIALOG_MAX_WIDTH,
+                maxHeight: '94dvh',
+                overflow: 'hidden',
+              }),
         },
       }}
     >
@@ -198,7 +197,7 @@ export function PlanFormDialog({ open, onClose, editing }: Props) {
             px: { xs: 2, sm: 3 },
             pb: { xs: 2, sm: 2.5 },
             flex: 1,
-            minHeight: 0,
+            minHeight: isMobile ? 0 : CONTENT_MIN_HEIGHT,
             overflow: 'auto',
             bgcolor: 'background.default',
             '&.MuiDialogContent-root': { pt: { xs: 2.75, sm: 3 } },
@@ -276,14 +275,14 @@ export function PlanFormDialog({ open, onClose, editing }: Props) {
                   control={control}
                   rules={{ validate: priceError }}
                   render={({ field, fieldState }) => (
-                    <LabeledField label="Preço mensal (R$)">
-                      <TextField
+                    <LabeledField label="Preço mensal">
+                      <MoneyField
                         {...field}
-                        placeholder="Ex.: 97,00"
                         error={!!fieldState.error}
-                        helperText={fieldState.error?.message ?? 'Vazio = sem preço · sem cobrança automática'}
+                        helperText={
+                          fieldState.error?.message ?? 'Vazio = sem preço · sem cobrança automática'
+                        }
                         fullWidth
-                        inputProps={{ inputMode: 'decimal' }}
                       />
                     </LabeledField>
                   )}
@@ -317,41 +316,49 @@ export function PlanFormDialog({ open, onClose, editing }: Props) {
             </FormSection>
           </Box>
 
-          <FormSection title="Módulos incluídos" sx={{ mt: 2.25 }}>
+          <FormSection
+            title="Módulos incluídos"
+            subtitle="Toque para incluir ou remover do plano"
+            sx={{ mt: 2.25 }}
+          >
             <Controller
               name="features"
               control={control}
               render={({ field }) => (
-                <FormGroup
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-                    gap: 0.25,
-                  }}
-                >
-                  {PLATFORM_FEATURES.map((f) => (
-                    <FormControlLabel
-                      key={f}
-                      control={
-                        <Checkbox
-                          size="small"
-                          checked={field.value.includes(f)}
-                          onChange={(_, checked) => {
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                  <FeatureModuleChipGrid
+                    aria-label="Módulos do plano"
+                    minHeight={isMobile ? undefined : MODULES_GRID_MIN_HEIGHT}
+                  >
+                    {PLATFORM_FEATURES.map((f) => {
+                      const selected = field.value.includes(f);
+                      return (
+                        <FeatureModuleChip
+                          key={f}
+                          feature={f}
+                          selected={selected}
+                          onClick={() => {
                             field.onChange(
-                              checked ? [...field.value, f] : field.value.filter((x) => x !== f),
+                              selected
+                                ? field.value.filter((x) => x !== f)
+                                : [...field.value, f],
                             );
                           }}
                         />
-                      }
-                      label={PLATFORM_FEATURE_LABELS[f]}
-                    />
-                  ))}
-                </FormGroup>
+                      );
+                    })}
+                  </FeatureModuleChipGrid>
+                  <Typography sx={{ fontSize: fontSizes.xs, color: 'text.disabled' }}>
+                    {field.value.length
+                      ? `${field.value.length} de ${PLATFORM_FEATURES.length} selecionados`
+                      : 'Nenhum módulo — a clínica só vê o que você marcar (ou extras dela)'}
+                  </Typography>
+                </Box>
               )}
             />
           </FormSection>
 
-          <Alert severity="info" variant="outlined" sx={{ mt: 2.25 }}>
+          <Alert severity="info" variant="outlined" sx={{ mt: 2.25, py: 0.75 }}>
             O preço é só referência. Os limites ainda não bloqueiam nada; os módulos sim — o app esconde e a API
             recusa o que não estiver no plano (ou nos extras da clínica).
           </Alert>
