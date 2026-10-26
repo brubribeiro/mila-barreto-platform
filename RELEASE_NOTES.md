@@ -10,16 +10,10 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 - Se sua conta Google for **usuário da clínica e administrador da plataforma**, após entrar você escolhe entre o **painel da clínica** e o **painel da plataforma** (`/admin`). No menu do seu avatar, **Trocar painel** permite alternar depois.
 
----
-
-## v0.2.1 — 26 out 2026
-
 ### Correções de segurança
 
 - Só **Administradores** podem promover ou rebaixar alguém para o grupo Administrador; ninguém altera o próprio grupo.
 - Só **Administradores** podem criar, editar ou excluir grupos e permissões — evita que um usuário com permissão de edição conceda acesso total a si mesmo.
-
-A versão aparece no menu lateral e na tela de login.
 
 ---
 

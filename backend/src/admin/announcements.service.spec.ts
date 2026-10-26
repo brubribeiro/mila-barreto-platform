@@ -117,6 +117,7 @@ describe('AnnouncementsService', () => {
           return Promise.resolve({ count: 1 });
         }),
         delete: jest.fn(),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       user: {
         findMany: jest.fn().mockResolvedValue([
@@ -135,6 +136,19 @@ describe('AnnouncementsService', () => {
   });
 
   afterEach(() => jest.restoreAllMocks());
+
+  describe('discardObsoleteDraftVersions', () => {
+    it('remove só rascunhos DRAFT das versões informadas', async () => {
+      prisma.platformAnnouncement.deleteMany.mockResolvedValue({ count: 2 });
+
+      const result = await service.discardObsoleteDraftVersions(['0.2.1']);
+
+      expect(result.deleted).toBe(2);
+      expect(prisma.platformAnnouncement.deleteMany).toHaveBeenCalledWith({
+        where: { version: { in: ['0.2.1'] }, status: 'DRAFT' },
+      });
+    });
+  });
 
   describe('draftFromRelease', () => {
     it('cria um rascunho por tipo da versão atual e audita', async () => {

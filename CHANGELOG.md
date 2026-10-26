@@ -4,47 +4,32 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
-### Fixed
 
+### Fixed
 - Build backend: `tokenVersion` nos retornos do `JwtStrategy` (seleção de painel e super-admin plataforma); `cookie-parser` já declarado em `backend/package.json` (#74/#75).
 - Banco: CHECK `users_tenant_or_super_admin_check` passa a aceitar super-admin dual (`isSuperAdmin` com `tenantId` e `roleId` da clínica), alinhado ao `prisma:create-super-admin` após #74.
 - Sidebar: ícone ao lado do nome abre o menu da conta (Reportar / Trocar painel / Sair); feedback só dentro do menu. Colapsada: um único controle (avatar).
 - Script `prisma:create-super-admin`: ao promover usuário existente, aplica `--name` / `SUPER_ADMIN_NAME` quando informado.
 - Login Google: sincroniza o nome do perfil Google quando difere do cadastro.
 - Central de reports (`/admin/feedback`): filtros de status no padrão Aurora (`ToggleButtonGroup`), sem pills soltas com bolinha colorida; pills da grid usam cores do tema.
+- Versão do repositório revertida para **0.2.0** (removida seção changelog/release `0.2.1` gerada por engano).
+- Disponibilidade: dia/hora do expediente extraídos no fuso do Brasil, não UTC do servidor.
+- Formulário de agendamento: elimina requisição extra de profissionais disponíveis ao abrir.
+- Acessibilidade: `aria-label` descritivo (com o nome do item) em todos os `IconButton`; busca, selects e switches com rótulo acessível; avatares decorativos com `alt=""`/`aria-hidden`; paginação com `aria-current`; filtros com `aria-pressed`.
+- Acessibilidade: linhas e cards clicáveis (Pacientes, Agenda, Dashboard, Financeiro, notificações, emojis, histórico de auditoria) focáveis por Tab e ativáveis com Enter/Espaço via `clickableProps` (`src/utils/a11y.ts`).
+- Tema: contorno de foco visível (`:focus-visible`) para navegação por teclado; botão de excluir foto aparece também ao receber foco.
+- Telas Usuários, Horários, Estoque, Financeiro, Metas, Documentos, Formas de pagamento, Mensagens, Grupos e permissões e Relatórios voltam a ocupar a largura total (removido `maxWidth: 1320` centralizado no wrapper raiz).
+- Dashboard: card **Metas do mês** alinhado ao card da Agenda (espaçamento do cabeçalho, estado vazio em largura total e botão "Definir metas" dentro da caixa vazia).
+- Horários: cabeçalhos dos cards **Disponibilidade da equipe** e **Bloqueios de agenda** com a mesma altura (`minHeight` no `CARD_HEADER_SX`), divisores alinhados.
+- Contraste: textos auxiliares abaixo do valor principal (`60h por semana` em Horários e linhas equivalentes em Mensagens, Documentos, Formas de pagamento, Metas, Pendências, Grupos, Despesas recorrentes e nota de Usuários) passam de `text.disabled` para `text.secondary`; os de 11px sobem para 12px.
+- Procedimentos: filtro de categoria passa de pills para select no cabeçalho do card (`LIST_HEADER_SELECT_SX`, compartilhado com Usuários); título do card mostra a categoria selecionada.
+- Usuários: removido o texto explicativo que ficava fora do card.
+- Listagens: filtros/busca/ações de Procedimentos e Usuários movidos para dentro do card da tabela (como Pacientes, Documentos, Estoque, Financeiro, Despesas recorrentes e Mensagens), via novo `ListCardHeader` (`ListSearchField`, `ListHistoryButton`, `LIST_HEADER_ACTION_SX`); Pacientes passa a usá-lo.
 
 ### Added
-
 - Login Google: mesmo e-mail pode ser usuário de clínica e super-admin; após autenticar, tela `/escolher-painel` (Painel da clínica vs painel da plataforma). `POST /auth/select-panel` emite JWT com `tenantId` da sessão escolhida; item **Trocar painel** no menu do usuário para contas dual.
 - Script `prisma:create-super-admin`: promove usuário de clínica existente (`isSuperAdmin: true`) em vez de recusar o e-mail.
 - Clínica: rota `/auditoria` e item em Configurações (Administrador) para o histórico global de alterações (`AuditLogs` + `GET /audit-logs`).
-
-### Changed
-
-- README e `AGENTS.md`: autenticação documentada como login Google (`POST /api/auth/google`); seed local explicado sem credenciais e-mail/senha de produção (#66).
-
-### Security
-
-- Agenda (#35): `PATCH /appointments/:id/start|finish|resume` passam a aplicar `restrictToOwnAppointments` (mesma regra de ownership de `findOne`/`update`).
-- Auth (#36): sessão em cookie HttpOnly (`access_token` / `admin_token`) com `withCredentials`; o painel deixa de persistir JWT em `localStorage` (XSS não lê mais o token no storage). Em produção: `SameSite=None; Secure` (cross-origin Vercel↔API). Bearer no header continua aceito para clientes que já enviam.
-- Auth (#37): `POST /auth/logout` incrementa `User.tokenVersion`; JWT leva `tv` e o `JwtStrategy` rejeita versão antiga (logout invalida o token no servidor). `POST /auth/stop-impersonating` restaura o cookie do admin sem JS ler o token.
-- Auth (#38): fail-fast no bootstrap se `GOOGLE_CLIENT_ID` estiver ausente/curto demais — garante audience obrigatória em `verifyIdToken`.
-- Documentos/R2 (#39): uploads deixam de gravar/expor `fileUrl` pública; acesso só via URL assinada de curta duração (`GET /documents/:id/access-url`). Objetos gravados com `Content-Disposition: attachment`.
-- Upload (#40): validação por magic bytes (`file-magic.util`) além do MIME declarado — documentos, fotos de paciente e de usuário.
-- Dependência (#41): `multer` atualizado para `^2.5.0` (com `overrides`) — corrige advisories HIGH da linha ≤2.4.x.
-- Auth (#42): `JwtStrategy` e emissão com allowlist `algorithms`/`algorithm: HS256`.
-- Multi-tenant (#43): `$queryRaw`/`$executeRaw` (e *Unsafe) só com tenant no contexto ou `TenantContext.runUnscoped`; keep-alive do scheduler usa `runUnscoped`.
-- R2 (#44): `remove`/`getPresignedUrl`/`download` recusam `storageKey` de outro tenant (`tenants/<id>/...`); keys legadas sem prefixo continuam permitidas com tenant ativo.
-
-## [0.2.1] - 2026-10-26
-
-### Security
-
-- RBAC (#33): `users:create`/`users:edit` não podem atribuir nem remover o grupo Administrador a menos que o ator já seja Administrador; ninguém pode alterar o próprio `roleId` (bloqueia auto-promoção).
-- RBAC (#34): `roles:create`/`roles:edit`/`roles:delete` restritos a Administradores da clínica; o grupo Administrador continua forçado ao catálogo completo de permissões (não esvazia a hierarquia).
-
-### Added
-
 - Admin — anúncios de release: model `PlatformAnnouncement` (sem `tenantId`; `version`, `kind` FEATURE|FIX, `status` DRAFT|SCHEDULED|SENT, `scheduledAt`, `sentAt`, `recipientCount`; único por `version`+`kind`) e `NotificationType.PLATFORM_ANNOUNCEMENT` (migration `20261026194057_platform_announcements`). `POST /admin/announcements/draft-from-release` lê a seção da versão de `VERSION` no `RELEASE_NOTES.md` (`### Novidades` → FEATURE, `### Correções…` → FIX) e cria os rascunhos que faltam; o boot da API faz o mesmo uma vez por versão. CRUD em `/admin/announcements`, `GET audience`, `POST :id/send`, `:id/schedule` e `:id/unschedule`; timer de 1 min envia os agendados vencidos. O envio cria uma `Notification` por usuário ativo das clínicas ativas (sem super-admin, respeitando o opt-out em `NotificationPreference`) e é idempotente (`updateMany` condicional antes de entregar). Auditoria `ANNOUNCEMENT_*` na `PlatformAuditLog` (ações automáticas com autor "Sistema").
 - Frontend admin: página Aurora `/admin/anuncios` (filtro por status, gerar do release, novo/editar com prévia do sino, enviar agora com contagem de destinatários, agendar/reagendar/cancelar, excluir), item Anúncios no `AdminLayout` e rótulos das ações na auditoria; no app da clínica, preferência "Novidades da plataforma" e texto em várias linhas no sino.
 - Admin — uso por funcionalidade: `GET /admin/usage?from&to&tenantId` (SuperAdminGuard, `UsageService`) com contagens por módulo do catálogo `PLATFORM_FEATURES` (`MODULE_USAGE_SOURCES`: model + campo de data por módulo; `groupBy` por `tenantId`, período em dias do Brasil e total), clínicas com o módulo habilitado/em uso, usuários ativos, acessos no período (`lastAccessAt`), armazenamento (documentos + fotos). Só contagens agregadas, sem dados clínicos.
@@ -87,7 +72,6 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Rotinas de skincare (anamnese de pele): modelos Prisma `SkincareProduct`, `SkincareRule` e `SkincareRoutine` (FK para `Patient`, cascade), migration `20261020120000_skincare_routines` (também concede `routines:view|create|edit` ao Profissional e `routines:view` à Recepção), módulo `skincare/` com CRUD de `/skincare/products`, `/skincare/rules` e `/skincare/routines` (`GET ?patientId=`); excluir produto o retira das regras; permissões `routines:*` e auditoria (`SkincareProduct`, `SkincareRule`, `SkincareRoutine`). A rotina salva guarda as respostas e uma cópia dos produtos (nome, marca, ativo, modo de uso), para o histórico não mudar quando o catálogo muda.
 - Seed: catálogo inicial da anamnese de pele (`prisma/skincare-demo-data.ts`, 20 produtos e 15 regras do protótipo), criado só quando não há produtos.
 - Frontend: página `/rotinas` (`SkincareRoutines.tsx`, `SkincareProductDialog`, `SkincareRuleDialog`) no menu Catálogo; assistente `SkinAnamnesisWizard` (6 etapas, rotina Manhã/Noite/Semanal gerada por `generateRoutine` em `skincareUtils`, edição, impressão, envio por WhatsApp/e-mail via `SendRoutineDialog`) aberto em `SkinAnamnesisDialog` pelo card `PatientSkinRoutinesCard` (aba Anamnese da ficha) e pelo atalho no modal de agendamento em edição.
-
 - Multi-tenant (banco único, coluna `tenantId`): modelo Prisma `Tenant` (`name`, `slug` único, `active`, `suspendedAt`) e `tenantId` obrigatório com índice em todos os models de dados da clínica (inclusive tabelas filhas como `PackageItem` e `AppointmentMaterial`); `User.tenantId` nulo só para super-admin. Migration `20261025120000_multi_tenant` cria a clínica inicial **Mila Barreto** (`mila-barreto`) e move para ela todos os registros existentes.
 - Escopo automático por clínica em `src/tenancy/`: `TenantContext` (AsyncLocalStorage aberto por `TenantContextMiddleware`, preenchido pelo `JwtAuthGuard`) e extensão Prisma `tenantScopeExtension` aplicada no `PrismaService`, que filtra `tenantId` em find/count/aggregate/groupBy/update/delete/upsert e o preenche em create/createMany e escritas aninhadas (create, createMany, connectOrCreate, upsert; `connect`/`set` também ficam presos à clínica). Sem tenant no contexto a consulta é recusada (`TenantContextMissingError`, 403); `TenantContext.run(tenantId)` e `runUnscoped()` para jobs, login e super-admin. `$queryRaw` não é coberto.
 - Banco: trigger `enforce_same_tenant` em todas as 38 FKs entre tabelas de clínica recusa referência a registro de outra clínica (vira P2003/400), e CHECK `users_tenant_or_super_admin_check` impede usuário de clínica sem `tenantId`/grupo.
@@ -109,13 +93,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Testes: `admin.service.spec.ts`, `super-admin.guard.spec.ts`, `jwt.strategy.spec.ts` e casos novos em `auth.service.spec.ts`; `test:tenancy` usa `provisionTenant` com o primeiro administrador. Frontend: rotas do super-admin, aviso de suspensão e formatadores do painel.
 
 ### Changed
-
+- README e `AGENTS.md`: autenticação documentada como login Google (`POST /api/auth/google`); seed local explicado sem credenciais e-mail/senha de produção (#66).
 - Refatoração sem mudança visual de Financeiro, Despesas recorrentes, Documentos, Equipamentos, Estoque, `ProcedureFormDialog` e `BulkPurchaseDialog` (comparação pixel a pixel antes/depois em 1440px e 390px, incluindo estados vazios, carregamento, paginação e modais):
-  - Peças compartilhadas de listagem: `ListPageButtons` (+ `utils/pagination.ts` `pageWindow`), `ListEmptyState`/`ListSkeletonRows` (`ListStates.tsx`), `ListTableHeader`, `StatCard`, `RowActionButton` e o hook `usePagination`; `ListCardHeader` ganhou `breakpoint`, `nowrapFrom` e `sx`, e `ListSearchField` ganhou `width`, `ariaLabel` e `compact`, mais os estilos `LIST_HEADER_PAPER_SELECT_SX`, `LIST_HEADER_COMPACT_SELECT_SX`, `LIST_HEADER_ICON_BUTTON_SX` e `LIST_HEADER_PRIMARY_ACTION_SX`.
-  - Subcomponentes extraídos das páginas: `TransactionRow`, `FinanceKpiCard`, `PeriodField`, hook `useFinanceBackgroundSync`; `RecurringSummaryCards`, `HourlyCostCard` (com suas queries e o switch de custo variável), `RecurringExpenseRow`, `recurringDue.ts`; `DocumentListRow`, `DocumentActionsMenu`; `EquipmentCard`, `equipmentMaintenance.ts`; `InventoryListRow`; `ProcedureToggleCard`, `ProcedureCostSummary`; `BulkPurchaseLineRow`, `BulkPurchaseTotals`, `bulkPurchase.ts` (rateio de frete) e `inventoryUnits.ts` (unidades compartilhadas com `InventoryFormDialog`).
-  - Código morto removido em `ProcedureFormDialog` (imports, `FIELD_SX` vazio, `DIALOG_HEIGHT_DESKTOP`, `watchedName`, `watchedActive`, `estimatedMargin`) e funções `pageWindow` duplicadas.
-  - Acessibilidade (sem efeito visual): a busca de Equipamentos, Despesas recorrentes e Documentos passa a ter `aria-label`, e os números de página de todas essas listas marcam `aria-current="page"`.
-
 - Refatoração sem mudança visual ou de comportamento: `Dashboard.tsx`, `Appointments.tsx` e `Layout.tsx` divididos em subcomponentes e hooks (`components/dashboard/` — `SummaryCard`, `WeekAgendaCard`, `BirthdaysCard`, `useDashboardData`; `components/appointments/` — `AgendaToolbar`, `AgendaStatusLegend`, `PendingAppointmentsBanner`, `AgendaCalendarSkeleton`, `agendaCalendarContent`, `agendaCalendarSx`, `agendaConfig`, `useAgendaData`, `useCalendarKeyboardScroll`; `components/layout/` — `navConfig`, `pageMeta`, `layoutTheme`, `SidebarContent`, `HeaderActions`, `ImpersonationBanner`). Removido código morto: seletor de período oculto do Dashboard (`{false && …}`), `DashboardDetailItem` sem uso, helpers/imports sem uso e estilos de toolbar do FullCalendar que nunca renderizavam (`headerToolbar={false}`).
 - `Patients.tsx`: substitui DataGrid por lista customizada Aurora.
 - `PatientDetail.tsx`, `PatientDetailDrawer`, `PatientFormDialog`: alinhados ao visual Aurora.
@@ -152,31 +131,28 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Formulários: `noValidate` nos `<form>` (mensagens do react-hook-form em português no lugar das do navegador), `inputMode` numeric/decimal/tel/email, `autoComplete="off"` em dados de terceiros, autoFocus no primeiro campo de paciente, usuário e procedimento, mensagens para regras que falhavam sem texto (duração, dia de vencimento, quantidades, valores, materiais e equipamentos).
 - Paciente: validação de telefone (DDD + número) e e-mail; erro de CEP passa a aparecer.
 - Refatoração sem mudança de comportamento ou visual: `Metrics.tsx` (1.303 → 90 linhas) e `Availability.tsx` (1.237 → 57) viram composição; abas, blocos de gráfico, KPIs, filtro de período e `useMetricsData` em `components/metrics/`; cards, diálogos de horário/bloqueio, `useAvailabilityData`, `useWorkingHoursForm`, `useUnavailabilityForm`, constantes e formatadores em `components/availability/` (sx dos diálogos, skeleton, invalidação de bloqueios e mensagem de erro da API deixam de ser duplicados).
-
 - `AppointmentFormDialog`: formulário reorganizado em seções numeradas e colapsáveis (paciente → procedimento/profissional → data/horário → pacote/pagamento → materiais → observações), com resumo fixo (lateral em `lg+`, barra acima do rodapé abaixo disso) e botão de salvar sempre visível; ao enviar com erro, as seções inválidas reabrem. Arquivo de ~3.400 linhas dividido em seções, diálogos (`CompletePaymentDialog`, `ReturnAppointmentDialog`, `SellPackageDialog`, `BatchSessionsDialog`, `PackageSessionsDialog`) e hooks (`useAppointmentProfessionals`, `useSessionTimer`, `useAppointmentMaterials`) em `components/appointments/`. Regras de negócio e API inalteradas.
 - `AppointmentFormDialog`: fechar com alterações não salvas (backdrop, Esc, X ou Cancelar) pede confirmação via `confirm` do `AppDialogContext` (`isDirty` do react-hook-form + materiais extras e pacote); avisos e erros que usavam `alert` do `AppDialogContext` passam a usar toast (`AppToastContext`).
-
 - Multi-tenant: unicidades que eram globais passam a ser por clínica (`Role.name`, `MessageTemplate.name`, `DocumentTemplate.name`, `PaymentMethod.name`, `InventoryItem.sku`, `PendingTask.sourceKey`); `AppSetting` com chave primária `(tenantId, key)`. `User.email` continua único no sistema e `User.roleId` passa a ser opcional (só super-admin fica sem grupo).
 - Scheduler roda as verificações (manutenção, validade, retorno, reativação) uma clínica ativa por vez, cada uma no próprio contexto.
 - Uploads no R2 passam a usar a chave `tenants/<tenantId>/...`; arquivos antigos continuam nas chaves anteriores.
 - Tokens emitidos antes do multi-tenant (sem `tenantId`) são recusados: todos precisam entrar de novo após o deploy.
-### Fixed
 
-- Disponibilidade: dia/hora do expediente extraídos no fuso do Brasil, não UTC do servidor.
-- Formulário de agendamento: elimina requisição extra de profissionais disponíveis ao abrir.
-- Acessibilidade: `aria-label` descritivo (com o nome do item) em todos os `IconButton`; busca, selects e switches com rótulo acessível; avatares decorativos com `alt=""`/`aria-hidden`; paginação com `aria-current`; filtros com `aria-pressed`.
-- Acessibilidade: linhas e cards clicáveis (Pacientes, Agenda, Dashboard, Financeiro, notificações, emojis, histórico de auditoria) focáveis por Tab e ativáveis com Enter/Espaço via `clickableProps` (`src/utils/a11y.ts`).
-- Tema: contorno de foco visível (`:focus-visible`) para navegação por teclado; botão de excluir foto aparece também ao receber foco.
-- Telas Usuários, Horários, Estoque, Financeiro, Metas, Documentos, Formas de pagamento, Mensagens, Grupos e permissões e Relatórios voltam a ocupar a largura total (removido `maxWidth: 1320` centralizado no wrapper raiz).
-- Dashboard: card **Metas do mês** alinhado ao card da Agenda (espaçamento do cabeçalho, estado vazio em largura total e botão "Definir metas" dentro da caixa vazia).
-- Horários: cabeçalhos dos cards **Disponibilidade da equipe** e **Bloqueios de agenda** com a mesma altura (`minHeight` no `CARD_HEADER_SX`), divisores alinhados.
-- Contraste: textos auxiliares abaixo do valor principal (`60h por semana` em Horários e linhas equivalentes em Mensagens, Documentos, Formas de pagamento, Metas, Pendências, Grupos, Despesas recorrentes e nota de Usuários) passam de `text.disabled` para `text.secondary`; os de 11px sobem para 12px.
-- Procedimentos: filtro de categoria passa de pills para select no cabeçalho do card (`LIST_HEADER_SELECT_SX`, compartilhado com Usuários); título do card mostra a categoria selecionada.
-- Usuários: removido o texto explicativo que ficava fora do card.
-- Listagens: filtros/busca/ações de Procedimentos e Usuários movidos para dentro do card da tabela (como Pacientes, Documentos, Estoque, Financeiro, Despesas recorrentes e Mensagens), via novo `ListCardHeader` (`ListSearchField`, `ListHistoryButton`, `LIST_HEADER_ACTION_SX`); Pacientes passa a usá-lo.
+### Security
+- RBAC (#33): `users:create`/`users:edit` não podem atribuir nem remover o grupo Administrador a menos que o ator já seja Administrador; ninguém pode alterar o próprio `roleId` (bloqueia auto-promoção).
+- RBAC (#34): `roles:create`/`roles:edit`/`roles:delete` restritos a Administradores da clínica; o grupo Administrador continua forçado ao catálogo completo de permissões (não esvazia a hierarquia).
+- Agenda (#35): `PATCH /appointments/:id/start|finish|resume` passam a aplicar `restrictToOwnAppointments` (mesma regra de ownership de `findOne`/`update`).
+- Auth (#36): sessão em cookie HttpOnly (`access_token` / `admin_token`) com `withCredentials`; o painel deixa de persistir JWT em `localStorage` (XSS não lê mais o token no storage). Em produção: `SameSite=None; Secure` (cross-origin Vercel↔API). Bearer no header continua aceito para clientes que já enviam.
+- Auth (#37): `POST /auth/logout` incrementa `User.tokenVersion`; JWT leva `tv` e o `JwtStrategy` rejeita versão antiga (logout invalida o token no servidor). `POST /auth/stop-impersonating` restaura o cookie do admin sem JS ler o token.
+- Auth (#38): fail-fast no bootstrap se `GOOGLE_CLIENT_ID` estiver ausente/curto demais — garante audience obrigatória em `verifyIdToken`.
+- Documentos/R2 (#39): uploads deixam de gravar/expor `fileUrl` pública; acesso só via URL assinada de curta duração (`GET /documents/:id/access-url`). Objetos gravados com `Content-Disposition: attachment`.
+- Upload (#40): validação por magic bytes (`file-magic.util`) além do MIME declarado — documentos, fotos de paciente e de usuário.
+- Dependência (#41): `multer` atualizado para `^2.5.0` (com `overrides`) — corrige advisories HIGH da linha ≤2.4.x.
+- Auth (#42): `JwtStrategy` e emissão com allowlist `algorithms`/`algorithm: HS256`.
+- Multi-tenant (#43): `$queryRaw`/`$executeRaw` (e *Unsafe) só com tenant no contexto ou `TenantContext.runUnscoped`; keep-alive do scheduler usa `runUnscoped`.
+- R2 (#44): `remove`/`getPresignedUrl`/`download` recusam `storageKey` de outro tenant (`tenants/<id>/...`); keys legadas sem prefixo continuam permitidas com tenant ativo.
 
 ### Removed
-
 - Pacientes: código morto da ficha, gaveta e formulário (abas Observações/Financeiro/Documentos e suas queries nunca exibidas, `InfoRow`, `NoteBlock`, `AppointmentNotesCard`, `PackageCard` e query de pacotes da gaveta, constantes de estilo e `TabPanel` sem uso no formulário, imports não usados). Some com isso os dois erros de `tsc` em `PatientDetail.tsx` (comparação de aba com `'finance'`/`'documents'`).
 
 ## [0.2.0] - 2026-07-15
