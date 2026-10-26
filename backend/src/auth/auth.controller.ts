@@ -67,8 +67,14 @@ export class AuthController {
    */
   @UseGuards(JwtAuthGuard)
   @Post('select-panel')
-  selectPanel(@Body() dto: SelectPanelDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.auth.selectPanel(user, dto.panel);
+  async selectPanel(
+    @Body() dto: SelectPanelDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.auth.selectPanel(user, dto.panel);
+    setAccessTokenCookie(res, result.access_token, this.config);
+    return result;
   }
 
   @UseGuards(JwtAuthGuard)
