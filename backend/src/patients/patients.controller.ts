@@ -20,10 +20,13 @@ import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { FeatureGuard } from '../common/guards/feature.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { RequireFeature } from '../common/decorators/require-feature.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequireFeature('patients')
+@UseGuards(JwtAuthGuard, FeatureGuard, PermissionsGuard)
 @Controller('patients')
 export class PatientsController {
   constructor(private readonly patients: PatientsService) {}

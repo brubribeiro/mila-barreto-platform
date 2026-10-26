@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 import { JwtStrategy } from './jwt.strategy';
 import { ALL_PERMISSIONS } from '../common/permissions';
+import { PLATFORM_FEATURES } from '../common/platform-features';
 
 describe('JwtStrategy', () => {
   const superAdmin = {
@@ -23,7 +24,15 @@ describe('JwtStrategy', () => {
     id: 'user-1',
     email: 'ana@clinica.com',
     tenantId: 'tenant-1',
-    tenant: { id: 'tenant-1', name: 'Clínica Um', active: true },
+    tenant: {
+      id: 'tenant-1',
+      name: 'Clínica Um',
+      active: true,
+      planId: null,
+      featuresExtra: null,
+      featuresDenied: null,
+      plan: null,
+    },
     isSuperAdmin: false,
     roleId: 'role-1',
     role: { name: 'Recepção', permissions: ['patients:view'], restrictToOwnAppointments: false },
@@ -45,7 +54,15 @@ describe('JwtStrategy', () => {
   describe('super-admin "entrando como" clínica', () => {
     it('age como administrador da clínica alvo, com o nome dela', async () => {
       prisma.user.findUnique.mockResolvedValue(superAdmin);
-      prisma.tenant.findUnique.mockResolvedValue({ id: 'tenant-2', name: 'Clínica Dois', active: true });
+      prisma.tenant.findUnique.mockResolvedValue({
+        id: 'tenant-2',
+        name: 'Clínica Dois',
+        active: true,
+        planId: 'plan-1',
+        featuresExtra: ['messages'],
+        featuresDenied: ['finance'],
+        plan: { features: ['patients', 'finance', 'appointments'] },
+      });
 
       const user = await strategy.validate({
         sub: 'root-1',
@@ -61,13 +78,20 @@ describe('JwtStrategy', () => {
         isSuperAdmin: true,
         roleName: 'Administrador',
         impersonatorId: 'root-1',
+        features: ['appointments', 'patients', 'messages'],
       });
       expect(user.permissions).toEqual(ALL_PERMISSIONS);
     });
 
     it('vale também para clínica suspensa (suporte)', async () => {
       prisma.user.findUnique.mockResolvedValue(superAdmin);
-      prisma.tenant.findUnique.mockResolvedValue({ id: 'tenant-2', name: 'Clínica Dois', active: false });
+      prisma.tenant.findUnique.mockResolvedValue({
+        id: 'tenant-2',
+        name: 'Clínica Dois',
+        active: false,
+        planId: null,
+        plan: null,
+      });
 
       await expect(
         strategy.validate({ sub: 'root-1', email: superAdmin.email, tenantId: 'tenant-2', impersonatorId: 'root-1' }),
@@ -97,12 +121,14 @@ describe('JwtStrategy', () => {
     it('grava lastAccessAt quando o último registro é antigo', async () => {
       prisma.user.findUnique.mockResolvedValue({ ...clinicUser, lastAccessAt: new Date(Date.now() - 10 * 60_000) });
 
-      await strategy.validate({ sub: 'user-1', email: clinicUser.email, tenantId: 'tenant-1' });
+      const user = await strategy.validate({ sub: 'user-1', email: clinicUser.email, tenantId: 'tenant-1' });
 
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-1' },
         data: { lastAccessAt: expect.any(Date) },
       });
+      // Sem plano: catálogo completo (legado)
+      expect(user.features).toEqual([...PLATFORM_FEATURES]);
     });
 
     it('não grava de novo dentro do intervalo', async () => {

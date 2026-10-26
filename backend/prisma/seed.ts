@@ -268,6 +268,78 @@ function demoProcedureStatus(startAt: Date, slotIndex: number): AppointmentStatu
   return 'SCHEDULED';
 }
 
+// Planos da plataforma (preço de referência + módulos; sem cobrança automática).
+// Limites informativos; ausente = ilimitado. Só cria — edições no painel não são sobrescritas.
+const essencialFeatures = [
+  'appointments',
+  'patients',
+  'procedures',
+  'availability',
+  'documents',
+  'messages',
+];
+const profissionalFeatures = [
+  ...essencialFeatures,
+  'packages',
+  'promotions',
+  'routines',
+  'equipment',
+  'inventory',
+  'finance',
+  'recurring_expenses',
+  'payment_methods',
+  'metrics',
+  'goals',
+];
+const enterpriseFeatures = [
+  'appointments',
+  'patients',
+  'procedures',
+  'packages',
+  'promotions',
+  'routines',
+  'availability',
+  'equipment',
+  'inventory',
+  'finance',
+  'recurring_expenses',
+  'payment_methods',
+  'metrics',
+  'goals',
+  'documents',
+  'messages',
+];
+
+const defaultPlans = [
+  {
+    slug: 'essencial',
+    name: 'Essencial',
+    description: 'Para quem atende sozinha ou com uma pequena equipe.',
+    priceCents: 9700,
+    currency: 'BRL',
+    features: essencialFeatures,
+    limits: { maxUsers: 3, maxPatients: 500, storageGb: 5 },
+  },
+  {
+    slug: 'profissional',
+    name: 'Profissional',
+    description: 'Para clínicas em crescimento, com equipe e agenda cheia.',
+    priceCents: 19700,
+    currency: 'BRL',
+    features: profissionalFeatures,
+    limits: { maxUsers: 10, maxPatients: 3000, storageGb: 25 },
+  },
+  {
+    slug: 'enterprise',
+    name: 'Enterprise',
+    description: 'Para redes e clínicas grandes; limites sob medida.',
+    priceCents: 39700,
+    currency: 'BRL',
+    features: enterpriseFeatures,
+    limits: undefined,
+  },
+];
+
 const defaultDocumentTemplates = [
   {
     name: 'Modelo padrão — Consentimento Toxina',
@@ -343,6 +415,12 @@ async function seedPlatformCatalogs() {
 }
 
 async function main() {
+  console.log('\n→ Garantindo planos da plataforma...');
+  // Só cria: planos editados no painel super-admin não são sobrescritos
+  for (const plan of defaultPlans) {
+    await prisma.plan.upsert({ where: { slug: plan.slug }, update: {}, create: plan });
+  }
+
   await seedPlatformCatalogs();
 
   // Grupos de sistema da clínica: criados/atualizados por runInScriptTenant (ensureSystemRoles)

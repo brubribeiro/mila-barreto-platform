@@ -7,10 +7,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload } from './auth.service';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { effectivePermissions, SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
+import { featuresFromTenant } from '../common/platform-features';
 import { TenantContext } from '../tenancy/tenant-context';
 import { assertTenantActive } from '../tenancy/tenant-status';
 
 const LAST_ACCESS_INTERVAL_MS = 5 * 60 * 1000;
+
+const TENANT_WITH_PLAN = {
+  include: { plan: { select: { features: true } } },
+} as const;
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -31,7 +36,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const user = await TenantContext.runUnscoped(() =>
       this.prisma.user.findUnique({
         where: { id: payload.sub },
-        include: { role: true, tenant: true },
+        include: { role: true, tenant: TENANT_WITH_PLAN },
       }),
     );
     if (!user || !user.active) {
@@ -41,7 +46,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // Super-admin "entrando como" uma clínica (painel admin): age como administrador dela.
     if (user.isSuperAdmin && payload.tenantId && payload.impersonatorId === user.id) {
       const tenant = await TenantContext.runUnscoped(() =>
-        this.prisma.tenant.findUnique({ where: { id: payload.tenantId! } }),
+        this.prisma.tenant.findUnique({ where: { id: payload.tenantId! }, ...TENANT_WITH_PLAN }),
       );
       if (!tenant) throw new UnauthorizedException('Clínica não encontrada.');
       return {
@@ -57,6 +62,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         permissions: effectivePermissions(SYSTEM_ADMIN_ROLE_NAME, []),
         restrictToOwnAppointments: false,
         providesAppointments: false,
+        features: featuresFromTenant(tenant),
         impersonatorId: user.id,
       };
     }
@@ -81,6 +87,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       permissions: effectivePermissions(user.role?.name ?? '', user.role?.permissions ?? []),
       restrictToOwnAppointments: user.role?.restrictToOwnAppointments ?? false,
       providesAppointments: user.providesAppointments,
+      features: featuresFromTenant(user.tenant),
       ...(payload.impersonatorId ? { impersonatorId: payload.impersonatorId } : {}),
     };
   }

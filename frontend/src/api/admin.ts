@@ -1,7 +1,9 @@
 import { api } from './client';
 import type {
+  AdminPlan,
   AdminTenant,
   AdminTenantDetail,
+  PlanLimits,
   PlatformAuditLog,
   PlatformCatalogItem,
   PlatformCatalogKind,
@@ -14,11 +16,26 @@ export interface CreateTenantPayload {
   slug?: string;
   adminName: string;
   adminEmail: string;
+  planId?: string;
 }
 
 export interface UpdateTenantPayload {
   name?: string;
   slug?: string;
+  /** null remove o plano */
+  planId?: string | null;
+  featuresExtra?: string[] | null;
+  featuresDenied?: string[] | null;
+}
+
+export interface PlanPayload {
+  name: string;
+  slug?: string;
+  description?: string | null;
+  priceCents?: number | null;
+  currency?: string;
+  features?: string[] | null;
+  limits?: PlanLimits | null;
 }
 
 export interface CatalogItemPayload {
@@ -77,6 +94,26 @@ export const adminApi = {
 
   listAudit: async (params: { tenantId?: string; page?: number; limit?: number } = {}): Promise<PlatformAuditPage> => {
     const { data } = await api.get<PlatformAuditPage>('/admin/audit', { params });
+    return data;
+  },
+
+  listPlans: async (): Promise<AdminPlan[]> => {
+    const { data } = await api.get<AdminPlan[]>('/admin/plans');
+    return data;
+  },
+
+  createPlan: async (payload: PlanPayload): Promise<AdminPlan> => {
+    const { data } = await api.post<AdminPlan>('/admin/plans', payload);
+    return data;
+  },
+
+  updatePlan: async (id: string, payload: Partial<PlanPayload>): Promise<AdminPlan> => {
+    const { data } = await api.patch<AdminPlan>(`/admin/plans/${id}`, payload);
+    return data;
+  },
+
+  setPlanActive: async (id: string, active: boolean): Promise<AdminPlan> => {
+    const { data } = await api.post<AdminPlan>(`/admin/plans/${id}/${active ? 'activate' : 'deactivate'}`);
     return data;
   },
 

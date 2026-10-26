@@ -1,6 +1,7 @@
 import { Box, alpha } from '@mui/material';
 
 import { fontSizes } from '../../theme/fontSizes';
+import type { PlanLimits } from '../../types';
 
 export const ROW_ACTION_SX = {
   width: 30,
@@ -74,4 +75,15 @@ export function formatBytes(bytes: number): string {
     unit++;
   }
   return `${value.toLocaleString('pt-BR', { maximumFractionDigits: value < 10 ? 1 : 0 })} ${units[unit]}`;
+}
+
+/** "3 usuários · 500 pacientes · 5 GB"; sem limites → "Sem limites". */
+export function formatPlanLimits(limits: PlanLimits | null | undefined): string {
+  const parts: string[] = [];
+  const n = (v: number) => v.toLocaleString('pt-BR');
+  if (limits?.maxUsers != null) parts.push(`${n(limits.maxUsers)} ${limits.maxUsers === 1 ? 'usuário' : 'usuários'}`);
+  if (limits?.maxPatients != null)
+    parts.push(`${n(limits.maxPatients)} ${limits.maxPatients === 1 ? 'paciente' : 'pacientes'}`);
+  if (limits?.storageGb != null) parts.push(`${n(limits.storageGb)} GB`);
+  return parts.length ? parts.join(' · ') : 'Sem limites';
 }
