@@ -142,7 +142,7 @@ export class AuthService {
   }
 
   async selectPanel(actor: AuthenticatedUser, panel: AuthPanel) {
-    const user = await this.users.findById(actor.id);
+    const user = await TenantContext.runUnscoped(() => this.users.findById(actor.id));
     if (!user?.active) throw new UnauthorizedException('Usuário inativo ou inexistente.');
     if (!this.canChoosePanel(user)) {
       throw new ForbiddenException('Este usuário não pode escolher entre painéis.');
