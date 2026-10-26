@@ -1,5 +1,6 @@
 ﻿import { AppointmentStatus, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { DEFAULT_PLATFORM_CATALOG } from '../src/admin/platform-catalog.constants';
 import { demoAppointmentNotes } from './demo-appointment-notes';
 import { SKINCARE_DEMO_PRODUCTS, SKINCARE_DEMO_RULES } from './skincare-demo-data';
 import { createScriptClient, demoEmail, runInScriptTenant } from './tenant-script';
@@ -394,12 +395,33 @@ ______________________________________
   },
 ];
 
+async function seedPlatformCatalogs() {
+  console.log('\n→ Garantindo catálogos da plataforma...');
+  // Só cria: itens editados no painel super-admin não são sobrescritos
+  for (const item of DEFAULT_PLATFORM_CATALOG) {
+    await prisma.platformCatalogItem.upsert({
+      where: { kind_value: { kind: item.kind, value: item.value } },
+      update: {},
+      create: {
+        kind: item.kind,
+        value: item.value,
+        label: item.label,
+        sortOrder: item.sortOrder,
+        ...(item.meta ? { meta: item.meta as Prisma.InputJsonValue } : {}),
+      },
+    });
+  }
+  console.log(`  ✓ ${DEFAULT_PLATFORM_CATALOG.length} itens de catálogo garantidos`);
+}
+
 async function main() {
   console.log('\n→ Garantindo planos da plataforma...');
   // Só cria: planos editados no painel super-admin não são sobrescritos
   for (const plan of defaultPlans) {
     await prisma.plan.upsert({ where: { slug: plan.slug }, update: {}, create: plan });
   }
+
+  await seedPlatformCatalogs();
 
   // Grupos de sistema da clínica: criados/atualizados por runInScriptTenant (ensureSystemRoles)
   console.log('\n→ Garantindo usuários...');

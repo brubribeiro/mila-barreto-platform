@@ -31,7 +31,8 @@ import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { LabeledField } from '../LabeledField';
-import { DOCUMENT_CATEGORIES, DOCUMENT_STATUSES, documentFileIcon, fmtFileSize } from './documentUtils';
+import { DOCUMENT_STATUSES, documentFileIcon, fmtFileSize } from './documentUtils';
+import { usePlatformCatalog } from '../../hooks/usePlatformCatalog';
 import type { DocumentFile, DocumentStatus } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
 
@@ -75,6 +76,7 @@ export function DocumentFormDialog({ open, onClose, editing, onSaved }: Props) {
   const [equipmentId, setEquipmentId] = useState<string | null>(null);
   const [status, setStatus] = useState<DocumentStatus>('SIGNED');
   const [notes, setNotes] = useState('');
+  const documentCategories = usePlatformCatalog('document_category');
 
   const { data: patients = [] } = useQuery({
     queryKey: ['patients', ''],
@@ -263,7 +265,7 @@ export function DocumentFormDialog({ open, onClose, editing, onSaved }: Props) {
                     Sem categoria
                   </Box>
                 </MenuItem>
-                {DOCUMENT_CATEGORIES.map((c) => (
+                {documentCategories.map((c) => (
                   <MenuItem key={c.value} value={c.value}>
                     {c.label}
                   </MenuItem>

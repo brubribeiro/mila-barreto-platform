@@ -14,9 +14,13 @@ export type PlatformAuditAction =
   | 'PLAN_CREATE'
   | 'PLAN_UPDATE'
   | 'PLAN_ACTIVATE'
-  | 'PLAN_DEACTIVATE';
+  | 'PLAN_DEACTIVATE'
+  | 'CATALOG_CREATE'
+  | 'CATALOG_UPDATE'
+  | 'CATALOG_ACTIVATE'
+  | 'CATALOG_DEACTIVATE';
 
-/** Grava uma ação do super-admin em platform_audit_logs. Em ações de plano, `tenantId` é nulo. */
+/** Grava uma ação do super-admin em platform_audit_logs. Em ações de plano/catálogo, `tenantId` é nulo. */
 export async function recordPlatformAudit(
   prisma: PrismaService,
   actor: AuthenticatedUser,

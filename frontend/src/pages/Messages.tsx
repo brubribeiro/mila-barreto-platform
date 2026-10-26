@@ -21,11 +21,12 @@ import { MessageTemplateFormDialog } from '../components/messages/MessageTemplat
 import { WhatsAppPreview } from '../components/messages/WhatsAppPreview';
 import { VariableChip } from '../components/messages/VariableChip';
 import {
-  categoryLabel,
+  categoryLabelMap,
   TEMPLATE_VARIABLES,
-  triggerLabel,
-  triggerOrder,
+  triggerLabelMap,
+  triggerOrderMap,
 } from '../components/messages/messageTemplateConstants';
+import { usePlatformCatalog } from '../hooks/usePlatformCatalog';
 import { useUrlState } from '../hooks/useUrlState';
 import { matchFields } from '../utils/listFilters';
 import { messagesApi } from '../api/messages';
@@ -131,6 +132,11 @@ export function Messages() {
   const canCreate = has('messages:create');
   const canEdit = has('messages:edit');
   const canDelete = has('messages:delete');
+  usePlatformCatalog('message_category');
+  usePlatformCatalog('message_trigger');
+  const categoryLabel = categoryLabelMap();
+  const triggerLabel = triggerLabelMap();
+  const triggerOrder = triggerOrderMap();
 
   const [search, setSearch] = useUrlState('busca', '');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -187,10 +193,10 @@ export function Messages() {
       [...templates].sort(
         (a, b) =>
           Number(b.active) - Number(a.active) ||
-          triggerOrder[a.trigger] - triggerOrder[b.trigger] ||
+          (triggerOrder[a.trigger] ?? 99) - (triggerOrder[b.trigger] ?? 99) ||
           a.name.localeCompare(b.name, 'pt-BR'),
       ),
-    [templates],
+    [templates, triggerOrder],
   );
 
   const filteredTemplates = useMemo(

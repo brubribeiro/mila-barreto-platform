@@ -14,6 +14,8 @@ import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { recordPlatformAudit, type PlatformAuditAction } from './platform-audit';
 
+export type { PlatformAuditAction };
+
 const PLAN_SUMMARY_SELECT = {
   id: true,
   name: true,

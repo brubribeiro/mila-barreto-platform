@@ -36,6 +36,7 @@ import { AdminLayout } from './components/admin/AdminLayout';
 import { AdminTenants } from './pages/admin/AdminTenants';
 import { AdminTenantDetail } from './pages/admin/AdminTenantDetail';
 import { AdminAudit } from './pages/admin/AdminAudit';
+import { AdminCatalogs } from './pages/admin/AdminCatalogs';
 import { AdminPlans } from './pages/admin/AdminPlans';
 
 export default function App() {
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="clinicas" element={<AdminTenants />} />
         <Route path="clinicas/:id" element={<AdminTenantDetail />} />
         <Route path="planos" element={<AdminPlans />} />
+        <Route path="catalogos" element={<AdminCatalogs />} />
         <Route path="auditoria" element={<AdminAudit />} />
         <Route path="*" element={<Navigate to="clinicas" replace />} />
       </Route>

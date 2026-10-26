@@ -27,7 +27,7 @@ import { FormSection } from '../FormSection';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { MoneyField } from '../MoneyField';
 import type { InventoryItem } from '../../types';
-import { INVENTORY_UNIT_OPTIONS } from './inventoryUnits';
+import { usePlatformCatalog } from '../../hooks/usePlatformCatalog';
 
 interface InventoryFormDialogProps {
   open: boolean;
@@ -71,6 +71,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
   const toast = useAppToast();
+  const unitOptions = usePlatformCatalog('inventory_unit');
   const { control, handleSubmit, reset } = useForm<FormValues>({ defaultValues: empty });
 
   useEffect(() => {
@@ -226,7 +227,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                           <MenuItem value="">
                             <em>Nenhuma</em>
                           </MenuItem>
-                          {INVENTORY_UNIT_OPTIONS.map((opt) => (
+                          {unitOptions.map((opt) => (
                             <MenuItem key={opt.value} value={opt.value}>
                               {opt.label}
                             </MenuItem>

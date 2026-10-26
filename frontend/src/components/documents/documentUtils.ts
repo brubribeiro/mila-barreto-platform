@@ -4,25 +4,22 @@ import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutl
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import type { SvgIconComponent } from '@mui/icons-material';
-import type { DocumentStatus } from '../../types';
+import { catalogMetaColor, FALLBACK_DOCUMENT_CATEGORIES, getCatalogItems } from '../../features/platformCatalog';
+import type { DocumentStatus, PlatformCatalogOption } from '../../types';
 
-export const DOCUMENT_CATEGORIES = [
-  { value: 'consentimento', label: 'Termo de consentimento', color: '#C27C6B' },
-  { value: 'anamnese', label: 'Ficha de anamnese', color: '#5BA8DE' },
-  { value: 'receita', label: 'Receita', color: '#4FA37A' },
-  { value: 'contrato', label: 'Contrato', color: '#5C6BC0' },
-  { value: 'autorizacao_imagem', label: 'Autorização de imagem', color: '#9B7BD4' },
-  { value: 'orcamento', label: 'Orçamento', color: '#E0915B' },
-  { value: 'evolucao', label: 'Evolução clínica', color: '#D46B8A' },
-  { value: 'vigilancia', label: 'Vigilância sanitária', color: '#00897B' },
-  { value: 'certificado', label: 'Certificado', color: '#7B1FA2' },
-  { value: 'recibo', label: 'Recibo', color: '#F57C00' },
-  { value: 'livre', label: 'Outro', color: '#78909C' },
-] as const;
+/** @deprecated Use usePlatformCatalog('document_category') — mantido como alias do fallback. */
+export const DOCUMENT_CATEGORIES = FALLBACK_DOCUMENT_CATEGORIES;
+
+export function documentCategories(): PlatformCatalogOption[] {
+  return getCatalogItems('document_category');
+}
 
 export function categoryMeta(category?: string | null) {
-  const found = DOCUMENT_CATEGORIES.find((c) => c.value === category);
-  return found ?? { value: '', label: 'Sem categoria', color: '#90A4AE' };
+  const found = documentCategories().find((c) => c.value === category);
+  if (found) {
+    return { value: found.value, label: found.label, color: catalogMetaColor(found.meta) ?? '#90A4AE' };
+  }
+  return { value: '', label: 'Sem categoria', color: '#90A4AE' };
 }
 
 export const DOCUMENT_STATUSES: { value: DocumentStatus; label: string; tone: 'success' | 'warning' | 'info' }[] = [

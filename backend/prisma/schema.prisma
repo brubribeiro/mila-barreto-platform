@@ -105,9 +105,8 @@ model Plan {
 // Não é dado de clínica: sem tenantId, fora do escopo automático; a clínica alvo fica em targetTenantId.
 model PlatformAuditLog {
   id             String   @id @default(uuid())
-  // TENANT_CREATE, TENANT_UPDATE, TENANT_SUSPEND, TENANT_REACTIVATE, TENANT_ENTER, TENANT_PLAN_CHANGE,
-  // TENANT_FEATURES_CHANGE, PLAN_CREATE, PLAN_UPDATE, PLAN_ACTIVATE, PLAN_DEACTIVATE
-  // (planos: targetTenantId nulo, targetName = plano)
+  // TENANT_*, PLAN_*, CATALOG_*, TENANT_PLAN_CHANGE, TENANT_FEATURES_CHANGE
+  // (planos/catálogos: targetTenantId nulo, targetName = plano ou item)
   action         String
   actorId        String
   actorName      String
@@ -123,6 +122,28 @@ model PlatformAuditLog {
   @@index([targetTenantId])
   @@index([createdAt])
   @@map("platform_audit_logs")
+}
+
+// Catálogo global da plataforma (sem tenantId): categorias de documento/mensagem,
+// gatilhos de mensagem, sugestões de procedimento e unidades de estoque.
+// Todas as clínicas consomem o mesmo; só o super-admin edita em /admin.
+model PlatformCatalogItem {
+  id        String   @id @default(uuid())
+  // document_category | message_category | message_trigger | procedure_category | inventory_unit
+  kind      String
+  // Valor persistido nas entidades da clínica (slug / código)
+  value     String
+  label     String
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  // Ex.: { "color": "#C27C6B" }, { "defaultTrigger": "ON_BOOKING" }
+  meta      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([kind, value])
+  @@index([kind, active, sortOrder])
+  @@map("platform_catalog_items")
 }
 
 // =========================

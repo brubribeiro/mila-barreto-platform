@@ -99,7 +99,11 @@ export type PlatformAuditAction =
   | 'PLAN_CREATE'
   | 'PLAN_UPDATE'
   | 'PLAN_ACTIVATE'
-  | 'PLAN_DEACTIVATE';
+  | 'PLAN_DEACTIVATE'
+  | 'CATALOG_CREATE'
+  | 'CATALOG_UPDATE'
+  | 'CATALOG_ACTIVATE'
+  | 'CATALOG_DEACTIVATE';
 
 export interface PlatformAuditLog {
   id: string;
@@ -112,6 +116,32 @@ export interface PlatformAuditLog {
   details: Record<string, unknown> | null;
   createdAt: string;
 }
+
+export type PlatformCatalogKind =
+  | 'document_category'
+  | 'message_category'
+  | 'message_trigger'
+  | 'procedure_category'
+  | 'inventory_unit';
+
+/** Item completo (painel /admin). */
+export interface PlatformCatalogItem {
+  id: string;
+  kind: PlatformCatalogKind;
+  value: string;
+  label: string;
+  sortOrder: number;
+  active: boolean;
+  meta?: Record<string, unknown> | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Leitura no app da clínica (só ativos). */
+export type PlatformCatalogOption = Pick<
+  PlatformCatalogItem,
+  'id' | 'kind' | 'value' | 'label' | 'sortOrder' | 'meta'
+>;
 
 export interface UserSummary {
   id: string;

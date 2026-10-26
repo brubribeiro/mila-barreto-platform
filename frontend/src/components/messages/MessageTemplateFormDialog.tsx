@@ -27,7 +27,12 @@ import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { LabeledField } from '../LabeledField';
-import { categoryOptions, TEMPLATE_VARIABLES, triggerOptions } from './messageTemplateConstants';
+import {
+  messageCategoryOptions,
+  messageTriggerOptions,
+  TEMPLATE_VARIABLES,
+} from './messageTemplateConstants';
+import { usePlatformCatalog } from '../../hooks/usePlatformCatalog';
 import { WHATSAPP_EMOJI_GROUPS } from './whatsappTemplateEmojis';
 import { VariableChip } from './VariableChip';
 import type { MessageTemplate, MessageTrigger, Procedure } from '../../types';
@@ -124,6 +129,10 @@ export function MessageTemplateFormDialog({
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
   const toast = useAppToast();
+  usePlatformCatalog('message_category');
+  usePlatformCatalog('message_trigger');
+  const categoryOptions = messageCategoryOptions();
+  const triggerOptions = messageTriggerOptions();
   const { control, handleSubmit, reset, setValue, getValues, watch } = useForm<FormValues>({
     defaultValues: empty,
   });

@@ -4,6 +4,7 @@ import { alpha, AppBar, Box, Drawer, IconButton, Toolbar, Typography, useTheme }
 
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/usePermissions';
+import { usePrefetchPlatformCatalogs } from '../hooks/usePlatformCatalog';
 import { AuditHistoryDialog } from './audit/AuditHistoryDialog';
 import { AuroraIcon } from './AuroraIcon';
 import { PAGE_SHELL_SX } from '../theme/layout';
@@ -31,6 +32,8 @@ export function Layout() {
   const { has, isAdmin } = usePermissions();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [moneyHidden, setMoneyHiddenState] = useState(isMoneyHidden);
+  // Catálogo global da plataforma (documentos, mensagens, procedimentos, estoque)
+  usePrefetchPlatformCatalogs(!!user?.tenantId);
 
   const toggleMoneyHidden = () => {
     setMoneyHidden(!moneyHidden);

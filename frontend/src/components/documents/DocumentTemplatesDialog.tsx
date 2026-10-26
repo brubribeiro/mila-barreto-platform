@@ -32,7 +32,8 @@ import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { LabeledField } from '../LabeledField';
-import { DOCUMENT_CATEGORIES, TEMPLATE_PLACEHOLDERS, categoryMeta } from './documentUtils';
+import { TEMPLATE_PLACEHOLDERS, categoryMeta } from './documentUtils';
+import { usePlatformCatalog } from '../../hooks/usePlatformCatalog';
 import type { DocumentTemplate } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
 
@@ -59,6 +60,7 @@ export function DocumentTemplatesDialog({ open, onClose, canEdit, canDelete }: P
   const { confirm } = useAppDialog();
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const [form, setForm] = useState<FormState | null>(null);
+  const documentCategories = usePlatformCatalog('document_category');
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: TEMPLATES_KEY,
@@ -248,7 +250,7 @@ export function DocumentTemplatesDialog({ open, onClose, canEdit, canDelete }: P
         </LabeledField>
         <LabeledField label="Tipo de documento">
           <TextField select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} fullWidth>
-            {DOCUMENT_CATEGORIES.map((c) => (
+            {documentCategories.map((c) => (
               <MenuItem key={c.value} value={c.value}>
                 {c.label}
               </MenuItem>

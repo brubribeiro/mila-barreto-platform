@@ -18,6 +18,10 @@ export const PLATFORM_AUDIT_LABELS: Record<PlatformAuditAction, { label: string;
   PLAN_UPDATE: { label: 'Editou o plano', color: '#5BA8DE' },
   PLAN_ACTIVATE: { label: 'Ativou o plano', color: '#15998B' },
   PLAN_DEACTIVATE: { label: 'Desativou o plano', color: '#C25A4C' },
+  CATALOG_CREATE: { label: 'Criou no catálogo', color: '#15998B' },
+  CATALOG_UPDATE: { label: 'Editou o catálogo', color: '#5BA8DE' },
+  CATALOG_ACTIVATE: { label: 'Ativou no catálogo', color: '#15998B' },
+  CATALOG_DEACTIVATE: { label: 'Desativou no catálogo', color: '#C25A4C' },
 };
 
 const FIELD_LABELS: Record<string, string> = {
@@ -28,6 +32,10 @@ const FIELD_LABELS: Record<string, string> = {
   features: 'módulos',
   priceCents: 'preço',
   currency: 'moeda',
+  value: 'valor',
+  label: 'rótulo',
+  sortOrder: 'ordem',
+  meta: 'meta',
 };
 
 type PlanRef = { name?: string } | null | undefined;
@@ -60,6 +68,15 @@ export function auditDetailsText(entry: PlatformAuditLog): string | null {
           return `${FIELD_LABELS[field] ?? field}: ${changeValue(field, c.old)} → ${changeValue(field, c.new)}`;
         })
         .join(' · ');
+    case 'CATALOG_UPDATE': {
+      const parts = Object.entries(d)
+        .filter(([, change]) => change && typeof change === 'object' && 'old' in (change as object))
+        .map(([field, change]) => {
+          const c = change as { old?: unknown; new?: unknown };
+          return `${FIELD_LABELS[field] ?? field}: ${String(c.old)} → ${String(c.new)}`;
+        });
+      return parts.join(' · ') || null;
+    }
     case 'TENANT_PLAN_CHANGE':
       return `Plano: ${(d.old as PlanRef)?.name ?? 'sem plano'} → ${(d.new as PlanRef)?.name ?? 'sem plano'}`;
     case 'TENANT_FEATURES_CHANGE': {
@@ -82,6 +99,11 @@ export function auditDetailsText(entry: PlatformAuditLog): string | null {
       return d.reason ? `Motivo: ${String(d.reason)}` : null;
     case 'TENANT_ENTER':
       return d.suspended ? 'Clínica estava suspensa' : null;
+    case 'CATALOG_CREATE':
+      return [d.kind, d.value, d.label].filter(Boolean).map(String).join(' · ') || null;
+    case 'CATALOG_ACTIVATE':
+    case 'CATALOG_DEACTIVATE':
+      return typeof d.kind === 'string' ? String(d.kind) : null;
     default:
       return null;
   }

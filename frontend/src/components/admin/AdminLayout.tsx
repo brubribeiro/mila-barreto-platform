@@ -15,6 +15,7 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Clínicas', path: '/admin/clinicas', icon: <AuroraIcon name="dashboard" /> },
       { label: 'Planos', path: '/admin/planos', icon: <AuroraIcon name="pacotes" /> },
+      { label: 'Catálogos', path: '/admin/catalogos', icon: <AuroraIcon name="documentos" /> },
       { label: 'Auditoria', path: '/admin/auditoria', icon: <AuroraIcon name="clock" /> },
     ],
   },
@@ -23,7 +24,16 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
 const ADMIN_PAGE_META: { path: string; title: string; subtitle: string }[] = [
   { path: '/admin/clinicas', title: 'Clínicas', subtitle: 'Clínicas da plataforma, acesso e uso' },
   { path: '/admin/planos', title: 'Planos', subtitle: 'Preço, módulos e limites (sem cobrança automática)' },
-  { path: '/admin/auditoria', title: 'Auditoria da plataforma', subtitle: 'Ações do super-admin nas clínicas e nos planos' },
+  {
+    path: '/admin/catalogos',
+    title: 'Catálogos',
+    subtitle: 'Opções globais compartilhadas por todas as clínicas',
+  },
+  {
+    path: '/admin/auditoria',
+    title: 'Auditoria da plataforma',
+    subtitle: 'Ações do super-admin nas clínicas, planos e catálogos',
+  },
 ];
 
 function adminPageMeta(pathname: string) {

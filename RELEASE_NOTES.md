@@ -205,7 +205,8 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 - **Entrar como**: abre a clínica como administrador para dar suporte, com a faixa "Você está visualizando como…" e o botão **Voltar ao painel**.
 - **Planos**: página no painel para criar, editar, ativar e desativar planos (já vêm **Essencial**, **Profissional** e **Enterprise**), com **preço de referência**, **módulos** (agenda, pacientes, financeiro, etc.) e limites de usuários, pacientes e armazenamento. Não há cobrança automática; os limites ainda são só informativos, mas os **módulos passam a valer**: o menu esconde o que não está no plano e a API bloqueia o acesso.
 - Cada clínica pode ter um **plano** e, no detalhe, **extras** (módulos além do plano) ou **removidos** (módulos do plano que aquela clínica não tem). Plano desativado some das opções, mas quem já tem continua com ele.
-- **Auditoria da plataforma**: criação/edição/suspensão/reativação/entrada em clínica, mudanças de plano e de módulos, e criar/editar/ativar/desativar planos.
+- **Catálogos**: página no painel para gerenciar as opções compartilhadas por todas as clínicas (tipos de documento, categorias e gatilhos de mensagem, sugestões de categoria de procedimento e unidades de estoque). Não há lista diferente por clínica — o que vale na plataforma vale para todas.
+- **Auditoria da plataforma**: criação/edição/suspensão/reativação/entrada em clínica, mudanças de plano e de módulos, criar/editar/ativar/desativar planos e itens de catálogo ficam registrados com quem fez e quando.
 
 ### Correções
 

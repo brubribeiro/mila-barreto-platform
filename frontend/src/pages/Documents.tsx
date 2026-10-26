@@ -15,7 +15,6 @@ import {
 import { DocumentTemplatesDialog } from '../components/documents/DocumentTemplatesDialog';
 import { DocumentViewerDialog } from '../components/documents/DocumentViewerDialog';
 import {
-  DOCUMENT_CATEGORIES,
   DOCUMENT_STATUSES,
   canOpenDocument,
   categoryMeta,
@@ -24,6 +23,7 @@ import {
   statusMeta,
   sumDocumentBytes,
 } from '../components/documents/documentUtils';
+import { usePlatformCatalog } from '../hooks/usePlatformCatalog';
 import {
   LIST_HEADER_ICON_BUTTON_SX,
   LIST_HEADER_PRIMARY_ACTION_SX,
@@ -78,6 +78,7 @@ export function Documents() {
   const canCreate = has('documents:create');
   const canEdit = has('documents:edit');
   const canDelete = has('documents:delete');
+  const documentCategories = usePlatformCatalog('document_category');
 
   const [search, setSearch] = useUrlState('busca', '');
   const [statusFilter, setStatusFilter] = useUrlState<'ALL' | DocumentStatus>('status', 'ALL', STATUS_FILTER_CODEC);
@@ -340,7 +341,7 @@ export function Documents() {
             sx={TOOLBAR_SELECT_SX}
           >
             <MenuItem value="ALL">Todos os tipos</MenuItem>
-            {DOCUMENT_CATEGORIES.map((cat) => (
+            {documentCategories.map((cat) => (
               <MenuItem key={cat.value} value={cat.value}>
                 {cat.label} ({stats.byCategory[cat.value] ?? 0})
               </MenuItem>

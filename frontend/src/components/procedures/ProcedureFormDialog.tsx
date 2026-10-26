@@ -38,6 +38,7 @@ import { ProcedureCostSummary } from './ProcedureCostSummary';
 import { ProcedureToggleCard } from './ProcedureToggleCard';
 import type { Procedure } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
+import { usePlatformCatalog } from '../../hooks/usePlatformCatalog';
 
 interface ProcedureFormDialogProps {
   open: boolean;
@@ -74,8 +75,6 @@ const empty: FormValues = {
   equipments: [],
 };
 
-const CATEGORY_SUGGESTIONS = ['Facial', 'Injetáveis', 'Laser', 'Corporal', 'Peeling', 'Depilação', 'Capilar'];
-
 const DIALOG_MAX_WIDTH = 1140;
 
 /** Botão contornado neutro (borda cinza, fundo branco). */
@@ -97,6 +96,7 @@ const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' 
 export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormDialogProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const categorySuggestions = usePlatformCatalog('procedure_category');
   const isEditing = !!procedure;
   const queryClient = useQueryClient();
   const toast = useAppToast();
@@ -311,8 +311,8 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                 )}
               />
               <datalist id="procedure-category-list">
-                {CATEGORY_SUGGESTIONS.map((c) => (
-                  <option key={c} value={c} />
+                {categorySuggestions.map((c) => (
+                  <option key={c.value} value={c.value} />
                 ))}
               </datalist>
 
