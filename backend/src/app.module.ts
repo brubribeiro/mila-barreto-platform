@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { RequestLoggerMiddleware } from './common/middleware/request-logger.middleware';
+import { TenantContextMiddleware } from './tenancy/tenant-context.middleware';
 
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
@@ -29,6 +30,7 @@ import { PendenciasModule } from './pendencias/pendencias.module';
 import { SkincareModule } from './skincare/skincare.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
+import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -63,12 +65,13 @@ import { AppController } from './app.controller';
     SkincareModule,
     SchedulerModule,
     AuditLogModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestLoggerMiddleware).forRoutes('*');
+    consumer.apply(TenantContextMiddleware, RequestLoggerMiddleware).forRoutes('*');
   }
 }

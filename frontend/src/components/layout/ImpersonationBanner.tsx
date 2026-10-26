@@ -6,10 +6,11 @@ import { fontSizes } from '../../theme/fontSizes';
 interface ImpersonationBannerProps {
   userName?: string;
   onStop: () => void;
+  stopLabel?: string;
 }
 
 /** Faixa fixa no topo enquanto o admin visualiza o sistema como outro usuário. */
-export function ImpersonationBanner({ userName, onStop }: ImpersonationBannerProps) {
+export function ImpersonationBanner({ userName, onStop, stopLabel = 'Voltar à minha conta' }: ImpersonationBannerProps) {
   const theme = useTheme();
   return (
     <Box
@@ -50,7 +51,7 @@ export function ImpersonationBanner({ userName, onStop }: ImpersonationBannerPro
           '&:hover': { bgcolor: 'rgba(255,255,255,0.15)' },
         }}
       >
-        Voltar à minha conta
+        {stopLabel}
       </Box>
     </Box>
   );

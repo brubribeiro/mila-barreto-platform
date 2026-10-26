@@ -2,9 +2,10 @@
  * Cria promoções de demonstração (≥10).
  * Uso: npm run prisma:seed-promotions
  */
-import { DiscountType, PrismaClient } from '@prisma/client';
+import { DiscountType } from '@prisma/client';
+import { createScriptClient, runInScriptTenant } from './tenant-script';
 
-const prisma = new PrismaClient();
+const prisma = createScriptClient();
 
 function utcNoon(date: string): Date {
   return new Date(`${date}T12:00:00.000Z`);
@@ -220,7 +221,7 @@ async function main() {
   console.log(`\nConcluído: ${created} criada(s), ${skipped} já existente(s)/pulada(s).\n`);
 }
 
-main()
+runInScriptTenant(prisma, main)
   .catch((e) => {
     console.error(e);
     process.exit(1);

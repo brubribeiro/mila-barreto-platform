@@ -30,6 +30,11 @@ import { FeedbackReports } from './pages/FeedbackReports';
 import { Layout } from './components/Layout';
 import { PrivateRoute } from './components/PrivateRoute';
 import { PermissionRoute } from './components/PermissionRoute';
+import { SuperAdminRoute } from './components/SuperAdminRoute';
+import { AdminLayout } from './components/admin/AdminLayout';
+import { AdminTenants } from './pages/admin/AdminTenants';
+import { AdminTenantDetail } from './pages/admin/AdminTenantDetail';
+import { AdminAudit } from './pages/admin/AdminAudit';
 
 export default function App() {
   return (
@@ -37,6 +42,21 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/termos" element={<TermsOfUse />} />
       <Route path="/privacidade" element={<PrivacyPolicy />} />
+      {/* Painel da plataforma (super-admin), separado do app da clínica */}
+      <Route
+        path="/admin"
+        element={
+          <SuperAdminRoute>
+            <AdminLayout />
+          </SuperAdminRoute>
+        }
+      >
+        <Route index element={<Navigate to="clinicas" replace />} />
+        <Route path="clinicas" element={<AdminTenants />} />
+        <Route path="clinicas/:id" element={<AdminTenantDetail />} />
+        <Route path="auditoria" element={<AdminAudit />} />
+        <Route path="*" element={<Navigate to="clinicas" replace />} />
+      </Route>
       <Route
         element={
           <PrivateRoute>
