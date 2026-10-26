@@ -22,6 +22,9 @@ describe('AuthService', () => {
     id: 'user-1',
     name: 'Maria',
     email: 'maria@clinic.com',
+    tenantId: 'tenant-1',
+    isSuperAdmin: false,
+    tenant: { id: 'tenant-1', name: 'Clínica Um', active: true },
     roleId: 'role-1',
     active: true,
     providesAppointments: true,
@@ -105,10 +108,28 @@ describe('AuthService', () => {
       expect(result.access_token).toBe('jwt-token');
       expect(result.user.id).toBe('user-1');
       expect(result.user.email).toBe('maria@clinic.com');
+      expect(result.user.tenantId).toBe('tenant-1');
       expect(jwtService.signAsync).toHaveBeenCalledWith({
         sub: 'user-1',
         email: 'maria@clinic.com',
+        tenantId: 'tenant-1',
       });
+    });
+
+    it('should refuse login when the clinic is suspended', async () => {
+      const googleClient = (service as any).googleClient;
+      googleClient.verifyIdToken.mockResolvedValue({
+        getPayload: () => ({ email: 'maria@clinic.com' }),
+      });
+      usersService.findByEmail.mockResolvedValue({
+        ...mockUser,
+        tenant: { ...mockUser.tenant, active: false },
+      } as any);
+
+      await expect(service.loginWithGoogle({ credential: 'token' })).rejects.toThrow(
+        'O acesso da clínica Clínica Um está suspenso',
+      );
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
     });
   });
 
@@ -117,7 +138,8 @@ describe('AuthService', () => {
       id: 'admin-1',
       name: 'Admin',
       email: 'admin@clinic.com',
-      roleName: 'Administrador do Sistema',
+      roleName: 'Administrador',
+      tenantId: 'tenant-1',
       permissions: [],
       restrictToOwnAppointments: false,
     };
@@ -163,6 +185,7 @@ describe('AuthService', () => {
       expect(jwtService.signAsync).toHaveBeenCalledWith({
         sub: 'user-1',
         email: 'maria@clinic.com',
+        tenantId: 'tenant-1',
         impersonatorId: 'admin-1',
       });
     });

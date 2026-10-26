@@ -1,4 +1,5 @@
 import { PrismaService } from '../../prisma/prisma.service';
+import { TenantContext } from '../../tenancy/tenant-context';
 
 export const HOURLY_COST_INCLUDE_VARIABLE_KEY = 'hourly_cost.include_variable';
 
@@ -19,7 +20,7 @@ export interface HourlyCostSummary {
 }
 
 export async function getHourlyCostIncludeVariable(prisma: PrismaService): Promise<boolean> {
-  const row = await prisma.appSetting.findUnique({
+  const row = await prisma.appSetting.findFirst({
     where: { key: HOURLY_COST_INCLUDE_VARIABLE_KEY },
   });
   return row?.value === 'true';
@@ -31,7 +32,7 @@ export async function setHourlyCostIncludeVariable(
 ): Promise<{ includeVariable: boolean }> {
   const value = includeVariable ? 'true' : 'false';
   await prisma.appSetting.upsert({
-    where: { key: HOURLY_COST_INCLUDE_VARIABLE_KEY },
+    where: { tenantId_key: { tenantId: TenantContext.requireTenantId(), key: HOURLY_COST_INCLUDE_VARIABLE_KEY } },
     create: { key: HOURLY_COST_INCLUDE_VARIABLE_KEY, value },
     update: { value },
   });

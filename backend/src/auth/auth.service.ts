@@ -7,10 +7,13 @@ import { UsersService } from '../users/users.service';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { effectivePermissions, SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { assertTenantActive } from '../tenancy/tenant-status';
 
 export interface JwtPayload {
   sub: string;
   email: string;
+  /** Clínica do usuário (null para super-admin). Conferida contra o banco a cada requisição. */
+  tenantId: string | null;
   /** ID do admin original quando em modo de personificação */
   impersonatorId?: string;
 }
@@ -34,6 +37,8 @@ export class AuthService {
       id: user.id,
       name: user.name,
       email: user.email,
+      tenantId: user.tenantId ?? null,
+      isSuperAdmin: user.isSuperAdmin ?? false,
       roleId: user.roleId,
       roleName: user.role?.name,
       permissions: effectivePermissions(
@@ -70,8 +75,9 @@ export class AuthService {
     if (!user.active) {
       throw new UnauthorizedException('Usuário inativo. Contate o administrador.');
     }
+    assertTenantActive(user.tenant);
 
-    const payload: JwtPayload = { sub: user.id, email: user.email };
+    const payload: JwtPayload = { sub: user.id, email: user.email, tenantId: user.tenantId };
 
     return {
       access_token: await this.jwt.signAsync(payload),
@@ -95,6 +101,7 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: target.id,
       email: target.email,
+      tenantId: target.tenantId,
       impersonatorId: admin.id,
     };
 

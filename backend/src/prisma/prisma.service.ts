@@ -1,6 +1,8 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 
+import { tenantScopeExtension } from '../tenancy/tenant-scope.extension';
+
 /**
  * Neon (e outros poolers PgBouncer) não suportam transações interativas
  * (`$transaction(async tx => ...)`) na URL pooled. Usamos conexão direta
@@ -30,6 +32,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   constructor() {
     const url = resolveDatabaseUrl();
     super(url ? { datasources: { db: { url } } } : undefined);
+    // Escopo automático por clínica (src/tenancy). O client estendido herda desta instância
+    // (Object.create), então $transactionWithRetry e os hooks do Nest continuam valendo.
+    return this.$extends(tenantScopeExtension) as unknown as PrismaService;
   }
 
   async onModuleInit() {

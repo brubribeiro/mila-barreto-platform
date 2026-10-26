@@ -8,6 +8,7 @@ import * as bcrypt from 'bcrypt';
 import { AppointmentStatus, NotificationType } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContext } from '../tenancy/tenant-context';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -79,11 +80,14 @@ export class UsersService {
   ) {}
 
   /** Versão completa com password e relação para autenticação. */
+  /** E-mail é único no sistema todo, então a busca ignora a clínica (login e checagem de duplicado). */
   findByEmail(email: string) {
-    return this.prisma.user.findUnique({
-      where: { email },
-      include: { role: true },
-    });
+    return TenantContext.runUnscoped(() =>
+      this.prisma.user.findUnique({
+        where: { email },
+        include: { role: true, tenant: true },
+      }),
+    );
   }
 
   findById(id: string) {
