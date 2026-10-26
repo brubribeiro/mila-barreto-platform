@@ -68,7 +68,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     const hour = new Date().getHours();
     if (hour < KEEP_ALIVE_START_HOUR || hour >= KEEP_ALIVE_END_HOUR) return;
 
-    await this.prisma.$queryRaw`SELECT 1`;
+    await TenantContext.runUnscoped(() => this.prisma.$queryRaw`SELECT 1`);
   }
 
   private async checkEquipmentMaintenance() {

@@ -9,6 +9,8 @@ export interface NavRouteItem {
   permission?: Permission;
   /** Módulo do plano; sem feature = sempre visível (dashboard, usuários, etc.). */
   feature?: PlatformFeature;
+  /** Só o grupo Administrador da clínica vê o item. */
+  adminOnly?: boolean;
 }
 
 export interface NavGroup {
@@ -67,6 +69,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Mensagens', path: '/mensagens', icon: <AuroraIcon name="mensagens" />, permission: 'messages:view', feature: 'messages' },
       { label: 'Grupos', path: '/grupos', icon: <AuroraIcon name="permissoes" />, permission: 'roles:view' },
       { label: 'Feedback', path: '/feedback', icon: <AuroraIcon name="feedback" />, permission: 'feedback:view' },
+      { label: 'Auditoria', path: '/auditoria', icon: <AuroraIcon name="clock" />, adminOnly: true },
     ],
   },
 ];

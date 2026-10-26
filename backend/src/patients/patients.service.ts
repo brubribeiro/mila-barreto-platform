@@ -125,6 +125,7 @@ export class PatientsService {
     if (oldPatient.photoStorageKey) {
       await this.photos.remove(oldPatient.photoStorageKey);
     }
+    // uploadProfilePhoto revalida magic bytes
     const key = await this.photos.uploadProfilePhoto(id, file);
     return this.updateAndAudit(oldPatient, { photoStorageKey: key, photoUrl: null }, user);
   }

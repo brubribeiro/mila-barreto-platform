@@ -17,6 +17,8 @@ import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 import { R2StorageService } from '../documents/r2-storage.service';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { isClinicAdministrator, SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
+import { assertAllowedFileContent } from '../common/utils/file-magic.util';
+import { PHOTO_ALLOWED_MIMES } from '../documents/upload-allowlist';
 
 const SAFE_SELECT = {
   id: true,
@@ -37,7 +39,6 @@ const SAFE_SELECT = {
   role: { select: { id: true, name: true, isSystem: true } },
 } as const;
 
-const PHOTO_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 const PHOTO_URL_TTL_SECONDS = 3600;
 
@@ -339,9 +340,7 @@ export class UsersService {
     if (!this.r2.isConfigured) {
       throw new BadRequestException('Cloudflare R2 não está configurado. Não é possível enviar a foto.');
     }
-    if (!PHOTO_MIMES.has(file.mimetype)) {
-      throw new BadRequestException('Use uma imagem JPEG, PNG ou WebP.');
-    }
+    const mimeType = assertAllowedFileContent(file.buffer, file.mimetype, PHOTO_ALLOWED_MIMES);
     if (file.size > PHOTO_MAX_BYTES) {
       throw new BadRequestException('A foto deve ter no máximo 5 MB.');
     }
@@ -353,8 +352,8 @@ export class UsersService {
       await this.r2.remove(before.photoStorageKey);
     }
 
-    const ext = file.mimetype === 'image/png' ? 'png' : file.mimetype === 'image/webp' ? 'webp' : 'jpg';
-    const { key } = await this.r2.upload(`foto.${ext}`, file.mimetype, file.buffer, `profissionais/${id}`);
+    const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
+    const { key } = await this.r2.upload(`foto.${ext}`, mimeType, file.buffer, `profissionais/${id}`);
 
     const updated = await this.prisma.user.update({
       where: { id },

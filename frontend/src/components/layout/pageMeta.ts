@@ -28,6 +28,7 @@ const PAGE_META: (PageMeta & { path: string; exact?: boolean })[] = [
   { path: '/metricas', title: 'Métricas', subtitle: 'Indicadores e relatórios' },
   { path: '/metas', title: 'Metas', subtitle: 'Objetivos e progresso da clínica', auditEntity: 'Goal' },
   { path: '/feedback', title: 'Feedback', subtitle: 'Bugs e sugestões da equipe', auditEntity: 'FeedbackReport' },
+  { path: '/auditoria', title: 'Auditoria', subtitle: 'Histórico global de alterações na clínica' },
 ];
 
 export function getPageMeta(pathname: string): PageMeta {
