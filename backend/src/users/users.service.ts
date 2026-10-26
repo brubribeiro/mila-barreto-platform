@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,6 +15,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 import { R2StorageService } from '../documents/r2-storage.service';
+import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { isClinicAdministrator, SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
 
 const SAFE_SELECT = {
   id: true,
@@ -194,12 +197,36 @@ export class UsersService {
     });
   }
 
-  async create(dto: CreateUserDto, user?: AuditUser) {
+  /**
+   * Impede escalação via users:create/edit (#33):
+   * - ninguém altera o próprio grupo;
+   * - só Administrador atribui ou remove o grupo Administrador.
+   */
+  private assertCanAssignRole(
+    actor: AuthenticatedUser | undefined,
+    targetRole: { name: string },
+    opts: { targetUserId?: string; previousRoleName?: string | null },
+  ) {
+    if (opts.targetUserId && actor && opts.targetUserId === actor.id) {
+      throw new ForbiddenException('Você não pode alterar o próprio grupo.');
+    }
+    const touchesAdmin =
+      targetRole.name === SYSTEM_ADMIN_ROLE_NAME ||
+      opts.previousRoleName === SYSTEM_ADMIN_ROLE_NAME;
+    if (touchesAdmin && !isClinicAdministrator(actor?.roleName)) {
+      throw new ForbiddenException(
+        'Apenas administradores podem atribuir ou remover o grupo Administrador.',
+      );
+    }
+  }
+
+  async create(dto: CreateUserDto, actor?: AuthenticatedUser) {
     const existing = await this.findByEmail(dto.email);
     if (existing) throw new ConflictException('E-mail já cadastrado');
 
     const role = await this.prisma.role.findUnique({ where: { id: dto.roleId } });
     if (!role) throw new BadRequestException('Grupo (role) inválido.');
+    this.assertCanAssignRole(actor, role, {});
 
     // Senha aleatória — autenticação é feita exclusivamente via Google OAuth
     const randomPassword = require('crypto').randomBytes(32).toString('hex');
@@ -230,7 +257,7 @@ export class UsersService {
       select: SAFE_SELECT,
     });
 
-    this.auditLog.logCreate('User', created.id, created as unknown as Record<string, unknown>, user).catch(() => undefined);
+    this.auditLog.logCreate('User', created.id, created as unknown as Record<string, unknown>, actor).catch(() => undefined);
 
     // Notifica outros administradores (exceto o próprio recém-criado)
     const admins = await this.notifications.findUsersWithPermission('users:view');
@@ -250,7 +277,7 @@ export class UsersService {
     return created;
   }
 
-  async update(id: string, dto: UpdateUserDto, auditUser?: AuditUser) {
+  async update(id: string, dto: UpdateUserDto, actor?: AuthenticatedUser) {
     const user = await this.findById(id);
     if (!user) throw new NotFoundException('Usuário não encontrado');
 
@@ -262,6 +289,10 @@ export class UsersService {
     if (dto.roleId && dto.roleId !== user.roleId) {
       const role = await this.prisma.role.findUnique({ where: { id: dto.roleId } });
       if (!role) throw new BadRequestException('Grupo (role) inválido.');
+      this.assertCanAssignRole(actor, role, {
+        targetUserId: id,
+        previousRoleName: user.role?.name,
+      });
     }
 
     // Se marcado como principal, desmarca o anterior
@@ -279,7 +310,7 @@ export class UsersService {
       data,
       select: SAFE_SELECT,
     });
-    this.auditLog.logUpdate('User', id, user as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, auditUser).catch(() => undefined);
+    this.auditLog.logUpdate('User', id, user as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, actor).catch(() => undefined);
     return this.withPhotoAccessUrl(updated);
   }
 

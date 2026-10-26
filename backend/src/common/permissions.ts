@@ -50,12 +50,17 @@ export function isValidPermission(value: string): value is Permission {
 /** Role de sistema que sempre equivale a possuir todas as permissões do catálogo. */
 export const SYSTEM_ADMIN_ROLE_NAME = 'Administrador';
 
+/** True se o nome do grupo é o Administrador da clínica (acesso total). */
+export function isClinicAdministrator(roleName: string | null | undefined): boolean {
+  return roleName === SYSTEM_ADMIN_ROLE_NAME;
+}
+
 /**
  * Permissões efetivas do usuário: administradores sempre têm o catálogo completo,
  * independentemente do que esteja gravado na role (ex.: inconsistência manual no BD).
  */
 export function effectivePermissions(roleName: string, storedPermissions: string[]): Permission[] {
-  if (roleName === SYSTEM_ADMIN_ROLE_NAME) {
+  if (isClinicAdministrator(roleName)) {
     return [...ALL_PERMISSIONS];
   }
   return storedPermissions.slice() as Permission[];

@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 
 import { UsersService } from './users.service';
@@ -10,6 +11,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { R2StorageService } from '../documents/r2-storage.service';
+import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
 
 jest.mock('bcrypt', () => ({
   hash: jest.fn().mockResolvedValue('hashed-password'),
@@ -32,6 +35,18 @@ describe('UsersService', () => {
     role: { id: 'role-1', name: 'Profissional', isSystem: false },
   };
 
+  const adminActor = {
+    id: 'admin-1',
+    name: 'Admin',
+    roleName: SYSTEM_ADMIN_ROLE_NAME,
+  } as AuthenticatedUser;
+
+  const managerActor = {
+    id: 'manager-1',
+    name: 'Gerente',
+    roleName: 'Gerente',
+  } as AuthenticatedUser;
+
   beforeEach(async () => {
     prisma = {
       user: {
@@ -47,6 +62,14 @@ describe('UsersService', () => {
       },
       appointment: {
         count: jest.fn().mockResolvedValue(0),
+        groupBy: jest.fn().mockResolvedValue([]),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      unavailability: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      workingHours: {
+        findMany: jest.fn().mockResolvedValue([]),
       },
     };
 
@@ -80,7 +103,10 @@ describe('UsersService', () => {
       expect(result).toEqual(mockUser);
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'ana@clinic.com' },
-        include: { role: true, tenant: true },
+        include: {
+          role: true,
+          tenant: { include: { plan: { select: { features: true } } } },
+        },
       });
     });
   });
@@ -99,7 +125,7 @@ describe('UsersService', () => {
       prisma.user.findUnique.mockResolvedValue(mockUser);
 
       await expect(
-        service.create({ name: 'Ana', email: 'ana@clinic.com', roleId: 'role-1' } as any),
+        service.create({ name: 'Ana', email: 'ana@clinic.com', roleId: 'role-1' } as any, managerActor),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -108,18 +134,21 @@ describe('UsersService', () => {
       prisma.role.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create({ name: 'Ana', email: 'new@clinic.com', roleId: 'invalid' } as any),
+        service.create({ name: 'Ana', email: 'new@clinic.com', roleId: 'invalid' } as any, managerActor),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should create user with hashed password', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
-      const result = await service.create({
-        name: 'Ana',
-        email: 'new@clinic.com',
-        roleId: 'role-1',
-      } as any);
+      const result = await service.create(
+        {
+          name: 'Ana',
+          email: 'new@clinic.com',
+          roleId: 'role-1',
+        } as any,
+        managerActor,
+      );
 
       expect(prisma.user.create).toHaveBeenCalled();
       expect(result).toEqual(mockUser);
@@ -128,17 +157,51 @@ describe('UsersService', () => {
     it('should unset other primary users when isPrimary is true', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
-      await service.create({
-        name: 'Ana',
-        email: 'new@clinic.com',
-        roleId: 'role-1',
-        isPrimary: true,
-      } as any);
+      await service.create(
+        {
+          name: 'Ana',
+          email: 'new@clinic.com',
+          roleId: 'role-1',
+          isPrimary: true,
+        } as any,
+        managerActor,
+      );
 
       expect(prisma.user.updateMany).toHaveBeenCalledWith({
         where: { isPrimary: true },
         data: { isPrimary: false },
       });
+    });
+
+    it('should forbid non-admin from creating an Administrador', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.role.findUnique.mockResolvedValue({
+        id: 'role-admin',
+        name: SYSTEM_ADMIN_ROLE_NAME,
+      });
+
+      await expect(
+        service.create(
+          { name: 'Boss', email: 'boss@clinic.com', roleId: 'role-admin' } as any,
+          managerActor,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('should allow admin to create an Administrador', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.role.findUnique.mockResolvedValue({
+        id: 'role-admin',
+        name: SYSTEM_ADMIN_ROLE_NAME,
+      });
+
+      await service.create(
+        { name: 'Boss', email: 'boss@clinic.com', roleId: 'role-admin' } as any,
+        adminActor,
+      );
+
+      expect(prisma.user.create).toHaveBeenCalled();
     });
   });
 
@@ -146,7 +209,7 @@ describe('UsersService', () => {
     it('should throw NotFoundException if user not found', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('invalid', {} as any)).rejects.toThrow(NotFoundException);
+      await expect(service.update('invalid', {} as any, managerActor)).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException if new email already exists', async () => {
@@ -155,14 +218,79 @@ describe('UsersService', () => {
         .mockResolvedValueOnce({ id: 'other' }); // findByEmail
 
       await expect(
-        service.update('user-1', { email: 'taken@clinic.com' } as any),
+        service.update('user-1', { email: 'taken@clinic.com' } as any, managerActor),
       ).rejects.toThrow(ConflictException);
     });
 
     it('should update user successfully', async () => {
       prisma.user.findUnique.mockResolvedValue(mockUser);
 
-      const result = await service.update('user-1', { name: 'Ana Maria' } as any);
+      const result = await service.update('user-1', { name: 'Ana Maria' } as any, managerActor);
+      expect(prisma.user.update).toHaveBeenCalled();
+      expect(result).toBeDefined();
+    });
+
+    it('should forbid self role change', async () => {
+      const self = { ...mockUser, id: 'manager-1' };
+      prisma.user.findUnique.mockResolvedValue(self);
+      prisma.role.findUnique.mockResolvedValue({
+        id: 'role-admin',
+        name: SYSTEM_ADMIN_ROLE_NAME,
+      });
+
+      await expect(
+        service.update('manager-1', { roleId: 'role-admin' } as any, managerActor),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should forbid non-admin from promoting someone to Administrador', async () => {
+      prisma.user.findUnique.mockResolvedValue(mockUser);
+      prisma.role.findUnique.mockResolvedValue({
+        id: 'role-admin',
+        name: SYSTEM_ADMIN_ROLE_NAME,
+      });
+
+      await expect(
+        service.update('user-1', { roleId: 'role-admin' } as any, managerActor),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should allow admin to promote someone to Administrador', async () => {
+      prisma.user.findUnique.mockResolvedValue(mockUser);
+      prisma.role.findUnique.mockResolvedValue({
+        id: 'role-admin',
+        name: SYSTEM_ADMIN_ROLE_NAME,
+      });
+
+      await service.update('user-1', { roleId: 'role-admin' } as any, adminActor);
+
+      expect(prisma.user.update).toHaveBeenCalled();
+    });
+
+    it('should forbid non-admin from demoting an Administrador', async () => {
+      const adminUser = {
+        ...mockUser,
+        id: 'admin-user',
+        roleId: 'role-admin',
+        role: { id: 'role-admin', name: SYSTEM_ADMIN_ROLE_NAME, isSystem: true },
+      };
+      prisma.user.findUnique.mockResolvedValue(adminUser);
+      prisma.role.findUnique.mockResolvedValue({ id: 'role-1', name: 'Profissional' });
+
+      await expect(
+        service.update('admin-user', { roleId: 'role-1' } as any, managerActor),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should allow manager to assign a non-admin role to another user', async () => {
+      prisma.user.findUnique.mockResolvedValue(mockUser);
+      prisma.role.findUnique.mockResolvedValue({ id: 'role-2', name: 'Recepção' });
+
+      await service.update('user-1', { roleId: 'role-2' } as any, managerActor);
+
       expect(prisma.user.update).toHaveBeenCalled();
     });
   });
