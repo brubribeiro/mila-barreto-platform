@@ -108,7 +108,7 @@ mila-barreto-platform/
 - API: `http://localhost:3333/api` (prefixo `/api`)
 - Frontend: Vite (porta padrão do projeto); `VITE_API_URL` em `.env`
 - Banco: Docker Compose — Postgres `localhost:5432`, db `mila_platform`
-- Seed: `admin@mila.com` / `admin123`
+- Auth: login **somente Google** (`POST /api/auth/google`, UI em `Login.tsx`). Seed cria usuários demo por e-mail (ex. `admin@mila.com`) — não há login e-mail/senha na API nem no painel.
 
 ---
 

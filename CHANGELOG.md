@@ -4,6 +4,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+### Changed
+
+- README e `AGENTS.md`: autenticação documentada como login Google (`POST /api/auth/google`); seed local explicado sem credenciais e-mail/senha de produção (#66).
+
 ## [0.2.1] - 2026-10-26
 
 ### Security
