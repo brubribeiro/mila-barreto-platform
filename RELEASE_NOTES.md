@@ -67,6 +67,11 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 **Barra superior**
 - Sino de notificações reposicionado; botão **Novo agendamento** com estilo outlined.
 
+**Feedback**
+- No menu do usuário (clique no avatar/nome na barra lateral), opção **Reportar bug ou sugestão**.
+- Escolha entre **Sugestão de melhoria** ou **Bug**, preencha título e descrição e envie — a página atual é registrada automaticamente.
+- Administradores veem os reports em **Configurações → Feedback**.
+
 **Pacotes**
 - Tela redesenhada no estilo Aurora: cards de resumo (**pacotes ativos**, **pacientes com pacote**) e grade de cards por pacote.
 - Cada card exibe **preço original**, **preço de venda**, **economia (%)**, **sessões** e **pacientes ativos**.
