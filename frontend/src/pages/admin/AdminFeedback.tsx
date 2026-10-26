@@ -1,5 +1,16 @@
 import { useDeferredValue } from 'react';
-import { Box, Button, ButtonBase, Card, MenuItem, Skeleton, Stack, TextField, Typography, alpha } from '@mui/material';
+import {
+  Box,
+  Button,
+  Card,
+  MenuItem,
+  Skeleton,
+  Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+} from '@mui/material';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { adminApi } from '../../api/admin';
@@ -25,6 +36,17 @@ type StatusFilter = 'ALL' | FeedbackStatus;
 type TypeFilter = 'ALL' | FeedbackType;
 const STATUS_CODEC = urlEnum<StatusFilter>(['ALL', ...FEEDBACK_STATUSES]);
 const TYPE_CODEC = urlEnum<TypeFilter>(['ALL', 'BUG', 'SUGGESTION']);
+
+const STATUS_FILTER_SX = {
+  flexWrap: 'wrap',
+  '& .MuiToggleButton-root': {
+    textTransform: 'none',
+    fontWeight: 700,
+    fontSize: fontSizes.sm,
+    px: 1.5,
+    fontVariantNumeric: 'tabular-nums',
+  },
+} as const;
 
 /** Central de reports (bugs e sugestões) de todas as clínicas — visão do super-admin. */
 export function AdminFeedback() {
@@ -66,12 +88,11 @@ export function AdminFeedback() {
     setPage(0);
   };
 
-  const tabs: { value: StatusFilter; label: string; count: number; color?: string }[] = [
+  const tabs: { value: StatusFilter; label: string; count: number }[] = [
     ...FEEDBACK_STATUSES.map((s) => ({
       value: s as StatusFilter,
       label: FEEDBACK_STATUS_META[s].label,
       count: counts?.[s] ?? 0,
-      color: FEEDBACK_STATUS_META[s].color,
     })),
     { value: 'ALL', label: 'Todos', count: allCount },
   ];
@@ -82,37 +103,23 @@ export function AdminFeedback() {
         breakpoint="lg"
         nowrapFrom={null}
         title={
-          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap role="tablist" aria-label="Status">
-            {tabs.map((tab) => {
-              const selected = status === tab.value;
-              return (
-                <ButtonBase
-                  key={tab.value}
-                  role="tab"
-                  aria-selected={selected}
-                  onClick={() => resetPage(setStatus)(tab.value)}
-                  sx={{
-                    px: 1.5,
-                    height: 34,
-                    borderRadius: '10px',
-                    fontSize: fontSizes.sm,
-                    fontWeight: 700,
-                    gap: 0.75,
-                    color: selected ? 'text.primary' : 'text.secondary',
-                    bgcolor: (t) => (selected ? alpha(t.palette.primary.main, 0.1) : 'transparent'),
-                    border: 1,
-                    borderColor: selected ? 'primary.main' : 'divider',
-                  }}
-                >
-                  {tab.color && <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: tab.color }} />}
-                  {tab.label}
-                  <Box component="span" sx={{ color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>
-                    {isLoading ? '…' : tab.count}
-                  </Box>
-                </ButtonBase>
-              );
-            })}
-          </Stack>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            color="primary"
+            value={status}
+            onChange={(_, value: StatusFilter | null) => {
+              if (value) resetPage(setStatus)(value);
+            }}
+            aria-label="Status"
+            sx={STATUS_FILTER_SX}
+          >
+            {tabs.map((tab) => (
+              <ToggleButton key={tab.value} value={tab.value}>
+                {tab.label} ({isLoading ? '…' : tab.count})
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
         }
       >
         <TextField
