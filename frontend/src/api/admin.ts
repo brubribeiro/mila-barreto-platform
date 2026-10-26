@@ -18,7 +18,7 @@ import type {
 export type TenantStatusFilter = 'active' | 'suspended';
 
 export interface TenantProfilePayload {
-  specialty?: string;
+  specialties?: string[] | null;
   foundedAt?: string | null;
   legalName?: string | null;
   document?: string | null;

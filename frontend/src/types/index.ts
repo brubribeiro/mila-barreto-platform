@@ -72,7 +72,7 @@ export interface AdminPlan {
 export type AdminPlanSummary = Pick<AdminPlan, 'id' | 'name' | 'slug' | 'active' | 'features' | 'priceCents' | 'currency'>;
 
 export interface AdminTenantProfile {
-  specialty: string | null;
+  specialties: string[];
   foundedAt: string | null;
   legalName: string | null;
   document: string | null;

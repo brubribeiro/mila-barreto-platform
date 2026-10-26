@@ -7,6 +7,7 @@ import {
   DialogActions,
   DialogContent,
   TextField,
+  Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -22,6 +23,9 @@ import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogClo
 import { FormSection } from '../FormSection';
 import { LabeledField } from '../LabeledField';
 import { PlanSelect } from './PlanSelect';
+import { CatalogSelectChip, FeatureModuleChipGrid } from './FeatureModuleChips';
+import { CLINIC_SPECIALTIES, CLINIC_SPECIALTY_LABELS } from '../../features/clinicSpecialties';
+import { fontSizes } from '../../theme/fontSizes';
 import {
   buildTenantProfilePayload,
   emptyTenantProfileForm,
@@ -264,6 +268,43 @@ export function TenantFormDialog({ open, onClose, editing }: Props) {
               </FormSection>
             )}
 
+            <FormSection
+              title="Especialidades"
+              subtitle="Toque para incluir ou remover"
+              sx={{ gridColumn: { md: '1 / -1' } }}
+            >
+              <Controller
+                name="specialties"
+                control={control}
+                render={({ field }) => (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                    <FeatureModuleChipGrid aria-label="Especialidades da clínica">
+                      {CLINIC_SPECIALTIES.map((key) => {
+                        const selected = field.value.includes(key);
+                        return (
+                          <CatalogSelectChip
+                            key={key}
+                            label={CLINIC_SPECIALTY_LABELS[key]}
+                            selected={selected}
+                            onClick={() => {
+                              field.onChange(
+                                selected ? field.value.filter((x) => x !== key) : [...field.value, key],
+                              );
+                            }}
+                          />
+                        );
+                      })}
+                    </FeatureModuleChipGrid>
+                    <Typography sx={{ fontSize: fontSizes.xs, color: 'text.disabled' }}>
+                      {field.value.length
+                        ? `${field.value.length} de ${CLINIC_SPECIALTIES.length} selecionadas`
+                        : 'Nenhuma especialidade marcada'}
+                    </Typography>
+                  </Box>
+                )}
+              />
+            </FormSection>
+
             <FormSection title="Perfil da clínica" sx={{ gridColumn: { md: '1 / -1' } }}>
               <Box
                 sx={{
@@ -272,15 +313,6 @@ export function TenantFormDialog({ open, onClose, editing }: Props) {
                   gap: 1.75,
                 }}
               >
-                <Controller
-                  name="specialty"
-                  control={control}
-                  render={({ field }) => (
-                    <LabeledField label="Especialidade principal">
-                      <TextField {...field} placeholder="Ex.: Estética facial, laser" fullWidth />
-                    </LabeledField>
-                  )}
-                />
                 <Controller
                   name="foundedAt"
                   control={control}

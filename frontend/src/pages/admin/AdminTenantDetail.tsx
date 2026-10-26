@@ -24,6 +24,7 @@ import {
   formatDateTime,
   formatLastAccess,
 } from '../../components/admin/adminUi';
+import { TenantSpecialtyChips } from '../../components/admin/TenantSpecialtyChips';
 import { formatDateOnlyFromApi } from '../../utils/dateOnly';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { fontSizes } from '../../theme/fontSizes';
@@ -115,12 +116,15 @@ export function AdminTenantDetail() {
                   {tenant.slug} · criada em {formatDate(tenant.createdAt)}
                   {!tenant.active && tenant.suspendedAt && ` · suspensa em ${formatDateTime(tenant.suspendedAt)}`}
                 </Typography>
-                {(tenant.specialty || tenant.foundedAt) && (
-                  <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', mt: 0.75 }}>
-                    {[tenant.specialty, tenant.foundedAt && `inaugurada em ${formatDateOnlyFromApi(tenant.foundedAt)}`]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </Typography>
+                {(tenant.specialties.length > 0 || tenant.foundedAt) && (
+                  <Box sx={{ mt: 1 }}>
+                    {tenant.specialties.length > 0 && <TenantSpecialtyChips specialties={tenant.specialties} />}
+                    {tenant.foundedAt && (
+                      <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', mt: tenant.specialties.length ? 0.75 : 0 }}>
+                        Inaugurada em {formatDateOnlyFromApi(tenant.foundedAt)}
+                      </Typography>
+                    )}
+                  </Box>
                 )}
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1.5 }}>
                   <Typography component="span" sx={{ fontSize: fontSizes.sm, fontWeight: 700, color: 'text.secondary' }}>

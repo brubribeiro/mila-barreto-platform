@@ -1,5 +1,5 @@
 -- Perfil da clínica no control plane (super-admin).
-ALTER TABLE "Tenant" ADD COLUMN "specialty" TEXT;
+ALTER TABLE "Tenant" ADD COLUMN "specialties" JSONB;
 ALTER TABLE "Tenant" ADD COLUMN "foundedAt" DATE;
 ALTER TABLE "Tenant" ADD COLUMN "legalName" TEXT;
 ALTER TABLE "Tenant" ADD COLUMN "document" TEXT;

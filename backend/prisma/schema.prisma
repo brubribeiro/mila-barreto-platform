@@ -32,7 +32,7 @@ model Tenant {
   featuresExtra  Json?
   // Módulos do plano que esta clínica não tem
   featuresDenied Json?
-  specialty   String?
+  specialties Json?
   foundedAt   DateTime? @db.Date
   legalName   String?
   document    String?

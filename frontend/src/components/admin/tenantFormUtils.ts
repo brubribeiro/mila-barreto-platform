@@ -3,7 +3,7 @@ import type { AdminTenantProfile } from '../../types';
 import { dateInputValueFromApi, dateOnlyToApiIso } from '../../utils/dateOnly';
 
 export interface TenantProfileFormValues {
-  specialty: string;
+  specialties: string[];
   foundedAt: string;
   legalName: string;
   document: string;
@@ -15,7 +15,7 @@ export interface TenantProfileFormValues {
 }
 
 export const emptyTenantProfileForm: TenantProfileFormValues = {
-  specialty: '',
+  specialties: [],
   foundedAt: '',
   legalName: '',
   document: '',
@@ -31,7 +31,7 @@ export function tenantProfileFormFromTenant(
 ): TenantProfileFormValues {
   if (!tenant) return { ...emptyTenantProfileForm };
   return {
-    specialty: tenant.specialty ?? '',
+    specialties: Array.isArray(tenant.specialties) ? [...tenant.specialties] : [],
     foundedAt: dateInputValueFromApi(tenant.foundedAt),
     legalName: tenant.legalName ?? '',
     document: tenant.document ?? '',
@@ -54,7 +54,13 @@ export function buildTenantProfilePayload(
   };
   const docDigits = values.document.replace(/\D/g, '');
   return {
-    specialty: empty(values.specialty) as string | undefined,
+    specialties: isEdit
+      ? values.specialties.length
+        ? values.specialties
+        : null
+      : values.specialties.length
+        ? values.specialties
+        : undefined,
     foundedAt: values.foundedAt ? dateOnlyToApiIso(values.foundedAt) : isEdit ? null : undefined,
     legalName: empty(values.legalName),
     document: docDigits ? docDigits : isEdit ? null : undefined,

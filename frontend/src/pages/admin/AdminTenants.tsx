@@ -33,6 +33,7 @@ import { useTenantActions } from '../../components/admin/useTenantActions';
 import { ROW_ACTION_SX, TenantStatusPill, formatLastAccess } from '../../components/admin/adminUi';
 import { clickableProps } from '../../utils/a11y';
 import { fontSizes } from '../../theme/fontSizes';
+import { formatSpecialtiesList } from '../../features/clinicSpecialties';
 import type { AdminTenant } from '../../types';
 
 const GRID_COLS =
@@ -204,12 +205,16 @@ export function AdminTenants() {
                     <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700 }} noWrap title={t.name}>
                       {t.name}
                     </Typography>
-                    <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }} noWrap title={[t.specialty, t.city].filter(Boolean).join(' · ') || t.slug}>
+                    <Typography
+                      sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}
+                      noWrap
+                      title={[formatSpecialtiesList(t.specialties), t.city].filter(Boolean).join(' · ') || t.slug}
+                    >
                       {t.slug}
-                      {(t.specialty || t.city) && (
+                      {(t.specialties.length > 0 || t.city) && (
                         <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
                           {' · '}
-                          {[t.specialty, t.city].filter(Boolean).join(' · ')}
+                          {[formatSpecialtiesList(t.specialties), t.city].filter(Boolean).join(' · ')}
                         </Box>
                       )}
                       <Box component="span" sx={{ display: { md: 'none' } }}>

@@ -1,5 +1,18 @@
 import { Transform } from 'class-transformer';
-import { IsDateString, IsEmail, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  ArrayUnique,
+  IsArray,
+  IsDateString,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
+import { Prisma } from '@prisma/client';
+
+import { CLINIC_SPECIALTIES, normalizeSpecialties } from '../../common/clinic-specialties';
 
 const trimToUndefined = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() || undefined : value;
@@ -23,11 +36,12 @@ export function normalizeCnpj(value: unknown): string | undefined | null {
 
 /** Campos de perfil da clínica (create e update no painel super-admin). */
 export class TenantProfileDto {
-  @Transform(trimToUndefined)
+  @Transform(({ value }) => (value === null ? null : normalizeSpecialties(value)))
   @IsOptional()
-  @IsString()
-  @MaxLength(120)
-  specialty?: string;
+  @IsArray()
+  @ArrayUnique()
+  @IsIn([...CLINIC_SPECIALTIES], { each: true })
+  specialties?: string[] | null;
 
   @Transform(trimToNull)
   @IsOptional()
@@ -83,14 +97,14 @@ export class TenantProfileDto {
 
 export type TenantProfileInput = Pick<
   TenantProfileDto,
-  'specialty' | 'foundedAt' | 'legalName' | 'document' | 'phone' | 'email' | 'city' | 'state' | 'notes'
+  'specialties' | 'foundedAt' | 'legalName' | 'document' | 'phone' | 'email' | 'city' | 'state' | 'notes'
 >;
 
 export function tenantProfilePrismaData(
   dto: Partial<TenantProfileInput>,
   mode: 'create' | 'update',
-): Record<string, string | Date | null | undefined> {
-  const out: Record<string, string | Date | null | undefined> = {};
+): Record<string, string | Date | Prisma.InputJsonValue | typeof Prisma.DbNull | null | undefined> {
+  const out: Record<string, string | Date | Prisma.InputJsonValue | typeof Prisma.DbNull | null | undefined> = {};
   const keys: (keyof TenantProfileInput)[] = [
     'legalName',
     'document',
@@ -106,9 +120,12 @@ export function tenantProfilePrismaData(
     if (mode === 'create' && (val === undefined || val === null)) continue;
     out[key] = val ?? null;
   }
-  if ('specialty' in dto && dto.specialty !== undefined) {
-    if (mode === 'update' || dto.specialty?.trim()) {
-      out.specialty = dto.specialty?.trim() || null;
+  if ('specialties' in dto && dto.specialties !== undefined) {
+    const list = normalizeSpecialties(dto.specialties);
+    if (mode === 'create') {
+      if (list.length) out.specialties = list;
+    } else {
+      out.specialties = list.length ? list : Prisma.DbNull;
     }
   }
   if ('foundedAt' in dto) {

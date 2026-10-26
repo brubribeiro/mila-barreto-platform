@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { normalizeSpecialties } from '../common/clinic-specialties';
 import { featuresFromTenant, normalizeFeatures } from '../common/platform-features';
 import { TenantContext } from '../tenancy/tenant-context';
 import { provisionTenant } from '../tenancy/system-roles';
@@ -122,6 +123,7 @@ export class AdminService {
 
       return tenants.map(({ _count, ...tenant }) => ({
         ...tenant,
+        specialties: normalizeSpecialties(tenant.specialties),
         metrics: {
           activeUsers: _count.users,
           patients: _count.patients,
@@ -153,6 +155,7 @@ export class AdminService {
 
       return {
         ...tenant,
+        specialties: normalizeSpecialties(tenant.specialties),
         featuresExtra: normalizeFeatures(tenant.featuresExtra),
         featuresDenied: normalizeFeatures(tenant.featuresDenied),
         effectiveFeatures: featuresFromTenant(tenant),
@@ -231,18 +234,14 @@ export class AdminService {
           changes[key] = { old: before[key], new: updated[key] };
         }
       }
-      for (const key of [
-        'specialty',
-        'legalName',
-        'document',
-        'phone',
-        'email',
-        'city',
-        'state',
-        'notes',
-      ] as const) {
+      for (const key of ['legalName', 'document', 'phone', 'email', 'city', 'state', 'notes'] as const) {
         if (!(key in profileData)) continue;
         if (before[key] !== updated[key]) changes[key] = { old: before[key], new: updated[key] };
+      }
+      if ('specialties' in profileData) {
+        const oldS = normalizeSpecialties(before.specialties);
+        const newS = normalizeSpecialties(updated.specialties);
+        if (!sameJson(oldS, newS)) changes.specialties = { old: oldS, new: newS };
       }
       if ('foundedAt' in profileData) {
         const oldDay = before.foundedAt?.toISOString().slice(0, 10) ?? null;
@@ -277,6 +276,7 @@ export class AdminService {
       }
       return {
         ...updated,
+        specialties: normalizeSpecialties(updated.specialties),
         plan,
         featuresExtra: normalizeFeatures(updated.featuresExtra),
         featuresDenied: normalizeFeatures(updated.featuresDenied),
