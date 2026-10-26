@@ -6,7 +6,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Added
 
-- Feedback: model Prisma `FeedbackReport` (BUG|SUGGESTION), migration `20261026010000_feedback_reports`, `POST /feedback` (qualquer autenticado) e `GET /feedback` (`feedback:view` / Administrador).
+- Feedback: model Prisma `FeedbackReport` (BUG|SUGGESTION) com `tenantId` (FK Tenant, índice, escopo automático e trigger same-tenant em `userId`), migration `20261026010000_feedback_reports`, `POST /feedback` (qualquer autenticado) e `GET /feedback` (`feedback:view` / Administrador da própria clínica).
 - Feedback: dialog no menu do usuário (sidebar) para escolher tipo, preencher título/descrição e enviar; página mínima `/feedback` para leitura admin.
 - Header Aurora: "Novo agendamento" preenchido, relógio global de histórico (`AuditHistoryDialog` pela rota, substitui os 16 botões por tela) e olho para ocultar valores (`utils/money.ts`).
 - `AuditHistoryDialog` no padrão Aurora: tabela em grid e select de ação/período no estilo das listas (Usuários), paginação própria no rodapé, no lugar do DataGrid; relógio do header fica desabilitado nas telas sem histórico.

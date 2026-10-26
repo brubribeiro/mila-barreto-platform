@@ -64,6 +64,7 @@ model Tenant {
   skincareProducts        SkincareProduct[]
   skincareRules           SkincareRule[]
   skincareRoutines        SkincareRoutine[]
+  feedbackReports         FeedbackReport[]
   platformAuditLogs       PlatformAuditLog[]
 
   @@map("tenants")
@@ -993,6 +994,7 @@ enum FeedbackType {
 
 model FeedbackReport {
   id          String       @id @default(uuid())
+  tenantId    String       @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   type        FeedbackType
   title       String
   description String
@@ -1000,11 +1002,13 @@ model FeedbackReport {
   userId      String
   createdAt   DateTime     @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([createdAt])
   @@index([type])
+  @@index([tenantId])
   @@map("feedback_reports")
 }
 
