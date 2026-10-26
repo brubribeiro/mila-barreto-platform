@@ -19,10 +19,12 @@ import { useAppToast } from '../../contexts/AppToastContext';
 import {
   TenantStatusPill,
   formatBytes,
+  formatCnpj,
   formatDate,
   formatDateTime,
   formatLastAccess,
 } from '../../components/admin/adminUi';
+import { formatDateOnlyFromApi } from '../../utils/dateOnly';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { fontSizes } from '../../theme/fontSizes';
 
@@ -113,6 +115,13 @@ export function AdminTenantDetail() {
                   {tenant.slug} · criada em {formatDate(tenant.createdAt)}
                   {!tenant.active && tenant.suspendedAt && ` · suspensa em ${formatDateTime(tenant.suspendedAt)}`}
                 </Typography>
+                {(tenant.specialty || tenant.foundedAt) && (
+                  <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', mt: 0.75 }}>
+                    {[tenant.specialty, tenant.foundedAt && `inaugurada em ${formatDateOnlyFromApi(tenant.foundedAt)}`]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Typography>
+                )}
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1.5 }}>
                   <Typography component="span" sx={{ fontSize: fontSizes.sm, fontWeight: 700, color: 'text.secondary' }}>
                     Plano
@@ -200,6 +209,27 @@ export function AdminTenantDetail() {
         />
       </Box>
 
+      {tenant && hasTenantProfile(tenant) && (
+        <Card sx={{ p: 0, overflow: 'hidden' }}>
+          <Typography component="h3" sx={SECTION_TITLE_SX}>
+            Cadastro da clínica
+          </Typography>
+          <Box sx={{ px: 2.5, py: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+            <ProfileField label="Razão social" value={tenant.legalName} />
+            <ProfileField label="CNPJ" value={tenant.document ? formatCnpj(tenant.document) : null} />
+            <ProfileField label="Telefone" value={tenant.phone} />
+            <ProfileField label="E-mail de contato" value={tenant.email} />
+            <ProfileField label="Cidade" value={tenant.city} />
+            <ProfileField label="UF" value={tenant.state} />
+            {tenant.notes && (
+              <Box sx={{ gridColumn: { sm: '1 / -1' } }}>
+                <ProfileField label="Nota interna" value={tenant.notes} multiline />
+              </Box>
+            )}
+          </Box>
+        </Card>
+      )}
+
       {tenant && (
         <Card sx={{ p: 0, overflow: 'hidden' }}>
           <Typography component="h3" sx={SECTION_TITLE_SX}>
@@ -272,6 +302,42 @@ function BackLink() {
       <Button component={RouterLink} to="/admin/clinicas" startIcon={<ArrowBackIcon />} size="small">
         Clínicas
       </Button>
+    </Box>
+  );
+}
+
+function hasTenantProfile(tenant: {
+  legalName: string | null;
+  document: string | null;
+  phone: string | null;
+  email: string | null;
+  city: string | null;
+  state: string | null;
+  notes: string | null;
+}) {
+  return [tenant.legalName, tenant.document, tenant.phone, tenant.email, tenant.city, tenant.state, tenant.notes].some(
+    Boolean,
+  );
+}
+
+function ProfileField({
+  label,
+  value,
+  multiline,
+}: {
+  label: string;
+  value: string | null | undefined;
+  multiline?: boolean;
+}) {
+  if (!value) return null;
+  return (
+    <Box>
+      <Typography sx={{ fontSize: fontSizes['2xs'], fontWeight: 800, letterSpacing: '0.06em', color: 'text.disabled', textTransform: 'uppercase' }}>
+        {label}
+      </Typography>
+      <Typography sx={{ fontSize: fontSizes.sm, fontWeight: 600, mt: 0.35, whiteSpace: multiline ? 'pre-wrap' : 'nowrap' }} noWrap={!multiline}>
+        {value}
+      </Typography>
     </Box>
   );
 }

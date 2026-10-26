@@ -204,8 +204,14 @@ export function AdminTenants() {
                     <Typography sx={{ fontSize: fontSizes.md, fontWeight: 700 }} noWrap title={t.name}>
                       {t.name}
                     </Typography>
-                    <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }} noWrap>
+                    <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }} noWrap title={[t.specialty, t.city].filter(Boolean).join(' · ') || t.slug}>
                       {t.slug}
+                      {(t.specialty || t.city) && (
+                        <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+                          {' · '}
+                          {[t.specialty, t.city].filter(Boolean).join(' · ')}
+                        </Box>
+                      )}
                       <Box component="span" sx={{ display: { md: 'none' } }}>
                         {' · '}
                         {t.active ? 'Ativa' : 'Suspensa'}

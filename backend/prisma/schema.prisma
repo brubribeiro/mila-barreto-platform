@@ -32,6 +32,15 @@ model Tenant {
   featuresExtra  Json?
   // Módulos do plano que esta clínica não tem
   featuresDenied Json?
+  specialty   String?
+  foundedAt   DateTime? @db.Date
+  legalName   String?
+  document    String?
+  phone       String?
+  email       String?
+  city        String?
+  state       String?
+  notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

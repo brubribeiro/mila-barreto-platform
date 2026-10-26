@@ -78,6 +78,12 @@ export function formatBytes(bytes: number): string {
 }
 
 /** "3 usuários · 500 pacientes · 5 GB"; sem limites → "Sem limites". */
+export function formatCnpj(digits: string | null | undefined): string {
+  const d = (digits ?? '').replace(/\D/g, '');
+  if (d.length !== 14) return digits?.trim() || '—';
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+}
+
 export function formatPlanLimits(limits: PlanLimits | null | undefined): string {
   const parts: string[] = [];
   const n = (v: number) => v.toLocaleString('pt-BR');

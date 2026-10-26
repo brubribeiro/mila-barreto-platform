@@ -11,6 +11,7 @@ import { featuresFromTenant, normalizeFeatures } from '../common/platform-featur
 import { TenantContext } from '../tenancy/tenant-context';
 import { provisionTenant } from '../tenancy/system-roles';
 import { CreateTenantDto } from './dto/create-tenant.dto';
+import { tenantProfilePrismaData } from './dto/tenant-profile.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { recordPlatformAudit, type PlatformAuditAction } from './platform-audit';
 
@@ -183,7 +184,12 @@ export class AdminService {
       const password = await bcrypt.hash(randomBytes(32).toString('hex'), 10);
       const tenant = await provisionTenant(
         this.prisma as unknown as PrismaClient,
-        { name: dto.name, slug, planId: plan?.id ?? null },
+        {
+          name: dto.name,
+          slug,
+          planId: plan?.id ?? null,
+          ...tenantProfilePrismaData(dto, 'create'),
+        },
         { name: dto.adminName, email: dto.adminEmail, password },
       );
       await this.audit(actor, 'TENANT_CREATE', tenant, {
@@ -206,6 +212,7 @@ export class AdminService {
       const featuresExtraData = normalizeFeatureOverride(dto.featuresExtra);
       const featuresDeniedData = normalizeFeatureOverride(dto.featuresDenied);
 
+      const profileData = tenantProfilePrismaData(dto, 'update');
       const { plan, ...updated } = await this.prisma.tenant.update({
         where: { id },
         data: {
@@ -214,12 +221,33 @@ export class AdminService {
           ...(planChanged ? { planId: newPlan?.id ?? null } : {}),
           ...(featuresExtraData !== undefined ? { featuresExtra: featuresExtraData } : {}),
           ...(featuresDeniedData !== undefined ? { featuresDenied: featuresDeniedData } : {}),
+          ...profileData,
         },
         include: { plan: { select: PLAN_SUMMARY_SELECT } },
       });
-      const changes: Record<string, { old: string; new: string }> = {};
+      const changes: Record<string, { old: unknown; new: unknown }> = {};
       for (const key of ['name', 'slug'] as const) {
+        if (dto[key] !== undefined && before[key] !== updated[key]) {
+          changes[key] = { old: before[key], new: updated[key] };
+        }
+      }
+      for (const key of [
+        'specialty',
+        'legalName',
+        'document',
+        'phone',
+        'email',
+        'city',
+        'state',
+        'notes',
+      ] as const) {
+        if (!(key in profileData)) continue;
         if (before[key] !== updated[key]) changes[key] = { old: before[key], new: updated[key] };
+      }
+      if ('foundedAt' in profileData) {
+        const oldDay = before.foundedAt?.toISOString().slice(0, 10) ?? null;
+        const newDay = updated.foundedAt?.toISOString().slice(0, 10) ?? null;
+        if (oldDay !== newDay) changes.foundedAt = { old: oldDay, new: newDay };
       }
       if (Object.keys(changes).length) await this.audit(actor, 'TENANT_UPDATE', updated, changes);
       if (planChanged) {

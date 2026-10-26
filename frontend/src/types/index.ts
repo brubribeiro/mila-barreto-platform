@@ -71,7 +71,19 @@ export interface AdminPlan {
 
 export type AdminPlanSummary = Pick<AdminPlan, 'id' | 'name' | 'slug' | 'active' | 'features' | 'priceCents' | 'currency'>;
 
-export interface AdminTenant {
+export interface AdminTenantProfile {
+  specialty: string | null;
+  foundedAt: string | null;
+  legalName: string | null;
+  document: string | null;
+  phone: string | null;
+  email: string | null;
+  city: string | null;
+  state: string | null;
+  notes: string | null;
+}
+
+export interface AdminTenant extends AdminTenantProfile {
   id: string;
   name: string;
   slug: string;
