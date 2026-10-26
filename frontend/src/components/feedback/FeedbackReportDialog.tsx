@@ -1,22 +1,20 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
-  alpha,
   Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
-  Stack,
   TextField,
-  Typography,
+  ToggleButton,
+  ToggleButtonGroup,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import BugReportOutlinedIcon from '@mui/icons-material/BugReportOutlined';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import FeedbackOutlinedIcon from '@mui/icons-material/FeedbackOutlined';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useMutation } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 
@@ -24,38 +22,17 @@ import { feedbackApi } from '../../api/feedback';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { LabeledField } from '../LabeledField';
 import type { FeedbackType } from '../../types';
-import { fontSizes } from '../../theme/fontSizes';
 
 interface Props {
   open: boolean;
   onClose: () => void;
 }
 
-type Step = 'type' | 'form';
-
-const TYPE_OPTIONS: {
-  type: FeedbackType;
-  title: string;
-  description: string;
-  icon: typeof BugReportOutlinedIcon;
-  tone: 'error' | 'primary';
-}[] = [
-  {
-    type: 'SUGGESTION',
-    title: 'Sugestão de melhoria',
-    description: 'Ideia para deixar o painel melhor ou mais fácil de usar',
-    icon: LightbulbOutlinedIcon,
-    tone: 'primary',
-  },
-  {
-    type: 'BUG',
-    title: 'Bug',
-    description: 'Algo não funcionou como esperado ou quebrou na tela',
-    icon: BugReportOutlinedIcon,
-    tone: 'error',
-  },
-];
+const DIALOG_MAX_WIDTH = 560;
+/** Altura mínima do corpo — tipo + campos cabem sem o paper encolher/expandir. */
+const CONTENT_MIN_HEIGHT = 360;
 
 export function FeedbackReportDialog({ open, onClose }: Props) {
   const theme = useTheme();
@@ -63,17 +40,14 @@ export function FeedbackReportDialog({ open, onClose }: Props) {
   const location = useLocation();
   const toast = useAppToast();
 
-  const [step, setStep] = useState<Step>('type');
-  const [type, setType] = useState<FeedbackType | null>(null);
+  const [type, setType] = useState<FeedbackType>('SUGGESTION');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [titleError, setTitleError] = useState('');
   const [descriptionError, setDescriptionError] = useState('');
-
   useEffect(() => {
     if (!open) return;
-    setStep('type');
-    setType(null);
+    setType('SUGGESTION');
     setTitle('');
     setDescription('');
     setTitleError('');
@@ -90,19 +64,6 @@ export function FeedbackReportDialog({ open, onClose }: Props) {
       toast.error(getApiErrorMessage(err, 'Não foi possível enviar o feedback.'));
     },
   });
-
-  const selectedOption = TYPE_OPTIONS.find((o) => o.type === type);
-
-  const handleSelectType = (next: FeedbackType) => {
-    setType(next);
-    setStep('form');
-  };
-
-  const handleBack = () => {
-    setStep('type');
-    setTitleError('');
-    setDescriptionError('');
-  };
 
   const handleSubmit = () => {
     let valid = true;
@@ -123,7 +84,7 @@ export function FeedbackReportDialog({ open, onClose }: Props) {
       setDescriptionError('');
     }
 
-    if (!valid || !type) return;
+    if (!valid) return;
 
     createMutation.mutate({
       type,
@@ -149,7 +110,8 @@ export function FeedbackReportDialog({ open, onClose }: Props) {
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
             : {
-                maxWidth: 560,
+                maxWidth: DIALOG_MAX_WIDTH,
+                width: DIALOG_MAX_WIDTH,
                 maxHeight: '94dvh',
                 overflow: 'hidden',
               }),
@@ -159,101 +121,61 @@ export function FeedbackReportDialog({ open, onClose }: Props) {
       <DialogHeader
         onClose={onClose}
         isMobile={isMobile}
-        title={step === 'type' ? 'Enviar feedback' : selectedOption?.title ?? 'Enviar feedback'}
-        subtitle={
-          step === 'type'
-            ? 'Escolha o tipo de report para continuar'
-            : 'Conte o que aconteceu ou o que você gostaria de ver'
-        }
+        title="Enviar feedback"
+        subtitle="Conte o que aconteceu ou o que você gostaria de ver"
         icon={<FeedbackOutlinedIcon fontSize="small" />}
       />
 
       <DialogContent
-        dividers
         sx={{
           px: { xs: 2, sm: 3 },
-          py: { xs: 2, sm: 2.5 },
+          pb: { xs: 2, sm: 2.5 },
           flex: 1,
-          minHeight: 0,
+          minHeight: isMobile ? 0 : CONTENT_MIN_HEIGHT,
           overflow: 'auto',
-          bgcolor: (t) => t.palette.background.default,
+          '&.MuiDialogContent-root': { pt: { xs: 2.75, sm: 3 } },
         }}
       >
-        {step === 'type' ? (
-          <Stack spacing={1.5}>
-            {TYPE_OPTIONS.map((option) => {
-              const Icon = option.icon;
-              const paletteKey = option.tone === 'error' ? 'error' : 'primary';
-              return (
-                <Box
-                  key={option.type}
-                  component="button"
-                  type="button"
-                  onClick={() => handleSelectType(option.type)}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 1.5,
-                    width: '100%',
-                    textAlign: 'left',
-                    p: 2,
-                    borderRadius: '16px',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    bgcolor: 'background.paper',
-                    cursor: 'pointer',
-                    transition: 'border-color .15s, box-shadow .15s, background-color .15s',
-                    '&:hover': {
-                      borderColor: `${paletteKey}.main`,
-                      bgcolor: (t) => alpha(t.palette[paletteKey].main, 0.04),
-                      boxShadow: '0 4px 14px rgba(15, 40, 36, 0.06)',
-                    },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      bgcolor: (t) => alpha(t.palette[paletteKey].main, 0.12),
-                      color: `${paletteKey}.main`,
-                    }}
-                  >
-                    <Icon />
-                  </Box>
-                  <Box sx={{ minWidth: 0, pt: 0.25 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: fontSizes.md, lineHeight: 1.25 }}>
-                      {option.title}
-                    </Typography>
-                    <Typography
-                      sx={{ mt: 0.5, fontSize: fontSizes.sm, color: 'text.secondary', lineHeight: 1.4 }}
-                    >
-                      {option.description}
-                    </Typography>
-                  </Box>
-                </Box>
-              );
-            })}
-          </Stack>
-        ) : (
-          <Stack spacing={2}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75, minHeight: isMobile ? undefined : CONTENT_MIN_HEIGHT - 24 }}>
+          <LabeledField label="Tipo" required>
+            <ToggleButtonGroup
+              exclusive
+              fullWidth
+              size="small"
+              color="primary"
+              value={type}
+              onChange={(_, val: FeedbackType | null) => {
+                if (val) setType(val);
+              }}
+              aria-label="Tipo de feedback"
+            >
+              <ToggleButton value="SUGGESTION" sx={{ px: 1.5, gap: 0.75, textTransform: 'none', fontWeight: 700 }}>
+                <LightbulbOutlinedIcon sx={{ fontSize: 18 }} />
+                Sugestão
+              </ToggleButton>
+              <ToggleButton value="BUG" sx={{ px: 1.5, gap: 0.75, textTransform: 'none', fontWeight: 700 }}>
+                <BugReportOutlinedIcon sx={{ fontSize: 18 }} />
+                Bug
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </LabeledField>
+
+          <LabeledField label="Título" required>
             <TextField
-              label="Título"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               error={!!titleError}
               helperText={titleError || 'Resumo curto do problema ou da ideia'}
+              placeholder="Ex.: Filtro da agenda não salva a data"
               fullWidth
               required
               autoFocus
               inputProps={{ maxLength: 200 }}
             />
+          </LabeledField>
+
+          <LabeledField label="Descrição" required>
             <TextField
-              label="Descrição"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               error={!!descriptionError}
@@ -261,56 +183,34 @@ export function FeedbackReportDialog({ open, onClose }: Props) {
                 descriptionError ||
                 'Detalhe o contexto, os passos e o que você esperava. A página atual será anexada automaticamente.'
               }
+              placeholder="Descreva o que aconteceu ou a melhoria desejada"
               fullWidth
               required
               multiline
               minRows={isMobile ? 5 : 6}
               inputProps={{ maxLength: 5000 }}
             />
-            <Alert severity="info" variant="outlined" sx={{ py: 0.5 }}>
-              Página atual: {location.pathname}
-              {location.search}
-            </Alert>
-          </Stack>
-        )}
+          </LabeledField>
+
+          <Alert severity="info" variant="outlined" sx={{ py: 0.5 }}>
+            Página atual: {location.pathname}
+            {location.search}
+          </Alert>
+        </Box>
       </DialogContent>
 
-      <DialogActions
-        sx={{
-          ...dialogActionsBorderSx,
-          flexShrink: 0,
-          justifyContent: step === 'form' ? 'space-between' : 'flex-end',
-        }}
-      >
-        {step === 'form' ? (
-          <>
-            <Button
-              type="button"
-              startIcon={<ArrowBackIcon />}
-              onClick={handleBack}
-              disabled={createMutation.isPending}
-            >
-              Voltar
-            </Button>
-            <Stack direction="row" spacing={1}>
-              <Button type="button" onClick={onClose} disabled={createMutation.isPending}>
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                variant="contained"
-                onClick={handleSubmit}
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? 'Enviando…' : 'Enviar'}
-              </Button>
-            </Stack>
-          </>
-        ) : (
-          <Button type="button" onClick={onClose}>
-            Cancelar
-          </Button>
-        )}
+      <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
+        <Button type="button" onClick={onClose} disabled={createMutation.isPending}>
+          Cancelar
+        </Button>
+        <Button
+          type="button"
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={createMutation.isPending}
+        >
+          {createMutation.isPending ? 'Enviando…' : 'Enviar'}
+        </Button>
       </DialogActions>
     </Dialog>
   );
