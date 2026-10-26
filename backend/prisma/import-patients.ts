@@ -5,7 +5,7 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-import { PrismaClient } from '@prisma/client';
+import { createScriptClient, runInScriptTenant } from './tenant-script';
 
 import {
   LegacyPatientRow,
@@ -13,7 +13,7 @@ import {
   shouldSkipRow,
 } from './import-patients-utils';
 
-const prisma = new PrismaClient();
+const prisma = createScriptClient();
 
 async function findExisting(mapped: ReturnType<typeof mapLegacyPatientRow>) {
   const or: object[] = [];
@@ -117,7 +117,7 @@ async function main() {
   console.log('\nImportação concluída.\n');
 }
 
-main()
+runInScriptTenant(prisma, main)
   .catch((err) => {
     console.error(err);
     process.exit(1);

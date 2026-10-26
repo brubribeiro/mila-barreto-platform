@@ -8,6 +8,8 @@ interface AuthContextValue {
   loading: boolean;
   loginWithGoogle: (credential: string) => Promise<void>;
   impersonate: (userId: string) => Promise<void>;
+  /** Super-admin: entra numa clínica como administrador (modo "visualizando como"). */
+  enterTenant: (tenantId: string) => Promise<void>;
   stopImpersonating: () => void;
   logout: () => void;
 }
@@ -69,12 +71,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function enterTenant(tenantId: string) {
+    const currentToken = localStorage.getItem('access_token');
+    if (currentToken) {
+      localStorage.setItem('admin_token', currentToken);
+    }
+    let data: { access_token: string };
+    try {
+      ({ data } = await api.post<{ access_token: string }>(`/admin/tenants/${tenantId}/enter`));
+    } catch (err) {
+      localStorage.removeItem('admin_token');
+      throw err;
+    }
+    localStorage.setItem('access_token', data.access_token);
+    const me = await api.get<User>('/auth/me');
+    setUser(me.data);
+  }
+
   function stopImpersonating() {
     const adminToken = localStorage.getItem('admin_token');
     if (!adminToken) return;
     localStorage.setItem('access_token', adminToken);
     localStorage.removeItem('admin_token');
-    window.location.href = appPath('/');
+    // Super-admin volta para o detalhe da clínica no painel
+    window.location.href = appPath(user?.isSuperAdmin && user.tenantId ? `/admin/clinicas/${user.tenantId}` : '/');
   }
 
   function logout() {
@@ -85,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginWithGoogle, impersonate, stopImpersonating, logout }}>
+    <AuthContext.Provider value={{ user, loading, loginWithGoogle, impersonate, enterTenant, stopImpersonating, logout }}>
       {children}
     </AuthContext.Provider>
   );

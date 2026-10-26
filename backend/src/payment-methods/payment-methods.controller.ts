@@ -14,10 +14,13 @@ import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { FeatureGuard } from '../common/guards/feature.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { RequireFeature } from '../common/decorators/require-feature.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequireFeature('payment_methods')
+@UseGuards(JwtAuthGuard, FeatureGuard, PermissionsGuard)
 @Controller('payment-methods')
 export class PaymentMethodsController {
   constructor(private readonly service: PaymentMethodsService) {}

@@ -3,9 +3,11 @@
  * Uso: npm run prisma:seed-packages
  */
 import { randomUUID } from 'crypto';
-import { PackageType, PrismaClient } from '@prisma/client';
+import { PackageType } from '@prisma/client';
+import { createScriptClient, runInScriptTenant } from './tenant-script';
+import { TenantContext } from '../src/tenancy/tenant-context';
 
-const prisma = new PrismaClient();
+const prisma = createScriptClient();
 
 type PackageItemSeed = {
   procedureName: string;
@@ -167,7 +169,7 @@ function sessionCountFromItems(items: { quantity: number }[]): number {
 
 async function packageExists(name: string): Promise<boolean> {
   const rows = await prisma.$queryRaw<{ id: string }[]>`
-    SELECT id FROM packages WHERE name = ${name} LIMIT 1
+    SELECT id FROM packages WHERE name = ${name} AND "tenantId" = ${TenantContext.requireTenantId()} LIMIT 1
   `;
   return rows.length > 0;
 }
@@ -177,7 +179,7 @@ async function resolveItems(items: PackageItemSeed[]) {
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     const rows = await prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM procedures WHERE name = ${item.procedureName} LIMIT 1
+      SELECT id FROM procedures WHERE name = ${item.procedureName} AND "tenantId" = ${TenantContext.requireTenantId()} LIMIT 1
     `;
     const procedureId = rows[0]?.id;
     if (!procedureId) return null;
@@ -200,9 +202,10 @@ async function createPackage(
 
   await prisma.$executeRaw`
     INSERT INTO packages (
-      id, name, description, type, "totalPrice", "validityDays", "sessionCount", active, "createdAt", "updatedAt"
+      id, "tenantId", name, description, type, "totalPrice", "validityDays", "sessionCount", active, "createdAt", "updatedAt"
     ) VALUES (
       ${packageId},
+      ${TenantContext.requireTenantId()},
       ${pkg.name},
       ${pkg.description},
       ${pkg.type}::"PackageType",
@@ -218,8 +221,8 @@ async function createPackage(
   for (const item of items) {
     const itemId = randomUUID();
     await prisma.$executeRaw`
-      INSERT INTO package_items (id, "packageId", "procedureId", quantity, "sortOrder")
-      VALUES (${itemId}, ${packageId}, ${item.procedureId}, ${item.quantity}, ${item.sortOrder})
+      INSERT INTO package_items (id, "tenantId", "packageId", "procedureId", quantity, "sortOrder")
+      VALUES (${itemId}, ${TenantContext.requireTenantId()}, ${packageId}, ${item.procedureId}, ${item.quantity}, ${item.sortOrder})
     `;
   }
 }
@@ -252,7 +255,7 @@ async function main() {
   console.log(`\nConcluído: ${created} criado(s), ${skipped} já existente(s)/pulado(s).\n`);
 }
 
-main()
+runInScriptTenant(prisma, main)
   .catch((e) => {
     console.error(e);
     process.exit(1);

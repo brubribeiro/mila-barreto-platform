@@ -17,14 +17,17 @@ import {
 } from './availability.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { FeatureGuard } from '../common/guards/feature.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { RequireFeature } from '../common/decorators/require-feature.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 /**
  * Rotas centradas em "users/:userId". Quando o usuário não tem permissão
  * de "availability:edit" sobre OUTRO usuário, pode editar apenas o próprio.
+ * GET continua aberto (agenda); escrita exige o módulo Horários.
  */
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, FeatureGuard, PermissionsGuard)
 @Controller('users/:userId/availability')
 export class AvailabilityController {
   constructor(private readonly availability: AvailabilityService) {}
@@ -35,6 +38,7 @@ export class AvailabilityController {
     return this.availability.listWorkingHours(userId);
   }
 
+  @RequireFeature('availability')
   @Put('working-hours')
   upsertWorkingHours(
     @Param('userId') userId: string,
@@ -45,6 +49,7 @@ export class AvailabilityController {
     return this.availability.upsertWorkingHours(userId, dto);
   }
 
+  @RequireFeature('availability')
   @Delete('working-hours/:dayOfWeek')
   removeWorkingHours(
     @Param('userId') userId: string,
@@ -60,6 +65,7 @@ export class AvailabilityController {
     return this.availability.listUnavailability(userId);
   }
 
+  @RequireFeature('availability')
   @Post('unavailability')
   createUnavailability(
     @Param('userId') userId: string,
@@ -70,6 +76,7 @@ export class AvailabilityController {
     return this.availability.createUnavailability(userId, dto);
   }
 
+  @RequireFeature('availability')
   @Delete('unavailability/:id')
   removeUnavailability(
     @Param('userId') userId: string,

@@ -86,7 +86,7 @@ function PhotoSlot({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        '&:hover .photo-del': { opacity: 1 },
+        '&:hover .photo-del, &:focus-within .photo-del': { opacity: 1 },
       }}
     >
       {photo?.url ? (
@@ -121,6 +121,7 @@ function PhotoSlot({
         <IconButton
           className="photo-del"
           size="small"
+          aria-label={`Excluir foto ${badge}`}
           onClick={onDelete}
           sx={{
             position: 'absolute',
@@ -426,6 +427,7 @@ export function PatientPhotosGallery({
                             />
                             <IconButton
                               size="small"
+                              aria-label={`Remover foto ${z.label}`}
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();

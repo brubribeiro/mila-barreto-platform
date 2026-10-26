@@ -54,13 +54,14 @@ export class RolesService {
   async create(dto: CreateRoleDto, user?: AuditUser) {
     this.validatePermissions(dto.permissions);
 
-    const exists = await this.prisma.role.findUnique({ where: { name: dto.name } });
+    const exists = await this.prisma.role.findFirst({ where: { name: dto.name } });
     if (exists) throw new ConflictException('Já existe um grupo com esse nome.');
 
     const created = await this.prisma.role.create({
       data: {
         name: dto.name,
         description: dto.description,
+        color: dto.color,
         permissions: dto.permissions,
         restrictToOwnAppointments: dto.restrictToOwnAppointments ?? false,
         isSystem: false,
@@ -87,7 +88,7 @@ export class RolesService {
     }
 
     if (dto.name && dto.name !== role.name) {
-      const exists = await this.prisma.role.findUnique({ where: { name: dto.name } });
+      const exists = await this.prisma.role.findFirst({ where: { name: dto.name } });
       if (exists) throw new ConflictException('Já existe um grupo com esse nome.');
     }
 
@@ -96,6 +97,7 @@ export class RolesService {
       data: {
         name: dto.name,
         description: dto.description,
+        color: dto.color,
         permissions: dto.permissions,
         restrictToOwnAppointments: dto.restrictToOwnAppointments,
       },

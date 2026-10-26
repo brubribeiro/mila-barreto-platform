@@ -16,10 +16,13 @@ import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { FeatureGuard } from '../common/guards/feature.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { RequireFeature } from '../common/decorators/require-feature.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequireFeature('appointments')
+@UseGuards(JwtAuthGuard, FeatureGuard, PermissionsGuard)
 @Controller('appointments')
 export class AppointmentsController {
   constructor(private readonly appts: AppointmentsService) {}

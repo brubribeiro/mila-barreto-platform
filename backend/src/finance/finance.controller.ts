@@ -5,10 +5,13 @@ import { CreateFinancialEntryDto } from './dto/create-financial-entry.dto';
 import { UpdateFinancialEntryDto } from './dto/update-financial-entry.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { FeatureGuard } from '../common/guards/feature.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { RequireFeature } from '../common/decorators/require-feature.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequireFeature('finance')
+@UseGuards(JwtAuthGuard, FeatureGuard, PermissionsGuard)
 @Controller('finance')
 export class FinanceController {
   constructor(private readonly finance: FinanceService) {}

@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { IsOptional, IsString } from 'class-validator';
+import { MessageTrigger } from '@prisma/client';
+import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
@@ -10,10 +11,18 @@ export class CreateMessageTemplateDto {
 
   @IsOptional()
   @IsString()
-  category?: string;
+  category?: string | null;
 
   @IsString()
   content: string;
+
+  @IsOptional()
+  @IsEnum(MessageTrigger)
+  trigger?: MessageTrigger;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
 
   @IsOptional()
   @IsString()
@@ -27,11 +36,19 @@ export class UpdateMessageTemplateDto {
 
   @IsOptional()
   @IsString()
-  category?: string;
+  category?: string | null;
 
   @IsOptional()
   @IsString()
   content?: string;
+
+  @IsOptional()
+  @IsEnum(MessageTrigger)
+  trigger?: MessageTrigger;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
 
   @IsOptional()
   @IsString()
@@ -62,7 +79,7 @@ export class MessagesService {
   }
 
   async create(dto: CreateMessageTemplateDto, user?: AuditUser) {
-    const exists = await this.prisma.messageTemplate.findUnique({ where: { name: dto.name } });
+    const exists = await this.prisma.messageTemplate.findFirst({ where: { name: dto.name } });
     if (exists) throw new ConflictException('Já existe um template com esse nome.');
     const created = await this.prisma.messageTemplate.create({ data: dto });
     this.auditLog.logCreate('MessageTemplate', created.id, created as unknown as Record<string, unknown>, user).catch(() => undefined);
@@ -72,7 +89,7 @@ export class MessagesService {
   async update(id: string, dto: UpdateMessageTemplateDto, user?: AuditUser) {
     const oldData = await this.findOne(id);
     if (dto.name) {
-      const exists = await this.prisma.messageTemplate.findUnique({ where: { name: dto.name } });
+      const exists = await this.prisma.messageTemplate.findFirst({ where: { name: dto.name } });
       if (exists && exists.id !== id) {
         throw new ConflictException('Já existe um template com esse nome.');
       }

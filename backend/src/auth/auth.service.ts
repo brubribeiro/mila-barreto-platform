@@ -7,13 +7,20 @@ import { UsersService } from '../users/users.service';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { effectivePermissions, SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { featuresFromTenant } from '../common/platform-features';
+import { assertTenantActive } from '../tenancy/tenant-status';
 
 export interface JwtPayload {
   sub: string;
   email: string;
+  /** Clínica do usuário (null para super-admin). Conferida contra o banco a cada requisição. */
+  tenantId: string | null;
   /** ID do admin original quando em modo de personificação */
   impersonatorId?: string;
 }
+
+/** Duração do token de "entrar como" uma clínica (super-admin). */
+export const TENANT_ACCESS_EXPIRES_IN = '2h';
 
 @Injectable()
 export class AuthService {
@@ -34,6 +41,8 @@ export class AuthService {
       id: user.id,
       name: user.name,
       email: user.email,
+      tenantId: user.tenantId ?? null,
+      isSuperAdmin: user.isSuperAdmin ?? false,
       roleId: user.roleId,
       roleName: user.role?.name,
       permissions: effectivePermissions(
@@ -43,6 +52,7 @@ export class AuthService {
       restrictToOwnAppointments: user.role?.restrictToOwnAppointments ?? false,
       active: user.active,
       providesAppointments: user.providesAppointments,
+      features: featuresFromTenant(user.tenant),
     };
   }
 
@@ -70,8 +80,9 @@ export class AuthService {
     if (!user.active) {
       throw new UnauthorizedException('Usuário inativo. Contate o administrador.');
     }
+    assertTenantActive(user.tenant);
 
-    const payload: JwtPayload = { sub: user.id, email: user.email };
+    const payload: JwtPayload = { sub: user.id, email: user.email, tenantId: user.tenantId };
 
     return {
       access_token: await this.jwt.signAsync(payload),
@@ -79,7 +90,25 @@ export class AuthService {
     };
   }
 
+  /**
+   * Token do super-admin agindo como administrador da clínica tenantId ("entrar como" do
+   * painel admin). Vale menos que a sessão normal; quem chama registra a auditoria.
+   */
+  signTenantAccess(superAdmin: AuthenticatedUser, tenantId: string) {
+    const payload: JwtPayload = {
+      sub: superAdmin.id,
+      email: superAdmin.email,
+      tenantId,
+      impersonatorId: superAdmin.id,
+    };
+    return this.jwt.signAsync(payload, { expiresIn: TENANT_ACCESS_EXPIRES_IN });
+  }
+
   async impersonate(targetUserId: string, admin: AuthenticatedUser) {
+    // Super-admin dentro de uma clínica não personifica: sairia da trilha de auditoria da plataforma.
+    if (admin.isSuperAdmin) {
+      throw new ForbiddenException('O super-admin não pode personificar usuários da clínica.');
+    }
     if (admin.roleName !== SYSTEM_ADMIN_ROLE_NAME) {
       throw new ForbiddenException('Apenas administradores podem personificar usuários.');
     }
@@ -95,6 +124,7 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: target.id,
       email: target.email,
+      tenantId: target.tenantId,
       impersonatorId: admin.id,
     };
 

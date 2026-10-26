@@ -2,9 +2,12 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 
 import { AvailabilityService } from './availability.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { FeatureGuard } from '../common/guards/feature.guard';
+import { RequireFeature } from '../common/decorators/require-feature.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
-@UseGuards(JwtAuthGuard)
+@RequireFeature('appointments')
+@UseGuards(JwtAuthGuard, FeatureGuard)
 @Controller('availability')
 export class AvailabilityCalendarController {
   constructor(private readonly availability: AvailabilityService) {}

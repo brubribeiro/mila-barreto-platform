@@ -27,7 +27,9 @@ import {
   TemplateVars,
   varsFromAppointment,
 } from '../../utils/whatsapp';
-import type { Appointment } from '../../types';
+import { triggerForCategory, triggerLabelMap } from './messageTemplateConstants';
+import { usePlatformCatalog } from '../../hooks/usePlatformCatalog';
+import type { Appointment, MessageTrigger } from '../../types';
 
 interface SendWhatsAppDialogProps {
   open: boolean;
@@ -40,6 +42,7 @@ interface SendWhatsAppDialogProps {
 }
 
 const CATEGORY_USES_APPOINTMENT = new Set(['confirmacao', 'retorno']);
+const TRIGGER_USES_APPOINTMENT = new Set<MessageTrigger>(['ON_BOOKING', 'DAY_BEFORE', 'AFTER_APPOINTMENT']);
 
 const statusLabelAppt: Record<string, string> = {
   SCHEDULED: 'Agendado',
@@ -67,15 +70,19 @@ export function SendWhatsAppDialog({
 }: SendWhatsAppDialogProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  usePlatformCatalog('message_category');
+  usePlatformCatalog('message_trigger');
+  const triggerLabel = triggerLabelMap();
   const [templateId, setTemplateId] = useState<string>('');
   const [message, setMessage] = useState('');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
-  const { data: templates = [] } = useQuery({
+  const { data: allTemplates = [] } = useQuery({
     queryKey: ['message-templates'],
     queryFn: () => messagesApi.list(),
     enabled: open,
   });
+  const templates = useMemo(() => allTemplates.filter((t) => t.active), [allTemplates]);
 
   const { data: patientDetail } = useQuery({
     queryKey: ['patient', patientId],
@@ -85,9 +92,12 @@ export function SendWhatsAppDialog({
 
   const appointments = patientDetail?.appointments ?? [];
 
-  const selectedCategory = templates.find((t) => t.id === templateId)?.category;
+  const selectedTemplate = templates.find((t) => t.id === templateId);
   const showAppointmentPicker =
-    !!patientId && !!selectedCategory && CATEGORY_USES_APPOINTMENT.has(selectedCategory);
+    !!patientId &&
+    !!selectedTemplate &&
+    (TRIGGER_USES_APPOINTMENT.has(selectedTemplate.trigger) ||
+      CATEGORY_USES_APPOINTMENT.has(selectedTemplate.category ?? ''));
 
   const mergedVars: TemplateVars = useMemo(() => {
     const base = { ...vars };
@@ -109,8 +119,10 @@ export function SendWhatsAppDialog({
   useEffect(() => {
     if (!open) return;
     if (templates.length === 0) return;
+    const preferredTrigger = preferredCategory ? triggerForCategory(preferredCategory) : undefined;
     const preferred = preferredCategory
-      ? templates.find((t) => t.category === preferredCategory)
+      ? (templates.find((t) => t.trigger === preferredTrigger) ??
+        templates.find((t) => t.category === preferredCategory))
       : null;
     const chosen = preferred ?? templates[0];
     setTemplateId(chosen.id);
@@ -169,14 +181,14 @@ export function SendWhatsAppDialog({
             disabled={templates.length === 0}
             helperText={
               templates.length === 0
-                ? 'Crie templates na página de Mensagens'
-                : 'Os templates aceitam {paciente_nome}, {procedimento}, {data}, {hora}, {profissional}'
+                ? 'Crie modelos ativos na página de Mensagens'
+                : 'Os modelos aceitam {nome}, {procedimento}, {data}, {hora}, {profissional}'
             }
             fullWidth
           >
             {templates.map((t) => (
               <MenuItem key={t.id} value={t.id}>
-                {t.name} {t.category ? `· ${t.category}` : ''}
+                {t.name} · {triggerLabel[t.trigger]}
               </MenuItem>
             ))}
           </TextField>

@@ -14,6 +14,7 @@ import {
   Stack,
   Tooltip,
   Typography,
+  alpha,
 } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -27,6 +28,7 @@ import { NotificationPreferencesDialog } from './NotificationPreferencesDialog';
 import { useAppToast } from '../../contexts/AppToastContext';
 import type { Notification } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
+import { clickableProps } from '../../utils/a11y';
 
 dayjs.extend(relativeTime);
 dayjs.locale('pt-br');
@@ -94,10 +96,11 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
     <>
       <Tooltip title="Notificações">
         <IconButton
+          aria-label={count > 0 ? `Notificações, ${count} não lidas` : 'Notificações'}
           onClick={handleOpen}
           sx={{
-            width: 38,
-            height: 38,
+            width: { xs: 34, sm: 38 },
+            height: { xs: 34, sm: 38 },
             borderRadius: '12px',
             border: '1px solid',
             borderColor: 'divider',
@@ -154,7 +157,7 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
                   fontSize: fontSizes['2xs'],
                   fontWeight: 800,
                   color: 'primary.main',
-                  bgcolor: '#EAF6F4',
+                  bgcolor: (t) => alpha(t.palette.primary.main, 0.09),
                   px: 1,
                   py: '2px',
                   borderRadius: '7px',
@@ -187,7 +190,7 @@ export function NotificationsBell({ iconColor }: NotificationsBellProps) {
             notifications.map((n) => (
               <Box
                 key={n.id}
-                onClick={() => handleClickNotification(n)}
+                {...clickableProps(() => handleClickNotification(n))}
                 sx={{
                   display: 'flex',
                   gap: 1.25,

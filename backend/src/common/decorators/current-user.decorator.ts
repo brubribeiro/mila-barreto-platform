@@ -4,12 +4,23 @@ export interface AuthenticatedUser {
   id: string;
   name: string;
   email: string;
-  roleId: string;
+  /** Clínica do usuário. Null só para super-admin. */
+  tenantId: string | null;
+  /** Nome da clínica quando o super-admin está "entrando como" ela pelo painel admin. */
+  tenantName?: string;
+  /** Super-admin da plataforma: sem clínica e sem grupo; só usa rotas com SuperAdminGuard. */
+  isSuperAdmin: boolean;
+  roleId: string | null;
   roleName: string;
   permissions: string[];
   restrictToOwnAppointments: boolean;
   active: boolean;
   providesAppointments: boolean;
+  /**
+   * Módulos efetivos da clínica ((plano ∪ extra) − denied).
+   * Sem plano = catálogo completo. Super-admin fora de clínica: [].
+   */
+  features: string[];
   /** Preenchido quando um admin está personificando este usuário */
   impersonatorId?: string;
 }
