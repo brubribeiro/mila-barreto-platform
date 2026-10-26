@@ -94,7 +94,7 @@ export class AuthService {
     }
 
     // Busca o profissional pelo email na base de usuários
-    const user = await this.users.findByEmail(googlePayload.email);
+    let user = await this.users.findByEmail(googlePayload.email);
 
     if (!user) {
       throw new UnauthorizedException(
@@ -105,6 +105,10 @@ export class AuthService {
     if (!user.active) {
       throw new UnauthorizedException('Usuário inativo. Contate o administrador.');
     }
+
+    const synced = await this.users.syncNameFromGoogle(user.id, googlePayload.name);
+    if (synced) user = synced;
+
     const dualPanel = this.canChoosePanel(user);
 
     if (dualPanel) {

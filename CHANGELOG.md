@@ -8,6 +8,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 - Build backend: `tokenVersion` nos retornos do `JwtStrategy` (seleção de painel e super-admin plataforma); `cookie-parser` já declarado em `backend/package.json` (#74/#75).
 - Banco: CHECK `users_tenant_or_super_admin_check` passa a aceitar super-admin dual (`isSuperAdmin` com `tenantId` e `roleId` da clínica), alinhado ao `prisma:create-super-admin` após #74.
+- Sidebar: ícone ao lado do nome abre o menu da conta (Reportar / Trocar painel / Sair); feedback só dentro do menu. Colapsada: um único controle (avatar).
+- Script `prisma:create-super-admin`: ao promover usuário existente, aplica `--name` / `SUPER_ADMIN_NAME` quando informado.
+- Login Google: sincroniza o nome do perfil Google quando difere do cadastro.
 
 ### Added
 

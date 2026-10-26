@@ -16,7 +16,7 @@ jest.mock('google-auth-library', () => ({
 
 describe('AuthService', () => {
   let service: AuthService;
-  let usersService: jest.Mocked<Pick<UsersService, 'findByEmail' | 'findById'>>;
+  let usersService: jest.Mocked<Pick<UsersService, 'findByEmail' | 'findById' | 'syncNameFromGoogle'>>;
   let jwtService: jest.Mocked<Pick<JwtService, 'signAsync' | 'decode'>>;
   let prisma: { user: { update: jest.Mock } };
 
@@ -42,6 +42,7 @@ describe('AuthService', () => {
     usersService = {
       findByEmail: jest.fn(),
       findById: jest.fn(),
+      syncNameFromGoogle: jest.fn().mockResolvedValue(null),
     };
 
     jwtService = {
@@ -133,12 +134,27 @@ describe('AuthService', () => {
       );
     });
 
+    it('should sync display name from Google when it differs', async () => {
+      const googleClient = (service as any).googleClient;
+      googleClient.verifyIdToken.mockResolvedValue({
+        getPayload: () => ({ email: 'maria@clinic.com', name: 'Maria Silva' }),
+      });
+      usersService.findByEmail.mockResolvedValue(mockUser as any);
+      usersService.syncNameFromGoogle.mockResolvedValue({ ...mockUser, name: 'Maria Silva' } as any);
+
+      const result = await service.loginWithGoogle({ credential: 'token' });
+
+      expect(usersService.syncNameFromGoogle).toHaveBeenCalledWith('user-1', 'Maria Silva');
+      expect(result.user.name).toBe('Maria Silva');
+    });
+
     it('should return access_token and user on success', async () => {
       const googleClient = (service as any).googleClient;
       googleClient.verifyIdToken.mockResolvedValue({
         getPayload: () => ({ email: 'maria@clinic.com' }),
       });
       usersService.findByEmail.mockResolvedValue(mockUser as any);
+      usersService.syncNameFromGoogle.mockResolvedValue(null);
 
       const result = await service.loginWithGoogle({ credential: 'token' });
 
