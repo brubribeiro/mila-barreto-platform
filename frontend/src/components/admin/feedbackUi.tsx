@@ -30,7 +30,9 @@ const FEEDBACK_TYPE_PALETTE: Record<FeedbackType, 'error' | 'secondary'> = {
   SUGGESTION: 'secondary',
 };
 
-function pillFromPalette(theme: Theme, paletteKey: keyof Theme['palette']) {
+type PaletteMainKey = 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
+
+function pillFromPalette(theme: Theme, paletteKey: PaletteMainKey) {
   const main = theme.palette[paletteKey].main;
   return {
     display: 'inline-block',
