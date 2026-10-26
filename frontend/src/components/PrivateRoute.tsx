@@ -16,7 +16,8 @@ export function PrivateRoute({ children }: { children: ReactNode }) {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  // Super-admin fora de uma clínica usa só o painel da plataforma
+  if (user.panelSelectionPending) return <Navigate to="/escolher-painel" replace />;
+  // Super-admin no painel da plataforma (sem clínica na sessão)
   if (user.isSuperAdmin && !user.tenantId) return <Navigate to="/admin" replace />;
   return <>{children}</>;
 }

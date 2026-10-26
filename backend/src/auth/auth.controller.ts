@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, UseGuards, Req } from '@nestjs/comm
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { SelectPanelDto } from './dto/select-panel.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser, type AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
@@ -32,6 +33,12 @@ export class AuthController {
    * Permite que um administrador personifique outro profissional.
    * Retorna um novo JWT com as permissões do usuário alvo.
    */
+  @UseGuards(JwtAuthGuard)
+  @Post('select-panel')
+  selectPanel(@Body() dto: SelectPanelDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.auth.selectPanel(user, dto.panel);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Post('impersonate/:userId')
   impersonate(

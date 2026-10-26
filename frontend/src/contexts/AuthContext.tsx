@@ -3,10 +3,13 @@ import { api } from '../api/client';
 import type { User } from '../types';
 import { appPath } from '../utils/appPath';
 
+type LoginResult = { needsPanelSelection?: boolean };
+
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
-  loginWithGoogle: (credential: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<LoginResult>;
+  selectPanel: (panel: 'clinic' | 'admin') => Promise<void>;
   impersonate: (userId: string) => Promise<void>;
   /** Super-admin: entra numa clínica como administrador (modo "visualizando como"). */
   enterTenant: (tenantId: string) => Promise<void>;
@@ -46,10 +49,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function loginWithGoogle(credential: string) {
-    const { data } = await api.post<{ access_token: string; user: User }>('/auth/google', {
-      credential,
-    });
+  async function loginWithGoogle(credential: string): Promise<LoginResult> {
+    const { data } = await api.post<{ access_token: string; user: User; needsPanelSelection?: boolean }>(
+      '/auth/google',
+      { credential },
+    );
+    await handleLoginResponse(data);
+    return { needsPanelSelection: data.needsPanelSelection };
+  }
+
+  async function selectPanel(panel: 'clinic' | 'admin') {
+    const { data } = await api.post<{ access_token: string; user: User }>('/auth/select-panel', { panel });
     await handleLoginResponse(data);
   }
 
@@ -105,7 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginWithGoogle, impersonate, enterTenant, stopImpersonating, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, loginWithGoogle, selectPanel, impersonate, enterTenant, stopImpersonating, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

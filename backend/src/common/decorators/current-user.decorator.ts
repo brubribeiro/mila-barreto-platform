@@ -23,6 +23,10 @@ export interface AuthenticatedUser {
   features: string[];
   /** Preenchido quando um admin está personificando este usuário */
   impersonatorId?: string;
+  /** Login Google com clínica + super-admin: token provisório até escolher o painel */
+  panelSelectionPending?: boolean;
+  /** Pode alternar entre painel da clínica e /admin (mesmo e-mail dual) */
+  canChoosePanel?: boolean;
 }
 
 /**

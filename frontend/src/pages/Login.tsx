@@ -107,7 +107,11 @@ export function Login() {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
   const adminEmail = import.meta.env.VITE_ADMIN_CONTACT_EMAIL ?? '';
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) {
+    if (user.panelSelectionPending) return <Navigate to="/escolher-painel" replace />;
+    if (user.isSuperAdmin && !user.tenantId) return <Navigate to="/admin" replace />;
+    return <Navigate to="/" replace />;
+  }
 
   async function handleGoogleSuccess(response: CredentialResponse) {
     if (!response.credential) return;
@@ -115,8 +119,9 @@ export function Login() {
     setSuspendedNotice(null);
     setSubmitting(true);
     try {
-      await loginWithGoogle(response.credential);
-      navigate('/');
+      const { needsPanelSelection } = await loginWithGoogle(response.credential);
+      if (needsPanelSelection) navigate('/escolher-painel');
+      else navigate('/');
     } catch (err: any) {
       const suspended = tenantSuspendedMessage(err);
       if (suspended) {

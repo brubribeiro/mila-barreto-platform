@@ -96,6 +96,30 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
+    it('should require panel selection for dual clinic + super-admin user', async () => {
+      const googleClient = (service as any).googleClient;
+      googleClient.verifyIdToken.mockResolvedValue({
+        getPayload: () => ({ email: 'owner@clinic.com' }),
+      });
+      usersService.findByEmail.mockResolvedValue({
+        ...mockUser,
+        email: 'owner@clinic.com',
+        isSuperAdmin: true,
+      } as any);
+
+      const result = await service.loginWithGoogle({ credential: 'token' });
+
+      expect(result.needsPanelSelection).toBe(true);
+      expect(result.user.panelSelectionPending).toBe(true);
+      expect(result.user.canChoosePanel).toBe(true);
+      expect(jwtService.signAsync).toHaveBeenCalledWith({
+        sub: 'user-1',
+        email: 'owner@clinic.com',
+        tenantId: null,
+        panelSelectionPending: true,
+      });
+    });
+
     it('should return access_token and user on success', async () => {
       const googleClient = (service as any).googleClient;
       googleClient.verifyIdToken.mockResolvedValue({
@@ -196,6 +220,47 @@ describe('AuthService', () => {
         email: 'maria@clinic.com',
         tenantId: 'tenant-1',
         impersonatorId: 'admin-1',
+      });
+    });
+  });
+
+  describe('selectPanel', () => {
+    const dualActor = { id: 'user-1', email: 'owner@clinic.com', isSuperAdmin: true, tenantId: 'tenant-1' };
+    const dualDbUser = {
+      ...mockUser,
+      email: 'owner@clinic.com',
+      isSuperAdmin: true,
+    };
+
+    it('should refuse non-dual users', async () => {
+      usersService.findById.mockResolvedValue(mockUser as any);
+      await expect(service.selectPanel({ id: 'user-1' } as any, 'admin')).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should sign admin panel token with tenantId null', async () => {
+      usersService.findById.mockResolvedValue(dualDbUser as any);
+
+      const result = await service.selectPanel(dualActor as any, 'admin');
+
+      expect(result.access_token).toBe('jwt-token');
+      expect(result.user.tenantId).toBeNull();
+      expect(jwtService.signAsync).toHaveBeenCalledWith({
+        sub: 'user-1',
+        email: 'owner@clinic.com',
+        tenantId: null,
+      });
+    });
+
+    it('should sign clinic panel token with home tenantId', async () => {
+      usersService.findById.mockResolvedValue(dualDbUser as any);
+
+      const result = await service.selectPanel(dualActor as any, 'clinic');
+
+      expect(result.user.tenantId).toBe('tenant-1');
+      expect(jwtService.signAsync).toHaveBeenCalledWith({
+        sub: 'user-1',
+        email: 'owner@clinic.com',
+        tenantId: 'tenant-1',
       });
     });
   });

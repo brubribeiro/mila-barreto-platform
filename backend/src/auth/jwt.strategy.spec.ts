@@ -117,6 +117,43 @@ describe('JwtStrategy', () => {
     });
   });
 
+  describe('super-admin dual', () => {
+    const dualUser = {
+      ...clinicUser,
+      isSuperAdmin: true,
+    };
+
+    it('token pendente expõe panelSelectionPending', async () => {
+      prisma.user.findUnique.mockResolvedValue(dualUser);
+
+      const user = await strategy.validate({
+        sub: 'user-1',
+        email: dualUser.email,
+        tenantId: null,
+        panelSelectionPending: true,
+      });
+
+      expect(user).toMatchObject({ panelSelectionPending: true, canChoosePanel: true, tenantId: null });
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('modo plataforma aceita tenantId null no token mesmo com clínica no banco', async () => {
+      prisma.user.findUnique.mockResolvedValue(dualUser);
+
+      const user = await strategy.validate({ sub: 'user-1', email: dualUser.email, tenantId: null });
+
+      expect(user).toMatchObject({ tenantId: null, isSuperAdmin: true, canChoosePanel: true, roleName: 'Administrador' });
+    });
+
+    it('modo clínica exige tenantId igual ao do usuário', async () => {
+      prisma.user.findUnique.mockResolvedValue(dualUser);
+
+      const user = await strategy.validate({ sub: 'user-1', email: dualUser.email, tenantId: 'tenant-1' });
+
+      expect(user).toMatchObject({ tenantId: 'tenant-1', roleName: 'Recepção', canChoosePanel: true });
+    });
+  });
+
   describe('último acesso', () => {
     it('grava lastAccessAt quando o último registro é antigo', async () => {
       prisma.user.findUnique.mockResolvedValue({ ...clinicUser, lastAccessAt: new Date(Date.now() - 10 * 60_000) });

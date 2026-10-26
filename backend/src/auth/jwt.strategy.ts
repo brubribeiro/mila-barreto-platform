@@ -43,6 +43,31 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Usuário inativo ou inexistente.');
     }
 
+    const canChoosePanel = !!(user.isSuperAdmin && user.tenantId);
+
+    // Login dual: token provisório até POST /auth/select-panel.
+    if (payload.panelSelectionPending) {
+      if (!canChoosePanel) {
+        throw new UnauthorizedException('Sessão inválida. Entre novamente.');
+      }
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        tenantId: null,
+        isSuperAdmin: true,
+        canChoosePanel: true,
+        panelSelectionPending: true,
+        active: user.active,
+        roleId: null,
+        roleName: '',
+        permissions: [],
+        restrictToOwnAppointments: false,
+        providesAppointments: false,
+        features: [],
+      };
+    }
+
     // Super-admin "entrando como" uma clínica (painel admin): age como administrador dela.
     if (user.isSuperAdmin && payload.tenantId && payload.impersonatorId === user.id) {
       const tenant = await TenantContext.runUnscoped(() =>
@@ -67,7 +92,27 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       };
     }
 
-    // Token anterior ao multi-tenant (sem tenantId) ou de outra clínica: exige novo login.
+    // Super-admin no painel da plataforma (tenantId null no token; no banco pode ter clínica própria).
+    if (user.isSuperAdmin && payload.tenantId === null && !payload.impersonatorId) {
+      await this.touchLastAccess(user.id, user.lastAccessAt);
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        tenantId: null,
+        isSuperAdmin: true,
+        canChoosePanel,
+        active: user.active,
+        roleId: null,
+        roleName: SYSTEM_ADMIN_ROLE_NAME,
+        permissions: effectivePermissions(SYSTEM_ADMIN_ROLE_NAME, []),
+        restrictToOwnAppointments: false,
+        providesAppointments: false,
+        features: [],
+      };
+    }
+
+    // Sessão da clínica (usuário comum ou super-admin dual no painel da clínica).
     if (payload.tenantId === undefined || payload.tenantId !== user.tenantId) {
       throw new UnauthorizedException('Sessão inválida. Entre novamente.');
     }
@@ -81,6 +126,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: user.email,
       tenantId: user.tenantId,
       isSuperAdmin: user.isSuperAdmin,
+      canChoosePanel,
       active: user.active,
       roleId: user.roleId,
       roleName: user.role?.name ?? '',
