@@ -70,6 +70,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         restrictToOwnAppointments: false,
         providesAppointments: false,
         features: [],
+        tokenVersion: user.tokenVersion,
       };
     }
 
@@ -119,6 +120,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         restrictToOwnAppointments: false,
         providesAppointments: false,
         features: [],
+        tokenVersion: user.tokenVersion,
       };
     }
 
