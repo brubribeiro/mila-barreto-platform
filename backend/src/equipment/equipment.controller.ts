@@ -17,10 +17,13 @@ import {
 } from './equipment.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { FeatureGuard } from '../common/guards/feature.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { RequireFeature } from '../common/decorators/require-feature.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequireFeature('equipment')
+@UseGuards(JwtAuthGuard, FeatureGuard, PermissionsGuard)
 @Controller('equipment')
 export class EquipmentController {
   constructor(private readonly equipment: EquipmentService) {}

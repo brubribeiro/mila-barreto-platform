@@ -30,6 +30,7 @@ import { FeedbackReports } from './pages/FeedbackReports';
 import { Layout } from './components/Layout';
 import { PrivateRoute } from './components/PrivateRoute';
 import { PermissionRoute } from './components/PermissionRoute';
+import { FeatureRoute } from './components/FeatureRoute';
 import { SuperAdminRoute } from './components/SuperAdminRoute';
 import { AdminLayout } from './components/admin/AdminLayout';
 import { AdminTenants } from './pages/admin/AdminTenants';
@@ -70,73 +71,91 @@ export default function App() {
         <Route
           path="/pacientes"
           element={
-            <PermissionRoute permission="patients:view">
+            <FeatureRoute feature="patients">
+              <PermissionRoute permission="patients:view">
               <Patients />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
           path="/pacientes/:id"
           element={
-            <PermissionRoute permission="patients:view">
+            <FeatureRoute feature="patients">
+              <PermissionRoute permission="patients:view">
               <PatientDetail />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
           path="/agenda"
           element={
-            <PermissionRoute permission="appointments:view">
+            <FeatureRoute feature="appointments">
+              <PermissionRoute permission="appointments:view">
               <Appointments />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
           path="/procedimentos"
           element={
-            <PermissionRoute permission="procedures:view">
+            <FeatureRoute feature="procedures">
+              <PermissionRoute permission="procedures:view">
               <Procedures />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
           path="/pacotes"
           element={
-            <PermissionRoute permission="packages:view">
+            <FeatureRoute feature="packages">
+              <PermissionRoute permission="packages:view">
               <Packages />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
           path="/financeiro"
           element={
-            <PermissionRoute permission="finance:view">
+            <FeatureRoute feature="finance">
+              <PermissionRoute permission="finance:view">
               <Finance />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
           path="/despesas-recorrentes"
           element={
-            <PermissionRoute permission="finance:view">
+            <FeatureRoute feature="recurring_expenses">
+              <PermissionRoute permission="finance:view">
               <RecurringExpensesPage />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
           path="/estoque"
           element={
-            <PermissionRoute permission="inventory:view">
+            <FeatureRoute feature="inventory">
+              <PermissionRoute permission="inventory:view">
               <Inventory />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
           path="/estoque/:id"
           element={
-            <PermissionRoute permission="inventory:view">
+            <FeatureRoute feature="inventory">
+              <PermissionRoute permission="inventory:view">
               <InventoryDetail />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
@@ -166,42 +185,59 @@ export default function App() {
         <Route
           path="/mensagens"
           element={
-            <PermissionRoute permission="messages:view">
+            <FeatureRoute feature="messages">
+              <PermissionRoute permission="messages:view">
               <Messages />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
-        <Route path="/horarios" element={<Availability />} />
+        <Route
+          path="/horarios"
+          element={
+            <FeatureRoute feature="availability">
+              <Availability />
+            </FeatureRoute>
+          }
+        />
         <Route
           path="/equipamentos"
           element={
-            <PermissionRoute permission="equipment:view">
+            <FeatureRoute feature="equipment">
+              <PermissionRoute permission="equipment:view">
               <EquipmentPage />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
           path="/documentos"
           element={
-            <PermissionRoute permission="documents:view">
+            <FeatureRoute feature="documents">
+              <PermissionRoute permission="documents:view">
               <Documents />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
           path="/metricas"
           element={
-            <PermissionRoute permission="metrics:view">
+            <FeatureRoute feature="metrics">
+              <PermissionRoute permission="metrics:view">
               <Metrics />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
           path="/metas"
           element={
-            <PermissionRoute permission="goals:view">
+            <FeatureRoute feature="goals">
+              <PermissionRoute permission="goals:view">
               <Goals />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
@@ -215,25 +251,31 @@ export default function App() {
         <Route
           path="/rotinas"
           element={
-            <PermissionRoute permission="routines:view">
+            <FeatureRoute feature="routines">
+              <PermissionRoute permission="routines:view">
               <SkincareRoutines />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
           path="/promocoes"
           element={
-            <PermissionRoute permission="promotions:view">
+            <FeatureRoute feature="promotions">
+              <PermissionRoute permission="promotions:view">
               <Promotions />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route
           path="/formas-pagamento"
           element={
-            <PermissionRoute permission="payment-methods:view">
+            <FeatureRoute feature="payment_methods">
+              <PermissionRoute permission="payment-methods:view">
               <PaymentMethods />
             </PermissionRoute>
+            </FeatureRoute>
           }
         />
         <Route

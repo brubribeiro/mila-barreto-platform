@@ -250,6 +250,43 @@ describe('AdminService', () => {
       await service.updateTenant('tenant-1', { name: 'Clínica Um' }, actor);
       expect(prisma.platformAuditLog.create).not.toHaveBeenCalled();
     });
+
+    it('salva overrides de módulos e audita TENANT_FEATURES_CHANGE', async () => {
+      const withPlan = {
+        ...tenant,
+        planId: plan.id,
+        plan: { ...plan, features: ['patients', 'finance'] },
+        featuresExtra: null,
+        featuresDenied: null,
+      };
+      prisma.tenant.findUnique.mockResolvedValue(withPlan);
+      prisma.tenant.update.mockResolvedValue({
+        ...withPlan,
+        featuresExtra: ['messages'],
+        featuresDenied: ['finance'],
+        plan: withPlan.plan,
+      });
+
+      const result = await service.updateTenant(
+        'tenant-1',
+        { featuresExtra: ['messages'], featuresDenied: ['finance'] },
+        actor,
+      );
+
+      expect(prisma.tenant.update.mock.calls[0][0].data).toMatchObject({
+        featuresExtra: ['messages'],
+        featuresDenied: ['finance'],
+      });
+      expect(lastAudit()).toMatchObject({
+        action: 'TENANT_FEATURES_CHANGE',
+        details: {
+          old: { featuresExtra: [], featuresDenied: [] },
+          new: { featuresExtra: ['messages'], featuresDenied: ['finance'] },
+          effectiveFeatures: ['patients', 'messages'],
+        },
+      });
+      expect(result.effectiveFeatures).toEqual(['patients', 'messages']);
+    });
   });
 
   describe('suspender e reativar', () => {

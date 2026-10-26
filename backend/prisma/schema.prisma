@@ -26,8 +26,12 @@ model Tenant {
   // false = clínica suspensa: login e requisições dos usuários dela são recusados
   active      Boolean   @default(true)
   suspendedAt DateTime?
-  // Plano contratado (só cadastro; sem cobrança nem bloqueio por limite)
+  // Plano contratado (preço/módulos/limites; cobrança automática fora do escopo)
   planId      String?
+  // Módulos além do plano (Json string[]); efetivo = (plano ∪ extra) − denied
+  featuresExtra  Json?
+  // Módulos do plano que esta clínica não tem
+  featuresDenied Json?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -80,6 +84,11 @@ model Plan {
   name        String
   slug        String   @unique
   description String?
+  // Preço de referência (centavos); sem gateway/cobrança automática nesta versão
+  priceCents  Int?
+  currency    String   @default("BRL")
+  // Módulos incluídos (Json string[] do catálogo em platform-features.ts)
+  features    Json?
   // Limites/recursos informativos, ex.: { "maxUsers": 5, "maxPatients": 500, "storageGb": 5 } (null = ilimitado)
   limits      Json?
   // false = não pode ser atribuído a novas clínicas; quem já tem continua com ele
@@ -97,7 +106,8 @@ model Plan {
 model PlatformAuditLog {
   id             String   @id @default(uuid())
   // TENANT_CREATE, TENANT_UPDATE, TENANT_SUSPEND, TENANT_REACTIVATE, TENANT_ENTER, TENANT_PLAN_CHANGE,
-  // PLAN_CREATE, PLAN_UPDATE, PLAN_ACTIVATE, PLAN_DEACTIVATE (planos: targetTenantId nulo, targetName = plano)
+  // TENANT_FEATURES_CHANGE, PLAN_CREATE, PLAN_UPDATE, PLAN_ACTIVATE, PLAN_DEACTIVATE
+  // (planos: targetTenantId nulo, targetName = plano)
   action         String
   actorId        String
   actorName      String

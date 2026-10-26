@@ -60,5 +60,16 @@ describe('adminUi', () => {
         auditDetailsText(entry('TENANT_CREATE', { adminName: 'Ana', adminEmail: 'a@x.com', plan: { name: 'Essencial' } })),
       ).toBe('Administrador: Ana <a@x.com> · Plano: Essencial');
     });
+
+    it('overrides de módulos da clínica', () => {
+      expect(
+        auditDetailsText(
+          entry('TENANT_FEATURES_CHANGE', {
+            old: { featuresExtra: [], featuresDenied: [] },
+            new: { featuresExtra: ['messages'], featuresDenied: ['finance'] },
+          }),
+        ),
+      ).toBe('Extras: Nenhum → Mensagens · Removidos: Nenhum → Financeiro');
+    });
   });
 });

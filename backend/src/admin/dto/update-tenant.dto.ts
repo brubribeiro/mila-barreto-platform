@@ -1,6 +1,17 @@
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  ArrayUnique,
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
+import { PLATFORM_FEATURES } from '../../common/platform-features';
 import { SLUG_MESSAGE, SLUG_PATTERN, trimToUndefined } from './create-tenant.dto';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
@@ -24,6 +35,20 @@ export class UpdateTenantDto {
   @IsOptional()
   @IsUUID('all', { message: 'Plano inválido.' })
   planId?: string | null;
+
+  /** Módulos além do plano; null limpa. */
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsIn([...PLATFORM_FEATURES], { each: true })
+  featuresExtra?: string[] | null;
+
+  /** Módulos do plano removidos nesta clínica; null limpa. */
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsIn([...PLATFORM_FEATURES], { each: true })
+  featuresDenied?: string[] | null;
 }
 
 export class SuspendTenantDto {

@@ -1,19 +1,42 @@
 import { randomBytes } from 'crypto';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma, PrismaClient, Tenant } from '@prisma/client';
+import { Prisma, type PrismaClient, type Tenant } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { featuresFromTenant, normalizeFeatures } from '../common/platform-features';
 import { TenantContext } from '../tenancy/tenant-context';
 import { provisionTenant } from '../tenancy/system-roles';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { recordPlatformAudit, type PlatformAuditAction } from './platform-audit';
 
-const PLAN_SUMMARY_SELECT = { id: true, name: true, slug: true, active: true } as const;
+const PLAN_SUMMARY_SELECT = {
+  id: true,
+  name: true,
+  slug: true,
+  active: true,
+  features: true,
+  priceCents: true,
+  currency: true,
+} as const;
+
+/** Overrides de módulos: lista normalizada ou null (limpa a coluna). undefined = não altera. */
+function normalizeFeatureOverride(
+  value: string[] | null | undefined,
+): Prisma.InputJsonValue | typeof Prisma.DbNull | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return Prisma.DbNull;
+  const normalized = normalizeFeatures(value);
+  return normalized.length ? normalized : Prisma.DbNull;
+}
+
+function sameJson(a: unknown, b: unknown) {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
 
 export type TenantStatusFilter = 'active' | 'suspended';
 
@@ -127,6 +150,9 @@ export class AdminService {
 
       return {
         ...tenant,
+        featuresExtra: normalizeFeatures(tenant.featuresExtra),
+        featuresDenied: normalizeFeatures(tenant.featuresDenied),
+        effectiveFeatures: featuresFromTenant(tenant),
         admins,
         metrics: {
           activeUsers,
@@ -175,10 +201,18 @@ export class AdminService {
       // undefined = não mexe no plano; null = remove o plano
       const planChanged = dto.planId !== undefined && dto.planId !== before.planId;
       const newPlan = planChanged && dto.planId ? await this.findAssignablePlan(dto.planId) : null;
+      const featuresExtraData = normalizeFeatureOverride(dto.featuresExtra);
+      const featuresDeniedData = normalizeFeatureOverride(dto.featuresDenied);
 
       const { plan, ...updated } = await this.prisma.tenant.update({
         where: { id },
-        data: { name: dto.name, slug: dto.slug, ...(planChanged ? { planId: newPlan?.id ?? null } : {}) },
+        data: {
+          name: dto.name,
+          slug: dto.slug,
+          ...(planChanged ? { planId: newPlan?.id ?? null } : {}),
+          ...(featuresExtraData !== undefined ? { featuresExtra: featuresExtraData } : {}),
+          ...(featuresDeniedData !== undefined ? { featuresDenied: featuresDeniedData } : {}),
+        },
         include: { plan: { select: PLAN_SUMMARY_SELECT } },
       });
       const changes: Record<string, { old: string; new: string }> = {};
@@ -195,7 +229,29 @@ export class AdminService {
           new: newPlan ? { id: newPlan.id, name: newPlan.name } : null,
         });
       }
-      return { ...updated, plan };
+      const featureOverridesChanged =
+        !sameJson(before.featuresExtra, updated.featuresExtra) ||
+        !sameJson(before.featuresDenied, updated.featuresDenied);
+      if (featureOverridesChanged) {
+        await this.audit(actor, 'TENANT_FEATURES_CHANGE', updated, {
+          old: {
+            featuresExtra: normalizeFeatures(before.featuresExtra),
+            featuresDenied: normalizeFeatures(before.featuresDenied),
+          },
+          new: {
+            featuresExtra: normalizeFeatures(updated.featuresExtra),
+            featuresDenied: normalizeFeatures(updated.featuresDenied),
+          },
+          effectiveFeatures: featuresFromTenant({ ...updated, plan }),
+        });
+      }
+      return {
+        ...updated,
+        plan,
+        featuresExtra: normalizeFeatures(updated.featuresExtra),
+        featuresDenied: normalizeFeatures(updated.featuresDenied),
+        effectiveFeatures: featuresFromTenant({ ...updated, plan }),
+      };
     });
   }
 

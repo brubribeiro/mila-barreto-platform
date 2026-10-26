@@ -11,6 +11,9 @@ describe('PlansService', () => {
     name: 'Essencial',
     slug: 'essencial',
     description: null,
+    priceCents: 9700,
+    currency: 'BRL',
+    features: ['patients', 'appointments'],
     limits: { maxUsers: 3 },
     active: true,
     createdAt: new Date(),
@@ -71,7 +74,15 @@ describe('PlansService', () => {
       );
 
       expect(prisma.plan.create).toHaveBeenCalledWith({
-        data: { name: 'Clínica Plus', slug: 'clinica-plus', description: 'Desc', limits: { maxUsers: 8 } },
+        data: {
+          name: 'Clínica Plus',
+          slug: 'clinica-plus',
+          description: 'Desc',
+          priceCents: null,
+          currency: 'BRL',
+          features: Prisma.DbNull,
+          limits: { maxUsers: 8 },
+        },
       });
       expect(result.tenantCount).toBe(0);
       expect(lastAudit()).toMatchObject({
@@ -80,6 +91,33 @@ describe('PlansService', () => {
         targetTenantId: null,
         targetName: 'Clínica Plus',
         details: { planId: 'plan-9', slug: 'clinica-plus', limits: { maxUsers: 8 } },
+      });
+    });
+
+    it('grava preço e módulos no create', async () => {
+      prisma.plan.findUnique.mockResolvedValue(null);
+      prisma.plan.create.mockImplementation(({ data }: any) => ({ ...plan, ...data, id: 'plan-10' }));
+
+      await service.createPlan(
+        {
+          name: 'Pro',
+          priceCents: 19700,
+          features: ['patients', 'finance', 'patients'],
+          limits: { maxUsers: 10 },
+        },
+        actor,
+      );
+
+      expect(prisma.plan.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          priceCents: 19700,
+          currency: 'BRL',
+          features: ['patients', 'finance'],
+        }),
+      });
+      expect(lastAudit().details).toMatchObject({
+        priceCents: 19700,
+        features: ['patients', 'finance'],
       });
     });
 

@@ -3,6 +3,7 @@ import { Prisma, type Plan } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { normalizeFeatures } from '../common/platform-features';
 import { TenantContext } from '../tenancy/tenant-context';
 import { slugify } from './admin.service';
 import { CreatePlanDto, PlanLimitsDto, UpdatePlanDto } from './dto/plan.dto';
@@ -23,8 +24,18 @@ export function normalizeLimits(
   return Object.keys(out).length ? out : Prisma.DbNull;
 }
 
+/** Lista de módulos; vazio/null → coluna nula. undefined → não altera. */
+export function normalizePlanFeatures(
+  features: string[] | null | undefined,
+): Prisma.InputJsonValue | typeof Prisma.DbNull | undefined {
+  if (features === undefined) return undefined;
+  if (features === null) return Prisma.DbNull;
+  const normalized = normalizeFeatures(features);
+  return normalized.length ? normalized : Prisma.DbNull;
+}
+
 /**
- * Planos da plataforma (só cadastro; sem cobrança nem bloqueio por limite nesta versão).
+ * Planos da plataforma: preço de referência, módulos e limites (limites ainda só informativos).
  * Plano não se exclui: desativado, some do seletor de novas clínicas e quem já tem continua com ele.
  */
 @Injectable()
@@ -58,10 +69,19 @@ export class PlansService {
           name: dto.name,
           slug,
           description: dto.description ?? null,
+          priceCents: dto.priceCents ?? null,
+          currency: (dto.currency?.trim() || 'BRL').toUpperCase(),
+          features: normalizePlanFeatures(dto.features ?? null),
           limits: normalizeLimits(dto.limits ?? null),
         },
       });
-      await this.audit(actor, 'PLAN_CREATE', plan, { slug, ...(plan.limits ? { limits: plan.limits } : {}) });
+      const createdFeatures = normalizeFeatures(plan.features);
+      await this.audit(actor, 'PLAN_CREATE', plan, {
+        slug,
+        ...(plan.priceCents != null ? { priceCents: plan.priceCents, currency: plan.currency } : {}),
+        ...(createdFeatures.length ? { features: createdFeatures } : {}),
+        ...(plan.limits && typeof plan.limits === 'object' ? { limits: plan.limits } : {}),
+      });
       return { ...plan, tenantCount: 0 };
     });
   }
@@ -77,12 +97,18 @@ export class PlansService {
           name: dto.name,
           slug: dto.slug,
           description: dto.description,
+          ...(dto.priceCents !== undefined ? { priceCents: dto.priceCents } : {}),
+          ...(dto.currency !== undefined ? { currency: dto.currency.trim().toUpperCase() || 'BRL' } : {}),
+          features: normalizePlanFeatures(dto.features),
           limits: normalizeLimits(dto.limits),
         },
       });
       const changes: Record<string, { old: unknown; new: unknown }> = {};
-      for (const key of ['name', 'slug', 'description'] as const) {
+      for (const key of ['name', 'slug', 'description', 'priceCents', 'currency'] as const) {
         if (before[key] !== updated[key]) changes[key] = { old: before[key], new: updated[key] };
+      }
+      if (JSON.stringify(before.features) !== JSON.stringify(updated.features)) {
+        changes.features = { old: before.features, new: updated.features };
       }
       if (JSON.stringify(before.limits) !== JSON.stringify(updated.limits)) {
         changes.limits = { old: before.limits, new: updated.limits };

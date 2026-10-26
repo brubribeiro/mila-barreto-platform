@@ -16,12 +16,17 @@ export interface UpdateTenantPayload {
   slug?: string;
   /** null remove o plano */
   planId?: string | null;
+  featuresExtra?: string[] | null;
+  featuresDenied?: string[] | null;
 }
 
 export interface PlanPayload {
   name: string;
   slug?: string;
   description?: string | null;
+  priceCents?: number | null;
+  currency?: string;
+  features?: string[] | null;
   limits?: PlanLimits | null;
 }
 

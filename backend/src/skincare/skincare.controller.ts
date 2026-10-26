@@ -11,11 +11,14 @@ import {
 } from './dto/skincare.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { FeatureGuard } from '../common/guards/feature.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { RequireFeature } from '../common/decorators/require-feature.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
 /** Produtos e regras da anamnese de pele (configuração) e rotinas salvas na ficha da paciente. */
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequireFeature('routines')
+@UseGuards(JwtAuthGuard, FeatureGuard, PermissionsGuard)
 @Controller('skincare')
 export class SkincareController {
   constructor(private readonly service: SkincareService) {}

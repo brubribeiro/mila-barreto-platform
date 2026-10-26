@@ -15,6 +15,7 @@ import { PlanFormDialog } from '../../components/admin/PlanFormDialog';
 import { ROW_ACTION_SX } from '../../components/admin/adminUi';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { fontSizes } from '../../theme/fontSizes';
+import { formatPlanPrice } from '../../features/platformFeatures';
 import type { AdminPlan } from '../../types';
 
 const CARDS_GRID_SX = {
@@ -149,13 +150,11 @@ function PlanCard({
   onEdit: () => void;
   onToggleActive: () => void;
 }) {
+  const featureCount = plan.features?.length ?? 0;
   const limits = [
+    { label: 'Preço', value: plan.priceCents != null ? formatPlanPrice(plan.priceCents, plan.currency) : null },
+    { label: 'Módulos', value: featureCount ? String(featureCount) : null },
     { label: 'Usuários', value: plan.limits?.maxUsers != null ? formatNumber(plan.limits.maxUsers) : null },
-    { label: 'Pacientes', value: plan.limits?.maxPatients != null ? formatNumber(plan.limits.maxPatients) : null },
-    {
-      label: 'Espaço',
-      value: plan.limits?.storageGb != null ? `${formatNumber(plan.limits.storageGb)} GB` : null,
-    },
   ];
 
   return (

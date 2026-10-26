@@ -21,6 +21,8 @@ export interface User {
   restrictToOwnAppointments: boolean;
   active: boolean;
   providesAppointments: boolean;
+  /** Módulos efetivos da clínica ((plano ∪ extra) − denied). Sem plano = todos. */
+  features?: string[];
   /** true quando um admin está personificando este usuário */
   impersonating?: boolean;
   impersonatorName?: string;
@@ -53,6 +55,9 @@ export interface AdminPlan {
   name: string;
   slug: string;
   description: string | null;
+  priceCents: number | null;
+  currency: string;
+  features: string[] | null;
   limits: PlanLimits | null;
   active: boolean;
   createdAt: string;
@@ -60,7 +65,7 @@ export interface AdminPlan {
   tenantCount: number;
 }
 
-export type AdminPlanSummary = Pick<AdminPlan, 'id' | 'name' | 'slug' | 'active'>;
+export type AdminPlanSummary = Pick<AdminPlan, 'id' | 'name' | 'slug' | 'active' | 'features' | 'priceCents' | 'currency'>;
 
 export interface AdminTenant {
   id: string;
@@ -70,6 +75,9 @@ export interface AdminTenant {
   suspendedAt: string | null;
   planId: string | null;
   plan: AdminPlanSummary | null;
+  featuresExtra?: string[] | null;
+  featuresDenied?: string[] | null;
+  effectiveFeatures?: string[];
   createdAt: string;
   updatedAt: string;
   metrics: AdminTenantMetrics;
@@ -87,6 +95,7 @@ export type PlatformAuditAction =
   | 'TENANT_REACTIVATE'
   | 'TENANT_ENTER'
   | 'TENANT_PLAN_CHANGE'
+  | 'TENANT_FEATURES_CHANGE'
   | 'PLAN_CREATE'
   | 'PLAN_UPDATE'
   | 'PLAN_ACTIVATE'

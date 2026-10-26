@@ -10,6 +10,7 @@ export type PlatformAuditAction =
   | 'TENANT_REACTIVATE'
   | 'TENANT_ENTER'
   | 'TENANT_PLAN_CHANGE'
+  | 'TENANT_FEATURES_CHANGE'
   | 'PLAN_CREATE'
   | 'PLAN_UPDATE'
   | 'PLAN_ACTIVATE'

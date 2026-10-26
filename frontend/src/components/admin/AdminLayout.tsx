@@ -22,7 +22,7 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
 
 const ADMIN_PAGE_META: { path: string; title: string; subtitle: string }[] = [
   { path: '/admin/clinicas', title: 'Clínicas', subtitle: 'Clínicas da plataforma, acesso e uso' },
-  { path: '/admin/planos', title: 'Planos', subtitle: 'Planos e limites das clínicas (sem cobrança)' },
+  { path: '/admin/planos', title: 'Planos', subtitle: 'Preço, módulos e limites (sem cobrança automática)' },
   { path: '/admin/auditoria', title: 'Auditoria da plataforma', subtitle: 'Ações do super-admin nas clínicas e nos planos' },
 ];
 

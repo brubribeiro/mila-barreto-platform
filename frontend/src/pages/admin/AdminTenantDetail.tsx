@@ -14,6 +14,7 @@ import { TenantFormDialog } from '../../components/admin/TenantFormDialog';
 import { PlatformAuditList } from '../../components/admin/PlatformAuditList';
 import { useTenantActions } from '../../components/admin/useTenantActions';
 import { PlanSelect } from '../../components/admin/PlanSelect';
+import { TenantFeaturesEditor } from '../../components/admin/TenantFeaturesEditor';
 import { useAppToast } from '../../contexts/AppToastContext';
 import {
   TenantStatusPill,
@@ -198,6 +199,15 @@ export function AdminTenantDetail() {
           skeletonWidth={90}
         />
       </Box>
+
+      {tenant && (
+        <Card sx={{ p: 0, overflow: 'hidden' }}>
+          <Typography component="h3" sx={SECTION_TITLE_SX}>
+            Módulos da clínica
+          </Typography>
+          <TenantFeaturesEditor tenant={tenant} />
+        </Card>
+      )}
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) minmax(0, 1.4fr)' }, gap: 2.5 }}>
         <Card sx={{ p: 0, overflow: 'hidden', alignSelf: 'start' }}>

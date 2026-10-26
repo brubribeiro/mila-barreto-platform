@@ -1,5 +1,8 @@
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayUnique,
+  IsArray,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -11,6 +14,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+import { PLATFORM_FEATURES } from '../../common/platform-features';
 import { SLUG_PATTERN, trimToUndefined } from './create-tenant.dto';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
@@ -56,6 +60,24 @@ export class CreatePlanDto {
   @MaxLength(500)
   description?: string | null;
 
+  /** Preço em centavos (ex.: 9700 = R$ 97,00). null limpa. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  priceCents?: number | null;
+
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  @MaxLength(3)
+  currency?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsIn([...PLATFORM_FEATURES], { each: true })
+  features?: string[] | null;
+
   @IsOptional()
   @ValidateNested()
   @Type(() => PlanLimitsDto)
@@ -82,6 +104,23 @@ export class UpdatePlanDto {
   @IsString()
   @MaxLength(500)
   description?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  priceCents?: number | null;
+
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  @MaxLength(3)
+  currency?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsIn([...PLATFORM_FEATURES], { each: true })
+  features?: string[] | null;
 
   @IsOptional()
   @ValidateNested()

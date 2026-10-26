@@ -7,6 +7,7 @@ import { UsersService } from '../users/users.service';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { effectivePermissions, SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { featuresFromTenant } from '../common/platform-features';
 import { assertTenantActive } from '../tenancy/tenant-status';
 
 export interface JwtPayload {
@@ -51,6 +52,7 @@ export class AuthService {
       restrictToOwnAppointments: user.role?.restrictToOwnAppointments ?? false,
       active: user.active,
       providesAppointments: user.providesAppointments,
+      features: featuresFromTenant(user.tenant),
     };
   }
 

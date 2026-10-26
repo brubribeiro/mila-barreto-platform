@@ -3,9 +3,12 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
+  FormControlLabel,
+  FormGroup,
   TextField,
   useMediaQuery,
   useTheme,
@@ -21,18 +24,25 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { FormSection } from '../FormSection';
 import { LabeledField } from '../LabeledField';
+import {
+  PLATFORM_FEATURES,
+  PLATFORM_FEATURE_LABELS,
+  type PlatformFeature,
+} from '../../features/platformFeatures';
 import type { AdminPlan, PlanLimits } from '../../types';
 
-const DIALOG_MAX_WIDTH = 760;
+const DIALOG_MAX_WIDTH = 860;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 interface FormValues {
   name: string;
   slug: string;
   description: string;
+  priceReais: string;
   maxUsers: string;
   maxPatients: string;
   storageGb: string;
+  features: PlatformFeature[];
 }
 
 const LIMIT_FIELDS = [
@@ -56,6 +66,22 @@ function limitError(value: string, integer: boolean): string | true {
   return true;
 }
 
+/** "" = sem preço; valor em reais → centavos. */
+function parsePriceCents(value: string): number | null {
+  const v = value.trim().replace(',', '.');
+  if (!v) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0) return NaN;
+  return Math.round(n * 100);
+}
+
+function priceError(value: string): string | true {
+  const cents = parsePriceCents(value);
+  if (cents === null) return true;
+  if (Number.isNaN(cents)) return 'Informe um valor válido (ex.: 97 ou 97,00)';
+  return true;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -63,7 +89,7 @@ interface Props {
   editing: AdminPlan | null;
 }
 
-/** Criar ou editar um plano da plataforma (sem preço/cobrança; limites só informativos). */
+/** Criar ou editar plano: preço de referência, módulos e limites (sem cobrança automática). */
 export function PlanFormDialog({ open, onClose, editing }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -71,7 +97,16 @@ export function PlanFormDialog({ open, onClose, editing }: Props) {
   const toast = useAppToast();
 
   const { control, handleSubmit, reset } = useForm<FormValues>({
-    defaultValues: { name: '', slug: '', description: '', maxUsers: '', maxPatients: '', storageGb: '' },
+    defaultValues: {
+      name: '',
+      slug: '',
+      description: '',
+      priceReais: '',
+      maxUsers: '',
+      maxPatients: '',
+      storageGb: '',
+      features: [],
+    },
   });
 
   const saveMutation = useMutation({
@@ -81,10 +116,14 @@ export function PlanFormDialog({ open, onClose, editing }: Props) {
         const n = parseLimit(values[f.name]);
         if (n !== undefined) limits[f.name] = n;
       }
+      const priceCents = parsePriceCents(values.priceReais);
       const payload = {
         name: values.name.trim(),
         slug: values.slug.trim() || undefined,
         description: values.description.trim() || null,
+        priceCents,
+        currency: 'BRL',
+        features: values.features.length ? values.features : null,
         limits: Object.keys(limits).length ? limits : null,
       };
       return editing ? adminApi.updatePlan(editing.id, payload) : adminApi.createPlan(payload);
@@ -92,7 +131,6 @@ export function PlanFormDialog({ open, onClose, editing }: Props) {
     onSuccess: (plan) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'audit'] });
-      // Nome do plano aparece na lista e no detalhe das clínicas
       if (editing) queryClient.invalidateQueries({ queryKey: ['admin', 'tenants'] });
       if (editing) queryClient.invalidateQueries({ queryKey: ['admin', 'tenant'] });
       toast.success(editing ? 'Plano atualizado.' : `Plano ${plan.name} criado.`);
@@ -110,9 +148,14 @@ export function PlanFormDialog({ open, onClose, editing }: Props) {
       name: editing?.name ?? '',
       slug: editing?.slug ?? '',
       description: editing?.description ?? '',
+      priceReais:
+        editing?.priceCents != null ? (editing.priceCents / 100).toFixed(2).replace('.', ',') : '',
       maxUsers: l?.maxUsers != null ? String(l.maxUsers) : '',
       maxPatients: l?.maxPatients != null ? String(l.maxPatients) : '',
       storageGb: l?.storageGb != null ? String(l.storageGb).replace('.', ',') : '',
+      features: (editing?.features ?? []).filter((f): f is PlatformFeature =>
+        (PLATFORM_FEATURES as readonly string[]).includes(f),
+      ),
     });
     resetMutation();
   }, [open, editing, reset, resetMutation]);
@@ -146,7 +189,7 @@ export function PlanFormDialog({ open, onClose, editing }: Props) {
           onClose={onClose}
           isMobile={isMobile}
           title={editing ? 'Editar plano' : 'Novo plano'}
-          subtitle={editing ? editing.name : 'Cadastro do plano; sem cobrança nesta versão'}
+          subtitle={editing ? editing.name : 'Preço de referência, módulos e limites'}
           icon={editing ? <EditOutlinedIcon fontSize="small" /> : <WorkspacePremiumOutlinedIcon fontSize="small" />}
         />
 
@@ -228,6 +271,23 @@ export function PlanFormDialog({ open, onClose, editing }: Props) {
                     </LabeledField>
                   )}
                 />
+                <Controller
+                  name="priceReais"
+                  control={control}
+                  rules={{ validate: priceError }}
+                  render={({ field, fieldState }) => (
+                    <LabeledField label="Preço mensal (R$)">
+                      <TextField
+                        {...field}
+                        placeholder="Ex.: 97,00"
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message ?? 'Vazio = sem preço · sem cobrança automática'}
+                        fullWidth
+                        inputProps={{ inputMode: 'decimal' }}
+                      />
+                    </LabeledField>
+                  )}
+                />
               </Box>
             </FormSection>
 
@@ -257,8 +317,43 @@ export function PlanFormDialog({ open, onClose, editing }: Props) {
             </FormSection>
           </Box>
 
+          <FormSection title="Módulos incluídos" sx={{ mt: 2.25 }}>
+            <Controller
+              name="features"
+              control={control}
+              render={({ field }) => (
+                <FormGroup
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                    gap: 0.25,
+                  }}
+                >
+                  {PLATFORM_FEATURES.map((f) => (
+                    <FormControlLabel
+                      key={f}
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={field.value.includes(f)}
+                          onChange={(_, checked) => {
+                            field.onChange(
+                              checked ? [...field.value, f] : field.value.filter((x) => x !== f),
+                            );
+                          }}
+                        />
+                      }
+                      label={PLATFORM_FEATURE_LABELS[f]}
+                    />
+                  ))}
+                </FormGroup>
+              )}
+            />
+          </FormSection>
+
           <Alert severity="info" variant="outlined" sx={{ mt: 2.25 }}>
-            Os limites ficam registrados no plano, mas ainda não bloqueiam nada nas clínicas.
+            O preço é só referência. Os limites ainda não bloqueiam nada; os módulos sim — o app esconde e a API
+            recusa o que não estiver no plano (ou nos extras da clínica).
           </Alert>
 
           {saveMutation.error && (
