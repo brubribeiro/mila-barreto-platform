@@ -103,7 +103,8 @@ export type PlatformAuditAction =
   | 'CATALOG_CREATE'
   | 'CATALOG_UPDATE'
   | 'CATALOG_ACTIVATE'
-  | 'CATALOG_DEACTIVATE';
+  | 'CATALOG_DEACTIVATE'
+  | 'FEEDBACK_STATUS_CHANGE';
 
 export interface PlatformAuditLog {
   id: string;
@@ -601,6 +602,63 @@ export interface NotificationPreference {
 }
 
 export type FeedbackType = 'BUG' | 'SUGGESTION';
+
+export type FeedbackStatus = 'OPEN' | 'TRIAGED' | 'CLOSED';
+
+/** Report na central do super-admin (todas as clínicas). */
+export interface AdminFeedbackReport {
+  id: string;
+  type: FeedbackType;
+  status: FeedbackStatus;
+  title: string;
+  pageUrl: string | null;
+  createdAt: string;
+  statusChangedAt: string | null;
+  tenant: { id: string; name: string };
+  user: { id: string; name: string; email: string };
+  /** Só no detalhe. */
+  description?: string;
+}
+
+export interface PlatformModuleUsage {
+  key: string;
+  label: string;
+  /** null = módulo sem registro próprio (ex.: Métricas). */
+  metricLabel: string | null;
+  enabledTenants: number;
+  activeTenants: number | null;
+  periodCount: number | null;
+  totalCount: number | null;
+}
+
+export interface PlatformTenantUsage {
+  id: string;
+  name: string;
+  slug: string;
+  active: boolean;
+  plan: { id: string; name: string } | null;
+  features: string[];
+  activeUsers: number;
+  usersAccessedInPeriod: number;
+  lastAccessAt: string | null;
+  storageBytes: number;
+  files: number;
+  usage: Record<string, { period: number; total: number } | null>;
+}
+
+export interface PlatformUsage {
+  range: { from: string; to: string };
+  totals: {
+    tenants: number;
+    activeTenants: number;
+    activeUsers: number;
+    usersAccessedInPeriod: number;
+    storageBytes: number;
+    files: number;
+  };
+  modules: PlatformModuleUsage[];
+  tenants: PlatformTenantUsage[];
+}
 
 export interface FeedbackReport {
   id: string;

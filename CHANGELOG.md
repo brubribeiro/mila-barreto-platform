@@ -6,6 +6,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Added
 
+- Admin — uso por funcionalidade: `GET /admin/usage?from&to&tenantId` (SuperAdminGuard, `UsageService`) com contagens por módulo do catálogo `PLATFORM_FEATURES` (`MODULE_USAGE_SOURCES`: model + campo de data por módulo; `groupBy` por `tenantId`, período em dias do Brasil e total), clínicas com o módulo habilitado/em uso, usuários ativos, acessos no período (`lastAccessAt`), armazenamento (documentos + fotos). Só contagens agregadas, sem dados clínicos.
+- Admin — central de reports: `FeedbackStatus` (OPEN|TRIAGED|CLOSED) e `statusChangedAt` em `FeedbackReport` (migration `20261026180000_feedback_status`); `GET /admin/feedback` (filtros tipo/status/clínica/busca/período, paginação, contadores por status), `GET /admin/feedback/:id` e `PATCH /admin/feedback/:id/status` com auditoria `FEEDBACK_STATUS_CHANGE` na `PlatformAuditLog`.
+- Frontend admin: páginas Aurora `/admin/uso` e `/admin/reports` (detalhe em `FeedbackDetailDialog`), itens Uso e Reports no `AdminLayout`, rótulo da nova ação na auditoria.
 - Catálogos globais da plataforma: model Prisma `PlatformCatalogItem` (kinds `document_category`, `message_category`, `message_trigger`, `procedure_category`, `inventory_unit`; sem `tenantId`), migration `20261026160000_platform_catalogs`, seed com os valores que o front usava hardcoded; CRUD ` /admin/catalogs` (SuperAdminGuard) com auditoria `CATALOG_*`; leitura autenticada `GET /catalogs` (só ativos) para o app da clínica.
 - Frontend admin: página Aurora `/admin/catalogos` para gerenciar itens por tipo; menu Catálogos no painel super-admin.
 - Frontend clínica: selects de documentos, mensagens (categoria/gatilho), sugestões de procedimento e unidades de estoque passam a consumir o catálogo via React Query (fallback local enquanto carrega).
