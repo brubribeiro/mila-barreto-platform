@@ -1,6 +1,6 @@
 {
   "name": "mila-barreto-backend",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "API NestJS para plataforma de gestão de clínica de estética",
   "private": true,
   "scripts": {
@@ -45,7 +45,7 @@
     "google-auth-library": "^9.0.0",
     "googleapis": "^131.0.0",
     "helmet": "^7.1.0",
-    "multer": "^1.4.5-lts.1",
+    "multer": "^2.5.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.1",
@@ -77,5 +77,8 @@
   },
   "prisma": {
     "seed": "ts-node --transpile-only prisma/seed.ts"
+  },
+  "overrides": {
+    "multer": "^2.5.0"
   }
 }

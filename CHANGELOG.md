@@ -4,6 +4,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-26
+
+### Security
+
+- Documentos/R2 (#39): uploads deixam de gravar/expor `fileUrl` pública; acesso só via URL assinada de curta duração (`GET /documents/:id/access-url`). Objetos gravados com `Content-Disposition: attachment`.
+- Upload (#40): validação por magic bytes (`file-magic.util`) além do MIME declarado — documentos, fotos de paciente e de usuário.
+- Dependência (#41): `multer` atualizado para `^2.5.0` (com `overrides`) — corrige advisories HIGH da linha ≤2.4.x.
+- Multi-tenant (#43): `$queryRaw`/`$executeRaw` (e *Unsafe) só com tenant no contexto ou `TenantContext.runUnscoped`; keep-alive do scheduler usa `runUnscoped`.
+- R2 (#44): `remove`/`getPresignedUrl`/`download` recusam `storageKey` de outro tenant (`tenants/<id>/...`); keys legadas sem prefixo continuam permitidas com tenant ativo.
+
 ## [0.2.1] - 2026-10-26
 
 ### Security

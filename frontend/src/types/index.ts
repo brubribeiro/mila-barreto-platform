@@ -511,6 +511,7 @@ export interface DocumentFile {
   status: DocumentStatus;
   signedAt?: string | null;
   storageKey?: string | null;
+  /** Sempre null na API — abrir via `documentsApi.getAccessUrl` (presign). */
   fileUrl?: string | null;
   mimeType?: string | null;
   size?: number | null;

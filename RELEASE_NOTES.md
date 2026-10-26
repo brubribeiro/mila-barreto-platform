@@ -4,6 +4,18 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ---
 
+## v0.2.2 — 26 out 2026
+
+### Correções de segurança
+
+- Documentos e fotos no armazenamento passam a ser acessados só com link temporário autenticado (não ficam em URL pública permanente).
+- Uploads verificam o conteúdo real do arquivo, não só o tipo informado pelo navegador.
+- Biblioteca de upload atualizada contra falhas conhecidas de abuso de recurso.
+
+A versão aparece no menu lateral e na tela de login.
+
+---
+
 ## v0.2.1 — 26 out 2026
 
 ### Correções de segurança
