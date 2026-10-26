@@ -33,7 +33,7 @@ mila-barreto-platform/
 │       ├── main.ts
 │       ├── app.module.ts
 │       ├── prisma/         Prisma service global
-│       ├── auth/           Login JWT, guard, strategy
+│       ├── auth/           Google OAuth + JWT, guard, strategy
 │       ├── users/          Usuários do sistema
 │       ├── patients/       Pacientes (CRUD + busca)
 │       ├── appointments/   Agendamentos
@@ -68,23 +68,34 @@ Adminer (interface web do banco) em `http://localhost:8080`.
 
 ```bash
 cd backend
-cp .env.example .env       # ajustar JWT_SECRET para produção
+cp .env.example .env       # JWT_SECRET + GOOGLE_CLIENT_ID (mesmo Client ID do frontend)
 npm install
 npx prisma migrate dev     # cria as tabelas
-npm run prisma:seed        # admin, procedimentos, despesas recorrentes de exemplo, etc.
+npm run prisma:seed        # usuários demo, procedimentos, despesas recorrentes de exemplo, etc.
 npm run start:dev          # API em http://localhost:3333/api
 ```
-
-**Credenciais padrão do seed:** `admin@mila.com` / `admin123`
 
 ### 3. Frontend
 
 ```bash
 cd frontend
-cp .env.example .env
+cp .env.example .env       # VITE_GOOGLE_CLIENT_ID (OAuth Web Client do Google Cloud)
 npm install
 npm run dev                # http://localhost:5173
 ```
+
+### 4. Autenticação (Google)
+
+O painel **não** tem login por e-mail/senha. O fluxo é:
+
+1. O usuário clica em **Entrar com o Google** na tela de login (`@react-oauth/google`).
+2. O frontend envia o ID token (`credential`) para `POST /api/auth/google`.
+3. O backend valida o token com `GOOGLE_CLIENT_ID`, localiza o usuário pelo **e-mail** do Google e devolve um JWT.
+4. Nas requisições seguintes, o frontend envia `Authorization: Bearer <token>`; ao abrir o app, `GET /api/auth/me` hidrata o contexto.
+
+**Variáveis:** `GOOGLE_CLIENT_ID` no backend e `VITE_GOOGLE_CLIENT_ID` no frontend devem ser o **mesmo** Client ID (tipo *Web application* no [Google Cloud Console](https://console.cloud.google.com/apis/credentials)). Opcional: `VITE_ADMIN_CONTACT_EMAIL` para o link “Fale com o administrador”.
+
+**Desenvolvimento local:** o seed cria usuários de exemplo **só pelo e-mail** (ex.: `admin@mila.com` — ver tabela em [Usuários de exemplo](#usuários-de-exemplo-seed)). Para entrar, a conta Google precisa ter um e-mail **já cadastrado** na tabela `User`. Ajuste os e-mails no `prisma/seed.ts` para um endereço que você controla no Google, ou altere o registro no banco após o seed. O seed ainda grava hash de senha no banco por compatibilidade histórica; **a API não expõe login por senha** — em produção o acesso é exclusivamente Google para e-mails autorizados pela clínica.
 
 ## Comandos úteis
 
@@ -116,8 +127,9 @@ npm run dev                # http://localhost:5173
 ## Endpoints principais
 
 ```
-POST /api/auth/login                  Login (email, password)
-GET  /api/auth/me                     Dados do usuário logado
+POST /api/auth/google                 Login com ID token do Google (body: { credential })
+GET  /api/auth/me                     Dados do usuário logado (JWT)
+POST /api/auth/impersonate/:userId    Personificar outro usuário (admin)
 
 GET  /api/users                       Listar usuários
 POST /api/users                       Criar usuário
@@ -140,7 +152,7 @@ GET  /api/inventory                   Listar itens
 POST /api/inventory/:id/movements     Entrada/saída/ajuste de estoque
 ```
 
-Todos os endpoints (exceto `/auth/login`) exigem `Authorization: Bearer <token>`.
+Todos os endpoints (exceto `POST /auth/google`) exigem `Authorization: Bearer <token>`.
 
 ## Módulos implementados
 
@@ -243,11 +255,13 @@ Grupos do sistema **não podem ser excluídos** (têm `isSystem=true`). O grupo 
 
 ### Usuários de exemplo (seed)
 
-| E-mail                  | Senha      | Grupo          |
-|-------------------------|------------|----------------|
-| `admin@mila.com`        | `admin123` | Administrador  |
-| `profissional@mila.com` | `pro123`   | Profissional   |
-| `recepcao@mila.com`     | `rec123`   | Recepção       |
+E-mails criados no banco para **dev local** (login via Google quando o e-mail da conta coincidir):
+
+| E-mail                  | Grupo          |
+|-------------------------|----------------|
+| `admin@mila.com`        | Administrador  |
+| `profissional@mila.com` | Profissional   |
+| `recepcao@mila.com`     | Recepção       |
 
 ### Migration
 
@@ -331,5 +345,6 @@ A flag `Appointment.materialsDeducted` mantém a operação idempotente: a lógi
 ## Notas de segurança
 
 - Trocar `JWT_SECRET` em produção (mínimo 32 caracteres aleatórios).
+- Configurar `GOOGLE_CLIENT_ID` (backend) e o mesmo Client ID no frontend; restringir origens autorizadas no Google Cloud.
 - Em produção, habilitar HTTPS, configurar `CORS_ORIGIN` específico e usar variáveis de ambiente seguras.
-- A senha do admin do seed deve ser trocada no primeiro login (criar fluxo de troca de senha).
+- Novos acessos: cadastrar o e-mail Google do profissional em **Profissionais** — só usuários existentes e ativos conseguem autenticar.

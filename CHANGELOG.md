@@ -4,6 +4,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+### Changed
+
+- README e `AGENTS.md`: autenticação documentada como login Google (`POST /api/auth/google`); seed local explicado sem credenciais e-mail/senha de produção (#66).
+
 ### Security
 
 - Agenda (#35): `PATCH /appointments/:id/start|finish|resume` passam a aplicar `restrictToOwnAppointments` (mesma regra de ownership de `findOne`/`update`).
