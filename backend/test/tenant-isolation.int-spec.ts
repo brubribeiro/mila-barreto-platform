@@ -45,17 +45,16 @@ let A: Clinic;
 let B: Clinic;
 
 async function createClinic(label: string): Promise<Clinic> {
-  const tenant = await provisionTenant(base, { name: `Isolamento ${label}`, slug: `test-${label.toLowerCase()}-${suffix}` });
+  // provisionTenant cria grupos de sistema e o primeiro administrador numa transação só
+  const email = `admin-${label.toLowerCase()}-${suffix}@isolamento.test`;
+  const tenant = await provisionTenant(
+    base,
+    { name: `Isolamento ${label}`, slug: `test-${label.toLowerCase()}-${suffix}` },
+    { name: `Admin ${label}`, email, password: 'x' },
+  );
   const adminRole = await base.role.findFirstOrThrow({ where: { tenantId: tenant.id, name: 'Administrador' } });
-  const admin = await base.user.create({
-    data: {
-      tenantId: tenant.id,
-      roleId: adminRole.id,
-      name: `Admin ${label}`,
-      email: `admin-${label.toLowerCase()}-${suffix}@isolamento.test`,
-      password: 'x',
-    },
-  });
+  const admin = await base.user.findUniqueOrThrow({ where: { email } });
+  expect(admin).toMatchObject({ tenantId: tenant.id, roleId: adminRole.id, isSuperAdmin: false });
   return { tenant, adminRole, admin, as: (fn) => TenantContext.run(tenant.id, fn) };
 }
 

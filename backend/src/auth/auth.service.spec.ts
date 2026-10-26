@@ -3,7 +3,7 @@ import { UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 
-import { AuthService } from './auth.service';
+import { AuthService, TENANT_ACCESS_EXPIRES_IN } from './auth.service';
 import { UsersService } from '../users/users.service';
 
 // Mock google-auth-library
@@ -152,6 +152,15 @@ describe('AuthService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
+    it('should not let a super-admin acting as a clinic impersonate its users', async () => {
+      const superAdmin = { ...admin, id: 'root-1', isSuperAdmin: true, impersonatorId: 'root-1' };
+
+      await expect(
+        service.impersonate('user-1', superAdmin as any),
+      ).rejects.toThrow(ForbiddenException);
+      expect(usersService.findById).not.toHaveBeenCalled();
+    });
+
     it('should throw if trying to impersonate self', async () => {
       await expect(
         service.impersonate('admin-1', admin as any),
@@ -188,6 +197,18 @@ describe('AuthService', () => {
         tenantId: 'tenant-1',
         impersonatorId: 'admin-1',
       });
+    });
+  });
+
+  describe('signTenantAccess', () => {
+    it('signs a short-lived token of the super-admin with the target tenant', async () => {
+      const superAdmin = { id: 'root-1', email: 'root@platform.dev', tenantId: null, isSuperAdmin: true };
+
+      await expect(service.signTenantAccess(superAdmin as any, 'tenant-2')).resolves.toBe('jwt-token');
+      expect(jwtService.signAsync).toHaveBeenCalledWith(
+        { sub: 'root-1', email: 'root@platform.dev', tenantId: 'tenant-2', impersonatorId: 'root-1' },
+        { expiresIn: TENANT_ACCESS_EXPIRES_IN },
+      );
     });
   });
 });
