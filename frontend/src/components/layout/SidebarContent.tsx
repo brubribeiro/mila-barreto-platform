@@ -1,4 +1,5 @@
 import { Fragment, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Avatar,
   Box,
@@ -17,6 +18,7 @@ import {
 } from '@mui/material';
 import FeedbackOutlinedIcon from '@mui/icons-material/FeedbackOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 
 import type { User } from '../../types';
 import { AuroraIcon } from '../AuroraIcon';
@@ -72,6 +74,7 @@ interface SidebarContentProps {
 
 export function SidebarContent({ collapsed: isCollapsed, groups, pathname, onNavigate, user, onLogout }: SidebarContentProps) {
   const theme = useTheme();
+  const navigate = useNavigate();
   const initials = userInitials(user?.name);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -418,6 +421,22 @@ export function SidebarContent({ collapsed: isCollapsed, groups, pathname, onNav
             primaryTypographyProps={{ fontSize: fontSizes.sm, fontWeight: 600 }}
           />
         </MenuItem>
+        {user?.canChoosePanel && (
+          <MenuItem
+            onClick={() => {
+              setUserMenuAnchor(null);
+              navigate('/escolher-painel');
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 36 }}>
+              <SwapHorizOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText
+              primary="Trocar painel"
+              primaryTypographyProps={{ fontSize: fontSizes.sm, fontWeight: 600 }}
+            />
+          </MenuItem>
+        )}
         <Divider sx={{ my: 0.5 }} />
         <MenuItem
           onClick={() => {

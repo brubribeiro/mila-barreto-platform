@@ -32,6 +32,10 @@ export interface User {
   isSuperAdmin?: boolean;
   /** Nome da clínica quando o super-admin "entrou como" ela */
   tenantName?: string;
+  /** Após login Google quando o e-mail tem clínica e super-admin */
+  panelSelectionPending?: boolean;
+  /** Pode alternar entre painel da clínica e /admin */
+  canChoosePanel?: boolean;
 }
 
 // ===== Painel administrativo da plataforma (super-admin) =====

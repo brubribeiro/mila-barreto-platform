@@ -5,6 +5,7 @@ import { OAuth2Client } from 'google-auth-library';
 
 import { UsersService } from '../users/users.service';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import type { AuthPanel } from './dto/select-panel.dto';
 import { effectivePermissions, SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { featuresFromTenant } from '../common/platform-features';
@@ -21,6 +22,8 @@ export interface JwtPayload {
   tv: number;
   /** ID do admin original quando em modo de personificação */
   impersonatorId?: string;
+  /** Token provisório após login Google quando o usuário tem clínica e super-admin */
+  panelSelectionPending?: boolean;
 }
 
 /** Duração do token de "entrar como" uma clínica (super-admin). */
@@ -41,23 +44,32 @@ export class AuthService {
     this.googleClient = new OAuth2Client(this.googleClientId || undefined);
   }
 
-  private buildUserResponse(user: any) {
+  private canChoosePanel(user: { isSuperAdmin?: boolean; tenantId?: string | null }) {
+    return !!(user.isSuperAdmin && user.tenantId);
+  }
+
+  private buildUserResponse(user: any, opts?: { panelSelectionPending?: boolean; sessionTenantId?: string | null }) {
+    const sessionTenantId =
+      opts && 'sessionTenantId' in opts ? (opts.sessionTenantId ?? null) : (user.tenantId ?? null);
+    const pending = opts?.panelSelectionPending ?? false;
+    const platformSession = user.isSuperAdmin && sessionTenantId === null && !pending;
     return {
       id: user.id,
       name: user.name,
       email: user.email,
-      tenantId: user.tenantId ?? null,
+      tenantId: sessionTenantId,
       isSuperAdmin: user.isSuperAdmin ?? false,
-      roleId: user.roleId,
-      roleName: user.role?.name,
-      permissions: effectivePermissions(
-        user.role?.name ?? '',
-        user.role?.permissions ?? [],
-      ),
-      restrictToOwnAppointments: user.role?.restrictToOwnAppointments ?? false,
+      canChoosePanel: this.canChoosePanel(user),
+      ...(pending ? { panelSelectionPending: true as const } : {}),
+      roleId: platformSession ? null : user.roleId,
+      roleName: platformSession ? SYSTEM_ADMIN_ROLE_NAME : user.role?.name,
+      permissions: platformSession
+        ? effectivePermissions(SYSTEM_ADMIN_ROLE_NAME, [])
+        : effectivePermissions(user.role?.name ?? '', user.role?.permissions ?? []),
+      restrictToOwnAppointments: platformSession ? false : user.role?.restrictToOwnAppointments ?? false,
       active: user.active,
-      providesAppointments: user.providesAppointments,
-      features: featuresFromTenant(user.tenant),
+      providesAppointments: platformSession ? false : user.providesAppointments,
+      features: platformSession ? [] : featuresFromTenant(user.tenant),
     };
   }
 
@@ -93,18 +105,60 @@ export class AuthService {
     if (!user.active) {
       throw new UnauthorizedException('Usuário inativo. Contate o administrador.');
     }
+    const dualPanel = this.canChoosePanel(user);
+
+    if (dualPanel) {
+      const payload: JwtPayload = {
+        sub: user.id,
+        email: user.email,
+        tenantId: null,
+        panelSelectionPending: true,
+        tv: user.tokenVersion ?? 0,
+      };
+      return {
+        access_token: await this.signAccessToken(payload),
+        user: this.buildUserResponse(user, { panelSelectionPending: true, sessionTenantId: null }),
+        needsPanelSelection: true as const,
+      };
+    }
+
     assertTenantActive(user.tenant);
 
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
-      tenantId: user.tenantId,
+      tenantId: user.tenantId ?? null,
       tv: user.tokenVersion ?? 0,
     };
 
     return {
       access_token: await this.signAccessToken(payload),
-      user: this.buildUserResponse(user),
+      user: this.buildUserResponse(user, { sessionTenantId: user.tenantId ?? null }),
+    };
+  }
+
+  async selectPanel(actor: AuthenticatedUser, panel: AuthPanel) {
+    const user = await this.users.findById(actor.id);
+    if (!user?.active) throw new UnauthorizedException('Usuário inativo ou inexistente.');
+    if (!this.canChoosePanel(user)) {
+      throw new ForbiddenException('Este usuário não pode escolher entre painéis.');
+    }
+
+    const tv = user.tokenVersion ?? 0;
+
+    if (panel === 'admin') {
+      const payload: JwtPayload = { sub: user.id, email: user.email, tenantId: null, tv };
+      return {
+        access_token: await this.signAccessToken(payload),
+        user: this.buildUserResponse(user, { sessionTenantId: null }),
+      };
+    }
+
+    assertTenantActive(user.tenant);
+    const payload: JwtPayload = { sub: user.id, email: user.email, tenantId: user.tenantId, tv };
+    return {
+      access_token: await this.signAccessToken(payload),
+      user: this.buildUserResponse(user, { sessionTenantId: user.tenantId }),
     };
   }
 

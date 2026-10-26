@@ -1,5 +1,6 @@
 /**
- * Cria um super-admin da plataforma (sem clínica, sem grupo). Login via Google com o e-mail.
+ * Cria ou promove super-admin da plataforma. Login via Google com o e-mail.
+ * Se o e-mail já for usuário de clínica, define isSuperAdmin (mantém tenantId e grupo).
  * Uso: npm run prisma:create-super-admin -- --email voce@exemplo.com --name "Seu Nome"
  * (ou SUPER_ADMIN_EMAIL / SUPER_ADMIN_NAME no ambiente)
  */
@@ -28,7 +29,9 @@ async function main() {
     return;
   }
   if (existing) {
-    throw new Error(`O e-mail ${email} já pertence a um usuário de clínica. Use outro e-mail para o super-admin.`);
+    await prisma.user.update({ where: { email }, data: { isSuperAdmin: true } });
+    console.log(`✓ Usuário de clínica promovido a super-admin: ${email}`);
+    return;
   }
 
   // Login é via Google; a senha só preenche o campo obrigatório.

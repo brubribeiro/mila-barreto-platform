@@ -15,6 +15,7 @@ import type { Request, Response } from 'express';
 
 import { AuthService } from './auth.service';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { SelectPanelDto } from './dto/select-panel.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser, type AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import {
@@ -64,6 +65,18 @@ export class AuthController {
    * Permite que um administrador personifique outro profissional.
    * Retorna um novo JWT com as permissões do usuário alvo.
    */
+  @UseGuards(JwtAuthGuard)
+  @Post('select-panel')
+  async selectPanel(
+    @Body() dto: SelectPanelDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.auth.selectPanel(user, dto.panel);
+    setAccessTokenCookie(res, result.access_token, this.config);
+    return result;
+  }
+
   @UseGuards(JwtAuthGuard)
   @Post('impersonate/:userId')
   async impersonate(

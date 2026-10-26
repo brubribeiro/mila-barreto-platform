@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 import { Login } from './pages/Login';
+import { ChoosePanel } from './pages/ChoosePanel';
 import { TermsOfUse } from './pages/TermsOfUse';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { Dashboard } from './pages/Dashboard';
@@ -48,6 +49,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/escolher-painel" element={<ChoosePanel />} />
       <Route path="/termos" element={<TermsOfUse />} />
       <Route path="/privacidade" element={<PrivacyPolicy />} />
       {/* Painel da plataforma (super-admin), separado do app da clínica */}

@@ -4,6 +4,14 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ---
 
+## Próxima versão
+
+### Login
+
+- Se sua conta Google for **usuário da clínica e administrador da plataforma**, após entrar você escolhe entre o **painel da clínica** e o **painel da plataforma** (`/admin`). No menu do seu avatar, **Trocar painel** permite alternar depois.
+
+---
+
 ## v0.2.1 — 26 out 2026
 
 ### Correções de segurança
