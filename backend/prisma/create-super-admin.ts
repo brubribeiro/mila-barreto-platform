@@ -8,7 +8,7 @@ import { randomBytes } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
-// Client sem escopo de clínica: super-admin não pertence a nenhuma.
+// Client sem escopo de tenant (promove dual ou cria super-admin puro).
 const prisma = new PrismaClient();
 
 function arg(name: string): string | undefined {

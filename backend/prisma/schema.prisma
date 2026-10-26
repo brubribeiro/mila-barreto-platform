@@ -224,13 +224,13 @@ model Role {
 
 model User {
   id                   String   @id @default(uuid())
-  // Null apenas para super-admin (isSuperAdmin = true), que não pertence a nenhuma clínica
+  // Super-admin puro: tenantId e roleId nulos. Clínica (com ou sem isSuperAdmin dual): tenantId + roleId (CHECK users_tenant_or_super_admin_check).
   tenantId             String?
   name                 String
   // E-mail continua único no sistema inteiro: o login acha o usuário (e a clínica) pelo e-mail
   email                String   @unique
   password             String
-  // Null apenas para super-admin
+  // Null só no super-admin puro; conta dual mantém o grupo da clínica
   roleId               String?
   isSuperAdmin         Boolean  @default(false)
   active               Boolean  @default(true)
