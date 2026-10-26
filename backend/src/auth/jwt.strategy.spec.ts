@@ -152,6 +152,7 @@ describe('JwtStrategy', () => {
         email: dualUser.email,
         tenantId: null,
         panelSelectionPending: true,
+        tv: dualUser.tokenVersion,
       });
 
       expect(user).toMatchObject({ panelSelectionPending: true, canChoosePanel: true, tenantId: null });
