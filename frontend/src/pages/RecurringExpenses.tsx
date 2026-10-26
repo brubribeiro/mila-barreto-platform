@@ -1,105 +1,61 @@
 import { useMemo, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  IconButton,
-  MenuItem,
-  Skeleton,
-  Stack,
-  Switch,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material';
-import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
+import { Box, Button, Card, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import ScheduleIcon from '@mui/icons-material/Schedule';
-import { Link as RouterLink } from 'react-router-dom';
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import dayjs from 'dayjs';
 
-import { PageHeader } from '../components/PageHeader';
-import { ListFiltersBar, ActiveFilterSelect } from '../components/ListFiltersBar';
-import { AppDataGrid } from '../components/AppDataGrid';
-import { FILTER_FIELD_SX, matchFields, matchesActiveFilter, type ActiveFilter } from '../utils/listFilters';
-import { recurringExpensesApi, type HourlyCostSettings } from '../api/recurring-expenses';
+import { useUrlState, urlEnum } from '../hooks/useUrlState';
+import {
+  ACTIVE_FILTER_CODEC,
+  matchFields,
+  matchesActiveFilter,
+  type ActiveFilter,
+} from '../utils/listFilters';
+import { recurringExpensesApi } from '../api/recurring-expenses';
+import { HourlyCostCard } from '../components/finance/HourlyCostCard';
 import { RecurringExpenseFormDialog } from '../components/finance/RecurringExpenseFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
+import { RECURRING_TABLE_COLUMNS, RecurringExpenseRow } from '../components/finance/RecurringExpenseRow';
+import { RecurringSummaryCards } from '../components/finance/RecurringSummaryCards';
+import { UPCOMING_DAYS, nextDueDate } from '../components/finance/recurringDue';
+import {
+  LIST_HEADER_PAPER_SELECT_SX,
+  LIST_HEADER_PRIMARY_ACTION_SX,
+  ListCardHeader,
+  ListSearchField,
+} from '../components/ListCardHeader';
+import { ListPageButtons } from '../components/ListPageButtons';
+import { ListEmptyState, ListSkeletonRows } from '../components/ListStates';
+import { ListTableHeader } from '../components/ListTableHeader';
+import { ROW_ACTION_BUTTON_SX } from '../components/RowActionButton';
+import { usePagination } from '../hooks/usePagination';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
-import { usePermissions } from '../contexts/usePermissions';
 import type { RecurringExpense } from '../types';
+import { fontSizes } from '../theme/fontSizes';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const PAGE_SIZE = 8;
+
+const PAGE_ARROW_SX = { ...ROW_ACTION_BUTTON_SX, width: 36, height: 36, borderRadius: '10px' } as const;
+
+type ExpenseTypeFilter = 'ALL' | 'FIXED' | 'VARIABLE';
+const TYPE_FILTER_CODEC = urlEnum<ExpenseTypeFilter>(['ALL', 'FIXED', 'VARIABLE']);
 
 export function RecurringExpensesPage() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { isAdmin } = usePermissions();
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
-  const [typeFilter, setTypeFilter] = useState<'ALL' | 'FIXED' | 'VARIABLE'>('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [activeFilter, setActiveFilter] = useUrlState<ActiveFilter>('status', 'ALL', ACTIVE_FILTER_CODEC);
+  const [typeFilter, setTypeFilter] = useUrlState<ExpenseTypeFilter>('tipo', 'ALL', TYPE_FILTER_CODEC);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RecurringExpense | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['recurring-expenses'],
     queryFn: () => recurringExpensesApi.list(),
-  });
-
-  const { data: hourlyCostSettings } = useQuery({
-    queryKey: ['recurring-expenses', 'hourly-cost-settings'],
-    queryFn: () => recurringExpensesApi.getHourlyCostSettings(),
-  });
-
-  const includeVariable = hourlyCostSettings?.includeVariable ?? false;
-
-  const { data: hourlyCostSummary, isLoading: hourlyCostLoading } = useQuery({
-    queryKey: ['recurring-expenses', 'hourly-cost-summary', includeVariable],
-    queryFn: () => recurringExpensesApi.getHourlyCostSummary(includeVariable),
-    enabled: hourlyCostSettings !== undefined,
-    placeholderData: keepPreviousData,
-  });
-
-  const updateHourlySettingsMutation = useMutation({
-    mutationFn: (value: boolean) => recurringExpensesApi.updateHourlyCostSettings(value),
-    onMutate: async (value) => {
-      await queryClient.cancelQueries({ queryKey: ['recurring-expenses', 'hourly-cost-settings'] });
-      const previousSettings = queryClient.getQueryData<HourlyCostSettings>([
-        'recurring-expenses',
-        'hourly-cost-settings',
-      ]);
-      queryClient.setQueryData(['recurring-expenses', 'hourly-cost-settings'], { includeVariable: value });
-      await queryClient.prefetchQuery({
-        queryKey: ['recurring-expenses', 'hourly-cost-summary', value],
-        queryFn: () => recurringExpensesApi.getHourlyCostSummary(value),
-      });
-      return { previousSettings };
-    },
-    onError: (_err, _value, context) => {
-      if (context?.previousSettings) {
-        queryClient.setQueryData(['recurring-expenses', 'hourly-cost-settings'], context.previousSettings);
-      }
-      toast.error('Não foi possível atualizar a configuração de custo/hora.');
-    },
-    onSuccess: (_data, value) => {
-      void queryClient.prefetchQuery({
-        queryKey: ['recurring-expenses', 'hourly-cost-summary', value],
-        queryFn: () => recurringExpensesApi.getHourlyCostSummary(value),
-      });
-      queryClient.invalidateQueries({ queryKey: ['procedures'] });
-    },
   });
 
   const deleteMutation = useMutation({
@@ -152,47 +108,21 @@ export function RecurringExpensesPage() {
     [items],
   );
 
-  const expensesForHourlyRate = includeVariable
-    ? activeFixedMonthly + activeVariableMonthly
-    : activeFixedMonthly;
+  const fixedPct = totalMonthly > 0 ? Math.round((activeFixedMonthly / totalMonthly) * 100) : 0;
+  const variablePct = totalMonthly > 0 ? 100 - fixedPct : 0;
 
-  const hourlyCostTooltip = useMemo(() => {
-    if (!hourlyCostSummary) return null;
-    const financeDiff = includeVariable
-      ? Math.abs(hourlyCostSummary.financeExpensesMonthly - expensesForHourlyRate)
-      : Math.abs(hourlyCostSummary.financeExpensesMonthly - activeFixedMonthly);
-    const expenseLabel = includeVariable ? 'fixas + variáveis' : 'fixas';
-
-    return (
-      <Stack spacing={0.75} sx={{ maxWidth: 300, p: 0.25 }}>
-        <Typography variant="caption" display="block">
-          Total de despesas {expenseLabel} ativas no cadastro, dividido pela carga horária mensal do
-          profissional principal ({hourlyCostSummary.monthlyHours} h).
-        </Typography>
-        {includeVariable && activeVariableMonthly > 0 && (
-          <Typography variant="caption" display="block">
-            Composição: fixas {brl.format(activeFixedMonthly)} + variáveis{' '}
-            {brl.format(activeVariableMonthly)}.
-          </Typography>
-        )}
-        <Typography variant="caption" display="block">
-          Procedimentos usam as despesas lançadas no financeiro do mês atual, não este cadastro.
-        </Typography>
-        {financeDiff > 0.01 && (
-          <Typography variant="caption" display="block">
-            Financeiro (mês atual): {brl.format(hourlyCostSummary.financeExpensesMonthly)} em despesas{' '}
-            {expenseLabel}.
-          </Typography>
-        )}
-      </Stack>
-    );
-  }, [
-    hourlyCostSummary,
-    includeVariable,
-    expensesForHourlyRate,
-    activeFixedMonthly,
-    activeVariableMonthly,
-  ]);
+  const dueStats = useMemo(() => {
+    const today = dayjs().startOf('day');
+    const dates = items
+      .filter((i) => i.active)
+      .map((i) => nextDueDate(i.dueDay))
+      .sort((a, b) => a.valueOf() - b.valueOf());
+    return {
+      activeCount: dates.length,
+      upcoming: dates.filter((d) => d.diff(today, 'day') <= UPCOMING_DAYS).length,
+      next: dates[0] ?? null,
+    };
+  }, [items]);
 
   const filteredItems = useMemo(
     () =>
@@ -204,285 +134,183 @@ export function RecurringExpensesPage() {
     [items, search, activeFilter, typeFilter],
   );
 
-  const columns = useMemo<GridColDef<RecurringExpense>[]>(
-    () => [
-      { field: 'name', headerName: 'Nome', flex: 1, minWidth: 180 },
-      {
-        field: 'amount',
-        headerName: 'Valor',
-        flex: 0.6,
-        minWidth: 120,
-        align: 'right',
-        headerAlign: 'right',
-        renderCell: (p) => (
-          <Typography variant="body2" fontWeight={600} color="error.main">
-            {brl.format(Number(p.row.amount))}
-          </Typography>
-        ),
-      },
-      {
-        field: 'expenseType',
-        headerName: 'Tipo',
-        flex: 0.5,
-        minWidth: 100,
-        renderCell: (p) =>
-          p.value === 'FIXED' ? (
-            <Chip size="small" label="Fixa" color="info" variant="outlined" />
-          ) : (
-            <Chip size="small" label="Variável" color="warning" variant="outlined" />
-          ),
-      },
-      {
-        field: 'category',
-        headerName: 'Categoria',
-        flex: 0.7,
-        minWidth: 120,
-        valueGetter: (p) => p.row.category ?? '---',
-      },
-      {
-        field: 'dueDay',
-        headerName: 'Vencimento',
-        flex: 0.5,
-        minWidth: 100,
-        valueGetter: (p) => `Dia ${p.row.dueDay}`,
-      },
-      {
-        field: 'active',
-        headerName: 'Status',
-        flex: 0.4,
-        minWidth: 90,
-        renderCell: (p) =>
-          p.value ? (
-            <Chip size="small" label="Ativa" color="success" variant="outlined" />
-          ) : (
-            <Chip size="small" label="Inativa" variant="outlined" />
-          ),
-      },
-      {
-        field: '_count',
-        headerName: 'Gerados',
-        flex: 0.4,
-        minWidth: 80,
-        valueGetter: (p) => p.row._count?.generatedEntries ?? 0,
-      },
-      {
-        field: 'actions',
-        type: 'actions',
-        headerName: 'Ações',
-        width: 140,
-        getActions: (p) => {
-          const actions = [];
-          actions.push(
-          <GridActionsCellItem
-            key="edit"
-            icon={
-              <Tooltip title="Editar">
-                <EditIcon fontSize="small" />
-              </Tooltip>
-            }
-            label="Editar"
-            onClick={() => {
-              setEditing(p.row);
-              setFormOpen(true);
-            }}
-          />,
-          <GridActionsCellItem
-            key="del"
-            icon={
-              <Tooltip title="Excluir">
-                <DeleteIcon fontSize="small" />
-              </Tooltip>
-            }
-            label="Excluir"
-            onClick={async () => {
-              const ok = await confirm({
-                title: 'Excluir despesa',
-                message: `Excluir "${p.row.name}"?`,
-                confirmLabel: 'Excluir',
-                confirmColor: 'error',
-              });
-              if (ok) deleteMutation.mutate(p.row.id);
-            }}
-          />,
-          );
-          return actions;
-        },
-      },
-    ],
-    [confirm, deleteMutation],
-  );
+  const { page: current, setPage, pageCount, rows, rangeStart, rangeEnd } = usePagination(
+    filteredItems,
+    PAGE_SIZE);
+
+  const handleEdit = (expense: RecurringExpense) => {
+    setEditing(expense);
+    setFormOpen(true);
+  };
+
+  const handleDelete = async (expense: RecurringExpense) => {
+    const ok = await confirm({
+      title: 'Excluir despesa',
+      message: `Excluir "${expense.name}"?`,
+      confirmLabel: 'Excluir',
+      confirmColor: 'error',
+    });
+    if (ok) deleteMutation.mutate(expense.id);
+  };
 
   return (
-    <Box>
-      <PageHeader
-        title="Despesas recorrentes"
-        subtitle="Cadastre despesas fixas e variáveis que se repetem mensalmente"
-        action={
-          <Stack direction="row" spacing={1}>
-            {isAdmin && (
-              <Button
-                variant="outlined"
-                startIcon={<HistoryIcon />}
-                onClick={() => setHistoryOpen(true)}
-              >
-                Histórico
-              </Button>
-            )}
-            <Button
-              variant="outlined"
-              startIcon={<AutorenewIcon />}
-              onClick={() => generateMutation.mutate()}
-              disabled={generateMutation.isPending}
-            >
-              {generateMutation.isPending ? 'Gerando...' : 'Gerar lançamentos do mes'}
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              Nova despesa
-            </Button>
-          </Stack>
-        }
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2, sm: 2.25 } }}>
+      {/* Resumo */}
+      <RecurringSummaryCards
+        loading={isLoading}
+        totalMonthly={totalMonthly}
+        activeFixedMonthly={activeFixedMonthly}
+        activeVariableMonthly={activeVariableMonthly}
+        fixedPct={fixedPct}
+        variablePct={variablePct}
+        dueStats={dueStats}
       />
 
-      {hourlyCostLoading && !hourlyCostSummary ? (
-        <Skeleton variant="rounded" height={100} sx={{ mb: 3 }} />
-      ) : null}
-      {hourlyCostSummary && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
-            <Stack spacing={1.5}>
-              <Stack
-                direction="row"
-                alignItems="flex-start"
-                justifyContent="space-between"
-                spacing={1}
-              >
-                <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
-                  <ScheduleIcon color="primary" fontSize="small" />
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    Custo/hora do profissional principal
-                  </Typography>
-                  {hourlyCostTooltip && (
-                    <Tooltip title={hourlyCostTooltip} arrow placement="top-start">
-                      <IconButton
-                        size="small"
-                        aria-label="Detalhes do cálculo de custo por hora"
-                        sx={{ color: 'text.secondary' }}
-                      >
-                        <InfoOutlinedIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Stack>
+      {/* Custo por hora */}
+      <HourlyCostCard activeFixedMonthly={activeFixedMonthly} activeVariableMonthly={activeVariableMonthly} />
 
-                <Tooltip
-                  title="Inclui despesas variáveis ativas no custo/hora e no cálculo dos procedimentos."
-                  arrow
-                  placement="left"
-                >
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    spacing={0.75}
-                    sx={{ flexShrink: 0, mt: -0.25, mr: -1 }}
-                  >
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ lineHeight: 1.2, whiteSpace: 'nowrap' }}
-                    >
-                      Incluir despesas variáveis
-                    </Typography>
-                    <Switch
-                      size="small"
-                      checked={includeVariable}
-                      onChange={(e) => updateHourlySettingsMutation.mutate(e.target.checked)}
-                      inputProps={{ 'aria-label': 'Incluir despesas variáveis no cálculo' }}
-                    />
-                  </Stack>
-                </Tooltip>
-              </Stack>
-
-              <Box>
-                <Typography variant="h4" fontWeight={700} color="primary.main">
-                  {brl.format(hourlyCostSummary.hourlyCost)}/h
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  {brl.format(hourlyCostSummary.recurringExpensesMonthly)} em despesas{' '}
-                  {includeVariable ? 'fixas + variáveis' : 'fixas'} ÷{' '}
-                  {hourlyCostSummary.monthlyHours} h/mês
-                </Typography>
-              </Box>
-
-              {!hourlyCostSummary.primaryProfessional && (
-                <Alert severity="warning">
-                  Nenhum profissional principal cadastrado.{' '}
-                  <Button component={RouterLink} to="/profissionais" size="small">
-                    Configurar
-                  </Button>
-                </Alert>
-              )}
-              {hourlyCostSummary.primaryProfessional && hourlyCostSummary.monthlyHours <= 0 && (
-                <Alert severity="warning">
-                  Sem horários de atendimento na agenda.{' '}
-                  <Button component={RouterLink} to="/horarios" size="small">
-                    Configurar horários
-                  </Button>
-                </Alert>
-              )}
-            </Stack>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
-        <ListFiltersBar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Buscar por nome ou categoria"
-          filteredCount={filteredItems.length}
-          totalCount={items.length}
-          countLabel={
-            filteredItems.length === 1 ? 'despesa cadastrada' : 'despesas cadastradas'
-          }
-          trailing={
-            <Typography variant="body2" fontWeight={600} color="error.main">
-              Total mensal (ativas): {brl.format(totalMonthly)}
-            </Typography>
+      {/* Lista */}
+      <Card sx={{ borderRadius: '18px', overflow: 'hidden' }}>
+        <ListCardHeader
+          breakpoint="lg"
+          nowrapFrom="md"
+          sx={{ px: { xs: 2, sm: '22px' }, py: '18px' }}
+          title={
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>Despesas fixas &amp; variáveis</Typography>
+              <Typography sx={{ fontSize: fontSizes.xs, color: 'text.disabled', fontWeight: 600 }}>
+                {filteredItems.length === items.length
+                  ? `${items.length} ${items.length === 1 ? 'despesa cadastrada' : 'despesas cadastradas'}`
+                  : `${filteredItems.length} de ${items.length} despesas`}
+              </Typography>
+            </Box>
           }
         >
           <TextField
             select
             size="small"
-            label="Tipo"
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
-            sx={FILTER_FIELD_SX}
+            onChange={(e) => {
+              setTypeFilter(e.target.value as ExpenseTypeFilter);
+              setPage(0);
+            }}
+            sx={LIST_HEADER_PAPER_SELECT_SX}
+            inputProps={{ 'aria-label': 'Tipo' }}
           >
-            <MenuItem value="ALL">Todos</MenuItem>
+            <MenuItem value="ALL">Todos os tipos</MenuItem>
             <MenuItem value="FIXED">Fixa</MenuItem>
             <MenuItem value="VARIABLE">Variável</MenuItem>
           </TextField>
-          <ActiveFilterSelect value={activeFilter} onChange={setActiveFilter} />
-        </ListFiltersBar>
-        <AppDataGrid
-          height={480}
-          rows={filteredItems}
-          columns={columns}
-          loading={isLoading}
-          localeText={{
-            noRowsLabel:
+          <TextField
+            select
+            size="small"
+            value={activeFilter}
+            onChange={(e) => {
+              setActiveFilter(e.target.value as ActiveFilter);
+              setPage(0);
+            }}
+            sx={LIST_HEADER_PAPER_SELECT_SX}
+            inputProps={{ 'aria-label': 'Status' }}
+          >
+            <MenuItem value="ALL">Todos os status</MenuItem>
+            <MenuItem value="ACTIVE">Ativas</MenuItem>
+            <MenuItem value="INACTIVE">Inativas</MenuItem>
+          </TextField>
+          <ListSearchField
+            width={250}
+            value={search}
+            onChange={(v) => {
+              setSearch(v);
+              setPage(0);
+            }}
+            placeholder="Buscar despesa, categoria..."
+          />
+          <Button
+            variant="outlined"
+            startIcon={<AutorenewIcon />}
+            onClick={() => generateMutation.mutate()}
+            disabled={generateMutation.isPending}
+            sx={{ flexShrink: 0, whiteSpace: 'nowrap', height: 38, px: 2, borderRadius: '12px' }}
+          >
+            {generateMutation.isPending ? 'Gerando...' : 'Gerar lançamentos do mês'}
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+            sx={LIST_HEADER_PRIMARY_ACTION_SX}
+          >
+            Nova despesa
+          </Button>
+        </ListCardHeader>
+
+        {/* Cabeçalho da tabela */}
+        <ListTableHeader
+          columns={RECURRING_TABLE_COLUMNS}
+          sx={{ display: { xs: 'none', md: 'grid' }, px: '22px', py: '13px' }}
+        >
+          <span>Descrição</span>
+          <span>Tipo</span>
+          <span>Categoria</span>
+          <span>Valor</span>
+          <span>Periodicidade</span>
+          <span>Próx. venc.</span>
+          <span>Status</span>
+          <span />
+        </ListTableHeader>
+
+        {isLoading ? (
+          <ListSkeletonRows count={5} height={34} px="22px" py={1.5} variant="rounded" />
+        ) : filteredItems.length === 0 ? (
+          <ListEmptyState
+            icon={ReceiptLongOutlinedIcon}
+            sx={{ p: 6 }}
+            title={items.length === 0 ? 'Nenhuma despesa recorrente cadastrada' : 'Nenhuma despesa encontrada com os filtros'}
+            description={
               items.length === 0
-                ? 'Nenhuma despesa recorrente cadastrada'
-                : 'Nenhuma despesa encontrada com os filtros',
-          }}
-        />
+                ? 'Cadastre aluguel, salários e contas do mês para calcular o custo por hora.'
+                : 'Tente ajustar a busca ou os filtros.'
+            }
+          />
+        ) : (
+          rows.map((d) => (
+            <RecurringExpenseRow key={d.id} expense={d} onEdit={() => handleEdit(d)} onDelete={() => handleDelete(d)} />
+          ))
+        )}
+
+        {/* Paginação */}
+        {!isLoading && filteredItems.length > 0 && (
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            flexWrap="wrap"
+            useFlexGap
+            gap={1.5}
+            sx={{ px: { xs: 2, sm: '22px' }, py: '14px' }}
+          >
+            <Typography sx={{ fontSize: fontSizes.sm, color: 'text.disabled', fontWeight: 600 }}>
+              Mostrando {rangeStart}–{rangeEnd} de{' '}
+              {filteredItems.length}
+            </Typography>
+            {pageCount > 1 && (
+              <ListPageButtons
+                page={current}
+                pageCount={pageCount}
+                onChange={setPage}
+                size={36}
+                radius="10px"
+                px={1}
+                spacing={0.875}
+                arrowSx={PAGE_ARROW_SX}
+                arrowSize="medium"
+              />
+            )}
+          </Stack>
+        )}
       </Card>
 
       <RecurringExpenseFormDialog
@@ -490,13 +318,6 @@ export function RecurringExpensesPage() {
         onClose={() => setFormOpen(false)}
         expense={editing}
       />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="RecurringExpense"
-        title="Despesas recorrentes"
-      />
-
     </Box>
   );
 }

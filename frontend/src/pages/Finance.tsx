@@ -1,147 +1,60 @@
 import { useMemo, useState } from 'react';
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Checkbox,
-  Chip,
-  Grid,
-  MenuItem,
-  Skeleton,
-  Stack,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material';
-import { alpha } from '@mui/material/styles';
-import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
+import { Box, Button, Card, MenuItem, Select, Skeleton, Stack, Tooltip, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-import ReceiptIcon from '@mui/icons-material/Receipt';
-import ShowChartOutlinedIcon from '@mui/icons-material/ShowChartOutlined';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { formatDateOnlyFromApi } from '../utils/dateOnly';
 
-import { PageHeader } from '../components/PageHeader';
-import { ListFiltersBar } from '../components/ListFiltersBar';
-import { AppDataGrid } from '../components/AppDataGrid';
 import { matchFields } from '../utils/listFilters';
+import { useUrlState, urlDate, urlEnum } from '../hooks/useUrlState';
 import { financeApi } from '../api/finance';
-import { recurringExpensesApi } from '../api/recurring-expenses';
-import { appointmentsBackfillFinance } from '../api/appointments';
 import { FinanceFormDialog } from '../components/finance/FinanceFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
-import type { ExpenseType, FinancialEntry } from '../types';
+import { FinanceKpiCard, FinancePill } from '../components/finance/FinanceKpiCard';
+import { PeriodField } from '../components/finance/PeriodField';
+import { TransactionRow } from '../components/finance/TransactionRow';
+import {
+  LIST_HEADER_COMPACT_SELECT_SX,
+  LIST_HEADER_PRIMARY_ACTION_SX,
+  ListCardHeader,
+  ListSearchField,
+} from '../components/ListCardHeader';
+import { COMPACT_PAGE_ARROW_SX, ListPageButtons } from '../components/ListPageButtons';
+import { ListEmptyState, ListSkeletonRows } from '../components/ListStates';
+import { useFinanceBackgroundSync } from '../hooks/useFinanceBackgroundSync';
+import { usePagination } from '../hooks/usePagination';
+import type { FinancialEntry } from '../types';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
-import { usePermissions } from '../contexts/usePermissions';
 import { downloadCsv } from '../utils/csv';
 import { fontSizes } from '../theme/fontSizes';
+import { brl } from '../utils/money';
 
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-
-const EXPENSE_TYPE_LABEL: Record<ExpenseType, string> = {
-  FIXED: 'Fixa',
-  VARIABLE: 'Variável',
-};
-
-function FinanceTypeCell({ row }: { row: FinancialEntry }) {
-  const isIncome = row.type === 'INCOME';
-  const palette = isIncome ? 'success' : 'error';
-  const Icon = isIncome ? TrendingUpIcon : TrendingDownIcon;
-  const label = isIncome ? 'Receita' : 'Despesa';
-
-  const details: string[] = [];
-  if (!isIncome) {
-    if (row.expenseType) details.push(EXPENSE_TYPE_LABEL[row.expenseType]);
-    if (row.recurringExpenseId) details.push('Recorrente');
-  } else if (row.appointmentId) {
-    details.push('Agendamento');
-  }
-
-  const tooltip = [
-    label,
-    details.length > 0 ? details.join(' · ') : null,
-    row.appointment?.procedure?.name ? `Procedimento: ${row.appointment.procedure.name}` : null,
-  ]
-    .filter(Boolean)
-    .join('\n');
-
-  return (
-    <Tooltip title={tooltip} placement="top" arrow>
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, py: 0.25 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 28,
-            height: 28,
-            borderRadius: 1.5,
-            flexShrink: 0,
-            bgcolor: (theme) => alpha(theme.palette[palette].main, 0.12),
-            color: `${palette}.main`,
-          }}
-        >
-          <Icon sx={{ fontSize: 16 }} />
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="body2" fontWeight={600} color={`${palette}.main`} noWrap>
-            {label}
-          </Typography>
-          {details.length > 0 && (
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {details.join(' · ')}
-            </Typography>
-          )}
-        </Box>
-      </Stack>
-    </Tooltip>
-  );
-}
-
-function monthsInRange(from: string, to: string): { year: number; month: number }[] {
-  const start = dayjs(from).startOf('month');
-  const end = dayjs(to).startOf('month');
-  if (!start.isValid() || !end.isValid()) {
-    const now = dayjs();
-    return [{ year: now.year(), month: now.month() + 1 }];
-  }
-
-  const months: { year: number; month: number }[] = [];
-  let current = start;
-  while (current.isBefore(end) || current.isSame(end, 'month')) {
-    months.push({ year: current.year(), month: current.month() + 1 });
-    current = current.add(1, 'month');
-  }
-  return months;
-}
-
+const PAGE_SIZE = 10;
 
 type TypeFilter = 'ALL' | 'INCOME' | 'EXPENSE';
 type InvoiceFilter = 'ALL' | 'PENDING' | 'ISSUED';
+const TYPE_FILTER_CODEC = urlEnum<TypeFilter>(['ALL', 'INCOME', 'EXPENSE']);
+const INVOICE_FILTER_CODEC = urlEnum<InvoiceFilter>(['ALL', 'PENDING', 'ISSUED']);
 
 export function Finance() {
   const queryClient = useQueryClient();
   const { confirm, alert } = useAppDialog();
   const toast = useAppToast();
-  const { isAdmin } = usePermissions();
-  const [from, setFrom] = useState(dayjs().startOf('month').format('YYYY-MM-DD'));
-  const [to, setTo] = useState(dayjs().endOf('month').format('YYYY-MM-DD'));
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
-  const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('ALL');
+  const theme = useTheme();
+  const [from, setFrom] = useUrlState('de', dayjs().startOf('month').format('YYYY-MM-DD'), urlDate);
+  const [to, setTo] = useUrlState('ate', dayjs().endOf('month').format('YYYY-MM-DD'), urlDate);
+  const [search, setSearch] = useUrlState('busca', '');
+  const [typeFilter, setTypeFilter] = useUrlState<TypeFilter>('tipo', 'ALL', TYPE_FILTER_CODEC);
+  const [invoiceFilter, setInvoiceFilter] = useUrlState<InvoiceFilter>(
+    'notaFiscal',
+    'ALL',
+    INVOICE_FILTER_CODEC,
+  );
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialEntry | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const fromIso = useMemo(() => {
     const parsed = dayjs(from);
@@ -152,34 +65,7 @@ export function Finance() {
     return (parsed.isValid() ? parsed : dayjs().endOf('month')).endOf('day').toISOString();
   }, [to]);
 
-  useQuery({
-    queryKey: ['recurring-generate', from, to],
-    queryFn: async () => {
-      const months = monthsInRange(from, to);
-      await Promise.all(
-        months.map(({ year, month }) => recurringExpensesApi.generate(year, month)),
-      );
-      await queryClient.invalidateQueries({ queryKey: ['finance'] });
-      await queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
-      await queryClient.invalidateQueries({ queryKey: ['finance-upcoming-expenses'] });
-      return true;
-    },
-    staleTime: 60_000,
-  });
-
-  useQuery({
-    queryKey: ['backfill-finance'],
-    queryFn: async () => {
-      const result = await appointmentsBackfillFinance();
-      if (result.created > 0) {
-        await queryClient.invalidateQueries({ queryKey: ['finance'] });
-        await queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
-        await queryClient.invalidateQueries({ queryKey: ['finance-upcoming-expenses'] });
-      }
-      return result;
-    },
-    staleTime: 5 * 60_000,
-  });
+  useFinanceBackgroundSync(from, to);
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ['finance', fromIso, toIso],
@@ -211,7 +97,7 @@ export function Finance() {
     [entries],
   );
 
-  const profit = (summary?.balance ?? 0);
+  const profit = summary?.balance ?? 0;
   const profitMarginPct = useMemo(() => {
     const income = summary?.totalIncome ?? 0;
     if (income <= 0) return null;
@@ -242,208 +128,24 @@ export function Finance() {
     },
   });
 
-  const columns = useMemo<GridColDef<FinancialEntry>[]>(
-    () => [
-      {
-        field: 'paidAt',
-        headerName: 'Data',
-        flex: 0.55,
-        minWidth: 130,
-        renderCell: (params) => {
-          const date = params.row.paidAt ?? params.row.dueDate;
-          if (!date) return '—';
-          return (
-            <Stack spacing={0.25}>
-              <Typography variant="body2">{formatDateOnlyFromApi(date)}</Typography>
-              {!params.row.paidAt && params.row.dueDate && (
-                <Typography variant="caption" color="text.secondary">
-                  vencimento
-                </Typography>
-              )}
-            </Stack>
-          );
-        },
-      },
-      {
-        field: 'type',
-        headerName: 'Tipo',
-        flex: 0.65,
-        minWidth: 132,
-        renderCell: (params) => <FinanceTypeCell row={params.row} />,
-      },
-      { field: 'description', headerName: 'Descrição', flex: 1.3, minWidth: 200 },
-      {
-        field: 'category',
-        headerName: 'Categoria',
-        flex: 0.7,
-        minWidth: 120,
-        valueGetter: (params) => params.row.category ?? '—',
-      },
-      {
-        field: 'paymentMethod',
-        headerName: 'Forma',
-        flex: 0.6,
-        minWidth: 110,
-        valueGetter: (params) =>
-          params.row.paymentMethod?.name ?? '—',
-      },
-      {
-        field: 'amount',
-        headerName: 'Bruto',
-        flex: 0.55,
-        minWidth: 110,
-        align: 'right',
-        headerAlign: 'right',
-        renderCell: (params) => (
-          <Typography
-            variant="body2"
-            fontWeight={600}
-            color={params.row.type === 'INCOME' ? 'success.main' : 'error.main'}
-          >
-            {params.row.type === 'INCOME' ? '+' : '-'} {brl.format(Number(params.row.amount))}
-          </Typography>
-        ),
-      },
-      {
-        field: 'materialCost',
-        headerName: 'Custo Mat.',
-        flex: 0.55,
-        minWidth: 110,
-        align: 'right',
-        headerAlign: 'right',
-        renderCell: (params) => {
-          const cost = params.row.materialCost;
-          if (cost == null || params.row.type !== 'INCOME') return '—';
-          return (
-            <Tooltip title="Custo de materiais do procedimento">
-              <Typography variant="body2" fontWeight={500} color="text.secondary">
-                {brl.format(cost)}
-              </Typography>
-            </Tooltip>
-          );
-        },
-      },
-      {
-        field: 'profitMargin',
-        headerName: 'Margem',
-        flex: 0.5,
-        minWidth: 100,
-        align: 'right',
-        headerAlign: 'right',
-        renderCell: (params) => {
-          const margin = params.row.profitMargin;
-          if (margin == null || params.row.type !== 'INCOME') return '—';
-          const isLow = margin < 50;
-          return (
-            <Tooltip
-              title={
-                isLow
-                  ? 'Margem abaixo de 50% — considere revisar o preço ou os custos. Calculada com a maior taxa de pagamento.'
-                  : 'Margem de lucro (materiais + despesas fixas + maior taxa de pagamento)'
-              }
-            >
-              <Chip
-                size="small"
-                label={`${margin.toFixed(1)}%`}
-                color={isLow ? 'error' : 'success'}
-                variant="outlined"
-                sx={{ fontWeight: 600 }}
-              />
-            </Tooltip>
-          );
-        },
-      },
-      {
-        field: 'netAmount',
-        headerName: 'Líquido',
-        flex: 0.55,
-        minWidth: 110,
-        align: 'right',
-        headerAlign: 'right',
-        renderCell: (params) => {
-          if (params.row.type !== 'INCOME' || params.row.netAmount == null) return '—';
-          const fee = params.row.feePercent ? `${Number(params.row.feePercent)}%` : '';
-          return (
-            <Tooltip title={fee ? `Taxa: ${fee}` : ''}>
-              <Typography variant="body2" fontWeight={500} color="text.secondary">
-                {brl.format(Number(params.row.netAmount))}
-              </Typography>
-            </Tooltip>
-          );
-        },
-      },
-      {
-        field: 'invoiceIssued',
-        headerName: 'Nota',
-        flex: 0.5,
-        minWidth: 110,
-        renderCell: (params) => {
-          if (params.row.type !== 'INCOME') return <span>—</span>;
-          return (
-            <Tooltip
-              title={
-                params.row.invoiceIssued
-                  ? 'Nota emitida. Click para reabrir.'
-                  : 'Marcar nota como emitida'
-              }
-            >
-              <Checkbox
-                size="small"
-                checked={!!params.row.invoiceIssued}
-                onChange={(e) =>
-                  invoiceMutation.mutate({ id: params.row.id, issued: e.target.checked })
-                }
-              />
-            </Tooltip>
-          );
-        },
-      },
-      {
-        field: 'actions',
-        type: 'actions',
-        headerName: '',
-        width: 120,
-        getActions: (params) => {
-          const actions = [];
-          actions.push(
-          <GridActionsCellItem
-            key="edit"
-            icon={
-              <Tooltip title="Editar">
-                <EditIcon fontSize="small" />
-              </Tooltip>
-            }
-            label="Editar"
-            onClick={() => {
-              setEditing(params.row);
-              setFormOpen(true);
-            }}
-          />,
-          <GridActionsCellItem
-            key="delete"
-            icon={
-              <Tooltip title="Excluir">
-                <DeleteIcon fontSize="small" />
-              </Tooltip>
-            }
-            label="Excluir"
-            onClick={async () => {
-              const ok = await confirm({
-                title: 'Excluir lançamento',
-                message: 'Excluir este lançamento?',
-                confirmLabel: 'Excluir',
-                confirmColor: 'error',
-              });
-              if (ok) deleteMutation.mutate(params.row.id);
-            }}
-          />,
-          );
-          return actions;
-        },
-      },
-    ],
-    [confirm, deleteMutation, invoiceMutation],
-  );
+  const { page: current, setPage, pageCount, rows, rangeStart, rangeEnd } = usePagination(filtered, PAGE_SIZE);
+
+  const expenseCount = useMemo(() => entries.filter((e) => e.type === 'EXPENSE').length, [entries]);
+
+  const handleEdit = (entry: FinancialEntry) => {
+    setEditing(entry);
+    setFormOpen(true);
+  };
+
+  const handleDelete = async (entry: FinancialEntry) => {
+    const ok = await confirm({
+      title: 'Excluir lançamento',
+      message: 'Excluir este lançamento?',
+      confirmLabel: 'Excluir',
+      confirmColor: 'error',
+    });
+    if (ok) deleteMutation.mutate(entry.id);
+  };
 
   const exportPeriodCsv = async () => {
     if (entries.length === 0) {
@@ -491,23 +193,56 @@ export function Finance() {
 
   return (
     <Box>
-      <PageHeader
-        title="Financeiro"
-        subtitle="Receitas, despesas, fluxo de caixa e notas de serviço"
-        action={
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            {isAdmin && (
-              <Button
-                variant="outlined"
-                startIcon={<HistoryIcon />}
-                onClick={() => setHistoryOpen(true)}
-              >
-                Histórico
-              </Button>
+      <Stack spacing={2.25}>
+        {/* Resumo do período + ações */}
+        <Stack
+          direction={{ xs: 'column', lg: 'row' }}
+          alignItems={{ xs: 'stretch', lg: 'center' }}
+          justifyContent="space-between"
+          spacing={1.5}
+        >
+          <Typography sx={{ fontSize: fontSizes.md, color: 'text.secondary', fontWeight: 600 }}>
+            {isLoading ? (
+              <Skeleton width={260} />
+            ) : (
+              <>
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
+                  {entries.length}
+                </Box>{' '}
+                {entries.length === 1 ? 'lançamento no período' : 'lançamentos no período'}
+                {'  ·  '}
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>
+                  {pendingInvoices}
+                </Box>{' '}
+                {pendingInvoices === 1 ? 'nota pendente' : 'notas pendentes'}
+              </>
             )}
-            <Button variant="outlined" startIcon={<FileDownloadIcon />} onClick={exportPeriodCsv}>
-              Exportar período
-            </Button>
+          </Typography>
+
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1.25}
+            flexWrap="wrap"
+            useFlexGap
+            justifyContent={{ lg: 'flex-end' }}
+          >
+            <PeriodField
+              label="De"
+              value={from}
+              onChange={(v) => {
+                setFrom(v);
+                setPage(0);
+              }}
+            />
+            <PeriodField
+              label="Até"
+              value={to}
+              onChange={(v) => {
+                setTo(v);
+                setPage(0);
+              }}
+            />
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -515,185 +250,203 @@ export function Finance() {
                 setEditing(null);
                 setFormOpen(true);
               }}
+              sx={LIST_HEADER_PRIMARY_ACTION_SX}
             >
               Novo lançamento
             </Button>
           </Stack>
-        }
-      />
+        </Stack>
 
-      <Grid container spacing={{ xs: 1.5, sm: 3 }} sx={{ mb: 1 }} alignItems="stretch">
-        <Grid item xs={6} sm={6} md={3}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                  Receitas
-                </Typography>
-                <TrendingUpIcon sx={{ color: 'success.main' }} />
-              </Stack>
-              {summaryLoading ? (
-                <Skeleton variant="text" width={120} sx={{ fontSize: fontSizes['7xl'] }} />
-              ) : (
-                <Typography variant="h4" fontWeight={700} color="success.main">
-                  {brl.format(summary?.totalIncome ?? 0)}
-                </Typography>
-              )}
-              {!summaryLoading && summary?.totalFees != null && summary.totalFees > 0 && (
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                  Líquido: {brl.format(summary.totalNetIncome ?? 0)} · Taxas: {brl.format(summary.totalFees)}
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={6} md={3}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                  Despesas
-                </Typography>
-                <TrendingDownIcon sx={{ color: 'error.main' }} />
-              </Stack>
-              {summaryLoading ? (
-                <Skeleton variant="text" width={120} sx={{ fontSize: fontSizes['7xl'] }} />
-              ) : (
-                <Typography variant="h4" fontWeight={700} color="error.main">
-                  {brl.format(summary?.totalExpense ?? 0)}
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={6} md={3}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                  Lucro
-                </Typography>
-                <ShowChartOutlinedIcon sx={{ color: profit >= 0 ? 'success.main' : 'error.main' }} />
-              </Stack>
-              {summaryLoading ? (
-                <Skeleton variant="text" width={120} sx={{ fontSize: fontSizes['7xl'] }} />
-              ) : (
-                <>
-                  <Typography
-                    variant="h4"
-                    fontWeight={700}
-                    color={profit >= 0 ? 'success.main' : 'error.main'}
-                  >
-                    {brl.format(profit)}
+        {/* Indicadores */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+            gap: { xs: 1.5, md: 2.25 },
+          }}
+        >
+          <FinanceKpiCard
+            label="Receitas"
+            tone={theme.palette.success.main}
+            loading={summaryLoading}
+            value={brl.format(summary?.totalIncome ?? 0)}
+            footer={
+              summary?.totalFees != null && summary.totalFees > 0 ? (
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <FinancePill tone={theme.palette.success.main}>
+                    Líquido {brl.format(summary.totalNetIncome ?? 0)}
+                  </FinancePill>
+                  <Typography sx={{ fontSize: fontSizes.xs, color: 'text.disabled', fontWeight: 600 }}>
+                    Taxas {brl.format(summary.totalFees)}
                   </Typography>
-                  {profitMarginPct != null && (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                      Margem: {profitMarginPct.toFixed(1)}%
-                    </Typography>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={6} md={3}>
+                </Stack>
+              ) : null
+            }
+          />
+          <FinanceKpiCard
+            label="Despesas"
+            tone={theme.palette.error.main}
+            loading={summaryLoading}
+            value={brl.format(summary?.totalExpense ?? 0)}
+            footer={
+              <FinancePill tone={theme.palette.error.main}>
+                {expenseCount} {expenseCount === 1 ? 'lançamento' : 'lançamentos'}
+              </FinancePill>
+            }
+          />
+          <FinanceKpiCard
+            label="Lucro"
+            tone={profit >= 0 ? theme.palette.success.main : theme.palette.error.main}
+            loading={summaryLoading}
+            value={brl.format(profit)}
+            valueColor={profit < 0 ? 'error.main' : undefined}
+            footer={
+              profitMarginPct != null ? (
+                <FinancePill tone={profitMarginPct >= 0 ? theme.palette.success.main : theme.palette.error.main}>
+                  Margem {profitMarginPct.toFixed(1)}%
+                </FinancePill>
+              ) : null
+            }
+          />
           <Tooltip title="Click para filtrar notas pendentes" arrow>
-            <Box sx={{ height: '100%' }}>
-              <Card
-                sx={{ height: '100%', cursor: 'pointer' }}
-                onClick={() => setInvoiceFilter('PENDING')}
-              >
-                <CardContent>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                      Notas pendentes
-                    </Typography>
-                    <ReceiptIcon sx={{ color: 'warning.main' }} />
-                  </Stack>
-                  <Typography variant="h4" fontWeight={700} color="warning.main">
-                    {pendingInvoices}
-                  </Typography>
-                </CardContent>
-              </Card>
+            <Box>
+              <FinanceKpiCard
+                label="Notas pendentes"
+                tone={theme.palette.warning.main}
+                loading={isLoading}
+                value={pendingInvoices}
+                active={invoiceFilter === 'PENDING'}
+                onClick={() => {
+                  setInvoiceFilter('PENDING');
+                  setPage(0);
+                }}
+                footer={
+                  <FinancePill tone={theme.palette.warning.main}>
+                    {invoiceFilter === 'PENDING' ? 'Filtro aplicado' : 'Ver pendentes'}
+                  </FinancePill>
+                }
+              />
             </Box>
           </Tooltip>
-        </Grid>
-      </Grid>
+        </Box>
 
-      <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
-        <ListFiltersBar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Buscar por descrição, categoria ou forma de pagamento"
-          filteredCount={filtered.length}
-          totalCount={entries.length}
-          countLabel={filtered.length === 1 ? 'lançamento' : 'lançamentos'}
-        >
-          <TextField
-            size="small"
-            type="date"
-            label="De"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' }, minWidth: { sm: 150 } }}
-          />
-          <TextField
-            size="small"
-            type="date"
-            label="Até"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' }, minWidth: { sm: 150 } }}
-          />
-          <TextField
-            size="small"
-            select
-            label="Tipo"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}
-            sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' }, minWidth: { xs: 100, sm: 130 } }}
+        {/* Transações */}
+        <Card sx={{ borderRadius: '18px', border: 1, borderColor: 'divider', overflow: 'hidden' }}>
+          <ListCardHeader
+            breakpoint="lg"
+            nowrapFrom={null}
+            sx={{ py: 2.25 }}
+            title={
+              <Typography component="h3" sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>
+                Transações
+              </Typography>
+            }
           >
-            <MenuItem value="ALL">Todos</MenuItem>
-            <MenuItem value="INCOME">Receitas</MenuItem>
-            <MenuItem value="EXPENSE">Despesas</MenuItem>
-          </TextField>
-          <TextField
-            size="small"
-            select
-            label="Nota"
-            value={invoiceFilter}
-            onChange={(e) => setInvoiceFilter(e.target.value as InvoiceFilter)}
-            sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' }, minWidth: { xs: 100, sm: 150 } }}
-          >
-            <MenuItem value="ALL">Todas</MenuItem>
-            <MenuItem value="PENDING">Pendentes</MenuItem>
-            <MenuItem value="ISSUED">Emitidas</MenuItem>
-          </TextField>
-        </ListFiltersBar>
+            <ListSearchField
+              compact
+              width={260}
+              value={search}
+              onChange={(v) => {
+                setSearch(v);
+                setPage(0);
+              }}
+              placeholder="Buscar lançamento..."
+              ariaLabel="Buscar por descrição, categoria ou forma de pagamento"
+            />
+            <Select
+              size="small"
+              value={typeFilter}
+              onChange={(e) => {
+                setTypeFilter(e.target.value as TypeFilter);
+                setPage(0);
+              }}
+              inputProps={{ 'aria-label': 'Tipo' }}
+              sx={LIST_HEADER_COMPACT_SELECT_SX}
+            >
+              <MenuItem value="ALL">Todos os tipos</MenuItem>
+              <MenuItem value="INCOME">Receitas</MenuItem>
+              <MenuItem value="EXPENSE">Despesas</MenuItem>
+            </Select>
+            <Select
+              size="small"
+              value={invoiceFilter}
+              onChange={(e) => {
+                setInvoiceFilter(e.target.value as InvoiceFilter);
+                setPage(0);
+              }}
+              inputProps={{ 'aria-label': 'Nota' }}
+              sx={LIST_HEADER_COMPACT_SELECT_SX}
+            >
+              <MenuItem value="ALL">Todas as notas</MenuItem>
+              <MenuItem value="PENDING">Notas pendentes</MenuItem>
+              <MenuItem value="ISSUED">Notas emitidas</MenuItem>
+            </Select>
+            <Button
+              variant="text"
+              onClick={exportPeriodCsv}
+              sx={{ flexShrink: 0, whiteSpace: 'nowrap', fontSize: fontSizes.sm, fontWeight: 700 }}
+            >
+              Exportar período
+            </Button>
+          </ListCardHeader>
 
-        <AppDataGrid
-          height={480}
-          rows={filtered}
-          columns={columns}
-          loading={isLoading}
-          localeText={{
-            noRowsLabel:
-              entries.length === 0
-                ? 'Nenhum lançamento no período'
-                : 'Nenhum lançamento encontrado com os filtros',
-          }}
-        />
-      </Card>
+          {isLoading ? (
+            <ListSkeletonRows height={36} px={2.75} py={1.5} />
+          ) : rows.length === 0 ? (
+            <ListEmptyState
+              icon={ReceiptLongOutlinedIcon}
+              sx={{ py: 7 }}
+              title={entries.length === 0 ? 'Nenhum lançamento no período' : 'Nenhum lançamento encontrado com os filtros'}
+              description={
+                entries.length === 0 ? 'Ajuste o período ou registre um novo lançamento.' : 'Tente ajustar a busca ou os filtros.'
+              }
+            />
+          ) : (
+            rows.map((entry) => (
+              <TransactionRow
+                key={entry.id}
+                entry={entry}
+                onEdit={() => handleEdit(entry)}
+                onDelete={() => handleDelete(entry)}
+                onToggleInvoice={(issued) => invoiceMutation.mutate({ id: entry.id, issued })}
+              />
+            ))
+          )}
+
+          {!isLoading && filtered.length > 0 && (
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              flexWrap="wrap"
+              useFlexGap
+              spacing={1.5}
+              sx={{ px: { xs: 2, sm: 2.75 }, py: 1.75 }}
+            >
+              <Typography sx={{ fontSize: fontSizes.sm, color: 'text.disabled', fontWeight: 600 }}>
+                Mostrando {rangeStart}–{rangeEnd} de{' '}
+                {filtered.length} {filtered.length === 1 ? 'lançamento' : 'lançamentos'}
+                {filtered.length !== entries.length && ` (de ${entries.length})`}
+              </Typography>
+              {pageCount > 1 && (
+                <ListPageButtons
+                  page={current}
+                  pageCount={pageCount}
+                  onChange={setPage}
+                  windowed
+                  size={34}
+                  radius="9px"
+                  px={0.75}
+                  spacing={0.9}
+                  arrowSx={COMPACT_PAGE_ARROW_SX}
+                />
+              )}
+            </Stack>
+          )}
+        </Card>
+      </Stack>
 
       <FinanceFormDialog open={formOpen} onClose={() => setFormOpen(false)} entry={editing} />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="FinancialEntry"
-        title="Financeiro"
-      />
     </Box>
   );
 }

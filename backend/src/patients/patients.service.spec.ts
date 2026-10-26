@@ -5,7 +5,11 @@ import { PatientsService } from './patients.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { R2StorageService } from '../documents/r2-storage.service';
+import { CompressionService } from '../documents/compression.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { PatientPhotoStorageService } from './patient-photo-storage.service';
+import { PatientStatsService } from './patient-stats.service';
+import { PatientEventsService } from './patient-events.service';
 
 describe('PatientsService', () => {
   let service: PatientsService;
@@ -36,6 +40,10 @@ describe('PatientsService', () => {
       appointment: {
         groupBy: jest.fn().mockResolvedValue([]),
       },
+      financialEntry: {
+        groupBy: jest.fn().mockResolvedValue([]),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: null } }),
+      },
     };
 
     notifications = {
@@ -59,9 +67,13 @@ describe('PatientsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PatientsService,
+        PatientPhotoStorageService,
+        PatientStatsService,
+        PatientEventsService,
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationsService, useValue: notifications },
         { provide: R2StorageService, useValue: r2 },
+        { provide: CompressionService, useValue: { compress: jest.fn() } },
         { provide: AuditLogService, useValue: auditLog },
       ],
     }).compile();

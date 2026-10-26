@@ -1,65 +1,56 @@
-import { useMemo, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  Chip,
-  MenuItem,
-  Stack,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material';
-import { GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
+import { useMemo, useState, type MouseEvent } from 'react';
+import { Box, Button, Card, MenuItem, Skeleton, Stack, TextField, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import HistoryIcon from '@mui/icons-material/History';
-import BuildIcon from '@mui/icons-material/Build';
+import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import dayjs from 'dayjs';
-import { dayjsFromDateOnlyApi, formatDateOnlyFromApi } from '../utils/dateOnly';
 
-import { PageHeader } from '../components/PageHeader';
-import { ListFiltersBar, ActiveFilterSelect } from '../components/ListFiltersBar';
-import { AppDataGrid } from '../components/AppDataGrid';
+import { useUrlState } from '../hooks/useUrlState';
 import {
-  FILTER_FIELD_SX,
+  ACTIVE_FILTER_CODEC,
+  MAINTENANCE_FILTER_CODEC,
   matchFields,
   matchesActiveFilter,
   type ActiveFilter,
   type MaintenanceFilter,
 } from '../utils/listFilters';
 import { equipmentApi } from '../api/equipment';
+import { EquipmentCard } from '../components/equipment/EquipmentCard';
 import { EquipmentFormDialog } from '../components/equipment/EquipmentFormDialog';
-import { AuditHistoryDialog } from '../components/audit/AuditHistoryDialog';
+import { daysUntil, nextMaintenanceOf } from '../components/equipment/equipmentMaintenance';
+import {
+  LIST_HEADER_PAPER_SELECT_SX,
+  LIST_HEADER_PRIMARY_ACTION_SX,
+  ListCardHeader,
+  ListSearchField,
+} from '../components/ListCardHeader';
+import { ListPageButtons } from '../components/ListPageButtons';
+import { ListEmptyState } from '../components/ListStates';
+import { StatCard } from '../components/StatCard';
+import { usePagination } from '../hooks/usePagination';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Equipment } from '../types';
+import { fontSizes } from '../theme/fontSizes';
 
-function formatCurrency(value?: number | null) {
-  if (value == null) return '—';
-  return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
+const PAGE_SIZE = 12;
+
 
 export function EquipmentPage() {
   const queryClient = useQueryClient();
   const { confirm } = useAppDialog();
   const toast = useAppToast();
-  const { has, isAdmin } = usePermissions();
+  const { has } = usePermissions();
   const canCreate = has('equipment:create');
   const canEdit = has('equipment:edit');
   const canDelete = has('equipment:delete');
 
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
-  const [maintenanceFilter, setMaintenanceFilter] = useState<MaintenanceFilter>('ALL');
+  const [search, setSearch] = useUrlState('busca', '');
+  const [activeFilter, setActiveFilter] = useUrlState<ActiveFilter>('status', 'ALL', ACTIVE_FILTER_CODEC);
+  const [maintenanceFilter, setMaintenanceFilter] = useUrlState<MaintenanceFilter>('manutencao', 'ALL', MAINTENANCE_FILTER_CODEC);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Equipment | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['equipment'],
@@ -89,12 +80,21 @@ export function EquipmentPage() {
   });
 
   const isMaintenanceDue = (e: Equipment) => {
-    const next = e.scheduledMaintenanceAt ?? e.nextMaintenanceAt;
-    const d = dayjsFromDateOnlyApi(next);
-    return !!d && d.diff(dayjs(), 'day') <= 30;
+    const days = daysUntil(nextMaintenanceOf(e));
+    return days != null && days <= 30;
   };
 
-  const dueSoon = useMemo(() => items.filter(isMaintenanceDue), [items]);
+  const stats = useMemo(() => {
+    let overdue = 0;
+    let upcoming = 0;
+    for (const e of items) {
+      const days = daysUntil(nextMaintenanceOf(e));
+      if (days == null) continue;
+      if (days < 0) overdue += 1;
+      else if (days <= 30) upcoming += 1;
+    }
+    return { total: items.length, active: items.filter((e) => e.active).length, overdue, upcoming };
+  }, [items]);
 
   const filteredItems = useMemo(
     () =>
@@ -106,252 +106,180 @@ export function EquipmentPage() {
     [items, search, activeFilter, maintenanceFilter],
   );
 
-  const columns = useMemo<GridColDef<Equipment>[]>(
-    () => [
-      { field: 'name', headerName: 'Nome', flex: 1, minWidth: 160 },
-      {
-        field: 'brand',
-        headerName: 'Marca / Modelo',
-        flex: 0.7,
-        minWidth: 140,
-        valueGetter: (p) => [p.row.brand, p.row.model].filter(Boolean).join(' · ') || '—',
-      },
-      {
-        field: 'purchaseValue',
-        headerName: 'Valor máquina',
-        flex: 0.6,
-        minWidth: 120,
-        valueGetter: (p) => formatCurrency(p.row.purchaseValue),
-      },
-      {
-        field: 'maintenanceValue',
-        headerName: 'Valor manut.',
-        flex: 0.6,
-        minWidth: 110,
-        valueGetter: (p) => formatCurrency(p.row.maintenanceValue),
-      },
-      {
-        field: 'scheduledMaintenanceAt',
-        headerName: 'Manut. agendada',
-        flex: 0.7,
-        minWidth: 140,
-        renderCell: (p) => {
-          if (!p.row.scheduledMaintenanceAt) return <span>—</span>;
-          const d = dayjsFromDateOnlyApi(p.row.scheduledMaintenanceAt);
-          if (!d) return '—';
-          const days = d.diff(dayjs(), 'day');
-          const overdue = days < 0;
-          const soon = days >= 0 && days <= 30;
-          return (
-            <Chip
-              size="small"
-              label={formatDateOnlyFromApi(p.row.scheduledMaintenanceAt)}
-              color={overdue ? 'error' : soon ? 'warning' : 'success'}
-              variant="outlined"
-            />
-          );
-        },
-      },
-      {
-        field: 'nextMaintenanceAt',
-        headerName: 'Próxima (auto)',
-        flex: 0.7,
-        minWidth: 140,
-        renderCell: (p) => {
-          if (!p.row.nextMaintenanceAt) return <span>—</span>;
-          const d = dayjsFromDateOnlyApi(p.row.nextMaintenanceAt);
-          if (!d) return '—';
-          const days = d.diff(dayjs(), 'day');
-          const overdue = days < 0;
-          const soon = days >= 0 && days <= 30;
-          return (
-            <Chip
-              size="small"
-              label={formatDateOnlyFromApi(p.row.nextMaintenanceAt)}
-              color={overdue ? 'error' : soon ? 'warning' : 'default'}
-              variant="outlined"
-            />
-          );
-        },
-      },
-      {
-        field: 'maintenanceNotifyDaysBefore',
-        headerName: 'Aviso',
-        flex: 0.4,
-        minWidth: 80,
-        valueGetter: (p) =>
-          p.row.maintenanceNotifyDaysBefore
-            ? `${p.row.maintenanceNotifyDaysBefore}d antes`
-            : '—',
-      },
-      {
-        field: 'active',
-        headerName: 'Status',
-        flex: 0.3,
-        minWidth: 80,
-        renderCell: (p) =>
-          p.value ? (
-            <Chip size="small" label="Ativo" color="success" variant="outlined" />
-          ) : (
-            <Chip size="small" label="Inativo" variant="outlined" />
-          ),
-      },
-      {
-        field: 'actions',
-        type: 'actions',
-        headerName: 'Ações',
-        width: 180,
-        getActions: (p) => {
-          const actions = [];
-          if (canEdit) {
-            actions.push(
-              <GridActionsCellItem
-                key="maint"
-                icon={
-                  <Tooltip title="Registrar manutenção agora">
-                    <BuildIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Manutenção"
-                onClick={async () => {
-                  const ok = await confirm({
-                    title: 'Registrar manutenção',
-                    message: `Registrar manutenção de ${p.row.name} agora?`,
-                    confirmLabel: 'Registrar',
-                  });
-                  if (ok) {
-                    maintenanceMutation.mutate(p.row.id);
-                  }
-                }}
-              />,
-              <GridActionsCellItem
-                key="edit"
-                icon={
-                  <Tooltip title="Editar">
-                    <EditIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Editar"
-                onClick={() => {
-                  setEditing(p.row);
-                  setFormOpen(true);
-                }}
-              />,
-            );
-          }
-          if (canDelete) {
-            actions.push(
-              <GridActionsCellItem
-                key="del"
-                icon={
-                  <Tooltip title="Excluir">
-                    <DeleteIcon fontSize="small" />
-                  </Tooltip>
-                }
-                label="Excluir"
-                onClick={async () => {
-                  const ok = await confirm({
-                    title: 'Excluir equipamento',
-                    message: `Excluir ${p.row.name}?`,
-                    confirmLabel: 'Excluir',
-                    confirmColor: 'error',
-                  });
-                  if (ok) deleteMutation.mutate(p.row.id);
-                }}
-              />,
-            );
-          }
-          return actions;
-        },
-      },
-    ],
-    [confirm, deleteMutation, maintenanceMutation, canEdit, canDelete],
-  );
+  const { page: current, setPage, pageCount, rows, rangeStart, rangeEnd } = usePagination(
+    filteredItems,
+    PAGE_SIZE);
+
+  const handleEdit = (e: Equipment) => {
+    setEditing(e);
+    setFormOpen(true);
+  };
+
+  const handleMaintenance = async (ev: MouseEvent, e: Equipment) => {
+    ev.stopPropagation();
+    const ok = await confirm({
+      title: 'Registrar manutenção',
+      message: `Registrar manutenção de ${e.name} agora?`,
+      confirmLabel: 'Registrar',
+    });
+    if (ok) maintenanceMutation.mutate(e.id);
+  };
+
+  const handleDelete = async (ev: MouseEvent, e: Equipment) => {
+    ev.stopPropagation();
+    const ok = await confirm({
+      title: 'Excluir equipamento',
+      message: `Excluir ${e.name}?`,
+      confirmLabel: 'Excluir',
+      confirmColor: 'error',
+    });
+    if (ok) deleteMutation.mutate(e.id);
+  };
 
   return (
     <Box>
-      <PageHeader
-        title="Equipamentos"
-        subtitle="Cadastro de máquinas e controle de manutenção preventiva"
-        action={
-          <Stack direction="row" spacing={1}>
-            {isAdmin && (
-              <Button
-                variant="outlined"
-                startIcon={<HistoryIcon />}
-                onClick={() => setHistoryOpen(true)}
-              >
-                Histórico
-              </Button>
-            )}
-            {canCreate && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
-                }}
-              >
-                Novo equipamento
-              </Button>
-            )}
-          </Stack>
-        }
-      />
+      {/* Cards de estatística */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+          gap: { xs: 1.5, sm: 2 },
+          mb: { xs: 2, sm: 2.5 },
+        }}
+      >
+        <StatCard label="Equipamentos" value={stats.total} loading={isLoading} />
+        <StatCard label="Operacionais" value={stats.active} color="success.main" loading={isLoading} />
+        <StatCard label="Manut. atrasada" value={stats.overdue} color="warning.main" loading={isLoading} />
+        <StatCard label="Manut. próx. 30d" value={stats.upcoming} loading={isLoading} />
+      </Box>
 
-      {dueSoon.length > 0 && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          {dueSoon.length} equipamento{dueSoon.length === 1 ? '' : 's'} com manutenção próxima ou
-          atrasada.
-        </Alert>
+      {/* Título + filtros + ações */}
+      <ListCardHeader
+        nowrapFrom="md"
+        sx={{ px: 0, py: 0, borderBottom: 0, mb: 2.5 }}
+        title={<Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>Equipamentos</Typography>}
+      >
+        <TextField
+          select
+          size="small"
+          value={maintenanceFilter}
+          onChange={(e) => {
+            setMaintenanceFilter(e.target.value as MaintenanceFilter);
+            setPage(0);
+          }}
+          sx={LIST_HEADER_PAPER_SELECT_SX}
+          inputProps={{ 'aria-label': 'Manutenção' }}
+        >
+          <MenuItem value="ALL">Todas as manutenções</MenuItem>
+          <MenuItem value="DUE">Próxima ou atrasada</MenuItem>
+        </TextField>
+        <TextField
+          select
+          size="small"
+          value={activeFilter}
+          onChange={(e) => {
+            setActiveFilter(e.target.value as ActiveFilter);
+            setPage(0);
+          }}
+          sx={LIST_HEADER_PAPER_SELECT_SX}
+          inputProps={{ 'aria-label': 'Status' }}
+        >
+          <MenuItem value="ALL">Todos os status</MenuItem>
+          <MenuItem value="ACTIVE">Ativos</MenuItem>
+          <MenuItem value="INACTIVE">Inativos</MenuItem>
+        </TextField>
+        <ListSearchField
+          value={search}
+          onChange={(v) => {
+            setSearch(v);
+            setPage(0);
+          }}
+          placeholder="Buscar equipamento..."
+        />
+        {canCreate && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+            sx={LIST_HEADER_PRIMARY_ACTION_SX}
+          >
+            Adicionar equipamento
+          </Button>
+        )}
+      </ListCardHeader>
+
+      {/* Lista de cards */}
+      {isLoading ? (
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 2.25 }}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={250} sx={{ borderRadius: '18px' }} />
+          ))}
+        </Box>
+      ) : filteredItems.length === 0 ? (
+        <Card sx={{ borderRadius: '18px' }}>
+          <ListEmptyState
+            icon={MemoryOutlinedIcon}
+            sx={{ p: 6 }}
+            title={items.length === 0 ? 'Nenhum equipamento cadastrado' : 'Nenhum equipamento encontrado'}
+            description={
+              items.length === 0
+                ? 'Cadastre as máquinas da clínica para controlar a manutenção preventiva.'
+                : 'Tente ajustar a busca ou os filtros.'
+            }
+          />
+        </Card>
+      ) : (
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 2.25 }}>
+          {rows.map((e) => (
+            <EquipmentCard
+              key={e.id}
+              equipment={e}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              onEdit={() => handleEdit(e)}
+              onMaintenance={(ev) => handleMaintenance(ev, e)}
+              onDelete={(ev) => handleDelete(ev, e)}
+            />
+          ))}
+        </Box>
       )}
 
-      <Card sx={{ p: { xs: 1.5, sm: 2 } }}>
-        <ListFiltersBar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Buscar por nome, marca ou modelo"
-          filteredCount={filteredItems.length}
-          totalCount={items.length}
-          countLabel={filteredItems.length === 1 ? 'equipamento' : 'equipamentos'}
+      {/* Paginação */}
+      {!isLoading && filteredItems.length > 0 && (
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems="center"
+          justifyContent="space-between"
+          spacing={1.5}
+          sx={{ mt: 3 }}
         >
-          <TextField
-            select
-            size="small"
-            label="Manutenção"
-            value={maintenanceFilter}
-            onChange={(e) => setMaintenanceFilter(e.target.value as MaintenanceFilter)}
-            sx={FILTER_FIELD_SX}
-          >
-            <MenuItem value="ALL">Todas</MenuItem>
-            <MenuItem value="DUE">Próxima ou atrasada</MenuItem>
-          </TextField>
-          <ActiveFilterSelect value={activeFilter} onChange={setActiveFilter} />
-        </ListFiltersBar>
-        <AppDataGrid
-          rows={filteredItems}
-          columns={columns}
-          loading={isLoading}
-          localeText={{
-            noRowsLabel:
-              items.length === 0
-                ? 'Nenhum equipamento cadastrado'
-                : 'Nenhum equipamento encontrado com os filtros',
-          }}
-        />
-      </Card>
-
+          <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary' }}>
+            Mostrando {rangeStart}–{rangeEnd} de{' '}
+            {filteredItems.length}
+            {filteredItems.length !== items.length && ` (${items.length} no total)`}
+          </Typography>
+          {pageCount > 1 && (
+            <ListPageButtons
+              page={current}
+              pageCount={pageCount}
+              onChange={setPage}
+              size={38}
+              radius="10px"
+              px={1}
+              spacing={1}
+              fontSize={fontSizes.md}
+              wrapJustify={{ xs: 'center', sm: 'flex-end' }}
+            />
+          )}
+        </Stack>
+      )}
       <EquipmentFormDialog
         open={formOpen}
         onClose={() => setFormOpen(false)}
         equipment={editing}
-      />
-      <AuditHistoryDialog
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        entity="Equipment"
-        title="Equipamentos"
       />
     </Box>
   );

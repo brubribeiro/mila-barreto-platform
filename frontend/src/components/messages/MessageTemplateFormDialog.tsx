@@ -1,18 +1,14 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
-  Alert,
-  alpha,
   Box,
   Button,
   Chip,
   Dialog,
   DialogActions,
   DialogContent,
-  Grid,
   IconButton,
   MenuItem,
-  Paper,
   Popover,
   Stack,
   TextField,
@@ -21,91 +17,58 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import ChatOutlinedIcon from '@mui/icons-material/ChatOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
-import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
-import NoteAddOutlinedIcon from '@mui/icons-material/NoteAddOutlined';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import EmojiEmotionsOutlinedIcon from '@mui/icons-material/EmojiEmotionsOutlined';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { messagesApi, MessageTemplatePayload } from '../../api/messages';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
-import { categoryOptions, TEMPLATE_VARIABLES } from './messageTemplateConstants';
+import { LabeledField } from '../LabeledField';
+import { categoryOptions, TEMPLATE_VARIABLES, triggerOptions } from './messageTemplateConstants';
 import { WHATSAPP_EMOJI_GROUPS } from './whatsappTemplateEmojis';
-import { WhatsAppPreview } from './WhatsAppPreview';
-import type { MessageTemplate, Procedure } from '../../types';
+import { VariableChip } from './VariableChip';
+import type { MessageTemplate, MessageTrigger, Procedure } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
+import { clickableProps } from '../../utils/a11y';
 
 interface MessageTemplateFormDialogProps {
   open: boolean;
   onClose: () => void;
   template?: MessageTemplate | null;
   procedures: Procedure[];
+  onSaved?: (template: MessageTemplate) => void;
 }
 
 interface FormValues {
   name: string;
-  category: string;
+  trigger: MessageTrigger;
   content: string;
+  category: string;
   procedureId: string;
+  active: boolean;
 }
 
-const empty: FormValues = { name: '', category: '', content: '', procedureId: '' };
+const empty: FormValues = {
+  name: '',
+  trigger: 'ON_BOOKING',
+  content: '',
+  category: '',
+  procedureId: '',
+  active: true,
+};
 
-const DIALOG_MAX_WIDTH = 980;
-const DIALOG_HEIGHT_DESKTOP = 800;
+const DIALOG_MAX_WIDTH = 580;
 
-const FORM_CARD_SX = {
-  p: { xs: 1.5, sm: 1.75 },
-  borderRadius: 2,
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-  height: '100%',
+const TWO_COLUMNS_SX = {
+  display: 'grid',
+  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+  gap: 1.75,
 } as const;
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-
-function SectionIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
-  return (
-    <Typography
-      sx={{
-        display: 'block',
-        mb: 1.75,
-        fontSize: fontSizes.xs,
-        fontWeight: 800,
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-        color: 'text.disabled',
-      }}
-    >
-      {title}
-    </Typography>
-  );
-}
 
 function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void }) {
   const [tab, setTab] = useState(0);
@@ -119,6 +82,7 @@ function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void }) {
             label={group.label}
             size="small"
             variant={tab === index ? 'filled' : 'outlined'}
+            aria-pressed={tab === index}
             onClick={() => setTab(index)}
             sx={{ cursor: 'pointer' }}
           />
@@ -128,7 +92,7 @@ function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void }) {
         {WHATSAPP_EMOJI_GROUPS[tab].emojis.map((emoji) => (
           <Box
             key={emoji}
-            onClick={() => onSelect(emoji)}
+            {...clickableProps(() => onSelect(emoji))}
             sx={{
               cursor: 'pointer',
               fontSize: 22,
@@ -154,6 +118,7 @@ export function MessageTemplateFormDialog({
   onClose,
   template,
   procedures,
+  onSaved,
 }: MessageTemplateFormDialogProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -167,11 +132,6 @@ export function MessageTemplateFormDialog({
   const [emojiAnchor, setEmojiAnchor] = useState<HTMLElement | null>(null);
 
   const category = watch('category');
-  const content = watch('content');
-  const procedureId = watch('procedureId');
-  const selectedProcedure = procedures.find((p) => p.id === procedureId) ?? null;
-  const categoryLabel =
-    categoryOptions.find((option) => option.value === category)?.label ?? undefined;
 
   useEffect(() => {
     if (!open) return;
@@ -179,9 +139,11 @@ export function MessageTemplateFormDialog({
       template
         ? {
             name: template.name,
-            category: template.category ?? '',
+            trigger: template.trigger,
             content: template.content,
+            category: template.category ?? '',
             procedureId: template.procedureId ?? '',
+            active: template.active,
           }
         : empty,
     );
@@ -191,19 +153,22 @@ export function MessageTemplateFormDialog({
     mutationFn: (values: FormValues) => {
       const payload: MessageTemplatePayload = {
         name: values.name.trim(),
+        trigger: values.trigger,
         content: values.content.trim(),
-        ...(values.category ? { category: values.category } : {}),
+        category: values.category || null,
         procedureId: values.category === 'promocao' && values.procedureId ? values.procedureId : null,
+        active: values.active,
       };
       return template ? messagesApi.update(template.id, payload) : messagesApi.create(payload);
     },
-    onSuccess: () => {
+    onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: ['message-templates'] });
-      toast.success(template ? 'Template atualizado.' : 'Template criado.');
+      toast.success(template ? 'Modelo atualizado.' : 'Modelo criado.');
+      onSaved?.(saved);
       onClose();
     },
     onError: (err) => {
-      toast.error(getApiErrorMessage(err, 'Não foi possível salvar o template.'));
+      toast.error(getApiErrorMessage(err, 'Não foi possível salvar o modelo.'));
     },
   });
 
@@ -239,197 +204,188 @@ export function MessageTemplateFormDialog({
           width: '100%',
           ...(isMobile
             ? { height: '100%', maxHeight: '100dvh' }
-            : {
-                maxWidth: DIALOG_MAX_WIDTH,
-                height: DIALOG_HEIGHT_DESKTOP,
-                maxHeight: '94dvh',
-                overflow: 'hidden',
-              }),
+            : { maxWidth: DIALOG_MAX_WIDTH, maxHeight: '94dvh' }),
         },
       }}
     >
       <Box
         component="form"
+        noValidate
         onSubmit={handleSubmit((values) => mutation.mutate(values))}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          minHeight: 0,
-          ...(isMobile ? { height: '100%' } : {}),
-        }}
+        sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
       >
         <DialogHeader
           onClose={onClose}
           isMobile={isMobile}
-          title={template ? 'Editar template' : 'Novo template de mensagem'}
-          subtitle={
-            template
-              ? `${template.name}${categoryLabel ? ` · ${categoryLabel}` : ''}`
-              : 'Nome, categoria e conteúdo da mensagem'
-          }
-          icon={
-            template ? (
-              <EditOutlinedIcon fontSize="small" />
-            ) : (
-              <NoteAddOutlinedIcon fontSize="small" />
-            )
-          }
+          title={template ? 'Editar modelo de mensagem' : 'Novo modelo de mensagem'}
+          subtitle={template ? template.name : 'Personalize uma mensagem do WhatsApp'}
+          icon={template ? <EditOutlinedIcon fontSize="small" /> : <WhatsAppIcon fontSize="small" />}
         />
 
         <DialogContent
-          dividers
           sx={{
             px: { xs: 2, sm: 3 },
-            py: { xs: 2, sm: 2.5 },
+            pb: { xs: 2, sm: 2.5 },
             flex: 1,
             minHeight: 0,
             overflow: 'auto',
-            bgcolor: (t) => t.palette.background.default,
+            bgcolor: 'background.paper',
+            '&.MuiDialogContent-root': { pt: { xs: 2.75, sm: 3 } },
           }}
         >
-          <Grid container spacing={2.5} alignItems="stretch">
-            <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<LabelOutlinedIcon fontSize="small" />} title="Identificação" />
-                <Stack spacing={2}>
-                  <Controller
-                    name="name"
-                    control={control}
-                    rules={{ required: 'Nome é obrigatório' }}
-                    render={({ field, fieldState }) => (
-                      <TextField
-                        {...field}
-                        label="Nome do template"
-                        fullWidth
-                        required
-                        autoFocus={!template}
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                  <Controller
-                    name="category"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField {...field} select label="Categoria" fullWidth>
-                        {categoryOptions.map((option) => (
-                          <MenuItem key={option.value || 'none'} value={option.value}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    )}
-                  />
-                  {category === 'promocao' && (
-                    <Controller
-                      name="procedureId"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField {...field} select label="Procedimento vinculado" fullWidth>
-                          <MenuItem value="">Nenhum</MenuItem>
-                          {procedures.map((procedure) => (
-                            <MenuItem key={procedure.id} value={procedure.id}>
-                              {procedure.name} — {brl.format(Number(procedure.price))}
-                            </MenuItem>
-                          ))}
-                        </TextField>
-                      )}
+          <Stack spacing={2}>
+            <Box sx={TWO_COLUMNS_SX}>
+              <Controller
+                name="name"
+                control={control}
+                rules={{ required: 'Título é obrigatório' }}
+                render={({ field, fieldState }) => (
+                  <LabeledField label="Título do modelo" required>
+                    <TextField
+                      {...field}
+                      fullWidth
+                      autoFocus={!template}
+                      placeholder="Ex.: Lembrete 24h"
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
                     />
-                  )}
-                  <Typography variant="caption" color="text.secondary">
-                    A categoria ajuda a filtrar e sugerir o template certo ao enviar mensagens pelo
-                    WhatsApp.
-                  </Typography>
-                </Stack>
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<ChatOutlinedIcon fontSize="small" />} title="Conteúdo" />
-                <Stack spacing={1.5}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                      Variáveis disponíveis · emojis compatíveis com WhatsApp
-                    </Typography>
-                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                      {TEMPLATE_VARIABLES.map((variable) => (
-                        <Chip
-                          key={variable}
-                          label={variable}
-                          size="small"
-                          variant="outlined"
-                          onClick={() => insertAtCursor(variable)}
-                          sx={{ cursor: 'pointer' }}
-                        />
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="trigger"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Gatilho de envio">
+                    <TextField {...field} select fullWidth>
+                      {triggerOptions.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
                       ))}
-                      <Tooltip title="Inserir emoji compatível com WhatsApp">
-                        <IconButton size="small" onClick={(event) => setEmojiAnchor(event.currentTarget)}>
-                          <EmojiEmotionsIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
-                  </Box>
-                  <Popover
-                    open={!!emojiAnchor}
-                    anchorEl={emojiAnchor}
-                    onClose={() => setEmojiAnchor(null)}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                  >
-                    <EmojiPicker
-                      onSelect={(emoji) => {
-                        insertAtCursor(emoji);
-                        setEmojiAnchor(null);
-                      }}
-                    />
-                  </Popover>
-                  <Controller
-                    name="content"
-                    control={control}
-                    rules={{ required: 'Conteúdo é obrigatório' }}
-                    render={({ field, fieldState }) => (
-                      <TextField
-                        {...field}
-                        inputRef={contentRef}
-                        label="Conteúdo da mensagem"
-                        fullWidth
-                        multiline
-                        minRows={6}
-                        maxRows={12}
-                        error={!!fieldState.error}
-                        helperText={
-                          fieldState.error?.message ??
-                          'Clique nas variáveis acima para inserir no texto'
-                        }
-                      />
-                    )}
+                    </TextField>
+                  </LabeledField>
+                )}
+              />
+            </Box>
+
+            <Controller
+              name="content"
+              control={control}
+              rules={{ required: 'Mensagem é obrigatória' }}
+              render={({ field, fieldState }) => (
+                <LabeledField
+                  label="Mensagem"
+                  required
+                  action={
+                    <Tooltip title="Inserir emoji compatível com WhatsApp">
+                      <IconButton
+                        aria-label="Inserir emoji"
+                        size="small"
+                        onClick={(event) => setEmojiAnchor(event.currentTarget)}
+                        sx={{ p: 0.25, color: 'text.secondary' }}
+                      >
+                        <EmojiEmotionsOutlinedIcon sx={{ fontSize: 18 }} />
+                      </IconButton>
+                    </Tooltip>
+                  }
+                >
+                  <TextField
+                    {...field}
+                    inputRef={contentRef}
+                    fullWidth
+                    multiline
+                    minRows={4}
+                    maxRows={12}
+                    placeholder="Escreva a mensagem usando as variáveis abaixo..."
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
                   />
-                </Stack>
-              </Paper>
-            </Grid>
+                </LabeledField>
+              )}
+            />
+            <Popover
+              open={!!emojiAnchor}
+              anchorEl={emojiAnchor}
+              onClose={() => setEmojiAnchor(null)}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+              <EmojiPicker
+                onSelect={(emoji) => {
+                  insertAtCursor(emoji);
+                  setEmojiAnchor(null);
+                }}
+              />
+            </Popover>
 
-            <Grid item xs={12}>
-              <Paper variant="outlined" sx={{ ...FORM_CARD_SX, height: 'auto' }}>
-                <SectionTitle icon={<VisibilityOutlinedIcon fontSize="small" />} title="Preview" />
-                <WhatsAppPreview
-                  content={content}
-                  category={category || undefined}
-                  procedure={selectedProcedure}
-                />
-              </Paper>
-            </Grid>
+            <Box>
+              <Typography
+                sx={{ fontSize: fontSizes.xs, fontWeight: 700, color: 'text.secondary', mb: 1.125 }}
+              >
+                Inserir variável
+              </Typography>
+              <Stack direction="row" flexWrap="wrap" useFlexGap sx={{ gap: 0.875 }}>
+                {TEMPLATE_VARIABLES.map((variable) => (
+                  <VariableChip key={variable} label={variable} onClick={() => insertAtCursor(variable)} />
+                ))}
+              </Stack>
+            </Box>
 
-            {mutation.isError && (
-              <Grid item xs={12}>
-                <Alert severity="error" variant="outlined">
-                  {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
-                    ?.message ?? 'Erro ao salvar template'}
-                </Alert>
-              </Grid>
+            <Box sx={TWO_COLUMNS_SX}>
+              <Controller
+                name="category"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Categoria">
+                    <TextField {...field} select fullWidth>
+                      {categoryOptions.map((option) => (
+                        <MenuItem key={option.value || 'none'} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="active"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Status">
+                    <TextField
+                      select
+                      fullWidth
+                      value={field.value ? 'active' : 'inactive'}
+                      onChange={(e) => field.onChange(e.target.value === 'active')}
+                    >
+                      <MenuItem value="active">Ativa</MenuItem>
+                      <MenuItem value="inactive">Inativa</MenuItem>
+                    </TextField>
+                  </LabeledField>
+                )}
+              />
+            </Box>
+
+            {category === 'promocao' && (
+              <Controller
+                name="procedureId"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Procedimento vinculado">
+                    <TextField {...field} select fullWidth>
+                      <MenuItem value="">Nenhum</MenuItem>
+                      {procedures.map((procedure) => (
+                        <MenuItem key={procedure.id} value={procedure.id}>
+                          {procedure.name} — {brl.format(Number(procedure.price))}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </LabeledField>
+                )}
+              />
             )}
-          </Grid>
+          </Stack>
         </DialogContent>
 
         <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
@@ -437,7 +393,7 @@ export function MessageTemplateFormDialog({
             Cancelar
           </Button>
           <Button type="submit" variant="contained" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Salvando…' : template ? 'Salvar' : 'Criar template'}
+            {mutation.isPending ? 'Salvando…' : 'Salvar modelo'}
           </Button>
         </DialogActions>
       </Box>
