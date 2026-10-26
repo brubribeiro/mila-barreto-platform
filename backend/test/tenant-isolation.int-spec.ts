@@ -14,6 +14,7 @@ import { PatientsService } from '../src/patients/patients.service';
 import { AppointmentsService } from '../src/appointments/appointments.service';
 import { FinanceService } from '../src/finance/finance.service';
 import { UsersService } from '../src/users/users.service';
+import { FeedbackService } from '../src/feedback/feedback.service';
 import { AuthService } from '../src/auth/auth.service';
 import { JwtStrategy } from '../src/auth/jwt.strategy';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -34,6 +35,7 @@ let patients: PatientsService;
 let appointments: AppointmentsService;
 let finance: FinanceService;
 let users: UsersService;
+let feedback: FeedbackService;
 
 interface Clinic {
   tenant: Tenant;
@@ -85,6 +87,7 @@ beforeAll(async () => {
   appointments = moduleRef.get(AppointmentsService);
   finance = moduleRef.get(FinanceService);
   users = moduleRef.get(UsersService);
+  feedback = moduleRef.get(FeedbackService);
   A = await createClinic('A');
   B = await createClinic('B');
 });
@@ -229,6 +232,57 @@ describe('tenant isolation', () => {
     await A.as(() => setHourlyCostIncludeVariable(prisma, true));
     await expect(A.as(() => getHourlyCostIncludeVariable(prisma))).resolves.toBe(true);
     await expect(B.as(() => getHourlyCostIncludeVariable(prisma))).resolves.toBe(false);
+  });
+
+  describe('feedback', () => {
+    const asUser = (clinic: Clinic): AuthenticatedUser => ({
+      id: clinic.admin.id,
+      email: clinic.admin.email,
+      name: clinic.admin.name,
+      tenantId: clinic.tenant.id,
+      isSuperAdmin: false,
+      roleId: clinic.adminRole.id,
+      roleName: clinic.adminRole.name,
+      permissions: ['feedback:view'],
+      restrictToOwnAppointments: false,
+      active: true,
+      providesAppointments: true,
+    });
+
+    it('fills tenantId on create and other clinic does not list it', async () => {
+      const created = await A.as(() =>
+        feedback.create(
+          {
+            type: 'BUG',
+            title: `Bug A ${suffix}`,
+            description: 'Isolamento de feedback entre clínicas',
+          },
+          asUser(A),
+        ),
+      );
+      const row = await base.feedbackReport.findUniqueOrThrow({ where: { id: created.id } });
+      expect(row.tenantId).toBe(A.tenant.id);
+
+      const listB = await B.as(() => feedback.list());
+      expect(listB.map((r) => r.id)).not.toContain(created.id);
+      const listA = await A.as(() => feedback.list());
+      expect(listA.map((r) => r.id)).toContain(created.id);
+    });
+
+    it('database refuses author from another clinic (same-tenant trigger)', async () => {
+      await expect(
+        B.as(() =>
+          feedback.create(
+            {
+              type: 'SUGGESTION',
+              title: 'Cruzado',
+              description: 'userId de outra clínica',
+            },
+            asUser(A),
+          ),
+        ),
+      ).rejects.toMatchObject({ code: 'P2003' });
+    });
   });
 
   describe('auth', () => {

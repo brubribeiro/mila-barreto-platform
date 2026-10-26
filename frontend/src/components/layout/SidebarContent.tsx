@@ -1,20 +1,26 @@
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import {
   Avatar,
   Box,
+  Divider,
   IconButton,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Menu,
+  MenuItem,
   Stack,
   Tooltip,
   Typography,
   useTheme,
 } from '@mui/material';
+import FeedbackOutlinedIcon from '@mui/icons-material/FeedbackOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 
 import type { User } from '../../types';
 import { AuroraIcon } from '../AuroraIcon';
+import { FeedbackReportDialog } from '../feedback/FeedbackReportDialog';
 import { fontSizes } from '../../theme/fontSizes';
 import { isNavPathActive, type NavGroup } from './navConfig';
 import {
@@ -36,13 +42,13 @@ const USER_AVATAR_SX = {
   fontWeight: 700,
 } as const;
 
-const LOGOUT_BUTTON_SX = {
+const REPORT_BUTTON_SX = {
   width: 34,
   height: 34,
   borderRadius: '10px',
   bgcolor: SIDEBAR_HOVER,
   color: SIDEBAR_TEXT,
-  '&:hover': { color: '#F08A8A', bgcolor: 'rgba(214,90,90,.18)' },
+  '&:hover': { color: '#fff', bgcolor: 'rgba(21,153,139,.28)' },
 } as const;
 
 function userInitials(name: string | undefined) {
@@ -67,6 +73,9 @@ interface SidebarContentProps {
 export function SidebarContent({ collapsed: isCollapsed, groups, pathname, onNavigate, user, onLogout }: SidebarContentProps) {
   const theme = useTheme();
   const initials = userInitials(user?.name);
+  const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const userMenuOpen = Boolean(userMenuAnchor);
 
   const navScrollSx = {
     flex: 1,
@@ -299,39 +308,134 @@ export function SidebarContent({ collapsed: isCollapsed, groups, pathname, onNav
         {isCollapsed ? (
           <Stack alignItems="center" spacing={1}>
             <Tooltip title={`${user?.name ?? 'Usuário'}${user?.roleName ? ` · ${user.roleName}` : ''}`} placement="right">
-              <Avatar variant="rounded" sx={USER_AVATAR_SX}>
+              <Avatar
+                variant="rounded"
+                onClick={(e) => setUserMenuAnchor(e.currentTarget)}
+                aria-haspopup="menu"
+                aria-expanded={userMenuOpen ? 'true' : undefined}
+                aria-label="Menu do usuário"
+                sx={{ ...USER_AVATAR_SX, cursor: 'pointer' }}
+              >
                 {initials}
               </Avatar>
             </Tooltip>
-            <Tooltip title="Sair" placement="right">
-              <IconButton aria-label="Sair" size="small" onClick={onLogout} sx={LOGOUT_BUTTON_SX}>
-                <AuroraIcon name="logout" size={18} strokeWidth={2} />
+            <Tooltip title="Reportar bug ou sugestão" placement="right">
+              <IconButton
+                aria-label="Reportar bug ou sugestão"
+                size="small"
+                onClick={() => setFeedbackOpen(true)}
+                sx={REPORT_BUTTON_SX}
+              >
+                <AuroraIcon name="feedback" size={18} strokeWidth={2} />
               </IconButton>
             </Tooltip>
           </Stack>
         ) : (
           <Stack direction="row" spacing={1.25} alignItems="center">
-            <Avatar variant="rounded" sx={{ ...USER_AVATAR_SX, flexShrink: 0 }}>
-              {initials}
-            </Avatar>
-            <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography noWrap sx={{ fontSize: fontSizes.sm, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
-                {user?.name ?? 'Usuário'}
-              </Typography>
-              {user?.roleName && (
-                <Typography noWrap sx={{ fontSize: fontSizes['2xs'], color: SIDEBAR_TEXT, lineHeight: 1.2 }}>
-                  {user.roleName}
+            <Box
+              component="button"
+              type="button"
+              onClick={(e) => setUserMenuAnchor(e.currentTarget)}
+              aria-haspopup="menu"
+              aria-expanded={userMenuOpen ? 'true' : undefined}
+              aria-label="Menu do usuário"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.25,
+                minWidth: 0,
+                flex: 1,
+                p: 0,
+                m: 0,
+                border: 0,
+                bgcolor: 'transparent',
+                cursor: 'pointer',
+                textAlign: 'left',
+                borderRadius: '12px',
+                '&:hover .user-menu-avatar': {
+                  boxShadow: '0 0 0 2px rgba(21,153,139,0.45)',
+                },
+              }}
+            >
+              <Avatar className="user-menu-avatar" variant="rounded" sx={{ ...USER_AVATAR_SX, flexShrink: 0 }}>
+                {initials}
+              </Avatar>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography noWrap sx={{ fontSize: fontSizes.sm, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
+                  {user?.name ?? 'Usuário'}
                 </Typography>
-              )}
+                {user?.roleName && (
+                  <Typography noWrap sx={{ fontSize: fontSizes['2xs'], color: SIDEBAR_TEXT, lineHeight: 1.2 }}>
+                    {user.roleName}
+                  </Typography>
+                )}
+              </Box>
             </Box>
-            <Tooltip title="Sair">
-              <IconButton aria-label="Sair" size="small" onClick={onLogout} sx={{ ...LOGOUT_BUTTON_SX, flexShrink: 0 }}>
-                <AuroraIcon name="logout" size={18} strokeWidth={2} />
+            <Tooltip title="Reportar bug ou sugestão">
+              <IconButton
+                aria-label="Reportar bug ou sugestão"
+                size="small"
+                onClick={() => setFeedbackOpen(true)}
+                sx={{ ...REPORT_BUTTON_SX, flexShrink: 0 }}
+              >
+                <AuroraIcon name="feedback" size={18} strokeWidth={2} />
               </IconButton>
             </Tooltip>
           </Stack>
         )}
       </Box>
+
+      <Menu
+        anchorEl={userMenuAnchor}
+        open={userMenuOpen}
+        onClose={() => setUserMenuAnchor(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        slotProps={{
+          paper: {
+            sx: {
+              mt: -1,
+              minWidth: 220,
+              borderRadius: '14px',
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: '0 10px 30px rgba(14,41,38,0.12)',
+            },
+          },
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            setUserMenuAnchor(null);
+            setFeedbackOpen(true);
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 36 }}>
+            <FeedbackOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary="Reportar bug ou sugestão"
+            primaryTypographyProps={{ fontSize: fontSizes.sm, fontWeight: 600 }}
+          />
+        </MenuItem>
+        <Divider sx={{ my: 0.5 }} />
+        <MenuItem
+          onClick={() => {
+            setUserMenuAnchor(null);
+            onLogout();
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 36 }}>
+            <LogoutOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary="Sair"
+            primaryTypographyProps={{ fontSize: fontSizes.sm, fontWeight: 600 }}
+          />
+        </MenuItem>
+      </Menu>
+
+      <FeedbackReportDialog open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </Box>
   );
 }

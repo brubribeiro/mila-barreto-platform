@@ -7,7 +7,16 @@ describe('tenant scope extension', () => {
   describe('TENANT_SCOPED_MODELS', () => {
     it('covers every clinic model and leaves Tenant out', () => {
       expect(TENANT_SCOPED_MODELS.has('Tenant')).toBe(false);
-      for (const model of ['User', 'Role', 'AppSetting', 'Patient', 'Appointment', 'FinancialEntry', 'PackageItem']) {
+      for (const model of [
+        'User',
+        'Role',
+        'AppSetting',
+        'Patient',
+        'Appointment',
+        'FinancialEntry',
+        'PackageItem',
+        'FeedbackReport',
+      ]) {
         expect(TENANT_SCOPED_MODELS.has(model)).toBe(true);
       }
     });

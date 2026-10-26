@@ -533,6 +533,23 @@ export interface NotificationPreference {
   enabled: boolean;
 }
 
+export type FeedbackType = 'BUG' | 'SUGGESTION';
+
+export interface FeedbackReport {
+  id: string;
+  type: FeedbackType;
+  title: string;
+  description: string;
+  pageUrl?: string | null;
+  userId: string;
+  createdAt: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
 export type GoalMetric =
   | 'REVENUE'
   | 'NEW_PATIENTS'

@@ -64,6 +64,7 @@ model Tenant {
   skincareProducts        SkincareProduct[]
   skincareRules           SkincareRule[]
   skincareRoutines        SkincareRoutine[]
+  feedbackReports         FeedbackReport[]
   platformAuditLogs       PlatformAuditLog[]
 
   @@map("tenants")
@@ -168,6 +169,7 @@ model User {
   notificationPreferences NotificationPreference[]
   workingHours            WorkingHours[]
   unavailabilities        Unavailability[]
+  feedbackReports         FeedbackReport[]
   pendingTasks            PendingTask[]            @relation("PendingTaskAssignee")
 
   @@index([tenantId])
@@ -979,6 +981,35 @@ model AuditLog {
   @@index([createdAt])
   @@index([tenantId])
   @@map("audit_logs")
+}
+
+// =========================
+// FEEDBACK / REPORTES DE USUÁRIOS
+// =========================
+
+enum FeedbackType {
+  BUG
+  SUGGESTION
+}
+
+model FeedbackReport {
+  id          String       @id @default(uuid())
+  tenantId    String       @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  type        FeedbackType
+  title       String
+  description String
+  pageUrl     String?
+  userId      String
+  createdAt   DateTime     @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([type])
+  @@index([tenantId])
+  @@map("feedback_reports")
 }
 
 enum MovementType {

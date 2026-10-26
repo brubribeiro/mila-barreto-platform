@@ -224,6 +224,12 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M16 17l5-5-5-5M21 12H9" />
     </>
   ),
+  feedback: (
+    <>
+      <path d="M20.5 11.5a7.5 7.5 0 0 1-10.8 6.7L4 20l1.8-5.2A7.5 7.5 0 1 1 20.5 11.5z" />
+      <path d="M9 10.5h.01M12 10.5h.01M15 10.5h.01" />
+    </>
+  ),
 };
 
 export type AuroraIconName = keyof typeof ICONS;

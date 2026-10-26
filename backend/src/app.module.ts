@@ -24,6 +24,7 @@ import { PackagesModule } from './packages/packages.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
+import { FeedbackModule } from './feedback/feedback.module';
 import { GoalsModule } from './goals/goals.module';
 import { PendenciasModule } from './pendencias/pendencias.module';
 import { SkincareModule } from './skincare/skincare.module';
@@ -58,6 +59,7 @@ import { AppController } from './app.controller';
     MetricsModule,
     PromotionsModule,
     PaymentMethodsModule,
+    FeedbackModule,
     GoalsModule,
     PendenciasModule,
     SkincareModule,
