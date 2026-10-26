@@ -7,10 +7,13 @@ import {
 } from './messages.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { FeatureGuard } from '../common/guards/feature.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { RequireFeature } from '../common/decorators/require-feature.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequireFeature('messages')
+@UseGuards(JwtAuthGuard, FeatureGuard, PermissionsGuard)
 @Controller('messages')
 export class MessagesController {
   constructor(private readonly messages: MessagesService) {}

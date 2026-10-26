@@ -37,14 +37,20 @@ export function Layout() {
     setMoneyHiddenState(!moneyHidden);
   };
 
+  const userFeatures = user?.features;
   const visibleGroups = useMemo(() => {
+    const features = userFeatures ?? [];
     return NAV_GROUPS
       .map((group) => ({
         ...group,
-        items: group.items.filter((item) => !item.permission || has(item.permission)),
+        items: group.items.filter(
+          (item) =>
+            (!item.permission || has(item.permission)) &&
+            (!item.feature || features.includes(item.feature)),
+        ),
       }))
       .filter((group) => group.items.length > 0);
-  }, [has]);
+  }, [has, userFeatures]);
 
   const theme = useTheme();
 

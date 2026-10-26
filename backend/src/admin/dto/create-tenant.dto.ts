@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from 'class-validator';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -33,4 +33,10 @@ export class CreateTenantDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   @IsEmail({}, { message: 'E-mail do administrador inválido.' })
   adminEmail: string;
+
+  /** Plano da clínica (opcional; só planos ativos). */
+  @Transform(trimToUndefined)
+  @IsOptional()
+  @IsUUID('all', { message: 'Plano inválido.' })
+  planId?: string;
 }

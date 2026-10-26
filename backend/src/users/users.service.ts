@@ -85,7 +85,10 @@ export class UsersService {
     return TenantContext.runUnscoped(() =>
       this.prisma.user.findUnique({
         where: { email },
-        include: { role: true, tenant: true },
+        include: {
+          role: true,
+          tenant: { include: { plan: { select: { features: true } } } },
+        },
       }),
     );
   }
@@ -93,7 +96,10 @@ export class UsersService {
   findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
-      include: { role: true },
+      include: {
+        role: true,
+        tenant: { include: { plan: { select: { features: true } } } },
+      },
     });
   }
 

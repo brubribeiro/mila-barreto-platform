@@ -36,8 +36,8 @@ import { fontSizes } from '../../theme/fontSizes';
 import type { AdminTenant } from '../../types';
 
 const GRID_COLS =
-  'minmax(0, 2.2fr) minmax(0, 0.8fr) minmax(0, 0.8fr) minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 0.8fr) 136px';
-const GRID_MIN_WIDTH = 900;
+  'minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 0.8fr) minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 0.8fr) 136px';
+const GRID_MIN_WIDTH = 1000;
 
 type StatusFilter = 'ALL' | TenantStatusFilter;
 const STATUS_CODEC = urlEnum<StatusFilter>(['ALL', 'active', 'suspended']);
@@ -139,6 +139,7 @@ export function AdminTenants() {
             }}
           >
             <span>Clínica</span>
+            <span>Plano</span>
             <span>Usuários</span>
             <span>Pacientes</span>
             <span>Agend. do mês</span>
@@ -213,6 +214,18 @@ export function AdminTenants() {
                   </Box>
                 </Stack>
 
+                <Typography
+                  sx={{
+                    display: { xs: 'none', md: 'block' },
+                    fontSize: fontSizes.sm,
+                    fontWeight: 600,
+                    color: t.plan ? (t.plan.active ? 'text.primary' : 'text.secondary') : 'text.disabled',
+                  }}
+                  noWrap
+                  title={t.plan && !t.plan.active ? 'Plano desativado' : undefined}
+                >
+                  {t.plan?.name ?? 'Sem plano'}
+                </Typography>
                 <Typography sx={numberCellSx}>{t.metrics.activeUsers}</Typography>
                 <Typography sx={numberCellSx}>{t.metrics.patients}</Typography>
                 <Typography sx={numberCellSx}>{t.metrics.appointmentsThisMonth}</Typography>

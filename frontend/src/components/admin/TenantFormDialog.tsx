@@ -21,6 +21,7 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
 import { FormSection } from '../FormSection';
 import { LabeledField } from '../LabeledField';
+import { PlanSelect } from './PlanSelect';
 import type { AdminTenant } from '../../types';
 
 const DIALOG_MAX_WIDTH = 760;
@@ -32,13 +33,14 @@ interface FormValues {
   slug: string;
   adminName: string;
   adminEmail: string;
+  planId: string;
 }
 
 interface Props {
   open: boolean;
   onClose: () => void;
   /** null = nova clínica */
-  editing: Pick<AdminTenant, 'id' | 'name' | 'slug'> | null;
+  editing: Pick<AdminTenant, 'id' | 'name' | 'slug' | 'planId' | 'plan'> | null;
 }
 
 /** Criar clínica (com o primeiro administrador) ou editar nome/identificador. */
@@ -49,16 +51,19 @@ export function TenantFormDialog({ open, onClose, editing }: Props) {
   const toast = useAppToast();
 
   const { control, handleSubmit, reset } = useForm<FormValues>({
-    defaultValues: { name: '', slug: '', adminName: '', adminEmail: '' },
+    defaultValues: { name: '', slug: '', adminName: '', adminEmail: '', planId: '' },
   });
 
   const saveMutation = useMutation({
     mutationFn: (values: FormValues) => {
       const slug = values.slug.trim() || undefined;
-      if (editing) return adminApi.updateTenant(editing.id, { name: values.name.trim(), slug });
+      if (editing) {
+        return adminApi.updateTenant(editing.id, { name: values.name.trim(), slug, planId: values.planId || null });
+      }
       return adminApi.createTenant({
         name: values.name.trim(),
         slug,
+        planId: values.planId || undefined,
         adminName: values.adminName.trim(),
         adminEmail: values.adminEmail.trim().toLowerCase(),
       });
@@ -66,6 +71,7 @@ export function TenantFormDialog({ open, onClose, editing }: Props) {
     onSuccess: (tenant) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'tenants'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'audit'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] });
       if (editing) queryClient.invalidateQueries({ queryKey: ['admin', 'tenant', editing.id] });
       toast.success(editing ? 'Clínica atualizada.' : `Clínica ${tenant.name} criada.`);
       onClose();
@@ -77,7 +83,13 @@ export function TenantFormDialog({ open, onClose, editing }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    reset({ name: editing?.name ?? '', slug: editing?.slug ?? '', adminName: '', adminEmail: '' });
+    reset({
+      name: editing?.name ?? '',
+      slug: editing?.slug ?? '',
+      adminName: '',
+      adminEmail: '',
+      planId: editing?.planId ?? '',
+    });
     resetMutation();
   }, [open, editing, reset, resetMutation]);
 
@@ -172,6 +184,23 @@ export function TenantFormDialog({ open, onClose, editing }: Props) {
                           (editing ? 'Único na plataforma' : 'Opcional: gerado a partir do nome se vazio')
                         }
                         fullWidth
+                      />
+                    </LabeledField>
+                  )}
+                />
+                <Controller
+                  name="planId"
+                  control={control}
+                  render={({ field }) => (
+                    <LabeledField label="Plano">
+                      <PlanSelect
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        inputRef={field.ref}
+                        currentPlan={editing?.plan}
+                        fullWidth
+                        inputProps={{ 'aria-label': 'Plano' }}
                       />
                     </LabeledField>
                   )}

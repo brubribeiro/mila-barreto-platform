@@ -16,6 +16,11 @@ export interface AuthenticatedUser {
   restrictToOwnAppointments: boolean;
   active: boolean;
   providesAppointments: boolean;
+  /**
+   * Módulos efetivos da clínica ((plano ∪ extra) − denied).
+   * Sem plano = catálogo completo. Super-admin fora de clínica: [].
+   */
+  features: string[];
   /** Preenchido quando um admin está personificando este usuário */
   impersonatorId?: string;
 }

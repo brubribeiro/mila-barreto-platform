@@ -247,6 +247,7 @@ describe('tenant isolation', () => {
       restrictToOwnAppointments: false,
       active: true,
       providesAppointments: true,
+      features: [],
     });
 
     it('fills tenantId on create and other clinic does not list it', async () => {
