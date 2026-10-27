@@ -17,7 +17,19 @@ import type {
 
 export type TenantStatusFilter = 'active' | 'suspended';
 
-export interface CreateTenantPayload {
+export interface TenantProfilePayload {
+  specialties?: string[] | null;
+  foundedAt?: string | null;
+  legalName?: string | null;
+  document?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  city?: string | null;
+  state?: string | null;
+  notes?: string | null;
+}
+
+export interface CreateTenantPayload extends TenantProfilePayload {
   name: string;
   slug?: string;
   adminName: string;
@@ -25,7 +37,7 @@ export interface CreateTenantPayload {
   planId?: string;
 }
 
-export interface UpdateTenantPayload {
+export interface UpdateTenantPayload extends TenantProfilePayload {
   name?: string;
   slug?: string;
   /** null remove o plano */

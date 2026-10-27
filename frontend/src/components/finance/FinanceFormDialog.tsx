@@ -1,7 +1,6 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect } from 'react';
 import {
   Alert,
-  alpha,
   Autocomplete,
   Box,
   Button,
@@ -10,7 +9,6 @@ import {
   DialogContent,
   Grid,
   MenuItem,
-  Paper,
   Stack,
   TextField,
   ToggleButton,
@@ -21,13 +19,18 @@ import {
 } from '@mui/material';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
-import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import { useForm, Controller, type Control } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
-import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import {
+  DialogHeader,
+  dialogActionsBorderSx,
+  dialogContentScrollSx,
+  dialogFormLayoutSx,
+  formDialogPaperSx,
+} from '../DialogCloseButton';
+import { FormSection } from '../FormSection';
 import { MoneyField } from '../MoneyField';
 import { financeApi, FinancialEntryPayload } from '../../api/finance';
 import { useAppToast } from '../../contexts/AppToastContext';
@@ -66,55 +69,19 @@ const empty: FormValues = {
   expenseType: '',
 };
 
-const DIALOG_MAX_WIDTH = 900;
-const DIALOG_HEIGHT_DESKTOP = 540;
+const DIALOG_MAX_WIDTH = 860;
+const FORM_STACK_GAP = 1.75;
 
-const FORM_CARD_SX = {
+const COMPACT_SECTION_SX = {
   p: { xs: 1.5, sm: 1.75 },
-  borderRadius: 2,
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-  height: '100%',
+  alignSelf: 'flex-start',
+  width: '100%',
+  height: 'fit-content',
+  flex: 'none',
+  '& > .MuiStack-root:first-of-type': { mb: 1.25 },
 } as const;
 
-function SectionIcon({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        borderRadius: 2,
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-        color: 'primary.main',
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function SectionTitle({ title }: { icon?: ReactNode; title: string }) {
-  return (
-    <Typography
-      sx={{
-        display: 'block',
-        mb: 1.75,
-        fontSize: fontSizes.xs,
-        fontWeight: 800,
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-        color: 'text.disabled',
-      }}
-    >
-      {title}
-    </Typography>
-  );
-}
+const GRID_ITEM_SX = { alignSelf: 'flex-start', height: 'auto' } as const;
 
 function EntryTypeToggle({
   control,
@@ -224,18 +191,16 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
       fullScreen={isMobile}
       PaperProps={{
         sx: {
-          ...dialogPaperSx(isMobile),
-          display: 'flex',
-          flexDirection: 'column',
-          width: '100%',
-          ...(isMobile
-            ? { height: '100%', maxHeight: '100dvh' }
-            : {
-                maxWidth: DIALOG_MAX_WIDTH,
-                height: DIALOG_HEIGHT_DESKTOP,
-                maxHeight: '94dvh',
-                overflow: 'hidden',
-              }),
+          ...formDialogPaperSx(isMobile, {
+            maxWidth: DIALOG_MAX_WIDTH,
+            height: 'min(86dvh, 520px)',
+          }),
+          ...(!isMobile
+            ? {
+                height: 'fit-content',
+                maxHeight: 'min(86dvh, 520px)',
+              }
+            : {}),
         },
       }}
     >
@@ -243,13 +208,7 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
         component="form"
         noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          minHeight: 0,
-          ...(isMobile ? { height: '100%' } : {}),
-        }}
+        sx={{ ...dialogFormLayoutSx(isMobile), overflow: 'hidden' }}
       >
         <DialogHeader
           onClose={onClose}
@@ -277,23 +236,18 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
         />
 
         <DialogContent
-          dividers
           sx={{
+            ...dialogContentScrollSx,
             px: { xs: 2, sm: 3 },
-            py: { xs: 2, sm: 2.5 },
-            flex: 1,
-            minHeight: 0,
-            overflow: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            bgcolor: (t) => t.palette.background.default,
+            pb: { xs: 2, sm: 2.5 },
+            bgcolor: 'background.default',
+            '&.MuiDialogContent-root': { pt: { xs: 2, sm: 2.25 } },
           }}
         >
-          <Grid container spacing={2.5} alignItems="stretch">
-            <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<LabelOutlinedIcon fontSize="small" />} title="Identificação" />
-                <Stack spacing={2}>
+          <Grid container spacing={FORM_STACK_GAP} alignItems="flex-start">
+            <Grid item xs={12} md={6} sx={GRID_ITEM_SX}>
+              <FormSection title="Identificação" sx={COMPACT_SECTION_SX}>
+                <Stack spacing={FORM_STACK_GAP}>
                   <Controller
                     name="description"
                     control={control}
@@ -326,7 +280,7 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
 
                   {type === 'EXPENSE' && (
                     <Box>
-                      <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
+                      <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700, mb: 0.75 }}>
                         Tipo de despesa
                       </Typography>
                       <Controller
@@ -346,7 +300,15 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
                           </ToggleButtonGroup>
                         )}
                       />
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                      <Typography
+                        sx={{
+                          display: 'block',
+                          mt: 0.75,
+                          fontSize: fontSizes['2xs'],
+                          color: 'text.secondary',
+                          lineHeight: 1.35,
+                        }}
+                      >
                         Fixa = recorrente (aluguel, internet) · Variável = pontual (material, taxas)
                       </Typography>
                     </Box>
@@ -374,14 +336,13 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
                     />
                   )}
                 </Stack>
-              </Paper>
+              </FormSection>
             </Grid>
 
-            <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={FORM_CARD_SX}>
-                <SectionTitle icon={<PaymentsOutlinedIcon fontSize="small" />} title="Valor e pagamento" />
-                <Stack spacing={2}>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <Grid item xs={12} md={6} sx={GRID_ITEM_SX}>
+              <FormSection title="Valor e pagamento" sx={COMPACT_SECTION_SX}>
+                <Stack spacing={FORM_STACK_GAP}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={FORM_STACK_GAP}>
                     <Controller
                       name="amount"
                       control={control}
@@ -431,7 +392,7 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
                     )}
                   />
                 </Stack>
-              </Paper>
+              </FormSection>
             </Grid>
 
             {mutation.isError && (

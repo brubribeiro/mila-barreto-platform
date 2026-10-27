@@ -7,6 +7,7 @@ import {
   DialogActions,
   DialogContent,
   TextField,
+  Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -22,25 +23,35 @@ import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogClo
 import { FormSection } from '../FormSection';
 import { LabeledField } from '../LabeledField';
 import { PlanSelect } from './PlanSelect';
+import { CatalogSelectChip, FeatureModuleChipGrid } from './FeatureModuleChips';
+import { CLINIC_SPECIALTIES, CLINIC_SPECIALTY_LABELS } from '../../features/clinicSpecialties';
+import { fontSizes } from '../../theme/fontSizes';
+import {
+  buildTenantProfilePayload,
+  emptyTenantProfileForm,
+  tenantProfileFormFromTenant,
+  type TenantProfileFormValues,
+} from './tenantFormUtils';
 import type { AdminTenant } from '../../types';
 
-const DIALOG_MAX_WIDTH = 760;
+const DIALOG_MAX_WIDTH = 820;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const CNPJ_PATTERN = /^(\d{14}|\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})$/;
 
-interface FormValues {
+type FormValues = TenantProfileFormValues & {
   name: string;
   slug: string;
   adminName: string;
   adminEmail: string;
   planId: string;
-}
+};
 
 interface Props {
   open: boolean;
   onClose: () => void;
   /** null = nova clínica */
-  editing: Pick<AdminTenant, 'id' | 'name' | 'slug' | 'planId' | 'plan'> | null;
+  editing: AdminTenant | null;
 }
 
 /** Criar clínica (com o primeiro administrador) ou editar nome/identificador. */
@@ -51,14 +62,20 @@ export function TenantFormDialog({ open, onClose, editing }: Props) {
   const toast = useAppToast();
 
   const { control, handleSubmit, reset } = useForm<FormValues>({
-    defaultValues: { name: '', slug: '', adminName: '', adminEmail: '', planId: '' },
+    defaultValues: { name: '', slug: '', adminName: '', adminEmail: '', planId: '', ...emptyTenantProfileForm },
   });
 
   const saveMutation = useMutation({
     mutationFn: (values: FormValues) => {
       const slug = values.slug.trim() || undefined;
+      const profile = buildTenantProfilePayload(values, !!editing);
       if (editing) {
-        return adminApi.updateTenant(editing.id, { name: values.name.trim(), slug, planId: values.planId || null });
+        return adminApi.updateTenant(editing.id, {
+          name: values.name.trim(),
+          slug,
+          planId: values.planId || null,
+          ...profile,
+        });
       }
       return adminApi.createTenant({
         name: values.name.trim(),
@@ -66,6 +83,7 @@ export function TenantFormDialog({ open, onClose, editing }: Props) {
         planId: values.planId || undefined,
         adminName: values.adminName.trim(),
         adminEmail: values.adminEmail.trim().toLowerCase(),
+        ...profile,
       });
     },
     onSuccess: (tenant) => {
@@ -89,6 +107,7 @@ export function TenantFormDialog({ open, onClose, editing }: Props) {
       adminName: '',
       adminEmail: '',
       planId: editing?.planId ?? '',
+      ...tenantProfileFormFromTenant(editing),
     });
     resetMutation();
   }, [open, editing, reset, resetMutation]);
@@ -248,6 +267,163 @@ export function TenantFormDialog({ open, onClose, editing }: Props) {
                 </Box>
               </FormSection>
             )}
+
+            <FormSection
+              title="Especialidades"
+              subtitle="Toque para incluir ou remover"
+              sx={{ gridColumn: { md: '1 / -1' } }}
+            >
+              <Controller
+                name="specialties"
+                control={control}
+                render={({ field }) => (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                    <FeatureModuleChipGrid aria-label="Especialidades da clínica">
+                      {CLINIC_SPECIALTIES.map((key) => {
+                        const selected = field.value.includes(key);
+                        return (
+                          <CatalogSelectChip
+                            key={key}
+                            label={CLINIC_SPECIALTY_LABELS[key]}
+                            selected={selected}
+                            onClick={() => {
+                              field.onChange(
+                                selected ? field.value.filter((x) => x !== key) : [...field.value, key],
+                              );
+                            }}
+                          />
+                        );
+                      })}
+                    </FeatureModuleChipGrid>
+                    <Typography sx={{ fontSize: fontSizes.xs, color: 'text.disabled' }}>
+                      {field.value.length
+                        ? `${field.value.length} de ${CLINIC_SPECIALTIES.length} selecionadas`
+                        : 'Nenhuma especialidade marcada'}
+                    </Typography>
+                  </Box>
+                )}
+              />
+            </FormSection>
+
+            <FormSection title="Perfil da clínica" sx={{ gridColumn: { md: '1 / -1' } }}>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gap: 1.75,
+                }}
+              >
+                <Controller
+                  name="foundedAt"
+                  control={control}
+                  render={({ field }) => (
+                    <LabeledField label="Data de inauguração">
+                      <TextField {...field} type="date" fullWidth InputLabelProps={{ shrink: true }} />
+                    </LabeledField>
+                  )}
+                />
+                <Controller
+                  name="legalName"
+                  control={control}
+                  render={({ field }) => (
+                    <LabeledField label="Razão social">
+                      <TextField {...field} placeholder="Nome jurídico" fullWidth />
+                    </LabeledField>
+                  )}
+                />
+                <Controller
+                  name="document"
+                  control={control}
+                  rules={{
+                    validate: (v) => {
+                      const d = v.replace(/\D/g, '');
+                      if (!d) return true;
+                      return d.length === 14 || CNPJ_PATTERN.test(v.trim()) || 'CNPJ deve ter 14 dígitos';
+                    },
+                  }}
+                  render={({ field, fieldState }) => (
+                    <LabeledField label="CNPJ">
+                      <TextField
+                        {...field}
+                        placeholder="00.000.000/0000-00"
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        fullWidth
+                        inputProps={{ inputMode: 'numeric' }}
+                      />
+                    </LabeledField>
+                  )}
+                />
+                <Controller
+                  name="phone"
+                  control={control}
+                  render={({ field }) => (
+                    <LabeledField label="Telefone">
+                      <TextField {...field} placeholder="(11) 99999-9999" fullWidth inputProps={{ inputMode: 'tel' }} />
+                    </LabeledField>
+                  )}
+                />
+                <Controller
+                  name="email"
+                  control={control}
+                  rules={{
+                    validate: (v) => !v.trim() || EMAIL_PATTERN.test(v.trim()) || 'E-mail inválido',
+                  }}
+                  render={({ field, fieldState }) => (
+                    <LabeledField label="E-mail de contato">
+                      <TextField
+                        {...field}
+                        type="email"
+                        placeholder="contato@clinica.com"
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        fullWidth
+                        inputProps={{ inputMode: 'email', autoCapitalize: 'none' }}
+                      />
+                    </LabeledField>
+                  )}
+                />
+                <Controller
+                  name="city"
+                  control={control}
+                  render={({ field }) => (
+                    <LabeledField label="Cidade">
+                      <TextField {...field} placeholder="São Paulo" fullWidth />
+                    </LabeledField>
+                  )}
+                />
+                <Controller
+                  name="state"
+                  control={control}
+                  rules={{
+                    validate: (v) => !v.trim() || /^[A-Za-z]{2}$/.test(v.trim()) || 'UF com 2 letras',
+                  }}
+                  render={({ field, fieldState }) => (
+                    <LabeledField label="UF">
+                      <TextField
+                        {...field}
+                        placeholder="SP"
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        fullWidth
+                        inputProps={{ maxLength: 2, style: { textTransform: 'uppercase' } }}
+                      />
+                    </LabeledField>
+                  )}
+                />
+                <Box sx={{ gridColumn: { sm: '1 / -1' } }}>
+                  <Controller
+                    name="notes"
+                    control={control}
+                    render={({ field }) => (
+                      <LabeledField label="Nota interna (super-admin)">
+                        <TextField {...field} multiline minRows={2} placeholder="Observações visíveis só no painel da plataforma" fullWidth />
+                      </LabeledField>
+                    )}
+                  />
+                </Box>
+              </Box>
+            </FormSection>
           </Box>
 
           {saveMutation.error && (

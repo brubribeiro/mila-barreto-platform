@@ -3,16 +3,20 @@ import { useForm, Controller } from 'react-hook-form';
 import {
   Alert,
   Autocomplete,
+  Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
-  Grid,
+  Stack,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  Typography,
   useMediaQuery,
   useTheme,
+  type SxProps,
+  type Theme,
 } from '@mui/material';
 import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,9 +24,18 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { inventoryApi, MovementType } from '../../api/inventory';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
-import { DialogHeader, dialogPaperSx } from '../DialogCloseButton';
+import {
+  DialogHeader,
+  dialogActionsBorderSx,
+  dialogContentScrollSx,
+  dialogFormLayoutSx,
+  formDialogPaperSx,
+} from '../DialogCloseButton';
+import { LabeledField } from '../LabeledField';
 import { MoneyField } from '../MoneyField';
 import { dateOnlyToApiIso } from '../../utils/dateOnly';
+import { fontSizes } from '../../theme/fontSizes';
+import { availabilityShortcutToggleSx } from '../availability/AvailabilityShortcutToggles';
 import type { InventoryItem } from '../../types';
 
 interface MovementDialogProps {
@@ -42,6 +55,27 @@ interface FormValues {
 }
 
 const empty: FormValues = { type: 'IN', quantity: 1, totalPrice: '', reason: '', expiresAt: '' };
+
+const DIALOG_MAX_WIDTH = 480;
+
+const FIELD_STACK_GAP = 1.75;
+
+const FIELD_HELPER_SX = {
+  '& .MuiFormHelperText-root': {
+    fontSize: fontSizes['2xs'],
+    lineHeight: 1.35,
+    mt: 0.75,
+    mx: 0,
+  },
+} as const;
+
+const MOVEMENT_TYPE_TOGGLE_SX: SxProps<Theme> = [
+  availabilityShortcutToggleSx,
+  {
+    width: '100%',
+    '& .MuiToggleButtonGroup-grouped': { flex: 1, py: 0.85 },
+  },
+];
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -110,31 +144,55 @@ export function MovementDialog({ open, onClose, item: fixedItem, items }: Moveme
 
   if (!item && !showPicker) return null;
 
+  const quantityHint =
+    type === 'ADJUSTMENT'
+      ? `O estoque ficará com ${quantity} unidades`
+      : `Quantidade resultante: ${newQuantity}`;
+
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="xs"
+      maxWidth={false}
       fullWidth
       fullScreen={isMobile}
-      PaperProps={{ sx: dialogPaperSx(isMobile) }}
+      PaperProps={{
+        sx: formDialogPaperSx(isMobile, {
+          maxWidth: DIALOG_MAX_WIDTH,
+          height: 'min(86dvh, 580px)',
+        }),
+      }}
     >
-      <form noValidate onSubmit={handleSubmit((v) => mutation.mutate(v))}>
+      <Box
+        component="form"
+        noValidate
+        onSubmit={handleSubmit((v) => mutation.mutate(v))}
+        sx={dialogFormLayoutSx(isMobile)}
+      >
         <DialogHeader
           onClose={onClose}
           isMobile={isMobile}
           title="Movimentar estoque"
           subtitle={
             item
-              ? `${item.name} · atual: ${item.quantity} ${item.unit ?? ''}`
-              : 'Escolha o produto e o tipo de movimentação'
+              ? `${item.name} · estoque atual: ${item.quantity}${item.unit ? ` ${item.unit}` : ''}`
+              : 'Escolha o produto e registre entrada, saída ou ajuste de quantidade'
           }
+          subtitleWrap
+          sx={{ pb: { xs: 2, sm: 2.25 } }}
           icon={<SwapHorizOutlinedIcon fontSize="small" />}
         />
-        <DialogContent dividers sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 2.5 } }}>
-          <Grid container spacing={2}>
+        <DialogContent
+          sx={{
+            ...dialogContentScrollSx,
+            px: { xs: 2, sm: 3 },
+            pb: { xs: 2, sm: 2.5 },
+            '&.MuiDialogContent-root': { pt: { xs: 2, sm: 2.25 } },
+          }}
+        >
+          <Stack spacing={FIELD_STACK_GAP}>
             {showPicker && (
-              <Grid item xs={12}>
+              <LabeledField label="Produto" required>
                 <Autocomplete
                   options={items}
                   getOptionLabel={(o) => (o.sku ? `${o.name} (${o.sku})` : o.name)}
@@ -142,11 +200,14 @@ export function MovementDialog({ open, onClose, item: fixedItem, items }: Moveme
                   value={pickedItem}
                   onChange={(_, v) => setPickedItem(v)}
                   noOptionsText="Nenhum produto"
-                  renderInput={(params) => <TextField {...params} label="Produto" required autoFocus />}
+                  renderInput={(params) => (
+                    <TextField {...params} required autoFocus inputProps={{ ...params.inputProps, 'aria-label': 'Produto' }} />
+                  )}
                 />
-              </Grid>
+              </LabeledField>
             )}
-            <Grid item xs={12}>
+
+            <LabeledField label="Tipo">
               <Controller
                 name="type"
                 control={control}
@@ -155,9 +216,9 @@ export function MovementDialog({ open, onClose, item: fixedItem, items }: Moveme
                     {...field}
                     exclusive
                     fullWidth
-                    onChange={(_, val) => val && field.onChange(val)}
-                    color="primary"
                     size="small"
+                    onChange={(_, val) => val && field.onChange(val)}
+                    sx={MOVEMENT_TYPE_TOGGLE_SX}
                   >
                     <ToggleButton value="IN">Entrada</ToggleButton>
                     <ToggleButton value="OUT">Saída</ToggleButton>
@@ -165,8 +226,9 @@ export function MovementDialog({ open, onClose, item: fixedItem, items }: Moveme
                   </ToggleButtonGroup>
                 )}
               />
-            </Grid>
-            <Grid item xs={12}>
+            </LabeledField>
+
+            <LabeledField label={type === 'ADJUSTMENT' ? 'Nova quantidade total' : 'Quantidade'} required>
               <Controller
                 name="quantity"
                 control={control}
@@ -175,113 +237,145 @@ export function MovementDialog({ open, onClose, item: fixedItem, items }: Moveme
                   min: { value: 1, message: 'A quantidade mínima é 1' },
                 }}
                 render={({ field, fieldState }) => (
-                  <TextField
-                    {...field}
-                    type="number"
-                    label={type === 'ADJUSTMENT' ? 'Nova quantidade total' : 'Quantidade'}
-                    fullWidth
-                    required
-                    autoFocus
-                    inputProps={{ inputMode: 'numeric', min: 1 }}
-                    helperText={
-                      fieldState.error?.message ??
-                      (type === 'ADJUSTMENT'
-                        ? `O estoque ficará com ${quantity} unidades`
-                        : `Quantidade resultante: ${newQuantity}`)
-                    }
-                    error={!!fieldState.error || newQuantity < 0}
-                  />
+                  <Box>
+                    <TextField
+                      {...field}
+                      type="number"
+                      fullWidth
+                      required
+                      autoFocus={!showPicker}
+                      inputProps={{ inputMode: 'numeric', min: 1, 'aria-label': 'Quantidade' }}
+                      error={!!fieldState.error || newQuantity < 0}
+                      sx={FIELD_HELPER_SX}
+                    />
+                    <Typography
+                      sx={{
+                        mt: 0.75,
+                        fontSize: fontSizes['2xs'],
+                        color: fieldState.error || newQuantity < 0 ? 'error.main' : 'text.secondary',
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {fieldState.error?.message ?? quantityHint}
+                    </Typography>
+                  </Box>
                 )}
               />
-            </Grid>
-            <Grid item xs={12}>
-              <Controller
-                name="reason"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Motivo (opcional)"
-                    fullWidth
-                    placeholder={
-                      type === 'IN'
-                        ? 'Compra, devolução...'
-                        : type === 'OUT'
-                          ? 'Uso em procedimento, perda...'
-                          : 'Inventário, correção...'
-                    }
-                  />
-                )}
+            </LabeledField>
+
+            <LabeledField label="Motivo">
+              <TextField
+                {...control.register('reason')}
+                fullWidth
+                placeholder={
+                  type === 'IN'
+                    ? 'Compra, devolução...'
+                    : type === 'OUT'
+                      ? 'Uso em procedimento, perda...'
+                      : 'Inventário, correção...'
+                }
+                inputProps={{ 'aria-label': 'Motivo' }}
               />
-            </Grid>
-            {type === 'IN' && (
-              <>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="totalPrice"
-                    control={control}
-                    rules={{
-                      required: 'Valor total é obrigatório para entradas',
-                      min: { value: 0.01, message: 'Informe um valor maior que zero' },
-                    }}
-                    render={({ field, fieldState }) => (
-                      <MoneyField
-                        {...field}
-                        label="Valor total da compra"
-                        fullWidth
-                        required
-                        error={!!fieldState.error}
-                        helperText={
-                          fieldState.error?.message ??
-                          (calculatedUnitPrice > 0
-                            ? `Custo unitário: ${brl.format(calculatedUnitPrice)} · gera despesa no financeiro`
-                            : 'Gera uma despesa no financeiro ao confirmar')
-                        }
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="expiresAt"
-                    control={control}
-                    rules={{ required: 'Data de validade é obrigatória para entradas' }}
-                    render={({ field, fieldState }) => (
-                      <TextField
-                        {...field}
-                        type="date"
-                        label="Data de validade do lote"
-                        fullWidth
-                        required
-                        InputLabelProps={{ shrink: true }}
-                        error={!!fieldState.error}
-                        helperText={
-                          fieldState.error?.message ??
-                          'Cada entrada pode ter validade diferente (lotes distintos)'
-                        }
-                      />
-                    )}
-                  />
-                </Grid>
-              </>
-            )}
+            </LabeledField>
+
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                gap: FIELD_STACK_GAP,
+                minHeight: { xs: 168, sm: 132 },
+              }}
+            >
+              {type === 'IN' ? (
+                <>
+                  <LabeledField label="Valor total da compra" required>
+                    <Controller
+                      name="totalPrice"
+                      control={control}
+                      rules={{
+                        required: 'Valor total é obrigatório para entradas',
+                        min: { value: 0.01, message: 'Informe um valor maior que zero' },
+                      }}
+                      render={({ field, fieldState }) => (
+                        <Box>
+                          <MoneyField
+                            {...field}
+                            fullWidth
+                            required
+                            error={!!fieldState.error}
+                            inputProps={{ 'aria-label': 'Valor total da compra' }}
+                            sx={FIELD_HELPER_SX}
+                          />
+                          <Typography
+                            sx={{
+                              mt: 0.75,
+                              fontSize: fontSizes['2xs'],
+                              color: fieldState.error ? 'error.main' : 'text.secondary',
+                              lineHeight: 1.35,
+                            }}
+                          >
+                            {fieldState.error?.message ??
+                              (calculatedUnitPrice > 0
+                                ? `Custo unitário: ${brl.format(calculatedUnitPrice)} · gera despesa no financeiro`
+                                : 'Gera uma despesa no financeiro ao confirmar')}
+                          </Typography>
+                        </Box>
+                      )}
+                    />
+                  </LabeledField>
+                  <LabeledField label="Validade do lote" required>
+                    <Controller
+                      name="expiresAt"
+                      control={control}
+                      rules={{ required: 'Data de validade é obrigatória para entradas' }}
+                      render={({ field, fieldState }) => (
+                        <Box>
+                          <TextField
+                            {...field}
+                            type="date"
+                            fullWidth
+                            required
+                            InputLabelProps={{ shrink: true }}
+                            error={!!fieldState.error}
+                            inputProps={{ 'aria-label': 'Data de validade do lote' }}
+                            sx={FIELD_HELPER_SX}
+                          />
+                          <Typography
+                            sx={{
+                              mt: 0.75,
+                              fontSize: fontSizes['2xs'],
+                              color: fieldState.error ? 'error.main' : 'text.secondary',
+                              lineHeight: 1.35,
+                            }}
+                          >
+                            {fieldState.error?.message ??
+                              'Cada entrada pode ter validade diferente (lotes distintos)'}
+                          </Typography>
+                        </Box>
+                      )}
+                    />
+                  </LabeledField>
+                </>
+              ) : null}
+            </Box>
+
             {newQuantity < 0 && (
-              <Grid item xs={12}>
-                <Alert severity="error">Estoque insuficiente para essa saída.</Alert>
-              </Grid>
+              <Alert severity="error" sx={{ py: 0.75, '& .MuiAlert-message': { fontSize: fontSizes.sm } }}>
+                Estoque insuficiente para essa saída.
+              </Alert>
             )}
             {mutation.isError && (
-              <Grid item xs={12}>
-                <Alert severity="error">
-                  {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-                    'Erro ao registrar movimento'}
-                </Alert>
-              </Grid>
+              <Alert severity="error" sx={{ py: 0.75, '& .MuiAlert-message': { fontSize: fontSizes.sm } }}>
+                {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+                  'Erro ao registrar movimento'}
+              </Alert>
             )}
-          </Grid>
+          </Stack>
         </DialogContent>
-        <DialogActions sx={{ px: { xs: 2, sm: 3 }, py: { xs: 1.5, sm: 2 } }}>
-          <Button onClick={onClose}>Cancelar</Button>
+        <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>
+          <Button onClick={onClose} type="button" disabled={mutation.isPending}>
+            Cancelar
+          </Button>
           <Button
             type="submit"
             variant="contained"
@@ -292,10 +386,10 @@ export function MovementDialog({ open, onClose, item: fixedItem, items }: Moveme
               (type === 'IN' && totalPrice <= 0)
             }
           >
-            {mutation.isPending ? 'Salvando...' : 'Confirmar'}
+            {mutation.isPending ? 'Salvando…' : 'Confirmar'}
           </Button>
         </DialogActions>
-      </form>
+      </Box>
     </Dialog>
   );
 }

@@ -34,7 +34,14 @@ import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { LabeledField } from '../LabeledField';
 import { EMAIL_PATTERN } from '../../utils/masks';
-import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import {
+  DialogHeader,
+  dialogActionsBorderSx,
+  dialogFormLayoutSx,
+  formDialogPaperSx,
+  formSwitchLabelSx,
+  formSwitchRowSx,
+} from '../DialogCloseButton';
 import type { UserSummary } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
 
@@ -74,6 +81,8 @@ const SPECIALTY_OPTIONS = [
 const COLOR_SWATCHES = ['#15998B', '#E0915B', '#5BA8DE', '#D46B8A', '#9B7BD4', '#4FB3A8', '#C99230', '#5A9A7D'];
 
 const DIALOG_MAX_WIDTH = 620;
+
+const FORM_GRID_SPACING = 1.75;
 
 function makeEmpty(presetProfessional: boolean): FormValues {
   return {
@@ -194,18 +203,17 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
       fullWidth
       fullScreen={isMobile}
       PaperProps={{
-        sx: {
-          ...dialogPaperSx(isMobile),
-          width: '100%',
-          ...(isMobile ? { height: '100%', maxHeight: '100dvh' } : { maxWidth: DIALOG_MAX_WIDTH, maxHeight: '94dvh' }),
-        },
+        sx: formDialogPaperSx(isMobile, {
+          maxWidth: DIALOG_MAX_WIDTH,
+          height: 'min(86dvh, 720px)',
+        }),
       }}
     >
       <Box
         component="form"
         noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
-        sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+        sx={dialogFormLayoutSx(isMobile)}
       >
         <DialogHeader
           onClose={onClose}
@@ -227,7 +235,52 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
             '&.MuiDialogContent-root': { pt: { xs: 2.75, sm: 3 } },
           }}
         >
-          <Stack spacing={2}>
+          <Stack spacing={FORM_GRID_SPACING}>
+            <Grid container spacing={FORM_GRID_SPACING}>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="name"
+                  control={control}
+                  rules={{ required: 'Nome é obrigatório' }}
+                  render={({ field, fieldState }) => (
+                    <LabeledField label="Nome completo" required>
+                      <TextField
+                        {...field}
+                        fullWidth
+                        placeholder="Ex.: Larissa Nunes"
+                        autoFocus={!user}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                      />
+                    </LabeledField>
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="email"
+                  control={control}
+                  rules={{
+                    required: 'E-mail é obrigatório',
+                    pattern: { value: EMAIL_PATTERN, message: 'E-mail inválido' },
+                  }}
+                  render={({ field, fieldState }) => (
+                    <LabeledField label="E-mail" required>
+                      <TextField
+                        {...field}
+                        type="email"
+                        fullWidth
+                        placeholder="email@clinica.com"
+                        inputProps={{ inputMode: 'email', autoComplete: 'off' }}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                      />
+                    </LabeledField>
+                  )}
+                />
+              </Grid>
+            </Grid>
+
             <Controller
               name="providesAppointments"
               control={control}
@@ -250,9 +303,32 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
               )}
             />
 
+            <Controller
+              name="roleId"
+              control={control}
+              rules={{ required: 'Selecione um grupo' }}
+              render={({ field, fieldState }) => (
+                <LabeledField label="Grupo de permissão" required>
+                  <TextField
+                    {...field}
+                    select
+                    fullWidth
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message ?? 'Define quais telas e ações este usuário pode acessar.'}
+                  >
+                    {roles.map((r) => (
+                      <MenuItem key={r.id} value={r.id}>
+                        {r.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </LabeledField>
+              )}
+            />
+
             {isProfessional && (
-              <>
-                <Grid container spacing={1.75}>
+              <Stack spacing={FORM_GRID_SPACING}>
+                <Grid container spacing={FORM_GRID_SPACING}>
                   <Grid item xs={12} sm={6}>
                     <Controller
                       name="specialty"
@@ -334,167 +410,112 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
                   />
                 </LabeledField>
 
-                <LabeledField label="Cor na agenda">
-                  <Controller
-                    name="calendarColor"
-                    control={control}
-                    render={({ field }) => (
-                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                        {COLOR_SWATCHES.map((c) => {
-                          const selected = field.value?.toLowerCase() === c.toLowerCase();
-                          return (
-                            <Box
-                              key={c}
-                              component="button"
-                              type="button"
-                              aria-label={c}
-                              onClick={() => field.onChange(selected ? '' : c)}
-                              sx={{
-                                width: 30,
-                                height: 30,
-                                borderRadius: '50%',
-                                cursor: 'pointer',
-                                bgcolor: c,
-                                border: (t) =>
-                                  selected ? `2px solid ${t.palette.text.primary}` : '2px solid transparent',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#fff',
-                              }}
-                            >
-                              {selected && <CheckIcon sx={{ fontSize: 16 }} />}
-                            </Box>
-                          );
-                        })}
-                      </Stack>
-                    )}
-                  />
-                </LabeledField>
-
-                <LabeledField label="Foto">
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <Avatar
-                      src={photoPreview ?? undefined}
-                      variant="rounded"
-                      sx={{ width: 56, height: 56, borderRadius: '14px', bgcolor: calendarColor || 'primary.main', fontWeight: 700 }}
-                    >
-                      {(nameValue || '?').trim().charAt(0).toUpperCase()}
-                    </Avatar>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      hidden
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) photoUpload.mutate(file);
-                        e.target.value = '';
-                      }}
-                    />
-                    <Tooltip title={user ? '' : 'Salve o usuário para adicionar a foto'}>
-                      <span>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<PhotoCameraOutlinedIcon />}
-                          disabled={!user || photoBusy}
-                          onClick={() => fileInputRef.current?.click()}
+                <Grid container spacing={FORM_GRID_SPACING} alignItems="flex-start">
+                  <Grid item xs={12} sm={6}>
+                    <LabeledField label="Cor na agenda">
+                      <Controller
+                        name="calendarColor"
+                        control={control}
+                        render={({ field }) => (
+                          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ pt: 0.25 }}>
+                            {COLOR_SWATCHES.map((c) => {
+                              const selected = field.value?.toLowerCase() === c.toLowerCase();
+                              return (
+                                <Box
+                                  key={c}
+                                  component="button"
+                                  type="button"
+                                  aria-label={c}
+                                  onClick={() => field.onChange(selected ? '' : c)}
+                                  sx={{
+                                    width: 30,
+                                    height: 30,
+                                    borderRadius: '50%',
+                                    cursor: 'pointer',
+                                    bgcolor: c,
+                                    border: (t) =>
+                                      selected ? `2px solid ${t.palette.text.primary}` : '2px solid transparent',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#fff',
+                                  }}
+                                >
+                                  {selected && <CheckIcon sx={{ fontSize: 16 }} />}
+                                </Box>
+                              );
+                            })}
+                          </Stack>
+                        )}
+                      />
+                    </LabeledField>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <LabeledField label="Foto">
+                      <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+                        <Avatar
+                          src={photoPreview ?? undefined}
+                          variant="rounded"
+                          sx={{
+                            width: 56,
+                            height: 56,
+                            borderRadius: '14px',
+                            bgcolor: calendarColor || 'primary.main',
+                            fontWeight: 700,
+                            flexShrink: 0,
+                          }}
                         >
-                          {photoPreview ? 'Trocar foto' : 'Enviar foto'}
-                        </Button>
-                      </span>
-                    </Tooltip>
-                    {photoPreview && user && (
-                      <Button
-                        size="small"
-                        color="error"
-                        startIcon={<DeleteOutlineIcon />}
-                        disabled={photoBusy}
-                        onClick={() => photoRemove.mutate()}
-                      >
-                        Remover
-                      </Button>
-                    )}
-                  </Stack>
-                </LabeledField>
-              </>
+                          {(nameValue || '?').trim().charAt(0).toUpperCase()}
+                        </Avatar>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          hidden
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) photoUpload.mutate(file);
+                            e.target.value = '';
+                          }}
+                        />
+                        <Tooltip title={user ? '' : 'Salve o usuário para adicionar a foto'}>
+                          <span>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<PhotoCameraOutlinedIcon />}
+                              disabled={!user || photoBusy}
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              {photoPreview ? 'Trocar foto' : 'Enviar foto'}
+                            </Button>
+                          </span>
+                        </Tooltip>
+                        {photoPreview && user && (
+                          <Button
+                            size="small"
+                            color="error"
+                            startIcon={<DeleteOutlineIcon />}
+                            disabled={photoBusy}
+                            onClick={() => photoRemove.mutate()}
+                          >
+                            Remover
+                          </Button>
+                        )}
+                      </Stack>
+                    </LabeledField>
+                  </Grid>
+                </Grid>
+              </Stack>
             )}
 
-            <Grid container spacing={1.75}>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name="name"
-                  control={control}
-                  rules={{ required: 'Nome é obrigatório' }}
-                  render={({ field, fieldState }) => (
-                    <LabeledField label="Nome completo" required>
-                      <TextField
-                        {...field}
-                        fullWidth
-                        placeholder="Ex.: Larissa Nunes"
-                        autoFocus={!user}
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                      />
-                    </LabeledField>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name="email"
-                  control={control}
-                  rules={{
-                    required: 'E-mail é obrigatório',
-                    pattern: { value: EMAIL_PATTERN, message: 'E-mail inválido' },
-                  }}
-                  render={({ field, fieldState }) => (
-                    <LabeledField label="E-mail" required>
-                      <TextField
-                        {...field}
-                        type="email"
-                        fullWidth
-                        placeholder="email@clinica.com"
-                        inputProps={{ inputMode: 'email', autoComplete: 'off' }}
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                      />
-                    </LabeledField>
-                  )}
-                />
-              </Grid>
-            </Grid>
-
-            <Controller
-              name="roleId"
-              control={control}
-              rules={{ required: 'Selecione um grupo' }}
-              render={({ field, fieldState }) => (
-                <LabeledField label="Grupo de permissão" required>
-                  <TextField
-                    {...field}
-                    select
-                    fullWidth
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message ?? 'Define quais telas e ações este usuário pode acessar.'}
-                  >
-                    {roles.map((r) => (
-                      <MenuItem key={r.id} value={r.id}>
-                        {r.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </LabeledField>
-              )}
-            />
-
-            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
+            <Box sx={formSwitchRowSx}>
               <Controller
                 name="active"
                 control={control}
                 render={({ field }) => (
                   <FormControlLabel
+                    sx={formSwitchLabelSx}
                     control={<Switch checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />}
                     label={field.value ? 'Ativo' : 'Inativo'}
                   />
@@ -506,13 +527,14 @@ export function UserFormDialog({ open, onClose, user, presetProfessional = false
                   control={control}
                   render={({ field }) => (
                     <FormControlLabel
+                      sx={formSwitchLabelSx}
                       control={<Switch checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />}
                       label="Profissional principal"
                     />
                   )}
                 />
               )}
-            </Stack>
+            </Box>
 
             {mutation.isError && (
               <Alert severity="error" variant="outlined">

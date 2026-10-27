@@ -8,7 +8,6 @@ import {
   DialogActions,
   DialogContent,
   Divider,
-  InputAdornment,
   MenuItem,
   Stack,
   TextField,
@@ -23,7 +22,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { equipmentApi, EquipmentPayload } from '../../api/equipment';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
-import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import {
+  DialogHeader,
+  dialogActionsBorderSx,
+  dialogFormLayoutSx,
+  formDialogPaperSx,
+} from '../DialogCloseButton';
+import { FieldAdornment } from '../FieldAdornment';
 import { LabeledField } from '../LabeledField';
 import { MoneyField } from '../MoneyField';
 import { dateInputValueFromApi, dateOnlyToApiIso } from '../../utils/dateOnly';
@@ -70,10 +75,12 @@ const empty: FormValues = {
 
 const DIALOG_MAX_WIDTH = 640;
 
+const FORM_STACK_GAP = 1.75;
+
 const TWO_COLUMNS_SX = {
   display: 'grid',
   gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-  gap: 1.75,
+  gap: FORM_STACK_GAP,
 } as const;
 
 function SectionLabel({ children }: { children: string }) {
@@ -94,7 +101,7 @@ function SectionLabel({ children }: { children: string }) {
 
 function Hint({ children }: { children: string }) {
   return (
-    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -0.75 }}>
+    <Typography sx={{ display: 'block', fontSize: fontSizes['2xs'], color: 'text.secondary', lineHeight: 1.35, mt: -0.5 }}>
       {children}
     </Typography>
   );
@@ -177,22 +184,17 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
       fullWidth
       fullScreen={isMobile}
       PaperProps={{
-        sx: {
-          ...dialogPaperSx(isMobile),
-          display: 'flex',
-          flexDirection: 'column',
-          width: '100%',
-          ...(isMobile
-            ? { height: '100%', maxHeight: '100dvh' }
-            : { maxWidth: DIALOG_MAX_WIDTH, maxHeight: '94dvh' }),
-        },
+        sx: formDialogPaperSx(isMobile, {
+          maxWidth: DIALOG_MAX_WIDTH,
+          height: 'min(86dvh, 680px)',
+        }),
       }}
     >
       <Box
         component="form"
         noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
-        sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+        sx={dialogFormLayoutSx(isMobile)}
       >
         <DialogHeader
           onClose={onClose}
@@ -223,7 +225,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
             '&.MuiDialogContent-root': { pt: { xs: 2.75, sm: 3 } },
           }}
         >
-          <Stack spacing={2.25}>
+          <Stack spacing={FORM_STACK_GAP}>
             <Controller
               name="name"
               control={control}
@@ -292,13 +294,10 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
               />
             </Box>
             {!isActive && (
-              <Hint>
-                Inativos permanecem no cadastro, mas ficam ocultos nas listagens e seleções do dia a
-                dia.
-              </Hint>
+              <Hint>Inativos ficam ocultos nas listagens e seleções do dia a dia.</Hint>
             )}
 
-            <Divider />
+            <Divider sx={{ my: 0.25 }} />
             <SectionLabel>Aquisição</SectionLabel>
             <Box sx={TWO_COLUMNS_SX}>
               <Controller
@@ -321,7 +320,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
               />
             </Box>
 
-            <Divider />
+            <Divider sx={{ my: 0.25 }} />
             <SectionLabel>Manutenção</SectionLabel>
             <Box sx={TWO_COLUMNS_SX}>
               <Controller
@@ -343,13 +342,13 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                 )}
               />
             </Box>
-            <Hint>Ao agendar a próxima manutenção, uma despesa será criada automaticamente.</Hint>
+            <Hint>Próxima manutenção agendada gera despesa automaticamente.</Hint>
 
             <Box
               sx={{
                 display: 'grid',
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-                gap: 1.75,
+                gap: FORM_STACK_GAP,
               }}
             >
               <Controller
@@ -362,7 +361,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                       type="number"
                       fullWidth
                       InputProps={{
-                        endAdornment: <InputAdornment position="end">meses</InputAdornment>,
+                        endAdornment: <FieldAdornment>meses</FieldAdornment>,
                       }}
                       inputProps={{ inputMode: 'numeric', min: 1 }}
                     />
@@ -379,7 +378,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                       type="number"
                       fullWidth
                       InputProps={{
-                        endAdornment: <InputAdornment position="end">dias</InputAdornment>,
+                        endAdornment: <FieldAdornment>dias</FieldAdornment>,
                       }}
                       inputProps={{ inputMode: 'numeric', min: 0 }}
                     />
@@ -396,12 +395,9 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                 )}
               />
             </Box>
-            <Hint>
-              Com periodicidade definida, a próxima manutenção é calculada automaticamente. O valor
-              da manutenção é usado para gerar despesa no financeiro.
-            </Hint>
+            <Hint>Periodicidade calcula a próxima data; o valor alimenta o financeiro.</Hint>
 
-            <Divider />
+            <Divider sx={{ my: 0.25 }} />
             <Controller
               name="notes"
               control={control}
@@ -411,7 +407,8 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                     {...field}
                     fullWidth
                     multiline
-                    minRows={3}
+                    minRows={2}
+                    maxRows={6}
                     placeholder="Fornecedor de assistência, contrato, notas de uso..."
                   />
                 </LabeledField>

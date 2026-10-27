@@ -20,12 +20,26 @@ const ACTION_SHORT_LABELS: Record<ActionKey, string> = {
   delete: 'Excluir',
 };
 
+/** Larguras fixas — layout idêntico ao trocar de grupo (sem colunas “andando”). */
+const MODULE_COL = 'minmax(200px, 240px)';
+const ACTION_COL = '80px';
+const MATRIX_MIN_WIDTH = 560;
+
 const GRID_SX = {
   display: 'grid',
-  gridTemplateColumns: '1.6fr repeat(4, minmax(64px, 1fr))',
-  gap: 1,
+  gridTemplateColumns: `${MODULE_COL} repeat(4, ${ACTION_COL})`,
+  columnGap: 0,
+  rowGap: 0,
   alignItems: 'center',
   px: { xs: 2, sm: 2.75 },
+} as const;
+
+const ACTION_CELL_SX = {
+  width: ACTION_COL,
+  maxWidth: ACTION_COL,
+  display: 'flex',
+  justifyContent: 'center',
+  justifySelf: 'center',
 } as const;
 
 const CHECK_COLOR = '#11A893';
@@ -77,7 +91,7 @@ export function PermissionsMatrix({ value, onChange, readOnly }: PermissionsMatr
 
   return (
     <Box sx={{ overflowX: 'auto' }}>
-      <Box sx={{ minWidth: 480 }}>
+      <Box sx={{ minWidth: MATRIX_MIN_WIDTH }}>
         <Box
           sx={{
             ...GRID_SX,
@@ -85,23 +99,34 @@ export function PermissionsMatrix({ value, onChange, readOnly }: PermissionsMatr
             borderBottom: 1,
             borderColor: 'divider',
             bgcolor: 'grey.50',
+            position: 'sticky',
+            top: 0,
+            zIndex: 1,
           }}
         >
           <HeaderLabel>Módulo</HeaderLabel>
           {ACTIONS.map((a) => {
             const label = <HeaderLabel center>{ACTION_SHORT_LABELS[a.key]}</HeaderLabel>;
-            return editable ? (
+            const cell = editable ? (
               <Tooltip key={a.key} title={`Marcar/desmarcar "${a.label}" em todos os módulos`}>
                 <ButtonBase
                   onClick={() => apply(RESOURCES.map((r) => `${r.key}:${a.key}` as Permission))}
-                  sx={{ borderRadius: '8px', py: 0.25, '&:hover': { bgcolor: 'grey.100' } }}
+                  sx={{
+                    ...ACTION_CELL_SX,
+                    borderRadius: '8px',
+                    py: 0.25,
+                    '&:hover': { bgcolor: 'grey.100' },
+                  }}
                 >
                   {label}
                 </ButtonBase>
               </Tooltip>
             ) : (
-              <Box key={a.key}>{label}</Box>
+              <Box key={a.key} sx={ACTION_CELL_SX}>
+                {label}
+              </Box>
             );
+            return cell;
           })}
         </Box>
 
@@ -138,7 +163,7 @@ export function PermissionsMatrix({ value, onChange, readOnly }: PermissionsMatr
                 <ModuleLabel>{r.label}</ModuleLabel>
               )}
               {rowPerms.map((perm, i) => (
-                <Box key={perm} sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Box key={perm} sx={ACTION_CELL_SX}>
                   {editable ? (
                     <ButtonBase
                       aria-label={`${ACTIONS[i].label} ${r.label}`}

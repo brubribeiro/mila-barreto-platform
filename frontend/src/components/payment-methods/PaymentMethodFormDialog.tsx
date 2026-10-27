@@ -6,7 +6,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  InputAdornment,
   MenuItem,
   TextField,
   Typography,
@@ -22,6 +21,7 @@ import { paymentMethodsApi, CreatePaymentMethodPayload } from '../../api/payment
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { FieldAdornment } from '../FieldAdornment';
 import { FormSection } from '../FormSection';
 import { LabeledField } from '../LabeledField';
 import type { PaymentMethodEntry } from '../../types';
@@ -259,7 +259,7 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
                         fullWidth
                         inputProps={{ inputMode: 'decimal', step: 0.01, min: 0, max: 100 }}
                         InputProps={{
-                          endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                          endAdornment: <FieldAdornment>%</FieldAdornment>,
                         }}
                       />
                     </LabeledField>

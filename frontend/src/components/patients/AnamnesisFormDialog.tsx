@@ -10,7 +10,6 @@ import {
   DialogContent,
   FormControl,
   Grid,
-  InputAdornment,
   InputLabel,
   MenuItem,
   Paper,
@@ -30,6 +29,7 @@ import { patientsApi } from '../../api/patients';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx } from '../DialogCloseButton';
+import { FieldAdornment } from '../FieldAdornment';
 import { FormSection } from '../FormSection';
 import { LabeledField } from '../LabeledField';
 import {
@@ -156,9 +156,7 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
                   InputProps={
                     fieldDef.suffix
                       ? {
-                          endAdornment: (
-                            <InputAdornment position="end">{fieldDef.suffix}</InputAdornment>
-                          ),
+                          endAdornment: <FieldAdornment>{fieldDef.suffix}</FieldAdornment>,
                         }
                       : undefined
                   }

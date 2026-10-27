@@ -18,6 +18,7 @@ function arg(name: string): string | undefined {
 
 async function main() {
   const email = (arg('email') ?? process.env.SUPER_ADMIN_EMAIL ?? '').trim().toLowerCase();
+  const nameProvided = arg('name') !== undefined || process.env.SUPER_ADMIN_NAME !== undefined;
   const name = (arg('name') ?? process.env.SUPER_ADMIN_NAME ?? 'Super-admin').trim();
   if (!email || !email.includes('@')) {
     throw new Error('Informe o e-mail: npm run prisma:create-super-admin -- --email voce@exemplo.com --name "Seu Nome"');
@@ -25,12 +26,20 @@ async function main() {
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing?.isSuperAdmin) {
-    console.log(`• Super-admin já existe: ${email}`);
+    if (nameProvided && existing.name !== name) {
+      await prisma.user.update({ where: { email }, data: { name } });
+      console.log(`✓ Nome do super-admin atualizado: ${email} → "${name}"`);
+    } else {
+      console.log(`• Super-admin já existe: ${email}`);
+    }
     return;
   }
   if (existing) {
-    await prisma.user.update({ where: { email }, data: { isSuperAdmin: true } });
-    console.log(`✓ Usuário de clínica promovido a super-admin: ${email}`);
+    const data: { isSuperAdmin: true; name?: string } = { isSuperAdmin: true };
+    if (nameProvided) data.name = name;
+    await prisma.user.update({ where: { email }, data });
+    const nameNote = nameProvided ? ` · nome: "${name}"` : '';
+    console.log(`✓ Usuário de clínica promovido a super-admin: ${email}${nameNote}`);
     return;
   }
 

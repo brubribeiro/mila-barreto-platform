@@ -53,6 +53,9 @@ export class AnnouncementsService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     if (process.env.NODE_ENV === 'test') return;
+    this.discardObsoleteDraftVersions(['0.2.1']).catch((e) =>
+      this.logger.warn(`Rascunhos de versão obsoleta não removidos: ${e instanceof Error ? e.message : e}`),
+    );
     this.draftFromRelease(SYSTEM_ACTOR, { onBoot: true }).catch((e) =>
       this.logger.warn(`Rascunho do release não gerado: ${e instanceof Error ? e.message : e}`),
     );
@@ -86,6 +89,18 @@ export class AnnouncementsService implements OnModuleInit, OnModuleDestroy {
       ]);
       return { users, tenants };
     });
+  }
+
+  /** Apaga rascunhos de versões revertidas no VERSION (não mexe em SCHEDULED/SENT). */
+  async discardObsoleteDraftVersions(versions: string[]) {
+    if (!versions.length) return { deleted: 0 };
+    const { count } = await this.prisma.platformAnnouncement.deleteMany({
+      where: { version: { in: versions }, status: AnnouncementStatus.DRAFT },
+    });
+    if (count) {
+      this.logger.log(`Removidos ${count} rascunho(s) de anúncio (${versions.join(', ')})`);
+    }
+    return { deleted: count };
   }
 
   /**

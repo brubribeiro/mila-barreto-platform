@@ -97,6 +97,26 @@ export class UsersService {
     );
   }
 
+  /** Atualiza o nome no login Google quando o perfil do Google difere do cadastro. */
+  syncNameFromGoogle(userId: string, googleName: string | undefined | null) {
+    const name = googleName?.trim();
+    if (!name) return Promise.resolve(null);
+    return TenantContext.runUnscoped(async () => {
+      const { count } = await this.prisma.user.updateMany({
+        where: { id: userId, NOT: { name } },
+        data: { name },
+      });
+      if (count === 0) return null;
+      return this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          role: true,
+          tenant: { include: { plan: { select: { features: true } } } },
+        },
+      });
+    });
+  }
+
   findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },

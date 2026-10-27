@@ -94,6 +94,61 @@ export function FeatureModuleChip({
   );
 }
 
+/** Chip selecionável com rótulo livre (catálogos além de módulos). */
+export function CatalogSelectChip({
+  label,
+  selected,
+  onClick,
+  disabled,
+}: {
+  label: string;
+  selected: boolean;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Box
+      component="button"
+      type="button"
+      aria-pressed={selected}
+      aria-disabled={disabled || undefined}
+      disabled={disabled}
+      onClick={disabled ? undefined : onClick}
+      sx={(t) => ({
+        display: 'inline-flex',
+        alignItems: 'center',
+        fontFamily: 'inherit',
+        fontSize: fontSizes.xs,
+        fontWeight: 700,
+        lineHeight: 1.25,
+        px: 1.35,
+        py: 0.85,
+        borderRadius: '10px',
+        border: '1.5px solid',
+        cursor: disabled ? 'default' : 'pointer',
+        textAlign: 'left',
+        transition: 'border-color .15s, background-color .15s, color .15s',
+        ...(selected
+          ? {
+              borderColor: 'primary.main',
+              bgcolor: alpha(t.palette.primary.main, 0.1),
+              color: 'primary.dark',
+            }
+          : {
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              color: 'text.secondary',
+              '&:hover': disabled
+                ? undefined
+                : { borderColor: 'primary.light', color: 'text.primary' },
+            }),
+      })}
+    >
+      {label}
+    </Box>
+  );
+}
+
 /** Grade estável de chips de módulos (evita saltos de altura no Dialog). */
 export function FeatureModuleChipGrid({
   children,

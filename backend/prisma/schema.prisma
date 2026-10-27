@@ -32,6 +32,15 @@ model Tenant {
   featuresExtra  Json?
   // Módulos do plano que esta clínica não tem
   featuresDenied Json?
+  specialties Json?
+  foundedAt   DateTime? @db.Date
+  legalName   String?
+  document    String?
+  phone       String?
+  email       String?
+  city        String?
+  state       String?
+  notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -162,7 +171,7 @@ model PlatformAnnouncement {
 // Todas as clínicas consomem o mesmo; só o super-admin edita em /admin.
 model PlatformCatalogItem {
   id        String   @id @default(uuid())
-  // document_category | message_category | message_trigger | procedure_category | inventory_unit
+  // document_category | message_category | message_trigger | procedure_category | inventory_unit | skincare_tag
   kind      String
   // Valor persistido nas entidades da clínica (slug / código)
   value     String

@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  InputAdornment,
   ListItemText,
   MenuItem,
   Stack,
@@ -29,6 +28,7 @@ import { promotionsApi, CreatePromotionPayload } from '../../api/promotions';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { FieldAdornment } from '../FieldAdornment';
 import { MoneyField } from '../MoneyField';
 import { LabeledField } from '../LabeledField';
 import { dateInputValueFromApi, dateOnlyToApiIso } from '../../utils/dateOnly';
@@ -385,7 +385,7 @@ export function PromotionFormDialog({ open, onClose, editing, initialCommemorati
                         error={!!fieldState.error}
                         helperText={fieldState.error?.message}
                         inputProps={{ inputMode: 'decimal', step: 1, min: 0, max: 100 }}
-                        InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
+                        InputProps={{ endAdornment: <FieldAdornment>%</FieldAdornment> }}
                       />
                     )
                   }
