@@ -28,7 +28,7 @@ import { FieldAdornment } from '../FieldAdornment';
 import { LabeledField } from '../LabeledField';
 import type { PendingRuleConfig } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
-import { CATEGORY_META, PendIcon, RULE_CATEGORY, RULE_META } from './pendenciasUtils';
+import { CATEGORY_META, PendIcon, categoryColor, RULE_CATEGORY, RULE_META } from './pendenciasUtils';
 
 interface Props {
   open: boolean;
@@ -150,6 +150,7 @@ export function PendingRulesDialog({ open, onClose, canEdit }: Props) {
             : draft.map((r, i) => {
                 const meta = RULE_META[r.rule];
                 const category = CATEGORY_META[RULE_CATEGORY[r.rule]];
+                const categoryTone = categoryColor(theme, RULE_CATEGORY[r.rule]);
                 const fieldsDisabled = !canEdit || !r.enabled;
 
                 return (
@@ -175,8 +176,8 @@ export function PendingRulesDialog({ open, onClose, canEdit }: Props) {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          bgcolor: alpha(category.color, 0.1),
-                          color: category.color,
+                          bgcolor: alpha(categoryTone, 0.1),
+                          color: categoryTone,
                         }}
                       >
                         <PendIcon name={meta.icon} size={15} strokeWidth={1.65} />
@@ -204,8 +205,8 @@ export function PendingRulesDialog({ open, onClose, canEdit }: Props) {
                                 py: 0.1,
                                 borderRadius: '5px',
                                 lineHeight: 1.35,
-                                bgcolor: alpha(category.color, 0.1),
-                                color: category.color,
+                                bgcolor: alpha(categoryTone, 0.1),
+                                color: categoryTone,
                               }}
                             >
                               {category.label}
