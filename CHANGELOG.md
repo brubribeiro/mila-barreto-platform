@@ -40,6 +40,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Estoque: modal Novo/Editar item com altura fixa e cards Identificação/Estoque sem espaço morto.
 - Compra em lote: altura fixa do modal; scroll só na tabela de itens (cabeçalho sticky).
 - Movimentar estoque: modal compacta, subtítulo legível, toggles Aurora e altura estável (entrada).
+- Financeiro: modal Novo lançamento com altura fixa e cards Identificação/Valor sem espaço morto.
 
 - Painel super-admin: campos de perfil da clínica (`Tenant`: especialidades múltiplas via chips do catálogo, data de inauguração, razão social, CNPJ, contato, cidade/UF, nota interna) em criar/editar clínica e no detalhe.
 - Login Google: mesmo e-mail pode ser usuário de clínica e super-admin; após autenticar, tela `/escolher-painel` (Painel da clínica vs painel da plataforma). `POST /auth/select-panel` emite JWT com `tenantId` da sessão escolhida; item **Trocar painel** no menu do usuário para contas dual.
