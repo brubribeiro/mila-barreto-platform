@@ -5,7 +5,6 @@ import {
   Button,
   ButtonBase,
   Card,
-  Chip,
   IconButton,
   Skeleton,
   Stack,
@@ -292,21 +291,35 @@ export function Roles() {
                   <Typography component="h3" sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>
                     Permissões — {selected.name}
                   </Typography>
-                  <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary' }}>
+                  <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', lineHeight: 1.45 }}>
                     {selected.description || 'Sem descrição'}
                   </Typography>
-                  <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap" sx={{ mt: 1.25 }}>
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      color="primary"
-                      label={`${selectedCount} de ${ALL_PERMISSIONS.length} permissões`}
-                    />
-                    <Chip size="small" variant="outlined" label={membersLabel(selected._count?.users ?? 0)} />
+                  <Typography
+                    component="p"
+                    sx={{
+                      mt: 0.75,
+                      fontSize: fontSizes['2xs'],
+                      fontWeight: 600,
+                      color: 'text.secondary',
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    {selectedCount} de {ALL_PERMISSIONS.length} permissões
+                    <Box component="span" sx={{ color: 'text.disabled', mx: 0.75 }}>
+                      ·
+                    </Box>
+                    {membersLabel(selected._count?.users ?? 0)}
                     {selected.restrictToOwnAppointments && (
-                      <Chip size="small" variant="outlined" color="warning" label="Só a própria agenda" />
+                      <>
+                        <Box component="span" sx={{ color: 'text.disabled', mx: 0.75 }}>
+                          ·
+                        </Box>
+                        <Box component="span" sx={{ color: 'warning.dark' }}>
+                          Só a própria agenda
+                        </Box>
+                      </>
                     )}
-                  </Stack>
+                  </Typography>
                 </>
               ) : (
                 <Skeleton variant="text" width={260} sx={{ fontSize: fontSizes['2xl'] }} />
