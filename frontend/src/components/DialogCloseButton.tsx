@@ -90,12 +90,14 @@ export type FormDialogPaperOptions = {
   maxWidth: number;
   /** Altura fixa no desktop (miolo faz scroll). Padrão: min(86dvh, 720px). */
   height?: number | string;
+  /** Teto da altura no desktop. Padrão: 94dvh. Com `height: 'auto'` o paper cresce até esse teto. */
+  maxHeight?: number | string;
 };
 
 /** Paper de modal de formulário: altura estável ao abrir, header/footer fixos, conteúdo scrollável. */
 export function formDialogPaperSx(
   isMobile: boolean,
-  { maxWidth, height = 'min(86dvh, 720px)' }: FormDialogPaperOptions,
+  { maxWidth, height = 'min(86dvh, 720px)', maxHeight = '94dvh' }: FormDialogPaperOptions,
 ): SxProps<Theme> {
   return {
     ...dialogPaperSx(isMobile),
@@ -108,7 +110,7 @@ export function formDialogPaperSx(
           maxWidth,
           width: maxWidth,
           height,
-          maxHeight: '94dvh',
+          maxHeight,
           overflow: 'hidden',
         }),
   };

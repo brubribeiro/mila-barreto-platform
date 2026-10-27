@@ -226,12 +226,6 @@ export function UnavailabilityDialog({
               )}
             </Box>
 
-            {allDay && (
-              <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', lineHeight: 1.4 }}>
-                Use a mesma data nos dois campos para bloquear um único dia.
-              </Typography>
-            )}
-
             {periodError ? (
               <PeriodNotice tone="error" visible>
                 {periodError}

@@ -126,7 +126,7 @@ export function Dashboard() {
           }}
         />
 
-        {canSeeGoals && <GoalsCard at={goalsAt} canCreate={has('goals:create')} />}
+        {canSeeGoals && <GoalsCard at={goalsAt} />}
       </Box>
 
       <Box

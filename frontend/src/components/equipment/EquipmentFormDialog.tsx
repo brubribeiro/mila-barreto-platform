@@ -7,7 +7,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  Divider,
   MenuItem,
   Stack,
   TextField,
@@ -75,11 +74,24 @@ const empty: FormValues = {
 
 const DIALOG_MAX_WIDTH = 640;
 
-const FORM_STACK_GAP = 1.75;
+const FORM_STACK_GAP = 1.5;
 
 const TWO_COLUMNS_SX = {
   display: 'grid',
-  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+  gap: FORM_STACK_GAP,
+} as const;
+
+const NAME_STATUS_SX = {
+  display: 'grid',
+  gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr' },
+  gap: FORM_STACK_GAP,
+  alignItems: 'start',
+} as const;
+
+const THREE_COLUMNS_SX = {
+  display: 'grid',
+  gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' },
   gap: FORM_STACK_GAP,
 } as const;
 
@@ -101,7 +113,7 @@ function SectionLabel({ children }: { children: string }) {
 
 function Hint({ children }: { children: string }) {
   return (
-    <Typography sx={{ display: 'block', fontSize: fontSizes['2xs'], color: 'text.secondary', lineHeight: 1.35, mt: -0.5 }}>
+    <Typography sx={{ display: 'block', fontSize: fontSizes['2xs'], color: 'text.secondary', lineHeight: 1.35, mt: -0.5, whiteSpace: { sm: 'nowrap' } }}>
       {children}
     </Typography>
   );
@@ -186,7 +198,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
       PaperProps={{
         sx: formDialogPaperSx(isMobile, {
           maxWidth: DIALOG_MAX_WIDTH,
-          height: 'min(86dvh, 680px)',
+          height: 'min(90dvh, 740px)',
         }),
       }}
     >
@@ -226,25 +238,45 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
           }}
         >
           <Stack spacing={FORM_STACK_GAP}>
-            <Controller
-              name="name"
-              control={control}
-              rules={{ required: 'Nome é obrigatório' }}
-              render={({ field, fieldState }) => (
-                <LabeledField label="Nome do equipamento" required>
-                  <TextField
-                    {...field}
-                    fullWidth
-                    autoFocus={!equipment}
-                    placeholder="Ex.: Laser CO2 Fracionado"
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                  />
-                </LabeledField>
-              )}
-            />
+            <Box sx={NAME_STATUS_SX}>
+              <Controller
+                name="name"
+                control={control}
+                rules={{ required: 'Nome é obrigatório' }}
+                render={({ field, fieldState }) => (
+                  <LabeledField label="Nome do equipamento" required>
+                    <TextField
+                      {...field}
+                      fullWidth
+                      autoFocus={!equipment}
+                      placeholder="Ex.: Laser CO2 Fracionado"
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                    />
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="active"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Status">
+                    <TextField
+                      select
+                      fullWidth
+                      value={field.value ? 'active' : 'inactive'}
+                      onChange={(e) => field.onChange(e.target.value === 'active')}
+                      helperText={!isActive ? 'Oculto nas listagens do dia a dia.' : undefined}
+                    >
+                      <MenuItem value="active">Operacional</MenuItem>
+                      <MenuItem value="inactive">Inativo</MenuItem>
+                    </TextField>
+                  </LabeledField>
+                )}
+              />
+            </Box>
 
-            <Box sx={TWO_COLUMNS_SX}>
+            <Box sx={THREE_COLUMNS_SX}>
               <Controller
                 name="brand"
                 control={control}
@@ -263,9 +295,6 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                   </LabeledField>
                 )}
               />
-            </Box>
-
-            <Box sx={TWO_COLUMNS_SX}>
               <Controller
                 name="serialNumber"
                 control={control}
@@ -275,29 +304,8 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                   </LabeledField>
                 )}
               />
-              <Controller
-                name="active"
-                control={control}
-                render={({ field }) => (
-                  <LabeledField label="Status">
-                    <TextField
-                      select
-                      fullWidth
-                      value={field.value ? 'active' : 'inactive'}
-                      onChange={(e) => field.onChange(e.target.value === 'active')}
-                    >
-                      <MenuItem value="active">Operacional</MenuItem>
-                      <MenuItem value="inactive">Inativo</MenuItem>
-                    </TextField>
-                  </LabeledField>
-                )}
-              />
             </Box>
-            {!isActive && (
-              <Hint>Inativos ficam ocultos nas listagens e seleções do dia a dia.</Hint>
-            )}
 
-            <Divider sx={{ my: 0.25 }} />
             <SectionLabel>Aquisição</SectionLabel>
             <Box sx={TWO_COLUMNS_SX}>
               <Controller
@@ -305,7 +313,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                 control={control}
                 render={({ field }) => (
                   <LabeledField label="Data de aquisição">
-                    <TextField {...field} type="date" fullWidth />
+                    <TextField {...field} fullWidth type="date" />
                   </LabeledField>
                 )}
               />
@@ -320,7 +328,6 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
               />
             </Box>
 
-            <Divider sx={{ my: 0.25 }} />
             <SectionLabel>Manutenção</SectionLabel>
             <Box sx={TWO_COLUMNS_SX}>
               <Controller
@@ -328,7 +335,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                 control={control}
                 render={({ field }) => (
                   <LabeledField label="Última manutenção">
-                    <TextField {...field} type="date" fullWidth />
+                    <TextField {...field} fullWidth type="date" />
                   </LabeledField>
                 )}
               />
@@ -336,21 +343,14 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                 name="scheduledMaintenanceAt"
                 control={control}
                 render={({ field }) => (
-                  <LabeledField label="Próxima manutenção (agendada)">
-                    <TextField {...field} type="date" fullWidth />
+                  <LabeledField label="Próxima (agendada)">
+                    <TextField {...field} fullWidth type="date" />
                   </LabeledField>
                 )}
               />
             </Box>
-            <Hint>Próxima manutenção agendada gera despesa automaticamente.</Hint>
 
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-                gap: FORM_STACK_GAP,
-              }}
-            >
+            <Box sx={THREE_COLUMNS_SX}>
               <Controller
                 name="maintenanceIntervalMonths"
                 control={control}
@@ -360,9 +360,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                       {...field}
                       type="number"
                       fullWidth
-                      InputProps={{
-                        endAdornment: <FieldAdornment>meses</FieldAdornment>,
-                      }}
+                      InputProps={{ endAdornment: <FieldAdornment>meses</FieldAdornment> }}
                       inputProps={{ inputMode: 'numeric', min: 1 }}
                     />
                   </LabeledField>
@@ -377,9 +375,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                       {...field}
                       type="number"
                       fullWidth
-                      InputProps={{
-                        endAdornment: <FieldAdornment>dias</FieldAdornment>,
-                      }}
+                      InputProps={{ endAdornment: <FieldAdornment>dias</FieldAdornment> }}
                       inputProps={{ inputMode: 'numeric', min: 0 }}
                     />
                   </LabeledField>
@@ -395,9 +391,8 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                 )}
               />
             </Box>
-            <Hint>Periodicidade calcula a próxima data; o valor alimenta o financeiro.</Hint>
+            <Hint>Manutenção agendada gera despesa; a periodicidade calcula a próxima data.</Hint>
 
-            <Divider sx={{ my: 0.25 }} />
             <Controller
               name="notes"
               control={control}
@@ -407,8 +402,8 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                     {...field}
                     fullWidth
                     multiline
-                    minRows={2}
-                    maxRows={6}
+                    minRows={1}
+                    maxRows={4}
                     placeholder="Fornecedor de assistência, contrato, notas de uso..."
                   />
                 </LabeledField>
