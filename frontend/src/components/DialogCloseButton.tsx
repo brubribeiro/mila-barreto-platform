@@ -206,13 +206,28 @@ export function DialogHeader({
   subtitleWrap = false,
   sx,
 }: DialogHeaderProps) {
-  const titleSx = (sx ? [dialogHeaderTitleSx, sx] : dialogHeaderTitleSx) as SxProps<Theme>;
+  const titleSx = (
+    subtitleWrap
+      ? [dialogHeaderTitleSx, { overflow: 'visible' }, ...(sx ? [sx] : [])]
+      : sx
+        ? [dialogHeaderTitleSx, sx]
+        : dialogHeaderTitleSx
+  ) as SxProps<Theme>;
 
   return (
     <DialogTitle sx={titleSx}>
       <Stack spacing={bottom ? (isMobile ? 1.5 : 0) : 0}>
-        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
-          {icon && !isMobile && <DialogHeaderIcon>{icon}</DialogHeaderIcon>}
+        <Stack
+          direction="row"
+          alignItems={subtitleWrap ? 'flex-start' : 'center'}
+          spacing={1.5}
+          sx={{ minWidth: 0 }}
+        >
+          {icon && !isMobile && (
+            <Box sx={subtitleWrap ? { mt: 0.15, flexShrink: 0 } : undefined}>
+              <DialogHeaderIcon>{icon}</DialogHeaderIcon>
+            </Box>
+          )}
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography
               component="h2"
@@ -232,14 +247,28 @@ export function DialogHeader({
                 color="text.secondary"
                 noWrap={!subtitleWrap}
                 title={subtitleTitle ?? subtitle}
-                sx={{ mt: 0.25 }}
+                sx={{
+                  mt: 0.35,
+                  ...(subtitleWrap
+                    ? {
+                        whiteSpace: 'normal',
+                        overflow: 'visible',
+                        textOverflow: 'unset',
+                        lineHeight: 1.45,
+                        wordBreak: 'break-word',
+                        pr: 0.5,
+                      }
+                    : {}),
+                }}
               >
                 {subtitle}
               </Typography>
             )}
           </Box>
           {trailing}
-          <DialogCloseButton onClose={onClose} />
+          <Box sx={subtitleWrap ? { flexShrink: 0, alignSelf: 'flex-start', mt: 0.15 } : undefined}>
+            <DialogCloseButton onClose={onClose} />
+          </Box>
         </Stack>
         {bottom}
       </Stack>

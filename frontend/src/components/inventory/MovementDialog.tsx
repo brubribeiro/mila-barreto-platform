@@ -179,6 +179,7 @@ export function MovementDialog({ open, onClose, item: fixedItem, items }: Moveme
               : 'Escolha o produto e registre entrada, saída ou ajuste de quantidade'
           }
           subtitleWrap
+          sx={{ pb: { xs: 2, sm: 2.25 } }}
           icon={<SwapHorizOutlinedIcon fontSize="small" />}
         />
         <DialogContent
