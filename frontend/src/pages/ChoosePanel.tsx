@@ -1,6 +1,15 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { Alert, Box, Button, CircularProgress, Stack, Typography, alpha } from '@mui/material';
+import {
+  Alert,
+  Box,
+  ButtonBase,
+  CircularProgress,
+  Stack,
+  Typography,
+  alpha,
+  useTheme,
+} from '@mui/material';
 import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 
@@ -11,35 +20,69 @@ import { fontSizes } from '../theme/fontSizes';
 
 const BRAND_BG = '#0E2926';
 
-const panelButtonSx = {
-  justifyContent: 'flex-start',
-  gap: 1.5,
-  py: 1.75,
-  px: 2,
-  borderRadius: '14px',
-  textTransform: 'none',
-  fontWeight: 700,
-  fontSize: fontSizes.md,
-  borderWidth: 1,
-  borderColor: 'divider',
-  color: 'text.primary',
-  bgcolor: 'background.paper',
-  boxShadow: 'none',
-  '&:hover': {
-    borderColor: 'primary.main',
-    bgcolor: (theme: { palette: { primary: { main: string } } }) => alpha(theme.palette.primary.main, 0.06),
-    boxShadow: 'none',
-  },
-  '&:active': {
-    bgcolor: (theme: { palette: { primary: { main: string } } }) => alpha(theme.palette.primary.main, 0.12),
-  },
-  '&.Mui-focusVisible': {
-    borderColor: 'primary.main',
-    outline: '2px solid',
-    outlineColor: (theme: { palette: { primary: { main: string } } }) => alpha(theme.palette.primary.main, 0.35),
-    outlineOffset: 2,
-  },
-};
+interface PanelChoiceProps {
+  title: string;
+  description: string;
+  icon: ReactNode;
+  loading: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}
+
+/** Card clicável — mesmo visual em repouso para clínica e plataforma (sem variant contained). */
+function PanelChoiceButton({ title, description, icon, loading, disabled, onClick }: PanelChoiceProps) {
+  const theme = useTheme();
+
+  return (
+    <ButtonBase
+      onClick={onClick}
+      disabled={disabled}
+      focusRipple
+      sx={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'flex-start',
+        gap: 1.5,
+        py: 1.75,
+        px: 2,
+        borderRadius: '14px',
+        textAlign: 'left',
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        color: 'text.primary',
+        transition: theme.transitions.create(['border-color', 'background-color', 'box-shadow'], {
+          duration: theme.transitions.duration.shorter,
+        }),
+        '&:hover': {
+          borderColor: 'primary.main',
+          bgcolor: alpha(theme.palette.primary.main, 0.06),
+        },
+        '&:active': {
+          bgcolor: alpha(theme.palette.primary.main, 0.12),
+        },
+        '&.Mui-focusVisible': {
+          borderColor: 'primary.main',
+          outline: `2px solid ${alpha(theme.palette.primary.main, 0.35)}`,
+          outlineOffset: 2,
+        },
+        '&.Mui-disabled': {
+          opacity: 0.65,
+          cursor: 'not-allowed',
+        },
+      }}
+    >
+      {loading ? <CircularProgress size={22} sx={{ mt: 0.25 }} /> : icon}
+      <Box sx={{ minWidth: 0 }}>
+        <Typography sx={{ fontWeight: 700, fontSize: fontSizes.md, lineHeight: 1.35 }}>{title}</Typography>
+        <Typography sx={{ fontWeight: 500, fontSize: fontSizes.xs, color: 'text.secondary', mt: 0.25 }}>
+          {description}
+        </Typography>
+      </Box>
+    </ButtonBase>
+  );
+}
 
 /** Escolha entre painel da clínica e painel da plataforma (conta dual). */
 export function ChoosePanel() {
@@ -70,6 +113,7 @@ export function ChoosePanel() {
   }
 
   const year = new Date().getFullYear();
+  const busy = loading !== null;
 
   return (
     <Box
@@ -105,6 +149,7 @@ export function ChoosePanel() {
               color: '#fff',
               flexShrink: 0,
             }}
+            aria-hidden
           >
             <AuroraIcon name="dashboard" size={22} strokeWidth={2} />
           </Box>
@@ -119,55 +164,22 @@ export function ChoosePanel() {
         </Stack>
 
         <Stack spacing={1.5}>
-          <Button
-            variant="outlined"
-            size="large"
-            disabled={!!loading}
+          <PanelChoiceButton
+            title="Painel da clínica"
+            description="Agenda, pacientes e rotina do dia a dia"
+            icon={<BusinessOutlinedIcon color="primary" sx={{ mt: 0.25 }} />}
+            loading={loading === 'clinic'}
+            disabled={busy}
             onClick={() => choose('clinic')}
-            sx={panelButtonSx}
-          >
-            {loading === 'clinic' ? (
-              <CircularProgress size={22} />
-            ) : (
-              <BusinessOutlinedIcon color="primary" />
-            )}
-            <Box sx={{ textAlign: 'left' }}>
-              <Box component="span" sx={{ display: 'block' }}>
-                Painel da clínica
-              </Box>
-              <Box
-                component="span"
-                sx={{ display: 'block', fontWeight: 500, fontSize: fontSizes.xs, color: 'text.secondary' }}
-              >
-                Agenda, pacientes e rotina do dia a dia
-              </Box>
-            </Box>
-          </Button>
-
-          <Button
-            variant="outlined"
-            size="large"
-            disabled={!!loading}
+          />
+          <PanelChoiceButton
+            title="Painel da plataforma"
+            description="Clínicas, planos, catálogos e auditoria (/admin)"
+            icon={<AdminPanelSettingsOutlinedIcon color="primary" sx={{ mt: 0.25 }} />}
+            loading={loading === 'admin'}
+            disabled={busy}
             onClick={() => choose('admin')}
-            sx={panelButtonSx}
-          >
-            {loading === 'admin' ? (
-              <CircularProgress size={22} />
-            ) : (
-              <AdminPanelSettingsOutlinedIcon color="primary" />
-            )}
-            <Box sx={{ textAlign: 'left' }}>
-              <Box component="span" sx={{ display: 'block' }}>
-                Painel da plataforma
-              </Box>
-              <Box
-                component="span"
-                sx={{ display: 'block', fontWeight: 500, fontSize: fontSizes.xs, color: 'text.secondary' }}
-              >
-                Clínicas, planos, catálogos e auditoria (/admin)
-              </Box>
-            </Box>
-          </Button>
+          />
         </Stack>
 
         {error && (
