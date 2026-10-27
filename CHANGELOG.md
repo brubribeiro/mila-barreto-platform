@@ -46,6 +46,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Permissões: contagem de permissões e membros no header do grupo como meta tipográfica (sem chips soltos).
 - Permissões: matriz com colunas de ação em largura fixa; botão Novo grupo no padrão Aurora outlined.
 - Clínica: removida tela `/feedback`; envio pelo menu do avatar e leitura no super-admin `/admin/reports`.
+- Clínica: removida tela `/auditoria`; histórico por tela (relógio) e auditoria global só em `/admin/auditoria`.
 
 - Painel super-admin: campos de perfil da clínica (`Tenant`: especialidades múltiplas via chips do catálogo, data de inauguração, razão social, CNPJ, contato, cidade/UF, nota interna) em criar/editar clínica e no detalhe.
 - Login Google: mesmo e-mail pode ser usuário de clínica e super-admin; após autenticar, tela `/escolher-painel` (Painel da clínica vs painel da plataforma). `POST /auth/select-panel` emite JWT com `tenantId` da sessão escolhida; item **Trocar painel** no menu do usuário para contas dual.

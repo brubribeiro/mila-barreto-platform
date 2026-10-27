@@ -68,7 +68,6 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Mensagens', path: '/mensagens', icon: <AuroraIcon name="mensagens" />, permission: 'messages:view', feature: 'messages' },
       { label: 'Grupos', path: '/grupos', icon: <AuroraIcon name="permissoes" />, permission: 'roles:view' },
-      { label: 'Auditoria', path: '/auditoria', icon: <AuroraIcon name="clock" />, adminOnly: true },
     ],
   },
 ];

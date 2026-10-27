@@ -27,7 +27,6 @@ const PAGE_META: (PageMeta & { path: string; exact?: boolean })[] = [
   { path: '/equipamentos', title: 'Equipamentos', subtitle: 'Aparelhos e manutenção', auditEntity: 'Equipment' },
   { path: '/metricas', title: 'Métricas', subtitle: 'Indicadores e relatórios' },
   { path: '/metas', title: 'Metas', subtitle: 'Objetivos e progresso da clínica', auditEntity: 'Goal' },
-  { path: '/auditoria', title: 'Auditoria', subtitle: 'Histórico global de alterações na clínica' },
 ];
 
 export function getPageMeta(pathname: string): PageMeta {
