@@ -1,4 +1,4 @@
-import { alpha, type Theme } from '@mui/material';
+import { darken, lighten, type Theme } from '@mui/material';
 
 import type { PendingCategory, PendingGroup, PendingItem, PendingRule } from '../../types';
 
@@ -60,18 +60,25 @@ export function categoryColor(theme: Theme, category: PendingCategory): string {
   return (theme.palette as unknown as Record<string, Record<string, string>>)[group][shade];
 }
 
+/** Fundo sólido suave a partir de uma cor (sem transparência). */
+export function softBg(theme: Theme, color: string, level = 0.88) {
+  return theme.palette.mode === 'dark' ? darken(color, level - 0.08) : lighten(color, level);
+}
+
 export type PendTone = 'error' | 'warning' | 'info' | 'success' | 'primary';
 
-/** Cores de um tom de status: fundo translúcido, borda e texto escuro do tema. */
+/** Cores de um tom de status: fundos sólidos suaves (opacos), borda e texto do tema. */
 export function pendTone(theme: Theme, tone: PendTone) {
   const { main, dark } = theme.palette[tone];
+  const soft = (light: number, deep: number) =>
+    theme.palette.mode === 'dark' ? darken(main, deep) : lighten(main, light);
   return {
     main,
     text: dark,
-    tint: alpha(main, 0.08),
-    statBg: alpha(main, 0.1),
-    chipBg: alpha(main, 0.14),
-    border: alpha(main, 0.35),
+    tint: soft(0.92, 0.82),
+    statBg: soft(0.9, 0.8),
+    chipBg: soft(0.84, 0.7),
+    border: soft(0.6, 0.45),
   };
 }
 

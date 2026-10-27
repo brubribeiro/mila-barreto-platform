@@ -28,7 +28,7 @@ import { FieldAdornment } from '../FieldAdornment';
 import { LabeledField } from '../LabeledField';
 import type { PendingRuleConfig } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
-import { CATEGORY_META, PendIcon, categoryColor, RULE_CATEGORY, RULE_META } from './pendenciasUtils';
+import { CATEGORY_META, PendIcon, categoryColor, softBg, RULE_CATEGORY, RULE_META } from './pendenciasUtils';
 
 interface Props {
   open: boolean;
@@ -176,7 +176,7 @@ export function PendingRulesDialog({ open, onClose, canEdit }: Props) {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          bgcolor: alpha(categoryTone, 0.1),
+                          bgcolor: softBg(theme, categoryTone),
                           color: categoryTone,
                         }}
                       >
@@ -205,7 +205,7 @@ export function PendingRulesDialog({ open, onClose, canEdit }: Props) {
                                 py: 0.1,
                                 borderRadius: '5px',
                                 lineHeight: 1.35,
-                                bgcolor: alpha(categoryTone, 0.1),
+                                bgcolor: softBg(theme, categoryTone),
                                 color: categoryTone,
                               }}
                             >

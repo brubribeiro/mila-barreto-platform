@@ -13,7 +13,6 @@ import {
   TextField,
   Tooltip,
   Typography,
-  alpha,
   useTheme,
 } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
@@ -93,6 +92,7 @@ export function Pendencias() {
   const theme = useTheme();
   const groupTone = (g: PendingGroup) => pendTone(theme, GROUP_META[g].tone);
   const resolvedTone = pendTone(theme, RESOLVED_META.tone);
+  const primaryTone = pendTone(theme, 'primary');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const toast = useAppToast();
@@ -438,7 +438,7 @@ export function Pendencias() {
                 width: 40,
                 height: 40,
                 borderRadius: '13px',
-                bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
+                bgcolor: primaryTone.tint,
                 color: 'primary.main',
                 display: 'flex',
                 alignItems: 'center',
