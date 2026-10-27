@@ -7,7 +7,6 @@ import {
   DialogActions,
   DialogContent,
   Grid,
-  InputAdornment,
   MenuItem,
   Stack,
   TextField,
@@ -25,6 +24,7 @@ import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { FormSection } from '../FormSection';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { FieldAdornment } from '../FieldAdornment';
 import { MoneyField } from '../MoneyField';
 import type { InventoryItem } from '../../types';
 import { usePlatformCatalog } from '../../hooks/usePlatformCatalog';
@@ -274,7 +274,7 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                           fullWidth
                           inputProps={{ inputMode: 'numeric', min: 1 }}
                           InputProps={{
-                            endAdornment: <InputAdornment position="end">dias</InputAdornment>,
+                            endAdornment: <FieldAdornment>dias</FieldAdornment>,
                           }}
                         />
                       )}

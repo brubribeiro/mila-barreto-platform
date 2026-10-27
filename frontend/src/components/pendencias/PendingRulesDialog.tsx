@@ -6,7 +6,6 @@ import {
   DialogActions,
   DialogContent,
   Grid,
-  InputAdornment,
   MenuItem,
   Skeleton,
   Stack,
@@ -25,6 +24,7 @@ import { usersApi } from '../../api/users';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { FieldAdornment } from '../FieldAdornment';
 import { LabeledField } from '../LabeledField';
 import type { PendingRuleConfig } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
@@ -52,11 +52,6 @@ const COMPACT_FIELD_SX = {
   '& .MuiSelect-select': {
     py: 0.65,
     fontSize: fontSizes.sm,
-  },
-  '& .MuiInputAdornment-root': {
-    fontSize: fontSizes.xs,
-    color: 'text.secondary',
-    '& .MuiTypography-root': { fontSize: fontSizes.xs },
   },
 } as const;
 
@@ -258,9 +253,7 @@ export function PendingRulesDialog({ open, onClose, canEdit }: Props) {
                                     patch(i, { param: v });
                                   }}
                                   InputProps={{
-                                    endAdornment: (
-                                      <InputAdornment position="end">{meta.param.suffix}</InputAdornment>
-                                    ),
+                                    endAdornment: <FieldAdornment>{meta.param.suffix}</FieldAdornment>,
                                   }}
                                   inputProps={{ min: 0, max: 365, 'aria-label': meta.param.label }}
                                   sx={COMPACT_FIELD_SX}

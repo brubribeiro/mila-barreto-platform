@@ -9,7 +9,6 @@ import {
   DialogActions,
   DialogContent,
   IconButton,
-  InputAdornment,
   Stack,
   TextField,
   Typography,
@@ -24,6 +23,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { proceduresApi, ProcedurePayload } from '../../api/procedures';
+import { FieldAdornment } from '../FieldAdornment';
 import { LabeledField } from '../LabeledField';
 import { MoneyField } from '../MoneyField';
 import { FormSection } from '../FormSection';
@@ -332,7 +332,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                         error={!!fieldState.error}
                         helperText={fieldState.error?.message}
                         inputProps={{ inputMode: 'numeric', min: 5 }}
-                        InputProps={{ endAdornment: <InputAdornment position="end">min</InputAdornment> }}
+                        InputProps={{ endAdornment: <FieldAdornment>min</FieldAdornment> }}
                       />
                     </LabeledField>
                   )}
@@ -349,7 +349,7 @@ export function ProcedureFormDialog({ open, onClose, procedure }: ProcedureFormD
                         size="small"
                         placeholder="Opcional"
                         inputProps={{ inputMode: 'numeric', min: 0 }}
-                        InputProps={{ endAdornment: <InputAdornment position="end">dias</InputAdornment> }}
+                        InputProps={{ endAdornment: <FieldAdornment>dias</FieldAdornment> }}
                       />
                     </LabeledField>
                   )}

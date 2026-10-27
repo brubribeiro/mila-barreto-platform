@@ -18,6 +18,7 @@ import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import type { Package, PatientPackage, PaymentMethodEntry, Procedure } from '../../types';
 import { DialogHeader } from '../DialogCloseButton';
+import { FieldAdornment } from '../FieldAdornment';
 
 function suggestedTotal(pkg: Package, procedures: Procedure[]) {
   const sumPrice = (pkg.items ?? []).reduce((sum, item) => {
@@ -109,7 +110,7 @@ export function SellPackageDialog({
               fullWidth
               inputProps={{ step: '0.01', min: 0 }}
               InputProps={{
-                startAdornment: <Typography sx={{ mr: 0.5 }}>R$</Typography>,
+                startAdornment: <FieldAdornment position="start">R$</FieldAdornment>,
               }}
             />
 

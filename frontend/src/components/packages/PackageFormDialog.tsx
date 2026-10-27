@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  InputAdornment,
   ListItemText,
   MenuItem,
   Stack,
@@ -29,6 +28,7 @@ import { proceduresApi } from '../../api/procedures';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogFormLayoutSx, formDialogPaperSx } from '../DialogCloseButton';
+import { FieldAdornment } from '../FieldAdornment';
 import { MoneyField } from '../MoneyField';
 import { LabeledField } from '../LabeledField';
 import type { Package, PackageHighlight } from '../../types';
@@ -430,7 +430,7 @@ export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps
                   sx={DISABLED_FIELD_SX}
                   value={fullPrice > 0 ? brl.format(fullPrice).replace('R$', '').trim() : ''}
                   placeholder="0,00"
-                  InputProps={{ startAdornment: <InputAdornment position="start">R$</InputAdornment> }}
+                  InputProps={{ startAdornment: <FieldAdornment position="start">R$</FieldAdornment> }}
                 />
               </LabeledField>
 

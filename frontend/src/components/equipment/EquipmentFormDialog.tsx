@@ -8,7 +8,6 @@ import {
   DialogActions,
   DialogContent,
   Divider,
-  InputAdornment,
   MenuItem,
   Stack,
   TextField,
@@ -24,6 +23,7 @@ import { equipmentApi, EquipmentPayload } from '../../api/equipment';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { FieldAdornment } from '../FieldAdornment';
 import { LabeledField } from '../LabeledField';
 import { MoneyField } from '../MoneyField';
 import { dateInputValueFromApi, dateOnlyToApiIso } from '../../utils/dateOnly';
@@ -362,7 +362,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                       type="number"
                       fullWidth
                       InputProps={{
-                        endAdornment: <InputAdornment position="end">meses</InputAdornment>,
+                        endAdornment: <FieldAdornment>meses</FieldAdornment>,
                       }}
                       inputProps={{ inputMode: 'numeric', min: 1 }}
                     />
@@ -379,7 +379,7 @@ export function EquipmentFormDialog({ open, onClose, equipment }: Props) {
                       type="number"
                       fullWidth
                       InputProps={{
-                        endAdornment: <InputAdornment position="end">dias</InputAdornment>,
+                        endAdornment: <FieldAdornment>dias</FieldAdornment>,
                       }}
                       inputProps={{ inputMode: 'numeric', min: 0 }}
                     />
