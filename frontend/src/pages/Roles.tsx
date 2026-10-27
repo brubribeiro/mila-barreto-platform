@@ -291,30 +291,32 @@ export function Roles() {
                   <Typography component="h3" sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>
                     Permissões — {selected.name}
                   </Typography>
-                  <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', lineHeight: 1.45 }}>
-                    {selected.description || 'Sem descrição'}
-                  </Typography>
+                  {selected.description?.trim() ? (
+                    <Typography sx={{ mt: 0.35, fontSize: fontSizes.sm, color: 'text.secondary', lineHeight: 1.45 }}>
+                      {selected.description}
+                    </Typography>
+                  ) : null}
                   <Typography
                     component="p"
                     sx={{
-                      mt: 0.75,
-                      fontSize: fontSizes['2xs'],
+                      mt: selected.description?.trim() ? 0.5 : 0.35,
+                      fontSize: fontSizes.xs,
                       fontWeight: 600,
-                      color: 'text.secondary',
-                      lineHeight: 1.45,
+                      color: 'text.disabled',
+                      lineHeight: 1.4,
                     }}
                   >
                     {selectedCount} de {ALL_PERMISSIONS.length} permissões
-                    <Box component="span" sx={{ color: 'text.disabled', mx: 0.75 }}>
+                    <Box component="span" aria-hidden sx={{ mx: 0.65 }}>
                       ·
                     </Box>
                     {membersLabel(selected._count?.users ?? 0)}
                     {selected.restrictToOwnAppointments && (
                       <>
-                        <Box component="span" sx={{ color: 'text.disabled', mx: 0.75 }}>
+                        <Box component="span" aria-hidden sx={{ mx: 0.65 }}>
                           ·
                         </Box>
-                        <Box component="span" sx={{ color: 'warning.dark' }}>
+                        <Box component="span" sx={{ color: 'warning.main', fontWeight: 700 }}>
                           Só a própria agenda
                         </Box>
                       </>
