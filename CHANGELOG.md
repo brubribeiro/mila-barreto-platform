@@ -26,6 +26,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Procedimentos: filtro de categoria passa de pills para select no cabeçalho do card (`LIST_HEADER_SELECT_SX`, compartilhado com Usuários); título do card mostra a categoria selecionada.
 - Usuários: removido o texto explicativo que ficava fora do card.
 - Listagens: filtros/busca/ações de Procedimentos e Usuários movidos para dentro do card da tabela (como Pacientes, Documentos, Estoque, Financeiro, Despesas recorrentes e Mensagens), via novo `ListCardHeader` (`ListSearchField`, `ListHistoryButton`, `LIST_HEADER_ACTION_SX`); Pacientes passa a usá-lo.
+- Admin — catálogos globais: modal Novo/Editar item alinhado ao Aurora (`DialogHeader`, `LabeledField`, swatches de cor e gatilho padrão em select).
 
 ### Added
 - Painel super-admin: campos de perfil da clínica (`Tenant`: especialidades múltiplas via chips do catálogo, data de inauguração, razão social, CNPJ, contato, cidade/UF, nota interna) em criar/editar clínica e no detalhe.

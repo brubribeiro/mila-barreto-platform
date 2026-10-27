@@ -102,6 +102,24 @@ export function getCatalogItems(kind: PlatformCatalogKind): PlatformCatalogOptio
   return liveCache[kind] ?? CATALOG_FALLBACKS[kind];
 }
 
+/** Paleta sugerida para categorias de documento (chips + personalizado). */
+export const CATALOG_DOCUMENT_COLORS = [
+  '#15998B',
+  '#5BA8DE',
+  '#9B7BD4',
+  '#E0915B',
+  '#5C6BC0',
+  '#C27C6B',
+  '#4FA37A',
+  '#78909C',
+] as const;
+
+export function normalizeCatalogHexColor(value: string): string {
+  const t = value.trim();
+  if (/^#[0-9A-Fa-f]{6}$/.test(t)) return t.toUpperCase();
+  return t;
+}
+
 export function catalogMetaColor(meta?: Record<string, unknown> | null): string | undefined {
   const color = meta && typeof meta === 'object' ? meta.color : undefined;
   return typeof color === 'string' ? color : undefined;
