@@ -12,6 +12,7 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
@@ -249,26 +250,29 @@ export function Roles() {
                 />
               ))}
           {canCreate && (
-            <ButtonBase
+            <Button
+              variant="outlined"
+              fullWidth
+              startIcon={<AddIcon />}
               onClick={() => {
                 setEditing(null);
                 setFormOpen(true);
               }}
               sx={{
-                gap: 1,
                 height: 46,
                 borderRadius: '14px',
-                border: '1.5px dashed',
-                borderColor: 'divider',
-                color: 'text.secondary',
                 fontSize: fontSizes.sm,
                 fontWeight: 700,
-                '&:hover': { borderColor: 'primary.main', color: 'primary.dark' },
+                borderColor: 'divider',
+                color: 'text.primary',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  bgcolor: (t) => alpha(t.palette.primary.main, 0.06),
+                },
               }}
             >
-              <AuroraIcon name="plus" size={16} strokeWidth={2.2} />
               Novo grupo
-            </ButtonBase>
+            </Button>
           )}
         </Stack>
 

@@ -44,6 +44,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Despesas recorrentes: custo/hora fechado por padrão; hint fixa/variável no form; alerts e KPI de vencimentos alinhados ao tema.
 - Metas: filtro e Nova meta no cabeçalho da lista; modal Nova meta mais larga (campo Ano legível).
 - Permissões: contagem de permissões e membros no header do grupo como meta tipográfica (sem chips soltos).
+- Permissões: matriz com colunas de ação em largura fixa; botão Novo grupo no padrão Aurora outlined.
 
 - Painel super-admin: campos de perfil da clínica (`Tenant`: especialidades múltiplas via chips do catálogo, data de inauguração, razão social, CNPJ, contato, cidade/UF, nota interna) em criar/editar clínica e no detalhe.
 - Login Google: mesmo e-mail pode ser usuário de clínica e super-admin; após autenticar, tela `/escolher-painel` (Painel da clínica vs painel da plataforma). `POST /auth/select-panel` emite JWT com `tenantId` da sessão escolhida; item **Trocar painel** no menu do usuário para contas dual.
