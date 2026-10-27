@@ -37,6 +37,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Rotinas de skincare: produtos e tags de regra em **multi-select** com busca; `SkinModal` com altura fixa e scroll no miolo.
 - Usuários e horários: switches e grades alinhados no `UserFormDialog`; atalhos e linhas dos dias no `WorkingHoursDialog` (`formSwitchLabelSx`, `formDialogPaperSx`).
 - Bloqueio de agenda: atalhos de motivo/período com `AvailabilityShortcutToggles`; equipamento com modal de altura fixa e seções mais compactas.
+- Estoque: modal Novo/Editar item com altura fixa e cards Identificação/Estoque sem espaço morto.
 
 - Painel super-admin: campos de perfil da clínica (`Tenant`: especialidades múltiplas via chips do catálogo, data de inauguração, razão social, CNPJ, contato, cidade/UF, nota interna) em criar/editar clínica e no detalhe.
 - Login Google: mesmo e-mail pode ser usuário de clínica e super-admin; após autenticar, tela `/escolher-painel` (Painel da clínica vs painel da plataforma). `POST /auth/select-panel` emite JWT com `tenantId` da sessão escolhida; item **Trocar painel** no menu do usuário para contas dual.
