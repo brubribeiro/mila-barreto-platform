@@ -47,3 +47,15 @@ export function getBrazilWallClock(date: Date): BrazilWallClock {
     hhmm: `${hour}:${lookup.minute}`,
   };
 }
+
+const dateFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: BRAZIL_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/** Dia do calendário no Brasil, como meio-dia UTC (mesmo formato das datas sem horário). */
+export function toBrazilDateAtUtcNoon(date: Date): Date {
+  return new Date(`${dateFormatter.format(date)}T12:00:00.000Z`);
+}

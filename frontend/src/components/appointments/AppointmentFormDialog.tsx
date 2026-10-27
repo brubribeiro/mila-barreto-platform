@@ -60,6 +60,7 @@ import {
   AppointmentSummaryBar,
   AppointmentSummaryPanel,
   type AppointmentSummaryData,
+  type PromotionSummary,
 } from './AppointmentSummary';
 import { BatchSessionsDialog, type BatchTarget } from './BatchSessionsDialog';
 import { CompletePaymentDialog } from './CompletePaymentDialog';
@@ -349,13 +350,40 @@ export function AppointmentFormDialog({
     0,
   );
 
+  // Prévia da promoção do dia: só atendimento avulso que ainda não gerou receita
+  // (sessão de pacote usa o valor do pacote, com a promoção aplicada na venda).
+  const previewDate = /^\d{4}-\d{2}-\d{2}$/.test(selectedDate ?? '') ? selectedDate : '';
+  const promotionPreviewEnabled =
+    open &&
+    selectedKind === 'PROCEDURE' &&
+    !!selectedProcedureId &&
+    !!previewDate &&
+    !selectedPackageId &&
+    !appointment?.financeGenerated;
+  const { data: promotionQuote } = useQuery({
+    queryKey: ['promotion-preview', selectedProcedureId, previewDate],
+    queryFn: () => appointmentsApi.promotionPreview(selectedProcedureId, previewDate),
+    enabled: promotionPreviewEnabled,
+    staleTime: 60_000,
+  });
+  const promotionSummary: PromotionSummary | undefined =
+    promotionPreviewEnabled && promotionQuote?.promotion
+      ? {
+          name: promotionQuote.promotion.name,
+          originalPrice: promotionQuote.originalPrice,
+          discount: promotionQuote.discount,
+        }
+      : undefined;
+  const promotionFinalPrice = promotionSummary ? promotionQuote?.finalPrice : undefined;
+
   const paymentAmountOnComplete = useMemo(() => {
     if (selectedPatientPkg && selectedPackageId && !selectedPatientPkg.financeGenerated) {
       return Number(selectedPatientPkg.totalPaid);
     }
+    if (promotionFinalPrice !== undefined) return promotionFinalPrice;
     if (selectedProcedure?.price) return Number(selectedProcedure.price);
     return 0;
-  }, [selectedPatientPkg, selectedPackageId, selectedProcedure]);
+  }, [selectedPatientPkg, selectedPackageId, selectedProcedure, promotionFinalPrice]);
 
   // Mês de referência (competência) — relevante para agendamentos de meses passados
   const appointmentMonthKey = appointment ? dayjs(appointment.startAt).format('YYYY-MM') : '';
@@ -657,6 +685,7 @@ export function AppointmentFormDialog({
       ? `${selectedPatientPkg.package?.name ?? 'Pacote'} · ${selectedPatientPkg.sessionsUsed}/${selectedPatientPkg.sessionsTotal}`
       : 'Avulso',
     amount: paymentAmountOnComplete,
+    promotion: promotionSummary,
     status: appointment ? selectedStatus : undefined,
     blockingMessage,
     stockWarning: materialsEnabled && stockBlocksSave,
@@ -1015,6 +1044,7 @@ export function AppointmentFormDialog({
         procedureName={selectedProcedure?.name}
         isPackage={!!(selectedPackageId && selectedPatientPkg)}
         amount={paymentAmountOnComplete}
+        promotion={promotionSummary}
         paymentMethods={paymentMethods}
         appointmentMonthKey={appointmentMonthKey}
         isPending={mutation.isPending}

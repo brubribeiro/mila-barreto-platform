@@ -11,7 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { packagesApi } from '../../api/packages';
 import { useAppToast } from '../../contexts/AppToastContext';
@@ -19,6 +19,7 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import type { Package, PatientPackage, PaymentMethodEntry, Procedure } from '../../types';
 import { DialogHeader } from '../DialogCloseButton';
 import { FieldAdornment } from '../FieldAdornment';
+import { brl } from './appointmentFormModel';
 
 function suggestedTotal(pkg: Package, procedures: Procedure[]) {
   const sumPrice = (pkg.items ?? []).reduce((sum, item) => {
@@ -54,11 +55,22 @@ export function SellPackageDialog({
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [totalPaid, setTotalPaid] = useState(0);
 
+  const { data: saleQuote } = useQuery({
+    queryKey: ['package-sale-quote', pkg?.id],
+    queryFn: () => packagesApi.saleQuote(pkg!.id),
+    enabled: !!pkg,
+  });
+  const promotion = saleQuote?.promotion ? saleQuote : null;
+
+  // Recalcula só ao escolher outro pacote ou ao chegar a cotação, para não sobrescrever o
+  // valor digitado. Com promoção ativa vinculada ao pacote, sugere o preço promocional.
   useEffect(() => {
     if (!pkg) return;
-    setTotalPaid(suggestedTotal(pkg, procedures));
-    setPaymentMethodId('');
-    // Recalcula só ao escolher outro pacote, para não sobrescrever o valor digitado.
+    setTotalPaid(promotion ? promotion.finalPrice : suggestedTotal(pkg, procedures));
+  }, [pkg, saleQuote]);
+
+  useEffect(() => {
+    if (pkg) setPaymentMethodId('');
   }, [pkg]);
 
   const handleConfirm = async () => {
@@ -96,6 +108,14 @@ export function SellPackageDialog({
               {pkg.sessionCount} sessões
               {pkg.validityDays ? ` · Validade: ${pkg.validityDays} dias` : ' · Sem validade'}
             </Typography>
+
+            {promotion?.promotion && (
+              <Alert severity="success" sx={{ py: 0.5 }}>
+                Promoção <strong>{promotion.promotion.name}</strong>: de{' '}
+                {brl.format(promotion.originalPrice)} por{' '}
+                <strong>{brl.format(promotion.finalPrice)}</strong> (−{brl.format(promotion.discount)}).
+              </Alert>
+            )}
 
             <Alert severity="info" sx={{ py: 0.5 }}>
               O pagamento será registrado ao concluir o primeiro agendamento. Você pode informar

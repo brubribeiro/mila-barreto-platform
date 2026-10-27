@@ -19,6 +19,7 @@ import type { PaymentMethodEntry } from '../../types';
 import { DialogHeader, dialogActionsBorderSx, dialogPaperSx, dialogSimpleContentSx } from '../DialogCloseButton';
 import { brl } from './appointmentFormModel';
 import { LabeledField } from './AppointmentFormSection';
+import { PromotionPriceLines, type PromotionSummary } from './AppointmentSummary';
 
 /** Forma de pagamento (e mês de competência) ao concluir um atendimento que gera receita. */
 export function CompletePaymentDialog({
@@ -28,6 +29,7 @@ export function CompletePaymentDialog({
   procedureName,
   isPackage,
   amount,
+  promotion,
   paymentMethods,
   appointmentMonthKey,
   isPending,
@@ -40,6 +42,8 @@ export function CompletePaymentDialog({
   procedureName?: string;
   isPackage: boolean;
   amount: number;
+  /** Promoção do dia aplicada à receita (valor cheio e desconto). */
+  promotion?: PromotionSummary;
   paymentMethods: PaymentMethodEntry[];
   /** Mês (YYYY-MM) do agendamento; habilita o mês de referência quando é passado. */
   appointmentMonthKey: string;
@@ -128,14 +132,26 @@ export function CompletePaymentDialog({
               </Typography>
             </Box>
           </Stack>
+          {promotion && (
+            <Box
+              sx={{
+                mt: 1.5,
+                pt: 1.5,
+                borderTop: '1px dashed',
+                borderColor: (t) => alpha(t.palette.primary.main, 0.22),
+              }}
+            >
+              <PromotionPriceLines promotion={promotion} />
+            </Box>
+          )}
           <Stack
             direction="row"
             alignItems="center"
             justifyContent="space-between"
             sx={{
-              mt: 1.5,
-              pt: 1.5,
-              borderTop: '1px dashed',
+              mt: promotion ? 0.75 : 1.5,
+              pt: promotion ? 0 : 1.5,
+              borderTop: promotion ? 'none' : '1px dashed',
               borderColor: (t) => alpha(t.palette.primary.main, 0.22),
             }}
           >
