@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Stack, Typography, alpha } from '@mui/material';
 import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 
@@ -11,6 +11,37 @@ import { fontSizes } from '../theme/fontSizes';
 
 const BRAND_BG = '#0E2926';
 
+const panelButtonSx = {
+  justifyContent: 'flex-start',
+  gap: 1.5,
+  py: 1.75,
+  px: 2,
+  borderRadius: '14px',
+  textTransform: 'none',
+  fontWeight: 700,
+  fontSize: fontSizes.md,
+  borderWidth: 1,
+  borderColor: 'divider',
+  color: 'text.primary',
+  bgcolor: 'background.paper',
+  boxShadow: 'none',
+  '&:hover': {
+    borderColor: 'primary.main',
+    bgcolor: (theme: { palette: { primary: { main: string } } }) => alpha(theme.palette.primary.main, 0.06),
+    boxShadow: 'none',
+  },
+  '&:active': {
+    bgcolor: (theme: { palette: { primary: { main: string } } }) => alpha(theme.palette.primary.main, 0.12),
+  },
+  '&.Mui-focusVisible': {
+    borderColor: 'primary.main',
+    outline: '2px solid',
+    outlineColor: (theme: { palette: { primary: { main: string } } }) => alpha(theme.palette.primary.main, 0.35),
+    outlineOffset: 2,
+  },
+};
+
+/** Escolha entre painel da clínica e painel da plataforma (conta dual). */
 export function ChoosePanel() {
   const { user, selectPanel } = useAuth();
   const navigate = useNavigate();
@@ -71,9 +102,11 @@ export function ChoosePanel() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              color: '#fff',
+              flexShrink: 0,
             }}
           >
-            <AuroraIcon name="lock" size={22} strokeWidth={2} />
+            <AuroraIcon name="dashboard" size={22} strokeWidth={2} />
           </Box>
           <Box>
             <Typography sx={{ fontWeight: 800, fontSize: fontSizes.xl, letterSpacing: '-0.3px' }}>
@@ -91,15 +124,7 @@ export function ChoosePanel() {
             size="large"
             disabled={!!loading}
             onClick={() => choose('clinic')}
-            sx={{
-              justifyContent: 'flex-start',
-              gap: 1.5,
-              py: 1.75,
-              borderRadius: '14px',
-              textTransform: 'none',
-              fontWeight: 700,
-              fontSize: fontSizes.md,
-            }}
+            sx={panelButtonSx}
           >
             {loading === 'clinic' ? (
               <CircularProgress size={22} />
@@ -110,37 +135,35 @@ export function ChoosePanel() {
               <Box component="span" sx={{ display: 'block' }}>
                 Painel da clínica
               </Box>
-              <Box component="span" sx={{ display: 'block', fontWeight: 500, fontSize: fontSizes.xs, color: 'text.secondary' }}>
+              <Box
+                component="span"
+                sx={{ display: 'block', fontWeight: 500, fontSize: fontSizes.xs, color: 'text.secondary' }}
+              >
                 Agenda, pacientes e rotina do dia a dia
               </Box>
             </Box>
           </Button>
 
           <Button
-            variant="contained"
+            variant="outlined"
             size="large"
             disabled={!!loading}
             onClick={() => choose('admin')}
-            sx={{
-              justifyContent: 'flex-start',
-              gap: 1.5,
-              py: 1.75,
-              borderRadius: '14px',
-              textTransform: 'none',
-              fontWeight: 700,
-              fontSize: fontSizes.md,
-            }}
+            sx={panelButtonSx}
           >
             {loading === 'admin' ? (
-              <CircularProgress size={22} color="inherit" />
+              <CircularProgress size={22} />
             ) : (
-              <AdminPanelSettingsOutlinedIcon />
+              <AdminPanelSettingsOutlinedIcon color="primary" />
             )}
             <Box sx={{ textAlign: 'left' }}>
               <Box component="span" sx={{ display: 'block' }}>
                 Painel da plataforma
               </Box>
-              <Box component="span" sx={{ display: 'block', fontWeight: 500, fontSize: fontSizes.xs, opacity: 0.85 }}>
+              <Box
+                component="span"
+                sx={{ display: 'block', fontWeight: 500, fontSize: fontSizes.xs, color: 'text.secondary' }}
+              >
                 Clínicas, planos, catálogos e auditoria (/admin)
               </Box>
             </Box>
