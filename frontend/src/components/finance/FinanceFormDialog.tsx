@@ -26,6 +26,7 @@ import dayjs from 'dayjs';
 import {
   DialogHeader,
   dialogActionsBorderSx,
+  dialogContentScrollSx,
   dialogFormLayoutSx,
   formDialogPaperSx,
 } from '../DialogCloseButton';
@@ -75,8 +76,12 @@ const COMPACT_SECTION_SX = {
   p: { xs: 1.5, sm: 1.75 },
   alignSelf: 'flex-start',
   width: '100%',
+  height: 'fit-content',
+  flex: 'none',
   '& > .MuiStack-root:first-of-type': { mb: 1.25 },
 } as const;
+
+const GRID_ITEM_SX = { alignSelf: 'flex-start', height: 'auto' } as const;
 
 function EntryTypeToggle({
   control,
@@ -185,17 +190,25 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
       fullWidth
       fullScreen={isMobile}
       PaperProps={{
-        sx: formDialogPaperSx(isMobile, {
-          maxWidth: DIALOG_MAX_WIDTH,
-          height: 'min(86dvh, 540px)',
-        }),
+        sx: {
+          ...formDialogPaperSx(isMobile, {
+            maxWidth: DIALOG_MAX_WIDTH,
+            height: 'min(86dvh, 520px)',
+          }),
+          ...(!isMobile
+            ? {
+                height: 'fit-content',
+                maxHeight: 'min(86dvh, 520px)',
+              }
+            : {}),
+        },
       }}
     >
       <Box
         component="form"
         noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
-        sx={dialogFormLayoutSx(isMobile)}
+        sx={{ ...dialogFormLayoutSx(isMobile), overflow: 'hidden' }}
       >
         <DialogHeader
           onClose={onClose}
@@ -224,17 +237,15 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
 
         <DialogContent
           sx={{
+            ...dialogContentScrollSx,
             px: { xs: 2, sm: 3 },
             pb: { xs: 2, sm: 2.5 },
-            flex: 1,
-            minHeight: 0,
-            overflow: 'auto',
             bgcolor: 'background.default',
             '&.MuiDialogContent-root': { pt: { xs: 2, sm: 2.25 } },
           }}
         >
           <Grid container spacing={FORM_STACK_GAP} alignItems="flex-start">
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={6} sx={GRID_ITEM_SX}>
               <FormSection title="Identificação" sx={COMPACT_SECTION_SX}>
                 <Stack spacing={FORM_STACK_GAP}>
                   <Controller
@@ -328,7 +339,7 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
               </FormSection>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={6} sx={GRID_ITEM_SX}>
               <FormSection title="Valor e pagamento" sx={COMPACT_SECTION_SX}>
                 <Stack spacing={FORM_STACK_GAP}>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={FORM_STACK_GAP}>
