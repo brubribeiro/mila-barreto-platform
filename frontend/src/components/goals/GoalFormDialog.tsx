@@ -87,7 +87,7 @@ const PERIOD_GRID_SX = (periodType: GoalPeriodType) =>
     gridTemplateColumns:
       periodType === 'YEAR'
         ? { xs: '1fr', sm: '1fr minmax(120px, 160px)' }
-        : { xs: '1fr', sm: 'minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(120px, 160px)' },
+        : { xs: '1fr', sm: 'minmax(0, 1fr) minmax(140px, 1.3fr) minmax(100px, 0.8fr)' },
   }) as const;
 
 const MONTH_LABELS = Array.from({ length: 12 }, (_, i) => {
@@ -385,7 +385,13 @@ export function GoalFormDialog({ open, onClose, editing, canDelete }: Props) {
                       control={control}
                       render={({ field }) => (
                         <LabeledField label={periodType === 'QUARTER' ? 'Trimestre' : 'Mês'}>
-                          <TextField {...field} select fullWidth onChange={(e) => field.onChange(Number(e.target.value))}>
+                          <TextField
+                            {...field}
+                            select
+                            fullWidth
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                            sx={{ '& .MuiSelect-select': { textOverflow: 'clip' } }}
+                          >
                             {(periodType === 'QUARTER' ? QUARTER_LABELS : MONTH_LABELS).map((label, i) => (
                               <MenuItem key={label} value={i}>
                                 {label}

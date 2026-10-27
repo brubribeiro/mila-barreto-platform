@@ -7,7 +7,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  Grid,
   MenuItem,
   Stack,
   TextField,
@@ -30,7 +29,7 @@ import {
   dialogFormLayoutSx,
   formDialogPaperSx,
 } from '../DialogCloseButton';
-import { FormSection } from '../FormSection';
+import { LabeledField } from '../LabeledField';
 import { MoneyField } from '../MoneyField';
 import { financeApi, FinancialEntryPayload } from '../../api/finance';
 import { useAppToast } from '../../contexts/AppToastContext';
@@ -69,19 +68,20 @@ const empty: FormValues = {
   expenseType: '',
 };
 
-const DIALOG_MAX_WIDTH = 860;
-const FORM_STACK_GAP = 1.75;
+const DIALOG_MAX_WIDTH = 680;
+const FORM_STACK_GAP = 1.5;
 
-const COMPACT_SECTION_SX = {
-  p: { xs: 1.5, sm: 1.75 },
-  alignSelf: 'flex-start',
-  width: '100%',
-  height: 'fit-content',
-  flex: 'none',
-  '& > .MuiStack-root:first-of-type': { mb: 1.25 },
+const TWO_COLUMNS_SX = {
+  display: 'grid',
+  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+  gap: FORM_STACK_GAP,
+  alignItems: 'start',
 } as const;
 
-const GRID_ITEM_SX = { alignSelf: 'flex-start', height: 'auto' } as const;
+const THREE_COLUMNS_SX = {
+  ...TWO_COLUMNS_SX,
+  gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' },
+} as const;
 
 function EntryTypeToggle({
   control,
@@ -190,18 +190,11 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
       fullWidth
       fullScreen={isMobile}
       PaperProps={{
-        sx: {
-          ...formDialogPaperSx(isMobile, {
-            maxWidth: DIALOG_MAX_WIDTH,
-            height: 'min(86dvh, 520px)',
-          }),
-          ...(!isMobile
-            ? {
-                height: 'fit-content',
-                maxHeight: 'min(86dvh, 520px)',
-              }
-            : {}),
-        },
+        sx: formDialogPaperSx(isMobile, {
+          maxWidth: DIALOG_MAX_WIDTH,
+          height: 'auto',
+          maxHeight: '88dvh',
+        }),
       }}
     >
       <Box
@@ -244,166 +237,139 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
             '&.MuiDialogContent-root': { pt: { xs: 2, sm: 2.25 } },
           }}
         >
-          <Grid container spacing={FORM_STACK_GAP} alignItems="flex-start">
-            <Grid item xs={12} md={6} sx={GRID_ITEM_SX}>
-              <FormSection title="Identificação" sx={COMPACT_SECTION_SX}>
-                <Stack spacing={FORM_STACK_GAP}>
-                  <Controller
-                    name="description"
-                    control={control}
-                    rules={{ required: 'Descrição é obrigatória' }}
-                    render={({ field, fieldState }) => (
-                      <TextField
-                        {...field}
-                        label="Descrição"
-                        fullWidth
-                        required
-                        autoFocus={!entry}
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                      />
-                    )}
+          <Stack spacing={FORM_STACK_GAP}>
+            <Controller
+              name="description"
+              control={control}
+              rules={{ required: 'Descrição é obrigatória' }}
+              render={({ field, fieldState }) => (
+                <LabeledField label="Descrição" required>
+                  <TextField
+                    {...field}
+                    fullWidth
+                    autoFocus={!entry}
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
                   />
+                </LabeledField>
+              )}
+            />
 
-                  <Controller
-                    name="category"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="Categoria"
-                        fullWidth
-                        placeholder={type === 'INCOME' ? 'Ex.: Atendimentos' : 'Ex.: Material, Aluguel'}
-                      />
-                    )}
-                  />
-
-                  {type === 'EXPENSE' && (
-                    <Box>
-                      <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700, mb: 0.75 }}>
-                        Tipo de despesa
-                      </Typography>
-                      <Controller
-                        name="expenseType"
-                        control={control}
-                        render={({ field }) => (
-                          <ToggleButtonGroup
-                            exclusive
-                            fullWidth
-                            size="small"
-                            color="primary"
-                            value={field.value || null}
-                            onChange={(_, val) => field.onChange(val ?? '')}
-                          >
-                            <ToggleButton value="FIXED">Fixa</ToggleButton>
-                            <ToggleButton value="VARIABLE">Variável</ToggleButton>
-                          </ToggleButtonGroup>
+            <Box sx={TWO_COLUMNS_SX}>
+              <Controller
+                name="category"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Categoria">
+                    <TextField
+                      {...field}
+                      fullWidth
+                      placeholder={type === 'INCOME' ? 'Ex.: Atendimentos' : 'Ex.: Material, Aluguel'}
+                    />
+                  </LabeledField>
+                )}
+              />
+              {type === 'INCOME' ? (
+                <Controller
+                  name="patientId"
+                  control={control}
+                  render={({ field }) => (
+                    <LabeledField label="Vincular a paciente">
+                      <Autocomplete
+                        options={patients}
+                        getOptionLabel={(p) => p.name}
+                        value={patients.find((p) => p.id === field.value) ?? null}
+                        onChange={(_, val) => field.onChange(val?.id ?? '')}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            placeholder="Opcional"
+                            inputProps={{ ...params.inputProps, 'aria-label': 'Vincular a paciente' }}
+                          />
                         )}
                       />
-                      <Typography
-                        sx={{
-                          display: 'block',
-                          mt: 0.75,
-                          fontSize: fontSizes['2xs'],
-                          color: 'text.secondary',
-                          lineHeight: 1.35,
-                        }}
+                    </LabeledField>
+                  )}
+                />
+              ) : (
+                <Controller
+                  name="expenseType"
+                  control={control}
+                  render={({ field }) => (
+                    <LabeledField label="Tipo de despesa">
+                      <ToggleButtonGroup
+                        exclusive
+                        fullWidth
+                        color="primary"
+                        value={field.value || null}
+                        onChange={(_, val) => field.onChange(val ?? '')}
+                        sx={{ height: 40 }}
                       >
-                        Fixa = recorrente (aluguel, internet) · Variável = pontual (material, taxas)
-                      </Typography>
-                    </Box>
+                        <ToggleButton value="FIXED">Fixa</ToggleButton>
+                        <ToggleButton value="VARIABLE">Variável</ToggleButton>
+                      </ToggleButtonGroup>
+                    </LabeledField>
                   )}
+                />
+              )}
+            </Box>
+            {type === 'EXPENSE' && (
+              <Typography sx={{ fontSize: fontSizes['2xs'], color: 'text.secondary', lineHeight: 1.35, mt: -0.5 }}>
+                Fixa = recorrente (aluguel, internet) · Variável = pontual (material, taxas)
+              </Typography>
+            )}
 
-                  {type === 'INCOME' && (
-                    <Controller
-                      name="patientId"
-                      control={control}
-                      render={({ field }) => (
-                        <Autocomplete
-                          options={patients}
-                          getOptionLabel={(p) => p.name}
-                          value={patients.find((p) => p.id === field.value) ?? null}
-                          onChange={(_, val) => field.onChange(val?.id ?? '')}
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              label="Vincular a paciente"
-                              placeholder="Opcional"
-                            />
-                          )}
-                        />
-                      )}
+            <Box sx={THREE_COLUMNS_SX}>
+              <Controller
+                name="amount"
+                control={control}
+                rules={{ validate: (v) => Number(v) > 0 || 'Informe um valor maior que zero' }}
+                render={({ field, fieldState }) => (
+                  <LabeledField label="Valor" required>
+                    <MoneyField
+                      {...field}
+                      fullWidth
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
                     />
-                  )}
-                </Stack>
-              </FormSection>
-            </Grid>
-
-            <Grid item xs={12} md={6} sx={GRID_ITEM_SX}>
-              <FormSection title="Valor e pagamento" sx={COMPACT_SECTION_SX}>
-                <Stack spacing={FORM_STACK_GAP}>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={FORM_STACK_GAP}>
-                    <Controller
-                      name="amount"
-                      control={control}
-                      rules={{ validate: (v) => Number(v) > 0 || 'Informe um valor maior que zero' }}
-                      render={({ field, fieldState }) => (
-                        <MoneyField
-                          {...field}
-                          label="Valor"
-                          fullWidth
-                          required
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                          sx={{ flex: 1, minWidth: 0 }}
-                        />
-                      )}
-                    />
-
-                    <Controller
-                      name="paidAt"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          type="date"
-                          label="Data do pagamento"
-                          fullWidth
-                          InputLabelProps={{ shrink: true }}
-                          sx={{ flex: 1, minWidth: 0 }}
-                        />
-                      )}
-                    />
-                  </Stack>
-
-                  <Controller
-                    name="paymentMethodId"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField {...field} select label="Forma de pagamento" fullWidth>
-                        <MenuItem value="">—</MenuItem>
-                        {paymentMethods.filter((m) => m.active).map((m) => (
-                          <MenuItem key={m.id} value={m.id}>
-                            {m.name}
-                            {Number(m.feePercent) > 0 ? ` (${Number(m.feePercent)}%)` : ''}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    )}
-                  />
-                </Stack>
-              </FormSection>
-            </Grid>
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="paidAt"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Data do pagamento">
+                    <TextField {...field} type="date" fullWidth />
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="paymentMethodId"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Forma de pagamento">
+                    <TextField {...field} select fullWidth>
+                      <MenuItem value="">—</MenuItem>
+                      {paymentMethods.filter((m) => m.active).map((m) => (
+                        <MenuItem key={m.id} value={m.id}>
+                          {m.name}
+                          {Number(m.feePercent) > 0 ? ` (${Number(m.feePercent)}%)` : ''}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </LabeledField>
+                )}
+              />
+            </Box>
 
             {mutation.isError && (
-              <Grid item xs={12}>
-                <Alert severity="error" variant="outlined">
-                  {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
-                    ?.message ?? 'Erro ao salvar lançamento'}
-                </Alert>
-              </Grid>
+              <Alert severity="error" variant="outlined">
+                {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data
+                  ?.message ?? 'Erro ao salvar lançamento'}
+              </Alert>
             )}
-          </Grid>
+          </Stack>
         </DialogContent>
 
         <DialogActions sx={{ ...dialogActionsBorderSx, flexShrink: 0 }}>

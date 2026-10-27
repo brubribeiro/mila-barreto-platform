@@ -28,7 +28,7 @@ import {
   DEFAULT_DAY,
   WEEK_ORDER,
   WEEK_PRESETS,
-  availabilityDialogPaperSx,
+  workingHoursDialogPaperSx,
   type DayScheduleEdit,
   type Professional,
 } from './availabilityConfig';
@@ -59,7 +59,7 @@ export function WorkingHoursDialog({
       maxWidth={false}
       fullWidth
       fullScreen={isMobile}
-      PaperProps={{ sx: availabilityDialogPaperSx(isMobile) }}
+      PaperProps={{ sx: workingHoursDialogPaperSx(isMobile) }}
     >
       <DialogHeader
         onClose={onClose}
@@ -69,7 +69,7 @@ export function WorkingHoursDialog({
         icon={<AuroraIcon name="clock" size={20} />}
       />
       <DialogContent sx={AVAILABILITY_DIALOG_CONTENT_SX}>
-        <Stack spacing={2}>
+        <Stack spacing={1.5}>
           <LabeledField label="Atalhos">
             <AvailabilityShortcutToggles
               options={WEEK_PRESETS.map((p) => ({ label: p.label, value: p.label }))}
@@ -169,7 +169,7 @@ function WorkingDayRow({
         columnGap: 1.5,
         rowGap: 1,
         px: { xs: 1.5, sm: 2 },
-        py: 1.25,
+        py: 0.75,
         bgcolor: state.works ? 'transparent' : 'grey.50',
       }}
     >

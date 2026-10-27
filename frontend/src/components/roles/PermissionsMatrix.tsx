@@ -20,14 +20,14 @@ const ACTION_SHORT_LABELS: Record<ActionKey, string> = {
   delete: 'Excluir',
 };
 
-/** Larguras fixas — layout idêntico ao trocar de grupo (sem colunas “andando”). */
-const MODULE_COL = 'minmax(200px, 240px)';
-const ACTION_COL = '80px';
+/** Mesmo template no cabeçalho e nas linhas — colunas alinhadas e uniformes ao trocar de grupo. */
+const MATRIX_COLUMNS = 'minmax(180px, 2fr) repeat(4, minmax(88px, 1fr))';
 const MATRIX_MIN_WIDTH = 560;
+const ROW_HEIGHT = 48;
 
 const GRID_SX = {
   display: 'grid',
-  gridTemplateColumns: `${MODULE_COL} repeat(4, ${ACTION_COL})`,
+  gridTemplateColumns: MATRIX_COLUMNS,
   columnGap: 0,
   rowGap: 0,
   alignItems: 'center',
@@ -35,8 +35,7 @@ const GRID_SX = {
 } as const;
 
 const ACTION_CELL_SX = {
-  width: ACTION_COL,
-  maxWidth: ACTION_COL,
+  width: '100%',
   display: 'flex',
   justifyContent: 'center',
   justifySelf: 'center',
@@ -95,7 +94,7 @@ export function PermissionsMatrix({ value, onChange, readOnly }: PermissionsMatr
         <Box
           sx={{
             ...GRID_SX,
-            py: 1.5,
+            height: ROW_HEIGHT,
             borderBottom: 1,
             borderColor: 'divider',
             bgcolor: 'grey.50',
@@ -137,7 +136,7 @@ export function PermissionsMatrix({ value, onChange, readOnly }: PermissionsMatr
               key={r.key}
               sx={{
                 ...GRID_SX,
-                py: 1.5,
+                height: ROW_HEIGHT,
                 borderBottom: index === RESOURCES.length - 1 ? 0 : 1,
                 borderColor: 'grey.100',
               }}
@@ -149,6 +148,10 @@ export function PermissionsMatrix({ value, onChange, readOnly }: PermissionsMatr
                     sx={{
                       justifyContent: 'flex-start',
                       textAlign: 'left',
+                      minWidth: 0,
+                      maxWidth: '100%',
+                      justifySelf: 'start',
+                      overflow: 'hidden',
                       borderRadius: '8px',
                       mx: -0.75,
                       px: 0.75,
@@ -214,7 +217,12 @@ function HeaderLabel({ children, center }: { children: string; center?: boolean 
 
 function ModuleLabel({ children }: { children: string }) {
   return (
-    <Typography component="span" sx={{ fontSize: fontSizes.sm, fontWeight: 700, color: 'text.primary' }}>
+    <Typography
+      component="span"
+      title={children}
+      noWrap
+      sx={{ display: 'block', minWidth: 0, maxWidth: '100%', fontSize: fontSizes.sm, fontWeight: 700, color: 'text.primary' }}
+    >
       {children}
     </Typography>
   );

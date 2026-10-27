@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect } from 'react';
 import {
   Alert,
   Box,
@@ -31,6 +31,7 @@ import {
 } from '../DialogCloseButton';
 import { fontSizes } from '../../theme/fontSizes';
 import { FieldAdornment } from '../FieldAdornment';
+import { LabeledField } from '../LabeledField';
 import { MoneyField } from '../MoneyField';
 import type { InventoryItem } from '../../types';
 import { usePlatformCatalog } from '../../hooks/usePlatformCatalog';
@@ -62,7 +63,13 @@ const empty: FormValues = {
 };
 
 const DIALOG_MAX_WIDTH = 860;
-const FORM_STACK_GAP = 1.75;
+const FORM_STACK_GAP = 1.5;
+
+const TWO_COLUMNS_SX = {
+  display: 'grid',
+  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+  gap: FORM_STACK_GAP,
+} as const;
 
 const COMPACT_SECTION_SX = {
   p: { xs: 1.5, sm: 1.75 },
@@ -81,14 +88,6 @@ const COMPACT_ALERT_SX = {
     py: 0.25,
   },
 } as const;
-
-function SubsectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <Typography sx={{ fontSize: fontSizes.xs, fontWeight: 700, color: 'text.primary', mb: 0.75 }}>
-      {children}
-    </Typography>
-  );
-}
 
 export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialogProps) {
   const theme = useTheme();
@@ -149,7 +148,8 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
       PaperProps={{
         sx: formDialogPaperSx(isMobile, {
           maxWidth: DIALOG_MAX_WIDTH,
-          height: 'min(86dvh, 600px)',
+          height: 'auto',
+          maxHeight: '88dvh',
         }),
       }}
     >
@@ -193,27 +193,53 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
                     control={control}
                     rules={{ required: 'Nome é obrigatório' }}
                     render={({ field, fieldState }) => (
-                      <TextField
-                        {...field}
-                        label="Nome do produto"
-                        fullWidth
-                        required
-                        autoFocus={!item}
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                      />
+                      <LabeledField label="Nome do produto" required>
+                        <TextField
+                          {...field}
+                          fullWidth
+                          autoFocus={!item}
+                          error={!!fieldState.error}
+                          helperText={fieldState.error?.message}
+                        />
+                      </LabeledField>
                     )}
                   />
-                  <Controller
-                    name="sku"
-                    control={control}
-                    render={({ field }) => <TextField {...field} label="SKU / Código" fullWidth />}
-                  />
+                  <Box sx={TWO_COLUMNS_SX}>
+                    <Controller
+                      name="sku"
+                      control={control}
+                      render={({ field }) => (
+                        <LabeledField label="SKU / Código">
+                          <TextField {...field} fullWidth />
+                        </LabeledField>
+                      )}
+                    />
+                    <Controller
+                      name="unit"
+                      control={control}
+                      render={({ field }) => (
+                        <LabeledField label="Unidade">
+                          <TextField {...field} select fullWidth>
+                            <MenuItem value="">
+                              <em>Nenhuma</em>
+                            </MenuItem>
+                            {unitOptions.map((opt) => (
+                              <MenuItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </MenuItem>
+                            ))}
+                          </TextField>
+                        </LabeledField>
+                      )}
+                    />
+                  </Box>
                   <Controller
                     name="description"
                     control={control}
                     render={({ field }) => (
-                      <TextField {...field} label="Descrição" fullWidth multiline minRows={2} maxRows={5} />
+                      <LabeledField label="Descrição">
+                        <TextField {...field} fullWidth multiline minRows={2} maxRows={4} />
+                      </LabeledField>
                     )}
                   />
                 </Stack>
@@ -223,80 +249,64 @@ export function InventoryFormDialog({ open, onClose, item }: InventoryFormDialog
             <Grid item xs={12} md={6}>
               <FormSection title="Estoque e custo" sx={COMPACT_SECTION_SX}>
                 <Stack spacing={FORM_STACK_GAP}>
-                  <Box>
-                    <SubsectionLabel>Unidade de medida</SubsectionLabel>
-                    <Controller
-                      name="unit"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField {...field} select label="Unidade" fullWidth>
-                          <MenuItem value="">
-                            <em>Nenhuma</em>
-                          </MenuItem>
-                          {unitOptions.map((opt) => (
-                            <MenuItem key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </MenuItem>
-                          ))}
-                        </TextField>
-                      )}
-                    />
-                  </Box>
-
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={FORM_STACK_GAP}>
+                  <Box sx={TWO_COLUMNS_SX}>
                     <Controller
                       name="minQuantity"
                       control={control}
                       render={({ field }) => (
-                        <TextField
-                          {...field}
-                          type="number"
-                          label="Estoque mínimo"
-                          fullWidth
-                          inputProps={{ inputMode: 'numeric', min: 0, step: 1 }}
-                          sx={{ flex: 1, minWidth: 0 }}
-                        />
+                        <LabeledField label="Estoque mínimo">
+                          <TextField
+                            {...field}
+                            type="number"
+                            fullWidth
+                            inputProps={{ inputMode: 'numeric', min: 0, step: 1 }}
+                          />
+                        </LabeledField>
                       )}
                     />
                     <Controller
                       name="costPrice"
                       control={control}
                       render={({ field }) => (
-                        <MoneyField {...field} label="Custo unitário" fullWidth sx={{ flex: 1, minWidth: 0 }} />
+                        <LabeledField label="Custo unitário">
+                          <MoneyField {...field} fullWidth />
+                        </LabeledField>
                       )}
                     />
-                  </Stack>
+                  </Box>
 
                   <Box>
-                    <SubsectionLabel>Validade</SubsectionLabel>
                     <Controller
                       name="expiryNotifyDaysBefore"
                       control={control}
                       render={({ field }) => (
-                        <TextField
-                          {...field}
-                          type="number"
-                          label="Notificar antes da validade"
-                          fullWidth
-                          inputProps={{ inputMode: 'numeric', min: 1 }}
-                          InputProps={{
-                            endAdornment: <FieldAdornment>dias</FieldAdornment>,
-                          }}
-                        />
+                        <LabeledField label="Notificar antes da validade">
+                          <TextField
+                            {...field}
+                            type="number"
+                            fullWidth
+                            inputProps={{ inputMode: 'numeric', min: 1 }}
+                            InputProps={{
+                              endAdornment: <FieldAdornment>dias</FieldAdornment>,
+                            }}
+                          />
+                        </LabeledField>
                       )}
                     />
                     <Typography sx={{ mt: 0.5, display: 'block', fontSize: fontSizes['2xs'], color: 'text.secondary' }}>
                       Deixe vazio para não receber alertas de validade.
                     </Typography>
                   </Box>
-
-                  <Alert severity="info" sx={COMPACT_ALERT_SX}>
-                    {item
-                      ? 'Para alterar quantidade ou lote com validade, use a movimentação de entrada.'
-                      : 'O estoque inicial é zero. Após criar, registre uma entrada para adicionar quantidade.'}
-                  </Alert>
                 </Stack>
               </FormSection>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Alert severity="info" sx={COMPACT_ALERT_SX}>
+                {item
+                  ? 'Para alterar quantidade ou lote com validade, use a movimentação de entrada.'
+                  : 'O estoque inicial é zero. Após criar, registre uma entrada para adicionar quantidade.'}
+              </Alert>
             </Grid>
 
             {mutation.isError && (

@@ -56,9 +56,9 @@ interface FormValues {
 
 const empty: FormValues = { type: 'IN', quantity: 1, totalPrice: '', reason: '', expiresAt: '' };
 
-const DIALOG_MAX_WIDTH = 480;
+const DIALOG_MAX_WIDTH = 600;
 
-const FIELD_STACK_GAP = 1.75;
+const FIELD_STACK_GAP = 1.5;
 
 const FIELD_HELPER_SX = {
   '& .MuiFormHelperText-root': {
@@ -159,7 +159,8 @@ export function MovementDialog({ open, onClose, item: fixedItem, items }: Moveme
       PaperProps={{
         sx: formDialogPaperSx(isMobile, {
           maxWidth: DIALOG_MAX_WIDTH,
-          height: 'min(86dvh, 580px)',
+          height: 'auto',
+          maxHeight: '88dvh',
         }),
       }}
     >
@@ -228,62 +229,63 @@ export function MovementDialog({ open, onClose, item: fixedItem, items }: Moveme
               />
             </LabeledField>
 
-            <LabeledField label={type === 'ADJUSTMENT' ? 'Nova quantidade total' : 'Quantidade'} required>
-              <Controller
-                name="quantity"
-                control={control}
-                rules={{
-                  required: 'Informe a quantidade',
-                  min: { value: 1, message: 'A quantidade mínima é 1' },
-                }}
-                render={({ field, fieldState }) => (
-                  <Box>
-                    <TextField
-                      {...field}
-                      type="number"
-                      fullWidth
-                      required
-                      autoFocus={!showPicker}
-                      inputProps={{ inputMode: 'numeric', min: 1, 'aria-label': 'Quantidade' }}
-                      error={!!fieldState.error || newQuantity < 0}
-                      sx={FIELD_HELPER_SX}
-                    />
-                    <Typography
-                      sx={{
-                        mt: 0.75,
-                        fontSize: fontSizes['2xs'],
-                        color: fieldState.error || newQuantity < 0 ? 'error.main' : 'text.secondary',
-                        lineHeight: 1.35,
-                      }}
-                    >
-                      {fieldState.error?.message ?? quantityHint}
-                    </Typography>
-                  </Box>
-                )}
-              />
-            </LabeledField>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: FIELD_STACK_GAP, alignItems: 'start' }}>
+              <LabeledField label={type === 'ADJUSTMENT' ? 'Nova quantidade total' : 'Quantidade'} required>
+                <Controller
+                  name="quantity"
+                  control={control}
+                  rules={{
+                    required: 'Informe a quantidade',
+                    min: { value: 1, message: 'A quantidade mínima é 1' },
+                  }}
+                  render={({ field, fieldState }) => (
+                    <Box>
+                      <TextField
+                        {...field}
+                        type="number"
+                        fullWidth
+                        required
+                        autoFocus={!showPicker}
+                        inputProps={{ inputMode: 'numeric', min: 1, 'aria-label': 'Quantidade' }}
+                        error={!!fieldState.error || newQuantity < 0}
+                        sx={FIELD_HELPER_SX}
+                      />
+                      <Typography
+                        sx={{
+                          mt: 0.75,
+                          fontSize: fontSizes['2xs'],
+                          color: fieldState.error || newQuantity < 0 ? 'error.main' : 'text.secondary',
+                          lineHeight: 1.35,
+                        }}
+                      >
+                        {fieldState.error?.message ?? quantityHint}
+                      </Typography>
+                    </Box>
+                  )}
+                />
+              </LabeledField>
 
-            <LabeledField label="Motivo">
-              <TextField
-                {...control.register('reason')}
-                fullWidth
-                placeholder={
-                  type === 'IN'
-                    ? 'Compra, devolução...'
-                    : type === 'OUT'
-                      ? 'Uso em procedimento, perda...'
-                      : 'Inventário, correção...'
-                }
-                inputProps={{ 'aria-label': 'Motivo' }}
-              />
-            </LabeledField>
+              <LabeledField label="Motivo">
+                <TextField
+                  {...control.register('reason')}
+                  fullWidth
+                  placeholder={
+                    type === 'IN'
+                      ? 'Compra, devolução...'
+                      : type === 'OUT'
+                        ? 'Uso em procedimento, perda...'
+                        : 'Inventário, correção...'
+                  }
+                  inputProps={{ 'aria-label': 'Motivo' }}
+                />
+              </LabeledField>
+            </Box>
 
             <Box
               sx={{
                 display: 'grid',
                 gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
                 gap: FIELD_STACK_GAP,
-                minHeight: { xs: 168, sm: 132 },
               }}
             >
               {type === 'IN' ? (
@@ -349,7 +351,7 @@ export function MovementDialog({ open, onClose, item: fixedItem, items }: Moveme
                             }}
                           >
                             {fieldState.error?.message ??
-                              'Cada entrada pode ter validade diferente (lotes distintos)'}
+                              'Cada entrada pode ter validade própria'}
                           </Typography>
                         </Box>
                       )}

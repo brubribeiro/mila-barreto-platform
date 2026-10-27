@@ -93,6 +93,10 @@ export const EMPTY_HOURS: WorkingHours[] = [];
 export const availabilityDialogPaperSx = (isMobile: boolean): SxProps<Theme> =>
   formDialogPaperSx(isMobile, { maxWidth: DIALOG_MAX_WIDTH, height: 'min(86dvh, 620px)' });
 
+/** Horário semanal: o paper cresce até caber os 7 dias; só então o miolo rola. */
+export const workingHoursDialogPaperSx = (isMobile: boolean): SxProps<Theme> =>
+  formDialogPaperSx(isMobile, { maxWidth: DIALOG_MAX_WIDTH, height: 'auto', maxHeight: '92dvh' });
+
 export const AVAILABILITY_DIALOG_CONTENT_SX = {
   px: { xs: 2, sm: 3 },
   pb: { xs: 2, sm: 2.5 },

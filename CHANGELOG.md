@@ -6,6 +6,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 
 ### Fixed
+- UI (modais e listas): redesign Aurora compacto de Novo usuário, Equipamento, Item de estoque, Movimentar estoque, Lançamento, Forma de pagamento e Meta (altura ≈ conteúdo, grades 2–3 colunas, Mês sem reticências); Horário semanal sem scroll interno prematuro; Novo bloqueio sem hint condicional; grade e toolbar de Formas de pagamento; matriz de permissões com linhas de altura fixa e colunas uniformes.
 - Auth: `POST /auth/select-panel` carrega o usuário fora do escopo de tenant (token provisório com `tenantId` null), evitando 403 na tela `/escolher-painel`.
 - Build backend: `tokenVersion` nos retornos do `JwtStrategy` (seleção de painel e super-admin plataforma); `cookie-parser` já declarado em `backend/package.json` (#74/#75).
 - Banco: CHECK `users_tenant_or_super_admin_check` passa a aceitar super-admin dual (`isSuperAdmin` com `tenantId` e `roleId` da clínica), alinhado ao `prisma:create-super-admin` após #74.
