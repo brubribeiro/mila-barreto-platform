@@ -27,7 +27,6 @@ import { Pendencias } from './pages/Pendencias';
 import { SkincareRoutines } from './pages/SkincareRoutines';
 import { Promotions } from './pages/Promotions';
 import { PaymentMethods } from './pages/PaymentMethods';
-import { FeedbackReports } from './pages/FeedbackReports';
 import { AuditLogs } from './pages/AuditLogs';
 import { Layout } from './components/Layout';
 import { AdminRoute } from './components/AdminRoute';
@@ -288,14 +287,6 @@ export default function App() {
               <PaymentMethods />
             </PermissionRoute>
             </FeatureRoute>
-          }
-        />
-        <Route
-          path="/feedback"
-          element={
-            <PermissionRoute permission="feedback:view">
-              <FeedbackReports />
-            </PermissionRoute>
           }
         />
         <Route
