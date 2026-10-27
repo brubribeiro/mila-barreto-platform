@@ -28,7 +28,7 @@ import { packagesApi, PackagePayload } from '../../api/packages';
 import { proceduresApi } from '../../api/procedures';
 import { useAppToast } from '../../contexts/AppToastContext';
 import { getApiErrorMessage } from '../../utils/apiError';
-import { DialogHeader, dialogActionsBorderSx, dialogPaperSx } from '../DialogCloseButton';
+import { DialogHeader, dialogActionsBorderSx, dialogFormLayoutSx, formDialogPaperSx } from '../DialogCloseButton';
 import { MoneyField } from '../MoneyField';
 import { LabeledField } from '../LabeledField';
 import type { Package, PackageHighlight } from '../../types';
@@ -218,22 +218,17 @@ export function PackageFormDialog({ open, onClose, pkg }: PackageFormDialogProps
       fullWidth
       fullScreen={isMobile}
       PaperProps={{
-        sx: {
-          ...dialogPaperSx(isMobile),
-          display: 'flex',
-          flexDirection: 'column',
-          width: '100%',
-          ...(isMobile
-            ? { height: '100%', maxHeight: '100dvh' }
-            : { maxWidth: DIALOG_MAX_WIDTH, maxHeight: '94dvh' }),
-        },
+        sx: formDialogPaperSx(isMobile, {
+          maxWidth: DIALOG_MAX_WIDTH,
+          height: 'min(86dvh, 680px)',
+        }),
       }}
     >
       <Box
         component="form"
         noValidate
         onSubmit={handleSubmit((v) => mutation.mutate(v))}
-        sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+        sx={dialogFormLayoutSx(isMobile)}
       >
         <DialogHeader
           onClose={onClose}

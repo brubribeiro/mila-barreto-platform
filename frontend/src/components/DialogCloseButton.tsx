@@ -65,6 +65,34 @@ export const dialogFormLayoutSx = (isMobile: boolean): SxProps<Theme> => ({
   ...(isMobile ? { height: '100%' } : {}),
 });
 
+export type FormDialogPaperOptions = {
+  maxWidth: number;
+  /** Altura fixa no desktop (miolo faz scroll). Padrão: min(86dvh, 720px). */
+  height?: number | string;
+};
+
+/** Paper de modal de formulário: altura estável ao abrir, header/footer fixos, conteúdo scrollável. */
+export function formDialogPaperSx(
+  isMobile: boolean,
+  { maxWidth, height = 'min(86dvh, 720px)' }: FormDialogPaperOptions,
+): SxProps<Theme> {
+  return {
+    ...dialogPaperSx(isMobile),
+    display: 'flex',
+    flexDirection: 'column',
+    width: '100%',
+    ...(isMobile
+      ? { height: '100%', maxHeight: '100dvh' }
+      : {
+          maxWidth,
+          width: maxWidth,
+          height,
+          maxHeight: '94dvh',
+          overflow: 'hidden',
+        }),
+  };
+}
+
 export const dialogActionsBorderSx: SxProps<Theme> = {
   px: { xs: 2, sm: 3 },
   py: { xs: 1.5, sm: 2 },
