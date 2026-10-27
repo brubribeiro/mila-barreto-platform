@@ -11,6 +11,7 @@ import {
   type Theme,
 } from '@mui/material';
 import type { ReactNode } from 'react';
+import { fontSizes } from '../theme/fontSizes';
 
 type DialogCloseButtonProps = {
   onClose: () => void;
@@ -55,6 +56,26 @@ export const dialogContentScrollSx: SxProps<Theme> = {
   overflow: 'auto',
   display: 'flex',
   flexDirection: 'column',
+};
+
+/** Switch + rótulo alinhados ao centro (modais de formulário). */
+export const formSwitchLabelSx: SxProps<Theme> = {
+  mx: 0,
+  gap: 1,
+  alignItems: 'center',
+  '& .MuiFormControlLabel-label': {
+    fontSize: fontSizes.sm,
+    fontWeight: 600,
+    lineHeight: 1.35,
+  },
+};
+
+export const formSwitchRowSx: SxProps<Theme> = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  columnGap: 3,
+  rowGap: 1,
 };
 
 export const dialogFormLayoutSx = (isMobile: boolean): SxProps<Theme> => ({
