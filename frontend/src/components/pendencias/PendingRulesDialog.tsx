@@ -12,7 +12,6 @@ import {
   Switch,
   TextField,
   Typography,
-  alpha,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
