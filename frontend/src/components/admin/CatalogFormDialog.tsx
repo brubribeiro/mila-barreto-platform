@@ -223,7 +223,13 @@ export function CatalogFormDialog({ open, onClose, editing, defaultKind }: Props
                         {...field}
                         fullWidth
                         autoFocus={!isEdit}
-                        placeholder={kind === 'procedure_category' ? 'Ex.: Facial' : 'Ex.: contrato'}
+                        placeholder={
+                          kind === 'procedure_category'
+                            ? 'Ex.: Facial'
+                            : kind === 'skincare_tag'
+                              ? 'Ex.: retinoide'
+                              : 'Ex.: contrato'
+                        }
                         error={!!fieldState.error}
                         helperText={fieldState.error?.message ?? 'Persistido nas entidades da clínica'}
                         inputProps={{ 'aria-label': 'Valor / código' }}

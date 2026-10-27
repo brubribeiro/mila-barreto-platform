@@ -165,7 +165,8 @@ export type PlatformCatalogKind =
   | 'message_category'
   | 'message_trigger'
   | 'procedure_category'
-  | 'inventory_unit';
+  | 'inventory_unit'
+  | 'skincare_tag';
 
 /** Item completo (painel /admin). */
 export interface PlatformCatalogItem {
@@ -827,7 +828,8 @@ export interface PendingRuleConfig {
 
 export type SkincareMoment = 'manha' | 'noite' | 'semanal';
 export type SkincareStep = 'limpeza' | 'tratamento' | 'hidratacao' | 'protetor' | 'olhos' | 'esfoliacao' | 'mascara';
-export type SkincareTag = 'acido' | 'acido-alto' | 'retinoide' | 'fragrancia' | 'oleo';
+/** Valor do catálogo global `skincare_tag`. */
+export type SkincareTag = string;
 export type SkincareRuleField = 'pele' | 'afeccao' | 'olheira' | 'idade';
 
 export interface SkincareProduct {

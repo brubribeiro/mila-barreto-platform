@@ -6,6 +6,7 @@ export const PLATFORM_CATALOG_KINDS: PlatformCatalogKind[] = [
   'message_trigger',
   'procedure_category',
   'inventory_unit',
+  'skincare_tag',
 ];
 
 export const PLATFORM_CATALOG_KIND_LABELS: Record<PlatformCatalogKind, string> = {
@@ -14,6 +15,7 @@ export const PLATFORM_CATALOG_KIND_LABELS: Record<PlatformCatalogKind, string> =
   message_trigger: 'Gatilhos de mensagem',
   procedure_category: 'Categorias de procedimento',
   inventory_unit: 'Unidades de estoque',
+  skincare_tag: 'Características de skincare',
 };
 
 /** Fallbacks = valores que o front usava hardcoded (enquanto a API carrega / se falhar). */
@@ -59,6 +61,14 @@ export const FALLBACK_PROCEDURE_CATEGORIES: PlatformCatalogOption[] = [
   { id: 'fb-proc-Capilar', kind: 'procedure_category', value: 'Capilar', label: 'Capilar', sortOrder: 6, meta: null },
 ];
 
+export const FALLBACK_SKINCARE_TAGS: PlatformCatalogOption[] = [
+  { id: 'fb-skin-acido', kind: 'skincare_tag', value: 'acido', label: 'Ácidos (baixa concentração)', sortOrder: 0, meta: null },
+  { id: 'fb-skin-acido-alto', kind: 'skincare_tag', value: 'acido-alto', label: 'Ácidos em alta concentração', sortOrder: 1, meta: null },
+  { id: 'fb-skin-retinoide', kind: 'skincare_tag', value: 'retinoide', label: 'Retinoides', sortOrder: 2, meta: null },
+  { id: 'fb-skin-fragrancia', kind: 'skincare_tag', value: 'fragrancia', label: 'Fragrância', sortOrder: 3, meta: null },
+  { id: 'fb-skin-oleo', kind: 'skincare_tag', value: 'oleo', label: 'Óleos comedogênicos', sortOrder: 4, meta: null },
+];
+
 export const FALLBACK_INVENTORY_UNITS: PlatformCatalogOption[] = [
   { id: 'fb-unit-un', kind: 'inventory_unit', value: 'un', label: 'Unidade (un)', sortOrder: 0, meta: null },
   { id: 'fb-unit-ml', kind: 'inventory_unit', value: 'ml', label: 'Mililitro (ml)', sortOrder: 1, meta: null },
@@ -79,6 +89,7 @@ export const CATALOG_FALLBACKS: Record<PlatformCatalogKind, PlatformCatalogOptio
   message_trigger: FALLBACK_MESSAGE_TRIGGERS,
   procedure_category: FALLBACK_PROCEDURE_CATEGORIES,
   inventory_unit: FALLBACK_INVENTORY_UNITS,
+  skincare_tag: FALLBACK_SKINCARE_TAGS,
 };
 
 /** Cache em memória preenchido pelo prefetch / hooks (labels fora de React). */
