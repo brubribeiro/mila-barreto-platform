@@ -28,6 +28,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Listagens: filtros/busca/ações de Procedimentos e Usuários movidos para dentro do card da tabela (como Pacientes, Documentos, Estoque, Financeiro, Despesas recorrentes e Mensagens), via novo `ListCardHeader` (`ListSearchField`, `ListHistoryButton`, `LIST_HEADER_ACTION_SX`); Pacientes passa a usá-lo.
 - Admin — catálogos globais: modal Novo/Editar item alinhado ao Aurora (`DialogHeader`, `LabeledField`, swatches de cor e gatilho padrão em select).
 - Tela `/escolher-painel`: opções da clínica e da plataforma com o mesmo estilo em repouso; ícone do cabeçalho claro no teal; rodapé usa `APP_VERSION` (0.2.0).
+- Pendências: modal **Regras de pendência** mais compacta (tipografia, grade de campos, scroll no miolo, chips de área menores).
 
 ### Added
 - Painel super-admin: campos de perfil da clínica (`Tenant`: especialidades múltiplas via chips do catálogo, data de inauguração, razão social, CNPJ, contato, cidade/UF, nota interna) em criar/editar clínica e no detalhe.
