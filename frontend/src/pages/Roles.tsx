@@ -19,7 +19,6 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { PageHeader } from '../components/PageHeader';
-import { AuroraIcon } from '../components/AuroraIcon';
 import { rolesApi } from '../api/roles';
 import { RoleFormDialog } from '../components/roles/RoleFormDialog';
 import { PermissionsMatrix } from '../components/roles/PermissionsMatrix';
