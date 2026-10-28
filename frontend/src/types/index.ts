@@ -433,9 +433,13 @@ export type FinancialType = 'INCOME' | 'EXPENSE';
 
 export type ExpenseType = 'FIXED' | 'VARIABLE';
 
+export type PaymentMethodKind = 'CASH' | 'PIX' | 'DEBIT' | 'CREDIT' | 'OTHER';
+
 export interface PaymentMethodEntry {
   id: string;
   name: string;
+  kind?: PaymentMethodKind;
+  settlementDays?: number;
   feePercent: number | string;
   active: boolean;
   createdAt?: string;
@@ -452,6 +456,9 @@ export interface FinancialEntry {
   feePercent?: number | string | null;
   paymentMethodId?: string | null;
   paymentMethod?: PaymentMethodEntry | null;
+  installments?: number | null;
+  cardBrand?: string | null;
+  authorizationCode?: string | null;
   category?: string;
   paidAt?: string;
   dueDate?: string;

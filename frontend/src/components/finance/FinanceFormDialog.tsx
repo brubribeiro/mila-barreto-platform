@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -39,6 +39,12 @@ import { patientsApi } from '../../api/patients';
 import { paymentMethodsApi } from '../../api/paymentMethods';
 import type { ExpenseType, FinancialEntry, FinancialType, PaymentMethodEntry } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
+import {
+  PaymentCaptureFields,
+  emptyPaymentCapture,
+  paymentCaptureToPayload,
+  type PaymentCaptureValues,
+} from '../payment-methods/PaymentCaptureFields';
 
 interface FinanceFormDialogProps {
   open: boolean;
@@ -122,6 +128,7 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
   const queryClient = useQueryClient();
   const toast = useAppToast();
   const { control, handleSubmit, reset, watch } = useForm<FormValues>({ defaultValues: empty });
+  const [capture, setCapture] = useState<PaymentCaptureValues>(emptyPaymentCapture);
 
   const { data: patients = [] } = useQuery({
     queryKey: ['patients', ''],
@@ -148,12 +155,20 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
         patientId: entry.patientId ?? '',
         expenseType: entry.expenseType ?? '',
       });
+      setCapture({
+        installments: entry.installments && entry.installments > 1 ? String(entry.installments) : '',
+        cardBrand: entry.cardBrand ?? '',
+        authorizationCode: entry.authorizationCode ?? '',
+      });
     } else {
       reset(empty);
+      setCapture(emptyPaymentCapture);
     }
   }, [open, entry, reset]);
 
   const type = watch('type');
+  const paymentMethodId = watch('paymentMethodId');
+  const selectedPaymentMethod = paymentMethods.find((m) => m.id === paymentMethodId);
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
@@ -167,6 +182,9 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
         ...(values.patientId ? { patientId: values.patientId } : {}),
         ...(values.type === 'EXPENSE' && values.expenseType
           ? { expenseType: values.expenseType }
+          : {}),
+        ...(values.type === 'INCOME' && values.paymentMethodId
+          ? paymentCaptureToPayload(capture)
           : {}),
       };
       return entry ? financeApi.update(entry.id, payload) : financeApi.create(payload);
@@ -349,7 +367,15 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
                 control={control}
                 render={({ field }) => (
                   <LabeledField label="Forma de pagamento">
-                    <TextField {...field} select fullWidth>
+                    <TextField
+                      {...field}
+                      select
+                      fullWidth
+                      onChange={(e) => {
+                        field.onChange(e);
+                        setCapture(emptyPaymentCapture);
+                      }}
+                    >
                       <MenuItem value="">—</MenuItem>
                       {paymentMethods.filter((m) => m.active).map((m) => (
                         <MenuItem key={m.id} value={m.id}>
@@ -362,6 +388,16 @@ export function FinanceFormDialog({ open, onClose, entry }: FinanceFormDialogPro
                 )}
               />
             </Box>
+
+            {type === 'INCOME' && selectedPaymentMethod && (
+              <Stack spacing={FORM_STACK_GAP}>
+                <PaymentCaptureFields
+                  kind={selectedPaymentMethod.kind}
+                  values={capture}
+                  onChange={(patch) => setCapture((prev) => ({ ...prev, ...patch }))}
+                />
+              </Stack>
+            )}
 
             {mutation.isError && (
               <Alert severity="error" variant="outlined">

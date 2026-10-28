@@ -1,5 +1,5 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsOptional, IsString, Matches } from 'class-validator';
+import { IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 
 import { CreateAppointmentDto } from './create-appointment.dto';
 
@@ -8,6 +8,22 @@ export class UpdateAppointmentDto extends PartialType(CreateAppointmentDto) {
   @IsOptional()
   @IsString()
   paymentMethodId?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(24)
+  installments?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  cardBrand?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  authorizationCode?: string;
 
   /**
    * Mês de competência da receita (formato "YYYY-MM"). Usado para lançar

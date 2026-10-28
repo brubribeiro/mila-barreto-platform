@@ -27,6 +27,7 @@ import { useAppToast } from '../contexts/AppToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { usePermissions } from '../contexts/usePermissions';
 import type { PaymentMethodEntry } from '../types';
+import { paymentMethodKindLabel, settlementDaysLabel } from '../utils/paymentMethodMeta';
 import {
   LIST_HEADER_PAPER_SELECT_SX,
   LIST_HEADER_PRIMARY_ACTION_SX,
@@ -257,6 +258,11 @@ export function PaymentMethods() {
                       )}
                     </Stack>
                     <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', mt: 0.25 }}>
+                      {paymentMethodKindLabel(m.kind)}
+                      {m.settlementDays != null && m.settlementDays > 0
+                        ? ` · ${settlementDaysLabel(m.settlementDays)}`
+                        : ''}
+                      {' · '}
                       {usageLabel(usage)}
                     </Typography>
                   </Box>

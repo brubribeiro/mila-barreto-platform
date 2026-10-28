@@ -921,12 +921,23 @@ enum FinancialType {
   EXPENSE
 }
 
+enum PaymentMethodKind {
+  CASH
+  PIX
+  DEBIT
+  CREDIT
+  OTHER
+}
+
 // Formas de pagamento cadastráveis, com taxa da maquininha (feePercent).
 // O valor líquido (netAmount) é calculado automaticamente ao gerar lançamento.
 model PaymentMethod {
   id         String   @id @default(uuid())
   tenantId   String   @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
   name       String
+  kind       PaymentMethodKind @default(OTHER)
+  // Dias até o recebimento na conta (conciliação / previsão de caixa)
+  settlementDays Int  @default(0)
   // Taxa percentual cobrada pela operadora/maquininha (0 = sem taxa, ex: dinheiro/PIX)
   feePercent Decimal  @default(0) @db.Decimal(5, 2)
   active     Boolean  @default(true)
@@ -959,6 +970,10 @@ model FinancialEntry {
   // Taxa percentual aplicada (snapshot no momento do lançamento)
   feePercent         Decimal?      @db.Decimal(5, 2)
   paymentMethodId    String?
+  // Dados opcionais de maquininha (cartão) no momento do lançamento
+  installments       Int?
+  cardBrand          String?
+  authorizationCode  String?
   category           String?
   paidAt             DateTime?
   dueDate            DateTime?

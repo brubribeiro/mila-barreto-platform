@@ -20,6 +20,11 @@ import { DialogHeader, dialogActionsBorderSx, dialogPaperSx, dialogSimpleContent
 import { brl } from './appointmentFormModel';
 import { LabeledField } from './AppointmentFormSection';
 import { PromotionPriceLines, type PromotionSummary } from './AppointmentSummary';
+import {
+  PaymentCaptureFields,
+  emptyPaymentCapture,
+  paymentCaptureToPayload,
+} from '../payment-methods/PaymentCaptureFields';
 
 /** Forma de pagamento (e mês de competência) ao concluir um atendimento que gera receita. */
 export function CompletePaymentDialog({
@@ -49,16 +54,26 @@ export function CompletePaymentDialog({
   appointmentMonthKey: string;
   isPending: boolean;
   onCancel: () => void;
-  onConfirm: (paymentMethodId: string, referenceMonth: string) => void;
+  onConfirm: (data: {
+    paymentMethodId: string;
+    referenceMonth: string;
+    installments?: number;
+    cardBrand?: string;
+    authorizationCode?: string;
+  }) => void;
 }) {
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [referenceMonth, setReferenceMonth] = useState('');
+  const [capture, setCapture] = useState(emptyPaymentCapture);
 
   useEffect(() => {
     if (!open) return;
     setPaymentMethodId('');
     setReferenceMonth('');
+    setCapture(emptyPaymentCapture);
   }, [open]);
+
+  const selectedMethod = paymentMethods.find((pm) => pm.id === paymentMethodId);
 
   const currentMonthKey = dayjs().format('YYYY-MM');
   const isOldAppointment = !!appointmentMonthKey && appointmentMonthKey < currentMonthKey;
@@ -167,7 +182,10 @@ export function CompletePaymentDialog({
           <TextField
             select
             value={paymentMethodId}
-            onChange={(e) => setPaymentMethodId(e.target.value)}
+            onChange={(e) => {
+              setPaymentMethodId(e.target.value);
+              setCapture(emptyPaymentCapture);
+            }}
             fullWidth
             SelectProps={{
               displayEmpty: true,
@@ -190,6 +208,15 @@ export function CompletePaymentDialog({
             ))}
           </TextField>
         </LabeledField>
+        {selectedMethod && (
+          <Stack spacing={2.25} sx={{ mt: 2.25 }}>
+            <PaymentCaptureFields
+              kind={selectedMethod.kind}
+              values={capture}
+              onChange={(patch) => setCapture((prev) => ({ ...prev, ...patch }))}
+            />
+          </Stack>
+        )}
         {isOldAppointment && (
           <Box sx={{ mt: 2.25 }}>
             <LabeledField label="Mês de referência">
@@ -241,7 +268,13 @@ export function CompletePaymentDialog({
         <Button
           variant="contained"
           disabled={!paymentMethodId || isPending}
-          onClick={() => onConfirm(paymentMethodId, referenceMonth)}
+          onClick={() =>
+            onConfirm({
+              paymentMethodId,
+              referenceMonth,
+              ...paymentCaptureToPayload(capture),
+            })
+          }
           sx={{ boxShadow: (t) => `0 6px 16px -6px ${t.palette.primary.main}` }}
         >
           {isPending ? 'Salvando...' : 'Confirmar e registrar'}

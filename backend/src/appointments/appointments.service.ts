@@ -275,6 +275,9 @@ export class AppointmentsService {
           extraMaterials: extraItems ?? before.extraMaterials,
           referenceMonth: dto.referenceMonth,
           paymentMethodId: dto.paymentMethodId,
+          installments: dto.installments,
+          cardBrand: dto.cardBrand,
+          authorizationCode: dto.authorizationCode,
         });
       }
 
