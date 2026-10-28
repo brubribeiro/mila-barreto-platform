@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { AppointmentStatus, ExpenseType, FinancialType, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { PromotionsService } from '../promotions/promotions.service';
+import { toBrazilDateAtUtcNoon } from '../common/utils/brazil-time.util';
 import { MaterialQuantity, resolveRevenuePaidAt } from './appointment.helpers';
 
 type Tx = Prisma.TransactionClient;
@@ -45,20 +46,18 @@ export class AppointmentFinanceService {
     let description = `${procedure.name} - ${patientName}`;
     let promotionId: string | null = null;
 
-    const activePromo = await this.promotionsService.findActiveForProcedure(procedureId, new Date());
-    if (activePromo) {
-      const discounted = this.promotionsService.applyDiscount(
+    // Sessão de pacote usa o valor do pacote (promoção de pacote já entrou na venda)
+    if (!packageId) {
+      const quote = await this.promotionsService.quoteForProcedure(
+        procedureId,
         Number(procedure.price),
-        activePromo.discountType,
-        Number(activePromo.discountValue),
+        toBrazilDateAtUtcNoon(input.startAt),
       );
-      finalAmount = new Prisma.Decimal(discounted);
-      const discountLabel =
-        activePromo.discountType === 'PERCENTAGE'
-          ? `${activePromo.discountValue}%`
-          : `R$ ${Number(activePromo.discountValue).toFixed(2)}`;
-      description += ` (Promoção: ${activePromo.name} -${discountLabel})`;
-      promotionId = activePromo.id;
+      if (quote.promotion) {
+        finalAmount = new Prisma.Decimal(quote.finalPrice);
+        description += ` (Promoção: ${quote.promotion.name} ${this.promotionsService.discountLabel(quote.promotion)})`;
+        promotionId = quote.promotion.id;
+      }
     }
 
     // Data de competência da receita (mês de referência p/ agendamentos antigos)
@@ -129,6 +128,16 @@ export class AppointmentFinanceService {
     }
 
     return true;
+  }
+
+  /** Prévia da promoção de um procedimento avulso no dia do agendamento (`day` em meio-dia UTC). */
+  async previewPromotion(procedureId: string, day: Date) {
+    const procedure = await this.prisma.procedure.findUnique({
+      where: { id: procedureId },
+      select: { price: true },
+    });
+    if (!procedure) throw new NotFoundException('Procedimento não encontrado');
+    return this.promotionsService.quoteForProcedure(procedureId, Number(procedure.price), day);
   }
 
   /** Lança receita de agendamentos concluídos que ainda não geraram financeiro. */

@@ -56,6 +56,15 @@ export class AppointmentsController {
   }
 
   @RequirePermissions('appointments:view')
+  @Get('promotion-preview')
+  promotionPreview(
+    @Query('procedureId', ParseUUIDPipe) procedureId: string,
+    @Query('date') date: string,
+  ) {
+    return this.appts.promotionPreview(procedureId, date);
+  }
+
+  @RequirePermissions('appointments:view')
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.appts.findOne(id, user);

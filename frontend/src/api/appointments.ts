@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Appointment, AppointmentKind, AppointmentStatus } from '../types';
+import type { Appointment, AppointmentKind, AppointmentStatus, PromotionQuote } from '../types';
 
 export interface AppointmentPayload {
   patientId: string;
@@ -43,6 +43,13 @@ export const appointmentsApi = {
   ): Promise<RecurrenceLimitResult> => {
     const { data } = await api.get<RecurrenceLimitResult>('/appointments/recurrence-limit', {
       params: { patientId, procedureId, excludeId },
+    });
+    return data;
+  },
+  /** Prévia da promoção do procedimento avulso no dia `date` (YYYY-MM-DD). */
+  promotionPreview: async (procedureId: string, date: string): Promise<PromotionQuote> => {
+    const { data } = await api.get<PromotionQuote>('/appointments/promotion-preview', {
+      params: { procedureId, date },
     });
     return data;
   },

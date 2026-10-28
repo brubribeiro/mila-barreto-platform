@@ -11,6 +11,7 @@ import { PackagesService } from '../packages/packages.service';
 import { AppointmentRulesService } from './appointment-rules.service';
 import { AppointmentMaterialsService } from './appointment-materials.service';
 import { AppointmentFinanceService } from './appointment-finance.service';
+import { parseDateOnlyToUtcNoon } from '../common/utils/date-only.util';
 import { AppointmentEventsService } from './appointment-events.service';
 import {
   appointmentRelationsInclude,
@@ -107,6 +108,13 @@ export class AppointmentsService {
 
   getRecurrenceLimit(patientId: string, procedureId: string, excludeAppointmentId?: string) {
     return this.rules.getRecurrenceLimit(patientId, procedureId, excludeAppointmentId);
+  }
+
+  /** Valor cheio, desconto e valor final do procedimento no dia (YYYY-MM-DD), antes de concluir. */
+  promotionPreview(procedureId: string, date: string) {
+    const day = /^\d{4}-\d{2}-\d{2}$/.test(date ?? '') ? parseDateOnlyToUtcNoon(date) : undefined;
+    if (!day) throw new BadRequestException('Data inválida (use AAAA-MM-DD).');
+    return this.finance.previewPromotion(procedureId, day);
   }
 
   async create(dto: CreateAppointmentDto, user?: AuditUser) {

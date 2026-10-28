@@ -95,8 +95,8 @@ describe('AppointmentsService', () => {
     };
 
     promotionsService = {
-      findActiveForProcedure: jest.fn().mockResolvedValue(null),
-      applyDiscount: jest.fn().mockReturnValue(700),
+      quoteForProcedure: jest.fn().mockResolvedValue({ promotion: null }),
+      discountLabel: jest.fn().mockReturnValue('-10%'),
     };
 
     auditLog = {

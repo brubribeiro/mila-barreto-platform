@@ -616,6 +616,14 @@ export interface Promotion {
   _count?: { appointments: number };
 }
 
+/** Valor cheio, desconto e valor final com a melhor promoção ativa (prévia do backend). */
+export interface PromotionQuote {
+  originalPrice: number;
+  discount: number;
+  finalPrice: number;
+  promotion: { id: string; name: string; discountType: DiscountType; discountValue: number } | null;
+}
+
 export type NotificationType =
   | 'APPOINTMENT_CREATED'
   | 'APPOINTMENT_CANCELLED'
