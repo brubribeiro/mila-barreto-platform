@@ -27,8 +27,10 @@ import { Pendencias } from './pages/Pendencias';
 import { SkincareRoutines } from './pages/SkincareRoutines';
 import { Promotions } from './pages/Promotions';
 import { PaymentMethods } from './pages/PaymentMethods';
+import { MyPlan } from './pages/MyPlan';
 import { Layout } from './components/Layout';
 import { PrivateRoute } from './components/PrivateRoute';
+import { AdminRoute } from './components/AdminRoute';
 import { PermissionRoute } from './components/PermissionRoute';
 import { FeatureRoute } from './components/FeatureRoute';
 import { SuperAdminRoute } from './components/SuperAdminRoute';
@@ -189,6 +191,14 @@ export default function App() {
             <PermissionRoute permission="roles:view">
               <Roles />
             </PermissionRoute>
+          }
+        />
+        <Route
+          path="/meu-plano"
+          element={
+            <AdminRoute>
+              <MyPlan />
+            </AdminRoute>
           }
         />
         <Route

@@ -31,6 +31,7 @@ import { SkincareModule } from './skincare/skincare.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { AdminModule } from './admin/admin.module';
+import { TenantPlanModule } from './tenant-plan/tenant-plan.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -66,6 +67,7 @@ import { AppController } from './app.controller';
     SchedulerModule,
     AuditLogModule,
     AdminModule,
+    TenantPlanModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

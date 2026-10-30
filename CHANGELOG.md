@@ -5,6 +5,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 ## [Unreleased]
 
 ### Added
+- Clínica — **Meu plano** (`/meu-plano`, admin): nome do plano, uso vs limites informativos (usuários, pacientes, armazenamento), módulos ativos e CTA de contato para upgrade; `GET /tenant/plan` (#64).
 - Formas de pagamento: tipo (dinheiro, PIX, débito, crédito) e prazo de recebimento; lançamentos e conclusão de agendamento com parcelas, bandeira e NSU/autorização opcionais (#57).
 
 ### Fixed
