@@ -6,6 +6,10 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ## Próxima versão
 
+### Atendimento
+
+- **Mapa de aplicação**: em procedimentos com a opção *Mapa de aplicação* ligada, a tela do atendimento ganha a seção para clicar no rosto e marcar cada ponto aplicado, com produto ou dose. O mapa fica salvo no atendimento e aparece na **ficha do paciente**, na aba Agendamentos.
+
 ### Login
 
 - Se sua conta Google for **usuário da clínica e administrador da plataforma**, após entrar você escolhe entre o **painel da clínica** e o **painel da plataforma** (`/admin`). No menu do seu avatar, **Trocar painel** permite alternar depois.
@@ -80,7 +84,7 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 **Procedimentos**
 - Lista redesenhada no estilo Aurora: busca, filtro por **categoria**, paginação e colunas de **margem**, **custo de materiais** e **custo de equipamentos**.
-- Cadastro com **categoria** (Facial, Injetáveis, Laser, etc.), vínculo de **equipamentos** com custo por uso e opção **Mapa de aplicação** (em breve).
+- Cadastro com **categoria** (Facial, Injetáveis, Laser, etc.), vínculo de **equipamentos** com custo por uso e opção **Mapa de aplicação** (marcação de pontos no atendimento).
 - Modal de procedimento reorganizada em seções padronizadas.
 
 **Formulários**

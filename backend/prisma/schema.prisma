@@ -945,6 +945,8 @@ model Appointment {
   patientPackageId  String?
   // Promoção aplicada automaticamente (se houver)
   promotionId       String?
+  // Snapshot do mapa de aplicação (pontos marcados no atendimento), quando o procedimento usa
+  applicationMap    Json?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
