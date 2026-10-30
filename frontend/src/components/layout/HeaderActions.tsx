@@ -27,9 +27,10 @@ interface HeaderActionsProps {
   canSeeAgenda: boolean;
   /** Presente quando a tela tem tour guiado: mostra o botão “Como funciona?”. */
   onOpenTour?: () => void;
+  onOpenAssistant: () => void;
 }
 
-/** Botões à direita do header: tour, tema, histórico, ocultar valores, notificações e novo agendamento. */
+/** Botões à direita do header: assistente, tour, tema, histórico, ocultar valores, notificações e novo agendamento. */
 export function HeaderActions({
   canSeeHistory,
   hasAuditEntity,
@@ -38,12 +39,18 @@ export function HeaderActions({
   onToggleMoneyHidden,
   canSeeAgenda,
   onOpenTour,
+  onOpenAssistant,
 }: HeaderActionsProps) {
   const { mode: colorMode, toggleColorMode } = useColorMode();
   const { openAppointmentDialog } = useAppointmentDialog();
 
   return (
     <Stack direction="row" spacing={{ xs: 0.5, sm: 1 }} alignItems="center" sx={{ flexShrink: 0 }}>
+      <Tooltip title="Assistente">
+        <IconButton onClick={onOpenAssistant} aria-label="Abrir assistente" sx={HEADER_ICON_BUTTON_SX}>
+          <AuroraIcon name="assistant" size={20} strokeWidth={1.8} />
+        </IconButton>
+      </Tooltip>
       {onOpenTour && (
         <Tooltip title="Como funciona?">
           <IconButton onClick={onOpenTour} aria-label="Como funciona? Ver tour da tela" data-tour="tour-help" sx={HEADER_ICON_BUTTON_SX}>

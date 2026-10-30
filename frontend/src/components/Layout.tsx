@@ -21,9 +21,16 @@ import {
 import { SidebarContent } from './layout/SidebarContent';
 import { HeaderActions } from './layout/HeaderActions';
 import { ImpersonationBanner } from './layout/ImpersonationBanner';
+import { AssistantDrawer } from './assistant/AssistantDrawer';
 import { GuidedTour } from './tour/GuidedTour';
 import { getScreenTour } from './tour/screenTours';
 import { isTourSeen, markTourSeen } from './tour/tourStorage';
+
+const CLINIC_ASSISTANT_SUGGESTIONS = [
+  'Como ativo o modo escuro?',
+  'Como funciona o mapa de aplicação?',
+  'Como montar uma rotina de skincare?',
+];
 
 export function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -34,6 +41,7 @@ export function Layout() {
   const isImpersonating = user?.impersonating === true;
   const { has, isAdmin } = usePermissions();
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [moneyHidden, setMoneyHiddenState] = useState(isMoneyHidden);
   // Catálogo global da plataforma (documentos, mensagens, procedimentos, estoque)
   usePrefetchPlatformCatalogs(!!user?.tenantId);
@@ -200,6 +208,7 @@ export function Layout() {
             onToggleMoneyHidden={toggleMoneyHidden}
             canSeeAgenda={has('appointments:view')}
             onOpenTour={screenTour ? () => setTourOpen(true) : undefined}
+            onOpenAssistant={() => setAssistantOpen(true)}
           />
         </Toolbar>
       </AppBar>
@@ -277,6 +286,13 @@ export function Layout() {
       {screenTour && tourOpen && (
         <GuidedTour key={screenTour.key} steps={screenTour.steps} onClose={closeTour} />
       )}
+
+      <AssistantDrawer
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        suggestions={CLINIC_ASSISTANT_SUGGESTIONS}
+        canSendFeedback
+      />
 
       {pageMeta.auditEntity && (
         <AuditHistoryDialog
