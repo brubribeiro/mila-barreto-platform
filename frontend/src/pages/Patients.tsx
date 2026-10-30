@@ -164,6 +164,7 @@ export function Patients() {
     <Box>
       {/* Cards de estatística */}
       <Box
+        data-tour="patients-stats"
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
@@ -178,7 +179,7 @@ export function Patients() {
       </Box>
 
       {/* Tabela */}
-      <Card sx={{ p: 0, overflow: 'hidden' }}>
+      <Card data-tour="patients-list" sx={{ p: 0, overflow: 'hidden' }}>
         {/* Cabeçalho da tabela */}
         <ListCardHeader title={<Typography sx={{ fontSize: fontSizes.xl, fontWeight: 700 }}>Todos os pacientes</Typography>}>
           <ListSearchField value={searchInput} onChange={setSearchInput} placeholder="Buscar paciente, CPF..." ariaLabel="Buscar paciente por nome, CPF ou telefone" />
@@ -190,6 +191,7 @@ export function Patients() {
                 setEditing(null);
                 setFormOpen(true);
               }}
+              data-tour="patients-new"
               sx={LIST_HEADER_ACTION_SX}
             >
               Adicionar paciente
