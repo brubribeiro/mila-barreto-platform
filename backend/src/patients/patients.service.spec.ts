@@ -10,6 +10,7 @@ import { AuditLogService } from '../audit-log/audit-log.service';
 import { PatientPhotoStorageService } from './patient-photo-storage.service';
 import { PatientStatsService } from './patient-stats.service';
 import { PatientEventsService } from './patient-events.service';
+import { PatientMeasurementsService } from './patient-measurements.service';
 
 describe('PatientsService', () => {
   let service: PatientsService;
@@ -39,6 +40,9 @@ describe('PatientsService', () => {
       },
       appointment: {
         groupBy: jest.fn().mockResolvedValue([]),
+      },
+      patientMeasurement: {
+        create: jest.fn().mockResolvedValue({ id: 'm-1' }),
       },
       financialEntry: {
         groupBy: jest.fn().mockResolvedValue([]),
@@ -70,6 +74,7 @@ describe('PatientsService', () => {
         PatientPhotoStorageService,
         PatientStatsService,
         PatientEventsService,
+        PatientMeasurementsService,
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationsService, useValue: notifications },
         { provide: R2StorageService, useValue: r2 },
@@ -159,6 +164,34 @@ describe('PatientsService', () => {
         where: { id: 'patient-1' },
         data: expect.objectContaining({ anamnesis }),
       });
+    });
+
+    it('should record a measurement when anamnesis weight/height change', async () => {
+      prisma.patient.findUnique.mockResolvedValue({ ...mockPatient, anamnesis: { peso: 70, altura: 165 } });
+
+      await service.update('patient-1', { anamnesis: { peso: '68.5', altura: 165 } } as any);
+
+      expect(prisma.patientMeasurement.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ patientId: 'patient-1', weightKg: 68.5, heightCm: 165 }),
+      });
+    });
+
+    it('should convert imported heights in meters to centimeters', async () => {
+      prisma.patient.findUnique.mockResolvedValue({ ...mockPatient, anamnesis: { peso: 71, altura: '1,73' } });
+
+      await service.update('patient-1', { anamnesis: { peso: 69, altura: '1,73' } } as any);
+
+      expect(prisma.patientMeasurement.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ weightKg: 69, heightCm: 173 }),
+      });
+    });
+
+    it('should not record a measurement when weight/height are unchanged', async () => {
+      prisma.patient.findUnique.mockResolvedValue({ ...mockPatient, anamnesis: { peso: 70, altura: 165 } });
+
+      await service.update('patient-1', { anamnesis: { peso: '70', altura: '165', tabagismo: 'Não' } } as any);
+
+      expect(prisma.patientMeasurement.create).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if patient does not exist', async () => {

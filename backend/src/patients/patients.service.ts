@@ -9,6 +9,7 @@ import { normalizePatientWritableFields } from './patient-fields.util';
 import { PatientPhotoStorageService } from './patient-photo-storage.service';
 import { PatientStatsService } from './patient-stats.service';
 import { PatientEventsService } from './patient-events.service';
+import { PatientMeasurementsService } from './patient-measurements.service';
 
 @Injectable()
 export class PatientsService {
@@ -17,6 +18,7 @@ export class PatientsService {
     private readonly photos: PatientPhotoStorageService,
     private readonly patientStats: PatientStatsService,
     private readonly events: PatientEventsService,
+    private readonly measurements: PatientMeasurementsService,
   ) {}
 
   async list(search?: string) {
@@ -104,11 +106,15 @@ export class PatientsService {
 
   async update(id: string, dto: UpdatePatientDto, user?: AuditUser) {
     const oldPatient = await this.findPatientOrThrow(id);
-    return this.updateAndAudit(
+    const updated = await this.updateAndAudit(
       oldPatient,
       normalizePatientWritableFields(dto) as Prisma.PatientUncheckedUpdateInput,
       user,
     );
+    if (dto.anamnesis !== undefined) {
+      await this.measurements.recordFromAnamnesis(id, oldPatient.anamnesis, dto.anamnesis, user);
+    }
+    return updated;
   }
 
   /**
