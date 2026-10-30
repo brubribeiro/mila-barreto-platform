@@ -6,6 +6,10 @@ Notas de versão para usuários do painel. Para detalhes técnicos, veja [CHANGE
 
 ## Próxima versão
 
+### Site de divulgação
+
+- O endereço principal da plataforma (`/`) passa a mostrar uma **página de apresentação** para clínicas interessadas: funcionalidades, planos, perguntas frequentes e botão **Falar com a gente**. O painel continua em `/painel`, e o botão **Entrar** leva ao login. O nome exibido ("Aurora") é provisório até a escolha do nome da aplicação.
+
 ### Atendimento
 
 - **Mapa de aplicação**: em procedimentos com a opção *Mapa de aplicação* ligada, a tela do atendimento ganha a seção para clicar no rosto e marcar cada ponto aplicado, com produto ou dose. O mapa fica salvo no atendimento e aparece na **ficha do paciente**, na aba Agendamentos.

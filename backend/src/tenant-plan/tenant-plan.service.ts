@@ -25,7 +25,7 @@ export type TenantPlanSummary = {
   features: string[];
 };
 
-function parseLimits(raw: unknown): PlanLimitsDto | null {
+export function parseLimits(raw: unknown): PlanLimitsDto | null {
   if (!raw || typeof raw !== 'object') return null;
   const o = raw as Record<string, unknown>;
   const limits: PlanLimitsDto = {};
