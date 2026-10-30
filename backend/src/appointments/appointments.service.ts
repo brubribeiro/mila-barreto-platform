@@ -18,6 +18,7 @@ import {
   assertOwnAppointmentAccess,
   computePackageSessionIndexes,
   isActive,
+  toApplicationMapData,
 } from './appointment.helpers';
 
 /** Campos que usuários restritos aos próprios agendamentos não podem alterar. */
@@ -303,6 +304,7 @@ export class AppointmentsService {
           materialsDeducted: willDeduct,
           financeGenerated,
           patientPackageId: dto.patientPackageId === undefined ? undefined : dto.patientPackageId ?? null,
+          applicationMap: toApplicationMapData(dto.applicationMap),
         },
         include: appointmentRelationsInclude,
       });

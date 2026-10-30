@@ -1,6 +1,8 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 
+import { ApplicationMapDto } from './application-map.dto';
 import { CreateAppointmentDto } from './create-appointment.dto';
 
 export class UpdateAppointmentDto extends PartialType(CreateAppointmentDto) {
@@ -33,4 +35,10 @@ export class UpdateAppointmentDto extends PartialType(CreateAppointmentDto) {
   @IsString()
   @Matches(/^\d{4}-\d{2}$/, { message: 'referenceMonth deve estar no formato YYYY-MM' })
   referenceMonth?: string;
+
+  /** Mapa de aplicação marcado no atendimento; lista vazia apaga o mapa. */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ApplicationMapDto)
+  applicationMap?: ApplicationMapDto;
 }

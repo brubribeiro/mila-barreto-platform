@@ -1,5 +1,11 @@
 import { api } from './client';
-import type { Appointment, AppointmentKind, AppointmentStatus, PromotionQuote } from '../types';
+import type {
+  ApplicationMap,
+  Appointment,
+  AppointmentKind,
+  AppointmentStatus,
+  PromotionQuote,
+} from '../types';
 
 export interface AppointmentPayload {
   patientId: string;
@@ -19,6 +25,8 @@ export interface AppointmentPayload {
   referenceMonth?: string;
   patientPackageId?: string | null;
   extraMaterials?: { itemId: string; quantity: number }[];
+  /** Só na edição; lista de pontos vazia apaga o mapa. */
+  applicationMap?: ApplicationMap;
 }
 
 export const appointmentsBackfillFinance = async (): Promise<{ created: number }> => {
