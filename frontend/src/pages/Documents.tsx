@@ -14,6 +14,7 @@ import {
 } from '../components/documents/DocumentListRow';
 import { DocumentTemplatesDialog } from '../components/documents/DocumentTemplatesDialog';
 import { DocumentViewerDialog } from '../components/documents/DocumentViewerDialog';
+import { SendDocumentDialog } from '../components/documents/SendDocumentDialog';
 import {
   DOCUMENT_STATUSES,
   canOpenDocument,
@@ -87,6 +88,7 @@ export function Documents() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<DocumentFile | null>(null);
   const [viewing, setViewing] = useState<DocumentFile | null>(null);
+  const [sending, setSending] = useState<DocumentFile | null>(null);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [menu, setMenu] = useState<{ anchor: HTMLElement; doc: DocumentFile } | null>(null);
   const attachInputRef = useRef<HTMLInputElement>(null);
@@ -480,6 +482,7 @@ export function Documents() {
         onOpenFile={(d) => void handleOpenDocument(d)}
         onView={setViewing}
         onAttach={startAttach}
+        onSend={setSending}
         onSetStatus={(d, status) => statusMutation.mutate({ id: d.id, status })}
         onEdit={(d) => {
           setEditing(d);
@@ -512,6 +515,12 @@ export function Documents() {
         doc={viewing}
         onClose={() => setViewing(null)}
         onAttach={canEdit ? startAttach : undefined}
+        onSend={canEdit ? setSending : undefined}
+      />
+      <SendDocumentDialog
+        doc={sending}
+        onClose={() => setSending(null)}
+        onSent={(saved) => setViewing((v) => (v?.id === saved.id ? saved : v))}
       />
       <DocumentTemplatesDialog
         open={templatesOpen}
