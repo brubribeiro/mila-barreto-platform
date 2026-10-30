@@ -1,4 +1,4 @@
-import { Fragment, useState, useMemo } from 'react';
+import { Fragment, useEffect, useState, useMemo } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { alpha, AppBar, Box, Drawer, IconButton, Toolbar, Typography, useTheme } from '@mui/material';
 
@@ -21,6 +21,9 @@ import {
 import { SidebarContent } from './layout/SidebarContent';
 import { HeaderActions } from './layout/HeaderActions';
 import { ImpersonationBanner } from './layout/ImpersonationBanner';
+import { GuidedTour } from './tour/GuidedTour';
+import { getScreenTour } from './tour/screenTours';
+import { isTourSeen, markTourSeen } from './tour/tourStorage';
 
 export function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -60,6 +63,23 @@ export function Layout() {
 
   const pageMeta = getPageMeta(location.pathname);
   const pageSubtitle = pageSubtitleFor(location.pathname, pageMeta);
+
+  // Tour guiado da tela: abre sozinho na primeira visita; depois só pelo “Como funciona?”.
+  const screenTour = getScreenTour(location.pathname);
+  const tourKey = screenTour?.key;
+  const userId = user?.id;
+  const [tourOpen, setTourOpen] = useState(false);
+  useEffect(() => {
+    setTourOpen(false);
+    if (!tourKey || !userId || isTourSeen(userId, tourKey)) return;
+    // Espera a página montar para os elementos destacados existirem.
+    const timer = window.setTimeout(() => setTourOpen(true), 800);
+    return () => window.clearTimeout(timer);
+  }, [tourKey, userId]);
+  const closeTour = () => {
+    setTourOpen(false);
+    if (tourKey && userId) markTourSeen(userId, tourKey);
+  };
 
   const currentDrawerWidth = collapsed ? DRAWER_COLLAPSED_WIDTH : DRAWER_WIDTH;
   const impersonationOffsetSx = isImpersonating
@@ -179,6 +199,7 @@ export function Layout() {
             moneyHidden={moneyHidden}
             onToggleMoneyHidden={toggleMoneyHidden}
             canSeeAgenda={has('appointments:view')}
+            onOpenTour={screenTour ? () => setTourOpen(true) : undefined}
           />
         </Toolbar>
       </AppBar>
@@ -252,6 +273,10 @@ export function Layout() {
           </Box>
         </Fragment>
       </Box>
+
+      {screenTour && tourOpen && (
+        <GuidedTour key={screenTour.key} steps={screenTour.steps} onClose={closeTour} />
+      )}
 
       {pageMeta.auditEntity && (
         <AuditHistoryDialog

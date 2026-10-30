@@ -29,6 +29,7 @@ export function AgendaToolbar({ periodLabel, currentView, onPrev, onNext, onToda
   const theme = useTheme();
   return (
     <Box
+      data-tour="agenda-toolbar"
       sx={{
         display: 'flex',
         alignItems: 'center',
