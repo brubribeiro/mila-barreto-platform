@@ -8,11 +8,13 @@ import dayjs from 'dayjs';
 
 import { documentsApi } from '../../api/documents';
 import { useAppToast } from '../../contexts/AppToastContext';
+import { usePermissions } from '../../contexts/usePermissions';
 import type { DocumentFile, DocumentStatus } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
 import { clickableProps } from '../../utils/a11y';
 import { StatusPill } from '../documents/DocumentListRow';
 import { DocumentViewerDialog } from '../documents/DocumentViewerDialog';
+import { SendDocumentDialog } from '../documents/SendDocumentDialog';
 import { DOCUMENT_STATUSES, canOpenDocument, categoryMeta, documentFileIcon } from '../documents/documentUtils';
 import { EmptyBlock } from './EmptyBlock';
 
@@ -29,7 +31,10 @@ export function PatientDocumentsTab({ patientId, patientName, onLeave, viewerZIn
   const theme = useTheme();
   const navigate = useNavigate();
   const toast = useAppToast();
+  const { has } = usePermissions();
+  const canEdit = has('documents:edit');
   const [viewing, setViewing] = useState<DocumentFile | null>(null);
+  const [sending, setSending] = useState<DocumentFile | null>(null);
 
   const { data: docs = [], isLoading } = useQuery({
     queryKey: ['documents', 'patient', patientId],
@@ -140,6 +145,13 @@ export function PatientDocumentsTab({ patientId, patientName, onLeave, viewerZIn
       <DocumentViewerDialog
         doc={viewing}
         onClose={() => setViewing(null)}
+        onSend={canEdit ? setSending : undefined}
+        sx={viewerZIndex ? { zIndex: viewerZIndex } : undefined}
+      />
+      <SendDocumentDialog
+        doc={sending}
+        onClose={() => setSending(null)}
+        onSent={(saved) => setViewing((v) => (v?.id === saved.id ? saved : v))}
         sx={viewerZIndex ? { zIndex: viewerZIndex } : undefined}
       />
     </Stack>

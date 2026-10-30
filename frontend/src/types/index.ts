@@ -575,7 +575,8 @@ export interface DocumentFile {
   equipmentId?: string | null;
   createdAt: string;
   updatedAt?: string;
-  patient?: { id: string; name: string } | null;
+  /** `phone` e `email` só vêm em GET /documents/:id */
+  patient?: { id: string; name: string; phone?: string | null; email?: string | null } | null;
   equipment?: { id: string; name: string } | null;
   template?: { id: string; name: string } | null;
 }
