@@ -54,6 +54,7 @@ model Tenant {
   documents               Document[]
   documentTemplates       DocumentTemplate[]
   messageTemplates        MessageTemplate[]
+  messageDispatches       MessageDispatch[]
   notifications           Notification[]
   notificationPreferences NotificationPreference[]
   patients                Patient[]
@@ -446,12 +447,53 @@ model MessageTemplate {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  procedure Procedure? @relation(fields: [procedureId], references: [id], onDelete: SetNull)
+  procedure  Procedure?         @relation(fields: [procedureId], references: [id], onDelete: SetNull)
+  dispatches MessageDispatch[]
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@unique([tenantId, name])
   @@map("message_templates")
+}
+
+/// Fila / histórico de envios WhatsApp (MVP: deep link wa.me; registro evita duplicata por gatilho).
+enum MessageDispatchStatus {
+  PENDING
+  SENT
+  SKIPPED
+}
+
+enum MessageDispatchSource {
+  AUTO
+  MANUAL
+}
+
+model MessageDispatch {
+  id                String                @id @default(uuid())
+  tenantId          String                @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  templateId        String
+  patientId         String
+  appointmentId     String?
+  trigger           MessageTrigger
+  dedupKey          String
+  phone             String?
+  renderedMessage   String
+  waMeUrl           String?
+  status            MessageDispatchStatus @default(PENDING)
+  source            MessageDispatchSource @default(AUTO)
+  createdAt         DateTime              @default(now())
+  sentAt            DateTime?
+
+  template    MessageTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  patient     Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointment Appointment?    @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, dedupKey])
+  @@index([status, createdAt])
+  @@index([tenantId])
+  @@map("message_dispatches")
 }
 
 // =========================
@@ -540,13 +582,14 @@ model Patient {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  appointments     Appointment[]
-  financialEntries FinancialEntry[]
-  documents        Document[]
-  packages         PatientPackage[]
-  photos           PatientPhoto[]
-  skincareRoutines SkincareRoutine[]
-  measurements     PatientMeasurement[]
+  appointments      Appointment[]
+  financialEntries  FinancialEntry[]
+  documents         Document[]
+  packages          PatientPackage[]
+  photos            PatientPhoto[]
+  skincareRoutines  SkincareRoutine[]
+  measurements      PatientMeasurement[]
+  messageDispatches MessageDispatch[]
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -911,10 +954,11 @@ model Appointment {
   patientPackage PatientPackage? @relation(fields: [patientPackageId], references: [id])
   promotion      Promotion?      @relation(fields: [promotionId], references: [id])
 
-  financialEntries FinancialEntry[]
-  extraMaterials   AppointmentMaterial[]
-  photos           PatientPhoto[]
-  measurements     PatientMeasurement[]
+  financialEntries  FinancialEntry[]
+  extraMaterials    AppointmentMaterial[]
+  photos            PatientPhoto[]
+  measurements      PatientMeasurement[]
+  messageDispatches MessageDispatch[]
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
