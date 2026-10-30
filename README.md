@@ -318,6 +318,15 @@ npx prisma migrate dev --name add_notifications
 
 Quando perguntar para resetar o banco, responda `y` (em dev). Depois roda `npm run prisma:seed` para recriar os usuários de exemplo.
 
+### Scheduler (jobs em background)
+
+O `SchedulerService` (`backend/src/scheduler/scheduler.service.ts`) inicia com a API NestJS:
+
+- **Intervalo:** a cada **1 hora**, percorre cada clínica ativa (`TenantContext.run`) e roda manutenção de equipamentos, validade de estoque, retorno de pacientes, reativação e **gatilhos de mensagens WhatsApp**.
+- **Gatilhos WhatsApp:** modelos ativos com `trigger` ≠ `MANUAL` geram registros em `message_dispatches` (mensagem renderizada + URL `wa.me`). A deduplicação usa `dedupKey` (ex.: um lembrete `DAY_BEFORE` por agendamento/modelo). Pacientes sem telefone geram registro `SKIPPED`.
+- **Envio:** MVP abre o deep link no navegador (tela **Mensagens** → fila pendente, ou modais manuais). API oficial do WhatsApp fica para uma fase posterior.
+- **Keep-alive:** query `SELECT 1` a cada 4,5 min entre 7h e 21h (fuso do servidor) para evitar cold start em hospedagem serverless.
+
 ### Roadmap
 
 - **Lembretes agendados** (`APPOINTMENT_REMINDER`) — precisa de cron job, ainda não implementado.

@@ -547,6 +547,25 @@ export interface MessageTemplate {
   updatedAt?: string;
 }
 
+export type MessageDispatchStatus = 'PENDING' | 'SENT' | 'SKIPPED';
+
+export interface MessageDispatch {
+  id: string;
+  templateId: string;
+  patientId: string;
+  appointmentId?: string | null;
+  trigger: MessageTrigger;
+  phone?: string | null;
+  renderedMessage: string;
+  waMeUrl?: string | null;
+  status: MessageDispatchStatus;
+  createdAt: string;
+  sentAt?: string | null;
+  template?: { id: string; name: string; trigger: MessageTrigger };
+  patient?: { id: string; name: string; phone?: string | null };
+  appointment?: { id: string; startAt: string; procedure?: { name: string } | null };
+}
+
 export interface WorkingHours {
   id: string;
   userId: string;
