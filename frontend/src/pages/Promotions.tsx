@@ -206,7 +206,7 @@ export function Promotions() {
             />
           </Stack>
           {canCreate && (
-            <Button
+            <Button data-tour="promotions-new"
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => {

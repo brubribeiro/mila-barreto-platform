@@ -83,7 +83,7 @@ export function Goals() {
 
   return (
     <Stack spacing={2.25}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: { xs: 1, sm: 1.75 } }}>
+      <Box data-tour="goals-summary" sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: { xs: 1, sm: 1.75 } }}>
         {summaryCards.map((s) => (
           <Card key={s.label} sx={{ px: { xs: 1.5, sm: 2.25 }, py: 2, borderRadius: '14px', border: 1, borderColor: 'divider' }}>
             {isLoading ? (
@@ -100,7 +100,7 @@ export function Goals() {
         ))}
       </Box>
 
-      <Card sx={{ borderRadius: '18px', overflow: 'hidden' }}>
+      <Card data-tour="goals-list" sx={{ borderRadius: '18px', overflow: 'hidden' }}>
         <ListCardHeader
           breakpoint="md"
           nowrapFrom="md"
@@ -130,7 +130,7 @@ export function Goals() {
             ))}
           </TextField>
           {canCreate && (
-            <Button
+            <Button data-tour="goals-new"
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => {

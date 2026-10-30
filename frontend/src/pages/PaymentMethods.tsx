@@ -156,7 +156,7 @@ export function PaymentMethods() {
         </TextField>
         <ListSearchField value={search} onChange={setSearch} placeholder="Buscar método..." ariaLabel="Buscar método" />
         {canCreate && (
-          <Button
+          <Button data-tour="payments-new"
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => {
