@@ -29,8 +29,14 @@ describe('AssistantFab', () => {
   it('mostra o trecho da documentação com a fonte', async () => {
     const ask = vi.spyOn(assistantApi, 'ask').mockResolvedValue({
       covered: true,
-      answer: 'Encontrei isto na documentação:',
-      sources: [{ file: 'RELEASE_NOTES.md', section: 'v0.2.0 › Novidades › Visual Aurora', excerpt: '• Modo escuro: botão da lua.' }],
+      answer: '• Modo escuro: o botão da lua no topo alterna entre tema claro e escuro.',
+      sources: [
+        {
+          file: 'RELEASE_NOTES.md',
+          section: 'v0.2.0 › Novidades › Visual Aurora',
+          excerpt: '• Modo escuro: o botão da lua no topo alterna entre tema claro e escuro.',
+        },
+      ],
     });
     renderFab(true);
     await openAssistant();
@@ -38,7 +44,9 @@ describe('AssistantFab', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Como ativo o modo escuro?' }));
 
     expect(ask).toHaveBeenCalledWith('Como ativo o modo escuro?', expect.anything());
-    expect(await screen.findByText('• Modo escuro: botão da lua.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('• Modo escuro: o botão da lua no topo alterna entre tema claro e escuro.'),
+    ).toBeInTheDocument();
     expect(screen.getByText('Fonte: RELEASE_NOTES.md › v0.2.0 › Novidades › Visual Aurora')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Enviar feedback' })).not.toBeInTheDocument();
   });

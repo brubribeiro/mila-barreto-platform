@@ -270,31 +270,30 @@ export function AssistantFab({ suggestions, canSendFeedback = false }: Props) {
 }
 
 function AssistantReply({ reply, onOpenFeedback }: { reply: AssistantAnswer; onOpenFeedback?: () => void }) {
+  const source = reply.sources[0];
+
   return (
-    <Stack spacing={1} sx={{ alignSelf: 'flex-start', width: '100%' }}>
-      <Typography variant="body2" fontWeight={600}>
-        {reply.answer}
-      </Typography>
-      {reply.sources.map((source, i) => (
-        <Box
-          key={i}
-          sx={{
-            p: 1.5,
-            borderRadius: '12px',
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
-          }}
-        >
-          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {source.excerpt}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75, fontWeight: 600 }}>
-            Fonte: {source.file}
-            {source.section ? ` › ${source.section}` : ''}
-          </Typography>
-        </Box>
-      ))}
+    <Stack spacing={0.75} sx={{ alignSelf: 'flex-start', maxWidth: '92%' }}>
+      <Box
+        sx={{
+          px: 1.75,
+          py: 1,
+          borderRadius: '14px 14px 14px 4px',
+          border: '1px solid',
+          borderColor: 'divider',
+          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06),
+        }}
+      >
+        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {reply.answer}
+        </Typography>
+      </Box>
+      {source && (
+        <Typography variant="caption" color="text.secondary" sx={{ px: 0.5, fontWeight: 600 }}>
+          Fonte: {source.file}
+          {source.section ? ` › ${source.section}` : ''}
+        </Typography>
+      )}
       {!reply.covered && onOpenFeedback && (
         <Box>
           <Button

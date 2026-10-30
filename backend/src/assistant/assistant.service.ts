@@ -15,7 +15,7 @@ const CORPUS: Record<AssistantAudience, string[]> = {
 
 /** Parte mínima dos termos da pergunta que precisa estar no trecho para contar como resposta. */
 const MIN_COVERAGE = 0.6;
-const MAX_SOURCES = 3;
+const MAX_SOURCES = 1;
 const MAX_EXCERPT = 600;
 
 export interface AssistantSource {
@@ -72,17 +72,19 @@ export class AssistantService {
       };
     }
 
+    const top = hits[0];
+    const body = truncate(stripMarkdown(top.text), MAX_EXCERPT);
+
     return {
       covered: true,
-      answer:
-        hits.length === 1
-          ? 'Encontrei isto na documentação:'
-          : `Encontrei ${hits.length} trechos na documentação sobre isso:`,
-      sources: hits.map((hit) => ({
-        file: hit.file,
-        section: hit.section,
-        excerpt: truncate(stripMarkdown(hit.text), MAX_EXCERPT),
-      })),
+      answer: body,
+      sources: [
+        {
+          file: top.file,
+          section: top.section,
+          excerpt: body,
+        },
+      ],
     };
   }
 
