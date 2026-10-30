@@ -21,6 +21,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Fixed
 - Migration `20261026223000_tenant_profile_fields`: `ALTER TABLE` apontava para `"Tenant"` em vez da tabela mapeada `"tenants"`, quebrando `prisma migrate deploy` em banco limpo (Fixes #98).
+- Backend: `provisionTenant` tipa o payload como `TenantUncheckedCreateInput`, permitindo `planId` escalar na criação de clínica pelo super-admin.
 - Anamnese: IMC aceita vírgula decimal e altura em metros (fichas importadas com `"1,73"` mostravam IMC 710000).
 - UI (modais e listas): redesign Aurora compacto de Novo usuário, Equipamento, Item de estoque, Movimentar estoque, Lançamento, Forma de pagamento e Meta (altura ≈ conteúdo, grades 2–3 colunas, Mês sem reticências); Horário semanal sem scroll interno prematuro; Novo bloqueio sem hint condicional; grade e toolbar de Formas de pagamento; matriz de permissões com linhas de altura fixa e colunas uniformes; card Metas do mês do Dashboard sem o botão "Definir metas" no estado vazio; Pendências com tokens do tema (vermelho/âmbar/azul/verde, botão "Ver detalhes" primário); toolbar da Agenda com título de largura fixa (Hoje e Dia/Semana/Mês não se mexem ao trocar a visão).
 - Auth: `POST /auth/select-panel` carrega o usuário fora do escopo de tenant (token provisório com `tenantId` null), evitando 403 na tela `/escolher-painel`.
