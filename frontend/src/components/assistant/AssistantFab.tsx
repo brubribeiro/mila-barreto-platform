@@ -131,8 +131,8 @@ export function AssistantFab({ suggestions, canSendFeedback = false }: Props) {
               {messages.length === 0 && (
                 <Stack spacing={1.5} sx={{ mb: 1.5 }}>
                   <Typography variant="body2" color="text.secondary">
-                    Pergunte sobre as telas e funcionalidades. As respostas vêm só da documentação, com a fonte de
-                    cada trecho — sem acesso a dados de pacientes ou da agenda.
+                    Pergunte sobre as telas e funcionalidades. As respostas vêm só da documentação — sem acesso a
+                    dados de pacientes ou da agenda.
                   </Typography>
                   <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1}>
                     {suggestions.map((s) => (
@@ -270,8 +270,6 @@ export function AssistantFab({ suggestions, canSendFeedback = false }: Props) {
 }
 
 function AssistantReply({ reply, onOpenFeedback }: { reply: AssistantAnswer; onOpenFeedback?: () => void }) {
-  const source = reply.sources[0];
-
   return (
     <Stack spacing={0.75} sx={{ alignSelf: 'flex-start', maxWidth: '92%' }}>
       <Box
@@ -288,12 +286,6 @@ function AssistantReply({ reply, onOpenFeedback }: { reply: AssistantAnswer; onO
           {reply.answer}
         </Typography>
       </Box>
-      {source && (
-        <Typography variant="caption" color="text.secondary" sx={{ px: 0.5, fontWeight: 600 }}>
-          Fonte: {source.file}
-          {source.section ? ` › ${source.section}` : ''}
-        </Typography>
-      )}
       {!reply.covered && onOpenFeedback && (
         <Box>
           <Button

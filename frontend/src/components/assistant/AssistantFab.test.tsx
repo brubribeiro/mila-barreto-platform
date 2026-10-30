@@ -26,7 +26,7 @@ async function openAssistant() {
 }
 
 describe('AssistantFab', () => {
-  it('mostra o trecho da documentação com a fonte', async () => {
+  it('mostra só a resposta da documentação, sem citar fonte na UI', async () => {
     const ask = vi.spyOn(assistantApi, 'ask').mockResolvedValue({
       covered: true,
       answer: '• Modo escuro: o botão da lua no topo alterna entre tema claro e escuro.',
@@ -47,7 +47,7 @@ describe('AssistantFab', () => {
     expect(
       await screen.findByText('• Modo escuro: o botão da lua no topo alterna entre tema claro e escuro.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Fonte: RELEASE_NOTES.md › v0.2.0 › Novidades › Visual Aurora')).toBeInTheDocument();
+    expect(screen.queryByText(/^Fonte:/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Enviar feedback' })).not.toBeInTheDocument();
   });
 

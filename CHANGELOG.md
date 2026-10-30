@@ -5,7 +5,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 ## [Unreleased]
 
 ### Changed
-- Assistente de ajuda: quando a documentação cobre a pergunta, a resposta principal é o trecho mais relevante (texto direto), com uma única fonte citada — em vez de “Encontrei N trechos” e vários cards repetindo o excerpt (#99).
+- Assistente de ajuda: quando a documentação cobre a pergunta, a UI mostra só o trecho mais relevante como resposta (texto direto), sem legenda de fonte nem cards de excerpt — em vez de “Encontrei N trechos” (#99).
 
 ### Added
 - **Assistente de ajuda** baseado na documentação (#80): chat flutuante (FAB) no canto inferior direito do painel da clínica e do `/admin`, minimizado por padrão. `POST /api/assistant/ask` (autenticado, 20/min) busca por BM25 (sem acento, stopwords e radical por prefixo) em trechos dos markdown versionados — cada parágrafo ou item de lista com o caminho de títulos — e devolve até 3 trechos com fonte (`arquivo › seção`); não gera texto, então não inventa. Só responde quando o trecho cobre ≥ 60% dos termos da pergunta; senão admite que a documentação não cobre e, na clínica, oferece **Enviar feedback**. Corpus: clínica (e super-admin "entrando como") só `RELEASE_NOTES.md`; super-admin no `/admin` também `README.md` e `AGENTS.md`. Nenhum dado de paciente ou da agenda entra na busca. Os arquivos são lidos da raiz do repositório (pai de `backend/`, como no Render) ou de `ASSISTANT_DOCS_DIR`, uma vez por processo.
