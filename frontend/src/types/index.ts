@@ -282,6 +282,26 @@ export interface PatientPhoto {
   } | null;
 }
 
+export interface PatientMeasurement {
+  id: string;
+  patientId: string;
+  appointmentId?: string | null;
+  measuredAt: string;
+  weightKg: number | null;
+  heightCm: number | null;
+  waistCm: number | null;
+  abdomenCm: number | null;
+  hipCm: number | null;
+  notes?: string | null;
+  createdAt: string;
+  appointment?: {
+    id: string;
+    startAt: string;
+    kind?: AppointmentKind;
+    procedure?: { name: string } | null;
+  } | null;
+}
+
 export interface Procedure {
   id: string;
   name: string;

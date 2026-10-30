@@ -99,6 +99,8 @@ export function AnamnesisFormDialog({ open, onClose, patientId }: AnamnesisFormD
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       queryClient.invalidateQueries({ queryKey: ['patient', patientId] });
+      // Peso/altura alterados viram um registro no histórico de medidas
+      queryClient.invalidateQueries({ queryKey: ['patient-measurements', patientId] });
       toast.success('Anamnese salva.');
       onClose();
     },
