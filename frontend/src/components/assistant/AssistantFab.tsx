@@ -75,6 +75,23 @@ export function AssistantFab({ suggestions, canSendFeedback = false }: Props) {
     send(question);
   };
 
+  const resetSession = () => {
+    setMessages([]);
+    setQuestion('');
+    nextId.current = 0;
+    ask.reset();
+  };
+
+  const minimize = () => {
+    resetSession();
+    setExpanded(false);
+  };
+
+  const toggleFab = () => {
+    if (expanded) minimize();
+    else setExpanded(true);
+  };
+
   return (
     <>
       <Box
@@ -124,7 +141,7 @@ export function AssistantFab({ suggestions, canSendFeedback = false }: Props) {
                   Responde com base na documentação
                 </Typography>
               </Box>
-              <DialogCloseButton onClose={() => setExpanded(false)} aria-label="Minimizar assistente" />
+              <DialogCloseButton onClose={minimize} aria-label="Minimizar assistente" />
             </Stack>
 
             <Box ref={listRef} sx={{ flex: 1, overflowY: 'auto', px: 2, py: 1.5, minHeight: 0 }} aria-live="polite">
@@ -255,7 +272,7 @@ export function AssistantFab({ suggestions, canSendFeedback = false }: Props) {
           color="primary"
           aria-label={expanded ? 'Minimizar assistente' : 'Abrir assistente'}
           aria-expanded={expanded}
-          onClick={() => setExpanded((v) => !v)}
+          onClick={toggleFab}
           sx={{
             width: 44,
             height: 44,

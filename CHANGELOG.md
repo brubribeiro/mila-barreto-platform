@@ -23,7 +23,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - KPIs no topo das listagens: `StatCard` com altura mínima uniforme; Metas e Documentos alinhados a Pacientes, Financeiro, Estoque e Equipamentos (Pacientes passa a usar `StatCard`).
 
 ### Fixed
-- Assistente (FAB): campo de pergunta e botão enviar com a mesma altura (~40px) e alinhamento na barra inferior do painel.
+- Assistente (FAB): campo de pergunta e botão enviar com a mesma altura (~40px) e alinhamento na barra inferior do painel; ao minimizar, limpa histórico e pergunta em digitação (não persiste entre aberturas).
 - Meu plano: botão **Solicitar upgrade** abre feedback (sugestão) pré-preenchido para a central `/admin/reports`, sem mailto nem menção a variáveis de ambiente na UI.
 - Migration `20261026223000_tenant_profile_fields`: `ALTER TABLE` apontava para `"Tenant"` em vez da tabela mapeada `"tenants"`, quebrando `prisma migrate deploy` em banco limpo (Fixes #98).
 - Backend: `provisionTenant` tipa o payload como `TenantUncheckedCreateInput`, permitindo `planId` escalar na criação de clínica pelo super-admin.
