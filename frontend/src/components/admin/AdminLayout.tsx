@@ -17,6 +17,7 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
       { label: 'Planos', path: '/admin/planos', icon: <AuroraIcon name="pacotes" /> },
       { label: 'Catálogos', path: '/admin/catalogos', icon: <AuroraIcon name="documentos" /> },
       { label: 'Uso', path: '/admin/uso', icon: <AuroraIcon name="relatorios" /> },
+      { label: 'Saúde da API', path: '/admin/saude', icon: <AuroraIcon name="eye" /> },
       { label: 'Reports', path: '/admin/reports', icon: <AuroraIcon name="feedback" /> },
       { label: 'Anúncios', path: '/admin/anuncios', icon: <AuroraIcon name="bell" /> },
       { label: 'Auditoria', path: '/admin/auditoria', icon: <AuroraIcon name="clock" /> },
@@ -36,6 +37,11 @@ const ADMIN_PAGE_META: { path: string; title: string; subtitle: string }[] = [
     path: '/admin/uso',
     title: 'Uso por funcionalidade',
     subtitle: 'Uso dos módulos por clínica e no total (só contagens, sem dados clínicos)',
+  },
+  {
+    path: '/admin/saude',
+    title: 'Saúde da API',
+    subtitle: 'Erros 5xx e rotas lentas das requisições (agregado por hora, guardado por 30 dias)',
   },
   {
     path: '/admin/reports',

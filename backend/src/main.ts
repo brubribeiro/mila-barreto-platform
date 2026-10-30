@@ -1,10 +1,10 @@
-import { NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
-import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
+import { ApiErrorFilter } from './observability/api-error.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -44,7 +44,8 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new PrismaExceptionFilter());
+  // Erros do Prisma seguem no PrismaExceptionFilter (o ApiErrorFilter delega)
+  app.useGlobalFilters(new ApiErrorFilter(app.get(HttpAdapterHost).httpAdapter));
 
   const corsOrigin = config.get<string>('CORS_ORIGIN', 'http://localhost:5173');
 

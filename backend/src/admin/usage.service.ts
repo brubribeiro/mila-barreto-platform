@@ -8,6 +8,7 @@ import {
   type PlatformFeature,
 } from '../common/platform-features';
 import { TenantContext } from '../tenancy/tenant-context';
+import { featureFromRoute } from '../observability/route-feature';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -135,7 +136,7 @@ export class UsageService {
           _count: { _all: true },
         });
 
-      const [moduleCounts, activeUsers, accessedUsers, lastAccess, documents, photos] = await Promise.all([
+      const [moduleCounts, activeUsers, accessedUsers, lastAccess, documents, photos, routeRequests] = await Promise.all([
         Promise.all(
           sources.map(async (s) => {
             const [inPeriod, total] = await Promise.all([
@@ -164,6 +165,12 @@ export class UsageService {
           _sum: { size: true },
           _count: { _all: true },
         }),
+        // Requisições à API no período (medidas desde a observabilidade, issue #84)
+        this.prisma.apiRouteMetric.groupBy({
+          by: ['route'],
+          where: { hour: period, ...(params.tenantId ? { tenantKey: params.tenantId } : {}) },
+          _sum: { count: true },
+        }),
       ]);
 
       const countsByKey = new Map(moduleCounts.map((c) => [c.key, c]));
@@ -172,6 +179,11 @@ export class UsageService {
       const lastAccessBy = new Map(lastAccess.map((r) => [r.tenantId, r._max.lastAccessAt]));
       const documentsBy = new Map(documents.map((r) => [r.tenantId, r]));
       const photosBy = new Map(photos.map((r) => [r.tenantId, r]));
+      const requestsBy = new Map<PlatformFeature, number>();
+      for (const r of routeRequests) {
+        const feature = featureFromRoute(r.route);
+        if (feature) requestsBy.set(feature, (requestsBy.get(feature) ?? 0) + (r._sum.count ?? 0));
+      }
 
       const tenantRows = tenants.map(({ plan, featuresExtra, featuresDenied, planId, ...tenant }) => {
         const features = featuresFromTenant({ planId, featuresExtra, featuresDenied, plan });
@@ -220,6 +232,7 @@ export class UsageService {
           activeTenants,
           periodCount,
           totalCount,
+          requests: requestsBy.get(key) ?? 0,
         };
       });
 

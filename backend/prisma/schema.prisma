@@ -84,6 +84,7 @@ model Tenant {
   skincareRoutines        SkincareRoutine[]
   feedbackReports         FeedbackReport[]
   platformAuditLogs       PlatformAuditLog[]
+  apiRequestErrors        ApiRequestError[]
 
   @@index([planId])
   @@map("tenants")
@@ -133,6 +134,56 @@ model PlatformAuditLog {
   @@index([targetTenantId])
   @@index([createdAt])
   @@map("platform_audit_logs")
+}
+
+// Observabilidade da API (painel super-admin): contagens e latência por hora e rota.
+// Sem tenantId (não é dado de clínica) e sem nada da requisição além do padrão da rota.
+model ApiRouteMetric {
+  id         String   @id @default(uuid())
+  // Início da hora (UTC)
+  hour       DateTime
+  method     String
+  // Padrão da rota (/api/patients/:id), nunca a URL com ids
+  route      String
+  // Clínica da requisição; "" = sem clínica (login, super-admin, público)
+  tenantKey  String   @default("")
+  count      Int      @default(0)
+  // Respostas 4xx e 5xx
+  clientErrors Int    @default(0)
+  serverErrors Int    @default(0)
+  totalMs    Float    @default(0)
+  maxMs      Int      @default(0)
+  // Histograma de duração (requisições por faixa, em ms) para estimar o p95
+  le50       Int      @default(0)
+  le100      Int      @default(0)
+  le250      Int      @default(0)
+  le500      Int      @default(0)
+  le1000     Int      @default(0)
+  le2500     Int      @default(0)
+  le5000     Int      @default(0)
+  gt5000     Int      @default(0)
+
+  @@unique([hour, method, route, tenantKey])
+  @@index([hour])
+  @@map("api_route_metrics")
+}
+
+// Últimos erros 5xx da API (painel super-admin). Só o tipo e a 1ª linha da mensagem, sem corpo nem parâmetros.
+model ApiRequestError {
+  id             String   @id @default(uuid())
+  method         String
+  route          String
+  statusCode     Int
+  durationMs     Int
+  errorName      String?
+  message        String?
+  targetTenantId String?
+  createdAt      DateTime @default(now())
+
+  targetTenant Tenant? @relation(fields: [targetTenantId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@map("api_request_errors")
 }
 
 enum AnnouncementKind {

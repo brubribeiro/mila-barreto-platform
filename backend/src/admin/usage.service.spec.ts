@@ -68,6 +68,13 @@ describe('UsageService', () => {
       patientPhoto: {
         groupBy: jest.fn().mockResolvedValue([{ tenantId: 't1', _sum: { size: null }, _count: { _all: 1 } }]),
       },
+      apiRouteMetric: {
+        groupBy: jest.fn().mockResolvedValue([
+          { route: '/api/metrics/summary', _sum: { count: 7 } },
+          { route: '/api/skincare/routines/:id', _sum: { count: 2 } },
+          { route: '/api/auth/me', _sum: { count: 9 } },
+        ]),
+      },
     };
     for (const source of Object.values(MODULE_USAGE_SOURCES)) {
       if (source && !prisma[source.model]) prisma[source.model] = { groupBy: jest.fn().mockResolvedValue([]) };
@@ -105,6 +112,10 @@ describe('UsageService', () => {
     expect(inventory.enabledTenants).toBe(1); // negado em t1
     const metrics = result.modules.find((m) => m.key === 'metrics')!;
     expect(metrics).toMatchObject({ metricLabel: null, periodCount: null, totalCount: null, activeTenants: null });
+    // Requisições à API por módulo (rotas da plataforma, como /auth, ficam de fora)
+    expect(metrics.requests).toBe(7);
+    expect(result.modules.find((m) => m.key === 'routines')!.requests).toBe(2);
+    expect(appointments.requests).toBe(0);
 
     const [t1, t2] = result.tenants;
     expect(t1).toMatchObject({
@@ -138,6 +149,7 @@ describe('UsageService', () => {
     expect(prisma.tenant.findMany.mock.calls[0][0].where).toEqual({ id: 't1' });
     for (const call of prisma.appointment.groupBy.mock.calls) expect(call[0].where.tenantId).toBe('t1');
     for (const call of prisma.document.groupBy.mock.calls) expect(call[0].where.tenantId).toBe('t1');
+    expect(prisma.apiRouteMetric.groupBy.mock.calls[0][0].where.tenantKey).toBe('t1');
     expect(prisma.patientPhoto.groupBy.mock.calls[0][0].where).toEqual({ tenantId: 't1' });
   });
 
