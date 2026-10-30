@@ -359,8 +359,8 @@ export function PlanFormDialog({ open, onClose, editing }: Props) {
           </FormSection>
 
           <Alert severity="info" variant="outlined" sx={{ mt: 2.25, py: 0.75 }}>
-            O preço é só referência. Os limites ainda não bloqueiam nada; os módulos sim — o app esconde e a API
-            recusa o que não estiver no plano (ou nos extras da clínica).
+            O preço é só referência. Limites e módulos são aplicados: a API recusa novos usuários ativos, pacientes e
+            uploads além do limite, e o app esconde o que não estiver no plano (ou nos extras da clínica).
           </Alert>
 
           {saveMutation.error && (

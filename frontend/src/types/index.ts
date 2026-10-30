@@ -47,7 +47,7 @@ export interface AdminTenantMetrics {
   lastAccessAt: string | null;
 }
 
-/** Limites informativos do plano (ausente = ilimitado). */
+/** Limites do plano, aplicados pela API (ausente = ilimitado). */
 export interface PlanLimits {
   maxUsers?: number;
   maxPatients?: number;

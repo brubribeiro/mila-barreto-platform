@@ -8,6 +8,7 @@ import { CompressionService } from './compression.service';
 import { AuditLogService, AuditUser } from '../audit-log/audit-log.service';
 import { assertAllowedFileContent } from '../common/utils/file-magic.util';
 import { DOCUMENT_ALLOWED_MIMES } from './upload-allowlist';
+import { PlanLimitsService } from '../plan-limits/plan-limits.service';
 
 export class CreateDocumentDto {
   @IsString()
@@ -114,6 +115,7 @@ export class DocumentsService {
     private readonly r2: R2StorageService,
     private readonly compression: CompressionService,
     private readonly auditLog: AuditLogService,
+    private readonly planLimits: PlanLimitsService,
   ) {}
 
   /** Lista sem o texto gerado (pode ser longo); `hasContent` indica se há texto para visualizar. */
@@ -243,6 +245,7 @@ export class DocumentsService {
     const before = await this.findOneRaw(id);
     const mimeType = assertAllowedFileContent(file.buffer, file.mimetype, DOCUMENT_ALLOWED_MIMES);
     const compressed = await this.compression.compress(file.buffer, mimeType);
+    await this.planLimits.assertStorageAvailable(compressed.compressedSize, before.storageKey ? (before.size ?? 0) : 0);
     const subfolder = before.patient
       ? `pacientes/${slug(before.patient.name)}`
       : before.equipment
@@ -317,6 +320,7 @@ export class DocumentsService {
 
     const mimeType = assertAllowedFileContent(file.buffer, file.mimetype, DOCUMENT_ALLOWED_MIMES);
     const compressed = await this.compression.compress(file.buffer, mimeType);
+    await this.planLimits.assertStorageAvailable(compressed.compressedSize);
 
     const { key } = await this.r2.upload(
       dto.name || file.originalname,

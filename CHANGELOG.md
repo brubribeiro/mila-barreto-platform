@@ -6,8 +6,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ### Added
 - Tour guiado por tela (Agenda, Pacientes, Financeiro): abre sozinho na primeira visita de cada tela e reabre pelo botão “Como funciona?” do header. Concluir ou dispensar (Pular, fechar, Esc) grava `mila.tourSeen.<userId>.<tela>` no `localStorage`, então não volta sozinho. Componente próprio (`components/tour/GuidedTour`, sem dependência nova) destaca elementos marcados com `data-tour`; passos cujo elemento não está na tela (sem permissão, sem dados, escondido no celular) são pulados. Teclado: setas avançam/voltam, Esc fecha (#70).
+- Métricas (`/metricas`): botão "Exportar CSV" ao lado das abas baixa o período filtrado (KPIs do resumo, atual e anterior) e as séries da aba ativa, em formato longo `Seção,Item,Indicador,Valor`; gerado no client a partir de `useMetricsData`, desabilitado enquanto o novo período carrega (#63).
 - Clínica — **Meu plano** (`/meu-plano`, admin): nome do plano, uso vs limites informativos (usuários, pacientes, armazenamento), módulos ativos e CTA de contato para upgrade; `GET /tenant/plan` (#64).
 - Formas de pagamento: tipo (dinheiro, PIX, débito, crédito) e prazo de recebimento; lançamentos e conclusão de agendamento com parcelas, bandeira e NSU/autorização opcionais (#57).
+- Limites do plano aplicados na API (#61): criar/reativar usuário ativo, criar paciente e enviar documento ou foto "antes e depois" além de `maxUsers` / `maxPatients` / `storageGb` responde 403 com mensagem em português. Clínica sem plano segue sem limite. A contagem é a mesma do "Meu plano" (`GET /api/tenant/plan`), cujo texto deixa de dizer que os limites são informativos.
 - Documentos: ação "Enviar ao paciente" (menu da lista, visualizador e aba Documentos da ficha) abre WhatsApp (`wa.me`) ou e-mail (`mailto`) com mensagem e, opcionalmente, o texto do documento; contato vem da ficha (`GET /documents/:id` inclui `patient.phone`/`patient.email`), com aviso quando falta; documento Pendente passa a Enviado ao abrir o envio. Pendência "Documento sem assinatura" leva à lista já filtrada pelo documento (#60).
 
 ### Fixed
