@@ -562,6 +562,8 @@ enum NotificationType {
   EQUIPMENT_MAINTENANCE
   // Novidades/correções enviadas pelo super-admin (PlatformAnnouncement)
   PLATFORM_ANNOUNCEMENT
+  // Report de bug/sugestão finalizado no /admin
+  FEEDBACK_CLOSED
 }
 
 model Notification {

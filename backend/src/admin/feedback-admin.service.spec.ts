@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 
 import { FeedbackAdminService } from './feedback-admin.service';
 import { TenantContext } from '../tenancy/tenant-context';
+import { NotificationsService } from '../notifications/notifications.service';
 
 describe('FeedbackAdminService', () => {
   const actor = { id: 'root-1', name: 'Dono', email: 'root@platform.dev', isSuperAdmin: true } as any;
@@ -19,6 +20,7 @@ describe('FeedbackAdminService', () => {
   };
 
   let prisma: any;
+  let notifications: jest.Mocked<Pick<NotificationsService, 'notifyMany'>>;
   let service: FeedbackAdminService;
 
   beforeEach(() => {
@@ -34,8 +36,13 @@ describe('FeedbackAdminService', () => {
         update: jest.fn(),
       },
       platformAuditLog: { create: jest.fn() },
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'u1', active: true }),
+        findMany: jest.fn(),
+      },
     };
-    service = new FeedbackAdminService(prisma);
+    notifications = { notifyMany: jest.fn().mockResolvedValue(undefined) };
+    service = new FeedbackAdminService(prisma, notifications as unknown as NotificationsService);
   });
 
   describe('list', () => {
@@ -98,9 +105,11 @@ describe('FeedbackAdminService', () => {
     it('muda o status e audita com a clínica alvo', async () => {
       prisma.feedbackReport.findUnique.mockResolvedValue(report);
       prisma.feedbackReport.update.mockResolvedValue({ ...report, status: 'CLOSED' });
+      const tenantSpy = jest.spyOn(TenantContext, 'run').mockImplementation((_id, fn) => fn());
 
       const result = await service.setStatus('fb-1', 'CLOSED' as any, actor);
 
+      tenantSpy.mockRestore();
       expect(result.status).toBe('CLOSED');
       expect(prisma.feedbackReport.update.mock.calls[0][0]).toMatchObject({
         where: { id: 'fb-1' },
@@ -113,6 +122,36 @@ describe('FeedbackAdminService', () => {
         targetName: 'Clínica Um',
         details: { feedbackId: 'fb-1', type: 'BUG', title: 'Botão não salva', old: 'OPEN', new: 'CLOSED' },
       });
+      expect(notifications.notifyMany).toHaveBeenCalledWith(
+        ['u1'],
+        expect.objectContaining({
+          type: 'FEEDBACK_CLOSED',
+          title: 'Bug concluído',
+          message: '"Botão não salva" foi finalizado pela equipe da plataforma.',
+          link: '/procedimentos',
+        }),
+      );
+    });
+
+    it('CLOSED com reportador inativo: notifica admins da clínica', async () => {
+      prisma.feedbackReport.findUnique.mockResolvedValue(report);
+      prisma.feedbackReport.update.mockResolvedValue({ ...report, status: 'CLOSED' });
+      prisma.user.findUnique.mockResolvedValue({ id: 'u1', active: false });
+      prisma.user.findMany.mockResolvedValue([{ id: 'admin-1' }, { id: 'admin-2' }]);
+      jest.spyOn(TenantContext, 'run').mockImplementation((_id, fn) => fn());
+
+      await service.setStatus('fb-1', 'CLOSED' as any, actor);
+
+      expect(notifications.notifyMany).toHaveBeenCalledWith(['admin-1', 'admin-2'], expect.any(Object));
+    });
+
+    it('TRIAGED: não notifica a clínica', async () => {
+      prisma.feedbackReport.findUnique.mockResolvedValue(report);
+      prisma.feedbackReport.update.mockResolvedValue({ ...report, status: 'TRIAGED' });
+
+      await service.setStatus('fb-1', 'TRIAGED' as any, actor);
+
+      expect(notifications.notifyMany).not.toHaveBeenCalled();
     });
 
     it('mesmo status: não grava nem audita', async () => {
