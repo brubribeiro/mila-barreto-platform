@@ -78,6 +78,12 @@ const DOC_INCLUDE = {
   template: { select: { id: true, name: true } },
 } satisfies Prisma.DocumentInclude;
 
+/** Detalhe: inclui o contato do paciente para "Enviar ao paciente". */
+const DOC_DETAIL_INCLUDE = {
+  ...DOC_INCLUDE,
+  patient: { select: { id: true, name: true, phone: true, email: true } },
+} satisfies Prisma.DocumentInclude;
+
 const TZ = 'America/Sao_Paulo';
 
 function fmtDate(value: Date, timeZone = TZ) {
@@ -126,7 +132,7 @@ export class DocumentsService {
   async findOne(id: string) {
     const d = await this.prisma.document.findUnique({
       where: { id },
-      include: DOC_INCLUDE,
+      include: DOC_DETAIL_INCLUDE,
     });
     if (!d) throw new NotFoundException('Documento não encontrado');
     // Resposta ao cliente: nunca devolver fileUrl pública persistida (usar getAccessUrl).
