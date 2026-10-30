@@ -59,3 +59,24 @@ const dateFormatter = new Intl.DateTimeFormat('en-CA', {
 export function toBrazilDateAtUtcNoon(date: Date): Date {
   return new Date(`${dateFormatter.format(date)}T12:00:00.000Z`);
 }
+
+/** Data civil no fuso do Brasil (YYYY-MM-DD + partes numéricas). */
+export function getBrazilYmd(date: Date = new Date()): { y: number; m: number; d: number; iso: string } {
+  const iso = dateFormatter.format(date);
+  const [y, m, d] = iso.split('-').map(Number);
+  return { y, m, d, iso };
+}
+
+/** Início e fim do dia civil no Brasil (ISO YYYY-MM-DD) como instantes UTC. */
+export function brazilDayBoundsUtc(isoDate: string): { from: Date; to: Date } {
+  return {
+    from: new Date(`${isoDate}T00:00:00-03:00`),
+    to: new Date(`${isoDate}T23:59:59.999-03:00`),
+  };
+}
+
+export function addDaysToIsoDate(isoDate: string, days: number): string {
+  const base = new Date(`${isoDate}T12:00:00-03:00`);
+  base.setUTCDate(base.getUTCDate() + days);
+  return dateFormatter.format(base);
+}

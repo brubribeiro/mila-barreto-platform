@@ -13,6 +13,7 @@ const defaultUsers = [
   { name: 'Recepção', email: 'recepcao@mila.com', password: 'rec123', roleName: 'Recepção', providesAppointments: false },
 ];
 
+/** Modelos demo com gatilhos — o scheduler (1h) enfileira envios em `message_dispatches` quando ativos. */
 const defaultTemplates = [
   {
     name: 'Confirmação de agendamento',

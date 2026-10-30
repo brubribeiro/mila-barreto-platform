@@ -18,6 +18,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { MessageTemplateFormDialog } from '../components/messages/MessageTemplateFormDialog';
+import { PendingWhatsAppDispatches } from '../components/messages/PendingWhatsAppDispatches';
 import { WhatsAppPreview } from '../components/messages/WhatsAppPreview';
 import { VariableChip } from '../components/messages/VariableChip';
 import {
@@ -239,6 +240,7 @@ export function Messages() {
 
   return (
     <Box>
+      <PendingWhatsAppDispatches />
       <Box
         sx={{
           display: 'grid',
