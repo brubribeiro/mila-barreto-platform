@@ -37,7 +37,13 @@ import { PatientDetailDrawer } from '../patients/PatientDetailDrawer';
 import { SkinAnamnesisDialog } from '../skincare/SkinAnamnesisDialog';
 import { varsFromAppointment } from '../../utils/whatsapp';
 import { getApiErrorMessage } from '../../utils/apiError';
-import type { Appointment, Package, PaymentMethodEntry, Procedure } from '../../types';
+import type {
+  ApplicationMapPoint,
+  Appointment,
+  Package,
+  PaymentMethodEntry,
+  Procedure,
+} from '../../types';
 import {
   invalidateAppointmentListQueries,
   isAppointmentListQuery,
@@ -49,12 +55,14 @@ import {
   emptyFormValues,
   formatElapsed,
   kindOptions,
+  normalizeApplicationMapPoints,
   normalizeExtraMaterials,
   type ExtraMaterialRow,
   type FormValues,
   type SectionKey,
 } from './appointmentFormModel';
 import type { SectionState } from './AppointmentFormSection';
+import { ApplicationMapSection } from './ApplicationMapSection';
 import { AppointmentStatusSelect } from './AppointmentStatusSelect';
 import {
   AppointmentSummaryBar,
@@ -86,7 +94,15 @@ interface AppointmentFormDialogProps {
   defaultPatientId?: string | null;
 }
 
-const SECTION_ORDER: SectionKey[] = ['patient', 'service', 'schedule', 'package', 'materials', 'notes'];
+const SECTION_ORDER: SectionKey[] = [
+  'patient',
+  'service',
+  'schedule',
+  'package',
+  'materials',
+  'applicationMap',
+  'notes',
+];
 
 const DEFAULT_EXPANDED: Record<SectionKey, boolean> = {
   patient: true,
@@ -94,6 +110,7 @@ const DEFAULT_EXPANDED: Record<SectionKey, boolean> = {
   schedule: true,
   package: false,
   materials: false,
+  applicationMap: false,
   notes: false,
 };
 
@@ -139,6 +156,8 @@ export function AppointmentFormDialog({
   const [batchTarget, setBatchTarget] = useState<BatchTarget | null>(null);
   /** Materiais extras como estavam ao abrir, para detectar alterações não salvas. */
   const initialExtrasRef = useRef('[]');
+  const [mapPoints, setMapPoints] = useState<ApplicationMapPoint[]>([]);
+  const [initialMapPoints, setInitialMapPoints] = useState<ApplicationMapPoint[]>([]);
   // Só habilita a busca de profissionais depois que o formulário foi inicializado
   // com os valores reais (reset), evitando uma requisição extra com o horário padrão.
   const [formInitialized, setFormInitialized] = useState(false);
@@ -203,6 +222,7 @@ export function AppointmentFormDialog({
       ...DEFAULT_EXPANDED,
       package: !!appointment?.patientPackageId,
       materials: !!appointment?.extraMaterials?.length,
+      applicationMap: appointment?.status === 'IN_PROGRESS' || !!appointment?.applicationMap?.points?.length,
       notes: !!(appointment?.notes?.trim() || appointment?.clinicalNotes?.trim()),
     });
     setFormInitialized(true);
@@ -222,6 +242,13 @@ export function AppointmentFormDialog({
       initialExtrasRef.current = '[]';
       setExtraMaterials([]);
     }
+  }, [open, appointment, appointmentDetail]);
+
+  useEffect(() => {
+    if (!open) return;
+    const points = (appointmentDetail ?? appointment)?.applicationMap?.points ?? [];
+    setMapPoints(points);
+    setInitialMapPoints(points);
   }, [open, appointment, appointmentDetail]);
 
   const selectedKind = watch('kind');
@@ -265,6 +292,13 @@ export function AppointmentFormDialog({
   }, [open, selectedKind, procedureOptions, getValues, setValue]);
 
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
+
+  // Mapa de aplicação: só ao editar; mantém visível se já houver pontos salvos
+  // mesmo que o procedimento tenha deixado de usar o mapa.
+  const showApplicationMap =
+    !!appointment &&
+    selectedKind === 'PROCEDURE' &&
+    (!!selectedProcedure?.applicationMap || initialMapPoints.length > 0);
 
   const { data: activePatientPackages = [] } = useQuery({
     queryKey: ['patient-packages-active', selectedPatientId],
@@ -455,9 +489,16 @@ export function AppointmentFormDialog({
     [extraMaterials],
   );
 
+  const normalizedMapPoints = useMemo(() => normalizeApplicationMapPoints(mapPoints), [mapPoints]);
+  const mapChanged =
+    showApplicationMap &&
+    JSON.stringify(normalizedMapPoints) !==
+      JSON.stringify(normalizeApplicationMapPoints(initialMapPoints));
+
   const hasUnsavedChanges =
     isDirty ||
     JSON.stringify(normalizedExtraMaterials) !== initialExtrasRef.current ||
+    mapChanged ||
     selectedPackageId !== (appointment?.patientPackageId ?? '');
 
   const deleteMutation = useMutation({
@@ -539,6 +580,9 @@ export function AppointmentFormDialog({
         ...(procedureId ? { procedureId } : {}),
         ...(selectedPackageId ? { patientPackageId: selectedPackageId } : {}),
         ...(normalizedExtraMaterials.length > 0 ? { extraMaterials: normalizedExtraMaterials } : {}),
+        ...(appointment && mapChanged
+          ? { applicationMap: { template: 'face' as const, points: normalizedMapPoints } }
+          : {}),
       };
       return appointment
         ? appointmentsApi.update(appointment.id, payload)
@@ -677,11 +721,13 @@ export function AppointmentFormDialog({
     schedule: errors.date || errors.startTime || !slotValid ? 'error' : 'complete',
     package: selectedPatientPkg ? 'complete' : 'pending',
     materials: materialsEnabled ? (stockBlocksSave ? 'error' : 'complete') : 'pending',
+    applicationMap: mapPoints.length > 0 ? 'complete' : 'pending',
     notes: notes.trim() || clinicalNotes.trim() ? 'complete' : 'pending',
   };
 
+  const visibleSections = SECTION_ORDER.filter((key) => key !== 'applicationMap' || showApplicationMap);
   const section = (key: SectionKey) => ({
-    step: SECTION_ORDER.indexOf(key) + 1,
+    step: visibleSections.indexOf(key) + 1,
     expanded: expanded[key],
     onToggle: () => setExpanded((prev) => ({ ...prev, [key]: !prev[key] })),
     state: sectionStates[key],
@@ -853,6 +899,13 @@ export function AppointmentFormDialog({
                   willDeductMaterials={willDeductMaterials}
                   materialsState={materialsState}
                 />
+                {showApplicationMap && (
+                  <ApplicationMapSection
+                    section={section('applicationMap')}
+                    points={mapPoints}
+                    setPoints={setMapPoints}
+                  />
+                )}
                 <NotesSection
                   section={section('notes')}
                   control={control}

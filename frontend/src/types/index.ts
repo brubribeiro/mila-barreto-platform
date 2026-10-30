@@ -366,8 +366,22 @@ export interface Appointment {
     paymentMethod?: { name: string } | null;
   }[];
   extraMaterials?: AppointmentMaterial[];
+  /** Pontos marcados no atendimento quando o procedimento usa mapa de aplicação. */
+  applicationMap?: ApplicationMap | null;
   startedAt?: string | null;
   finishedAt?: string | null;
+}
+
+/** Ponto do mapa de aplicação; x/y em % da largura/altura do desenho. */
+export interface ApplicationMapPoint {
+  x: number;
+  y: number;
+  note?: string;
+}
+
+export interface ApplicationMap {
+  template: 'face';
+  points: ApplicationMapPoint[];
 }
 
 export type PackageType = 'COMBO' | 'SESSIONS';

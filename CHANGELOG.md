@@ -5,6 +5,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 ## [Unreleased]
 
 ### Added
+- Atendimento — **Mapa de aplicação**: no agendamento cujo procedimento tem `applicationMap`, seção para marcar pontos num diagrama do rosto com produto/dose por ponto; snapshot salvo em `Appointment.applicationMap` (JSONB, migration `20261030140000_appointment_application_map`) via `PATCH /appointments/:id` (`applicationMap: { template: 'face', points: [{ x, y, note? }] }`, x/y em %; lista vazia apaga). A ficha do paciente (página e drawer, aba Agendamentos) mostra o mapa de cada atendimento (#52).
 - Clínica — **Meu plano** (`/meu-plano`, admin): nome do plano, uso vs limites informativos (usuários, pacientes, armazenamento), módulos ativos e CTA de contato para upgrade; `GET /tenant/plan` (#64).
 - Formas de pagamento: tipo (dinheiro, PIX, débito, crédito) e prazo de recebimento; lançamentos e conclusão de agendamento com parcelas, bandeira e NSU/autorização opcionais (#57).
 - Documentos: ação "Enviar ao paciente" (menu da lista, visualizador e aba Documentos da ficha) abre WhatsApp (`wa.me`) ou e-mail (`mailto`) com mensagem e, opcionalmente, o texto do documento; contato vem da ficha (`GET /documents/:id` inclui `patient.phone`/`patient.email`), com aviso quando falta; documento Pendente passa a Enviado ao abrir o envio. Pendência "Documento sem assinatura" leva à lista já filtrada pelo documento (#60).
