@@ -5,6 +5,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 ## [Unreleased]
 
 ### Added
+- Clínica — **Meu plano** (`/meu-plano`, admin): nome do plano, uso vs limites informativos (usuários, pacientes, armazenamento), módulos ativos e CTA de contato para upgrade; `GET /tenant/plan` (#64).
 - Formas de pagamento: tipo (dinheiro, PIX, débito, crédito) e prazo de recebimento; lançamentos e conclusão de agendamento com parcelas, bandeira e NSU/autorização opcionais (#57).
 - Documentos: ação "Enviar ao paciente" (menu da lista, visualizador e aba Documentos da ficha) abre WhatsApp (`wa.me`) ou e-mail (`mailto`) com mensagem e, opcionalmente, o texto do documento; contato vem da ficha (`GET /documents/:id` inclui `patient.phone`/`patient.email`), com aviso quando falta; documento Pendente passa a Enviado ao abrir o envio. Pendência "Documento sem assinatura" leva à lista já filtrada pelo documento (#60).
 
