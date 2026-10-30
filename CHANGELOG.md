@@ -19,8 +19,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Limites do plano aplicados na API (#61): criar/reativar usuário ativo, criar paciente e enviar documento ou foto "antes e depois" além de `maxUsers` / `maxPatients` / `storageGb` responde 403 com mensagem em português. Clínica sem plano segue sem limite. A contagem é a mesma do "Meu plano" (`GET /api/tenant/plan`), cujo texto deixa de dizer que os limites são informativos.
 - Documentos: ação "Enviar ao paciente" (menu da lista, visualizador e aba Documentos da ficha) abre WhatsApp (`wa.me`) ou e-mail (`mailto`) com mensagem e, opcionalmente, o texto do documento; contato vem da ficha (`GET /documents/:id` inclui `patient.phone`/`patient.email`), com aviso quando falta; documento Pendente passa a Enviado ao abrir o envio. Pendência "Documento sem assinatura" leva à lista já filtrada pelo documento (#60).
 
+### Changed
+- KPIs no topo das listagens: `StatCard` com altura mínima uniforme; Metas e Documentos alinhados a Pacientes, Financeiro, Estoque e Equipamentos (Pacientes passa a usar `StatCard`).
+
 ### Fixed
 - Assistente (FAB): campo de pergunta e botão enviar com a mesma altura (~40px) e alinhamento na barra inferior do painel.
+- Meu plano: botão **Solicitar upgrade** abre feedback (sugestão) pré-preenchido para a central `/admin/reports`, sem mailto nem menção a variáveis de ambiente na UI.
 - Migration `20261026223000_tenant_profile_fields`: `ALTER TABLE` apontava para `"Tenant"` em vez da tabela mapeada `"tenants"`, quebrando `prisma migrate deploy` em banco limpo (Fixes #98).
 - Backend: `provisionTenant` tipa o payload como `TenantUncheckedCreateInput`, permitindo `planId` escalar na criação de clínica pelo super-admin.
 - Anamnese: IMC aceita vírgula decimal e altura em metros (fichas importadas com `"1,73"` mostravam IMC 710000).

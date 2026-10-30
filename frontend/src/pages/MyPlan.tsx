@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -5,23 +6,21 @@ import {
   Card,
   Chip,
   LinearProgress,
-  Link,
   Skeleton,
   Stack,
   Typography,
   alpha,
   useTheme,
 } from '@mui/material';
-import MailOutlineIcon from '@mui/icons-material/MailOutline';
+import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
 import { useQuery } from '@tanstack/react-query';
 
 import { tenantPlanApi } from '../api/tenantPlan';
 import { formatBytes } from '../components/admin/adminUi';
+import { FeedbackReportDialog } from '../components/feedback/FeedbackReportDialog';
 import { PLATFORM_FEATURE_LABELS, formatPlanPrice, isPlatformFeature } from '../features/platformFeatures';
 import { getApiErrorMessage } from '../utils/apiError';
 import { fontSizes } from '../theme/fontSizes';
-
-const adminEmail = import.meta.env.VITE_ADMIN_CONTACT_EMAIL?.trim() ?? '';
 
 const SECTION_TITLE_SX = {
   px: 2.5,
@@ -93,23 +92,55 @@ function LimitRow({
 
 const GB = 1024 ** 3;
 
-/** Plano da clínica, consumo vs limites e contato para upgrade. */
+function buildUpgradeFeedbackDescription(planName: string, usage?: {
+  activeUsers: number;
+  patients: number;
+  storageBytes: number;
+}): string {
+  const lines = [
+    'Gostaria de ampliar limites do plano, incluir módulos ou migrar para outro plano.',
+    '',
+    `Plano atual: ${planName}`,
+  ];
+  if (usage) {
+    lines.push(
+      `Uso atual: ${usage.activeUsers.toLocaleString('pt-BR')} usuário(s) ativo(s), ${usage.patients.toLocaleString('pt-BR')} paciente(s), ${formatBytes(usage.storageBytes)} em arquivos.`,
+    );
+  }
+  lines.push('', 'Descreva abaixo o que você precisa (limites, módulos, etc.).');
+  return lines.join('\n');
+}
+
+/** Plano da clínica, consumo vs limites e solicitação de upgrade via feedback. */
 export function MyPlan() {
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['tenant', 'plan'],
     queryFn: () => tenantPlanApi.getSummary(),
   });
+
+  const plan = data?.plan;
+  const usage = data?.usage;
+  const planDisplayName = plan?.name ?? 'Plano personalizado';
+
+  const upgradeFeedbackInitial = useMemo(
+    () => ({
+      type: 'SUGGESTION' as const,
+      title: 'Solicitação de upgrade de plano',
+      description: buildUpgradeFeedbackDescription(planDisplayName, usage),
+    }),
+    [planDisplayName, usage],
+  );
+
+  const storageLimitBytes =
+    plan?.limits?.storageGb != null ? plan.limits.storageGb * GB : undefined;
 
   if (error) {
     return (
       <Alert severity="error">{getApiErrorMessage(error, 'Não foi possível carregar o plano da clínica.')}</Alert>
     );
   }
-
-  const plan = data?.plan;
-  const usage = data?.usage;
-  const storageLimitBytes =
-    plan?.limits?.storageGb != null ? plan.limits.storageGb * GB : undefined;
 
   return (
     <Stack spacing={2.5}>
@@ -220,26 +251,24 @@ export function MyPlan() {
       >
         <Typography sx={{ fontWeight: 800, fontSize: fontSizes.lg, mb: 0.75 }}>Precisa de mais recursos?</Typography>
         <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary', mb: 2, maxWidth: 560 }}>
-          Para ampliar limites, incluir módulos ou migrar de plano, fale com a equipe da plataforma. Informe o
-          nome da clínica e o que você precisa.
+          Para ampliar limites, incluir módulos ou migrar de plano, envie uma solicitação à equipe da plataforma.
+          Ela aparece na central de reports do administrador.
         </Typography>
-        {adminEmail ? (
-          <Button
-            component={Link}
-            href={`mailto:${adminEmail}?subject=${encodeURIComponent('Upgrade de plano — clínica')}`}
-            variant="contained"
-            startIcon={<MailOutlineIcon />}
-            sx={{ alignSelf: 'flex-start' }}
-          >
-            Solicitar upgrade
-          </Button>
-        ) : (
-          <Typography sx={{ fontSize: fontSizes.sm, color: 'text.secondary' }}>
-            Configure o e-mail de contato da plataforma (`VITE_ADMIN_CONTACT_EMAIL`) para habilitar o atalho de
-            e-mail aqui.
-          </Typography>
-        )}
+        <Button
+          variant="contained"
+          startIcon={<TrendingUpOutlinedIcon />}
+          onClick={() => setUpgradeDialogOpen(true)}
+          sx={{ alignSelf: 'flex-start' }}
+        >
+          Solicitar upgrade
+        </Button>
       </Card>
+
+      <FeedbackReportDialog
+        open={upgradeDialogOpen}
+        onClose={() => setUpgradeDialogOpen(false)}
+        initial={upgradeFeedbackInitial}
+      />
     </Stack>
   );
 }

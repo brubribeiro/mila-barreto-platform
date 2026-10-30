@@ -35,6 +35,7 @@ import {
 } from '../components/goals/goalUtils';
 import { usePermissions } from '../contexts/usePermissions';
 import type { Goal } from '../types';
+import { StatCard } from '../components/StatCard';
 import { fontSizes } from '../theme/fontSizes';
 import { clickableProps } from '../utils/a11y';
 
@@ -85,18 +86,7 @@ export function Goals() {
     <Stack spacing={2.25}>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: { xs: 1, sm: 1.75 } }}>
         {summaryCards.map((s) => (
-          <Card key={s.label} sx={{ px: { xs: 1.5, sm: 2.25 }, py: 2, borderRadius: '14px', border: 1, borderColor: 'divider' }}>
-            {isLoading ? (
-              <Skeleton width={60} height={30} />
-            ) : (
-              <Typography sx={{ fontSize: fontSizes['5xl'], fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.2, color: s.color }}>
-                {s.value}
-              </Typography>
-            )}
-            <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', fontWeight: 600, mt: 0.25 }}>
-              {s.label}
-            </Typography>
-          </Card>
+          <StatCard key={s.label} label={s.label} value={s.value} color={s.color} loading={isLoading} />
         ))}
       </Box>
 
