@@ -18,6 +18,8 @@ interface GuidedTourProps {
 }
 
 const SPOTLIGHT_PADDING = 6;
+// Altura do header fixo + folga: o elemento destacado não fica escondido atrás dele.
+const HEADER_OFFSET = 96;
 
 function findTarget(target?: string): HTMLElement | null {
   if (!target) return null;
@@ -40,12 +42,23 @@ export function GuidedTour({ steps, onClose }: GuidedTourProps) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
 
+  // Ao fechar, devolve a página à posição de rolagem de antes do tour.
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    return () => window.scrollTo({ top: scrollY });
+  }, []);
+
   const step = activeSteps[index];
 
   useLayoutEffect(() => {
     if (!step) return;
     const el = findTarget(step.target);
-    el?.scrollIntoView({ block: 'center', inline: 'nearest' });
+    if (el) {
+      const r = el.getBoundingClientRect();
+      if (r.top < HEADER_OFFSET || r.bottom > window.innerHeight - 12) {
+        window.scrollBy({ top: r.top - HEADER_OFFSET });
+      }
+    }
     setAnchor(el);
     setRect(el?.getBoundingClientRect() ?? null);
     cardRef.current?.focus();

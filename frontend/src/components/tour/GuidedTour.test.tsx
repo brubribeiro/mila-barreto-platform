@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -15,9 +15,14 @@ describe('GuidedTour', () => {
   beforeEach(() => {
     // jsdom não faz layout: dá tamanho ao elemento para ele contar como visível.
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(10, 10, 100, 40));
-    HTMLElement.prototype.scrollIntoView = vi.fn();
+    vi.spyOn(window, 'scrollBy').mockImplementation(() => {});
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
   });
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    // Desmonta antes de restaurar: o tour devolve a rolagem ao fechar.
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   it('pula passos cujo elemento não está na tela e conclui no último', async () => {
     const onClose = vi.fn();
