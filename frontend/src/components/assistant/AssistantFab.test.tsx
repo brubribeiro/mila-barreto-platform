@@ -6,29 +6,34 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { assistantApi } from '../../api/assistant';
 import { AppToastProvider } from '../../contexts/AppToastContext';
-import { AssistantDrawer } from './AssistantDrawer';
+import { AssistantFab } from './AssistantFab';
 
-function renderDrawer(canSendFeedback: boolean) {
+function renderFab(canSendFeedback: boolean) {
   const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <AppToastProvider>
-          <AssistantDrawer open onClose={() => {}} suggestions={['Como ativo o modo escuro?']} canSendFeedback={canSendFeedback} />
+          <AssistantFab suggestions={['Como ativo o modo escuro?']} canSendFeedback={canSendFeedback} />
         </AppToastProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-describe('AssistantDrawer', () => {
+async function openAssistant() {
+  await userEvent.click(screen.getByRole('button', { name: 'Abrir assistente' }));
+}
+
+describe('AssistantFab', () => {
   it('mostra o trecho da documentação com a fonte', async () => {
     const ask = vi.spyOn(assistantApi, 'ask').mockResolvedValue({
       covered: true,
       answer: 'Encontrei isto na documentação:',
       sources: [{ file: 'RELEASE_NOTES.md', section: 'v0.2.0 › Novidades › Visual Aurora', excerpt: '• Modo escuro: botão da lua.' }],
     });
-    renderDrawer(true);
+    renderFab(true);
+    await openAssistant();
 
     await userEvent.click(screen.getByRole('button', { name: 'Como ativo o modo escuro?' }));
 
@@ -40,7 +45,8 @@ describe('AssistantDrawer', () => {
 
   it('sem cobertura na documentação, oferece o feedback só no painel da clínica', async () => {
     vi.spyOn(assistantApi, 'ask').mockResolvedValue({ covered: false, answer: 'Não encontrei isso na documentação.', sources: [] });
-    const { unmount } = renderDrawer(true);
+    const { unmount } = renderFab(true);
+    await openAssistant();
 
     await userEvent.type(screen.getByLabelText('Pergunta para o assistente'), 'nota fiscal{Enter}');
 
@@ -48,7 +54,8 @@ describe('AssistantDrawer', () => {
     expect(screen.getByRole('button', { name: 'Enviar feedback' })).toBeInTheDocument();
     unmount();
 
-    renderDrawer(false);
+    renderFab(false);
+    await openAssistant();
     await userEvent.type(screen.getByLabelText('Pergunta para o assistente'), 'nota fiscal{Enter}');
     expect(await screen.findByText('Não encontrei isso na documentação.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Enviar feedback' })).not.toBeInTheDocument();

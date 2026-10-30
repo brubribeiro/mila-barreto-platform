@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { alpha, AppBar, Box, Drawer, IconButton, Toolbar, Tooltip, Typography, useTheme } from '@mui/material';
+import { alpha, AppBar, Box, Drawer, IconButton, Toolbar, Typography, useTheme } from '@mui/material';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { AuroraIcon } from '../AuroraIcon';
@@ -8,7 +8,7 @@ import { PAGE_SHELL_SX } from '../../theme/layout';
 import type { NavGroup } from '../layout/navConfig';
 import { DRAWER_COLLAPSED_WIDTH, DRAWER_WIDTH, SIDEBAR_BG, drawerTransition } from '../layout/layoutTheme';
 import { SidebarContent } from '../layout/SidebarContent';
-import { AssistantDrawer } from '../assistant/AssistantDrawer';
+import { AssistantFab } from '../assistant/AssistantFab';
 
 const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
@@ -80,7 +80,6 @@ function adminPageMeta(pathname: string) {
 export function AdminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [assistantOpen, setAssistantOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -189,25 +188,6 @@ export function AdminLayout() {
           </Box>
 
           <Box sx={{ flex: 1 }} />
-
-          <Tooltip title="Assistente">
-            <IconButton
-              onClick={() => setAssistantOpen(true)}
-              aria-label="Abrir assistente"
-              sx={{
-                width: { xs: 34, sm: 38 },
-                height: { xs: 34, sm: 38 },
-                borderRadius: '12px',
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'grey.50',
-                color: 'text.secondary',
-                '&:hover': { bgcolor: 'grey.100' },
-              }}
-            >
-              <AuroraIcon name="assistant" size={20} strokeWidth={1.8} />
-            </IconButton>
-          </Tooltip>
         </Toolbar>
       </AppBar>
 
@@ -257,11 +237,7 @@ export function AdminLayout() {
         </Box>
       </Box>
 
-      <AssistantDrawer
-        open={assistantOpen}
-        onClose={() => setAssistantOpen(false)}
-        suggestions={ADMIN_ASSISTANT_SUGGESTIONS}
-      />
+      <AssistantFab suggestions={ADMIN_ASSISTANT_SUGGESTIONS} />
     </Box>
   );
 }
