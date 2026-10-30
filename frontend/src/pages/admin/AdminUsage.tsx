@@ -45,7 +45,7 @@ const ROW_SX = {
 
 const NUMBER_SX = { fontSize: fontSizes.sm, fontWeight: 700, fontVariantNumeric: 'tabular-nums' } as const;
 
-const MODULE_COLS = 'minmax(0, 1.3fr) minmax(0, 1.6fr) 110px 110px minmax(0, 1.4fr)';
+const MODULE_COLS = 'minmax(0, 1.3fr) minmax(0, 1.6fr) 110px 110px 110px minmax(0, 1.4fr)';
 const TENANT_COLS = 'minmax(0, 1.8fr) minmax(0, 0.9fr) 90px 120px 110px 130px 130px 110px';
 
 /** Mês corrente no fuso do navegador (o backend usa o mesmo padrão no Brasil). */
@@ -98,6 +98,9 @@ function ModuleRow({ module, single }: { module: PlatformModuleUsage; single: bo
       <Typography sx={NUMBER_SX}>{module.periodCount == null ? '—' : n(module.periodCount)}</Typography>
       <Typography sx={{ ...NUMBER_SX, display: { xs: 'none', md: 'block' }, color: 'text.secondary' }}>
         {module.totalCount == null ? '—' : n(module.totalCount)}
+      </Typography>
+      <Typography sx={{ ...NUMBER_SX, display: { xs: 'none', md: 'block' }, color: 'text.secondary' }}>
+        {n(module.requests)}
       </Typography>
       <Box sx={{ display: { xs: 'none', md: 'block' }, minWidth: 0 }}>
         {single ? (
@@ -288,6 +291,7 @@ export function AdminUsage() {
             <span>O que é contado</span>
             <span>No período</span>
             <span>Total</span>
+            <span>Requisições</span>
             <span>{single ? 'Situação' : 'Clínicas usando / habilitadas'}</span>
           </Box>
           {isLoading ? (
@@ -340,7 +344,8 @@ export function AdminUsage() {
       )}
 
       <Typography sx={{ fontSize: fontSizes.xs, color: 'text.secondary', px: 0.5 }}>
-        Contagens derivadas dos registros de cada módulo (sem telemetria de cliques e sem dados de pacientes).
+        Contagens derivadas dos registros de cada módulo (sem dados de pacientes). “Requisições” = chamadas à API
+        do módulo no período, medidas desde a observabilidade (detalhes em Saúde da API).
         “Módulos em uso” = módulos com pelo menos um registro no período, sobre os habilitados no plano.
       </Typography>
     </Stack>

@@ -1,5 +1,6 @@
 import { api } from './client';
 import type {
+  ApiObservability,
   AdminFeedbackReport,
   AdminPlan,
   AdminTenant,
@@ -197,6 +198,11 @@ export const adminApi = {
 
   getUsage: async (params: { from?: string; to?: string; tenantId?: string } = {}): Promise<PlatformUsage> => {
     const { data } = await api.get<PlatformUsage>('/admin/usage', { params });
+    return data;
+  },
+
+  getObservability: async (params: { hours?: number } = {}): Promise<ApiObservability> => {
+    const { data } = await api.get<ApiObservability>('/admin/observability', { params });
     return data;
   },
 

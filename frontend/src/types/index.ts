@@ -744,6 +744,8 @@ export interface PlatformModuleUsage {
   activeTenants: number | null;
   periodCount: number | null;
   totalCount: number | null;
+  /** Requisições à API do módulo no período (medidas desde a observabilidade). */
+  requests: number;
 }
 
 export interface PlatformTenantUsage {
@@ -773,6 +775,41 @@ export interface PlatformUsage {
   };
   modules: PlatformModuleUsage[];
   tenants: PlatformTenantUsage[];
+}
+
+export interface ApiRouteStats {
+  method: string;
+  /** Padrão da rota, ex.: /api/patients/:id */
+  route: string;
+  count: number;
+  clientErrors: number;
+  serverErrors: number;
+  /** 5xx / total (0–1) */
+  errorRate: number;
+  avgMs: number | null;
+  /** Estimado pelo histograma (limite superior da faixa). */
+  p95Ms: number | null;
+  maxMs: number | null;
+}
+
+export interface ApiRequestErrorEntry {
+  id: string;
+  createdAt: string;
+  method: string;
+  route: string;
+  statusCode: number;
+  durationMs: number;
+  errorName: string | null;
+  message: string | null;
+  tenant: { id: string; name: string } | null;
+}
+
+export interface ApiObservability {
+  window: { hours: number; since: string };
+  totals: Omit<ApiRouteStats, 'method' | 'route'> & { routes: number };
+  slowRoutes: ApiRouteStats[];
+  errorRoutes: ApiRouteStats[];
+  recentErrors: ApiRequestErrorEntry[];
 }
 
 export interface FeedbackReport {
