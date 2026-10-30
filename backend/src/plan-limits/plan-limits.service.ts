@@ -38,6 +38,7 @@ export function formatBytes(bytes: number): string {
 
 /**
  * Limites do plano (usuários ativos, pacientes, armazenamento) da clínica da requisição.
+ * Conta como o TenantPlanService (tela "Meu plano", GET /tenant/plan).
  * Clínica sem plano não tem limite (mesma regra legada dos módulos no FeatureGuard).
  * A checagem é contagem + criação, sem trava: requisições simultâneas podem passar 1 a mais.
  */
@@ -45,14 +46,13 @@ export function formatBytes(bytes: number): string {
 export class PlanLimitsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getLimits(): Promise<{ plan: { id: string; name: string } | null; limits: EffectivePlanLimits }> {
+  async getLimits(): Promise<EffectivePlanLimits> {
     const tenantId = TenantContext.requireTenantId();
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { plan: { select: { id: true, name: true, limits: true } } },
+      select: { plan: { select: { limits: true } } },
     });
-    const plan = tenant?.plan ?? null;
-    return { plan: plan ? { id: plan.id, name: plan.name } : null, limits: resolvePlanLimits(plan) };
+    return resolvePlanLimits(tenant?.plan);
   }
 
   /** Só usuários ativos ocupam vaga; super-admin da plataforma não tem clínica e não entra. */
@@ -64,7 +64,7 @@ export class PlanLimitsService {
     return this.prisma.patient.count();
   }
 
-  /** Documentos e fotos "antes e depois" no R2 (bytes gravados no upload), como no /admin. */
+  /** Documentos e fotos "antes e depois" no R2 (bytes gravados no upload), como no /admin e no "Meu plano". */
   async storageBytes(): Promise<number> {
     const [documents, photos] = await Promise.all([
       this.prisma.document.aggregate({ _sum: { size: true } }),
@@ -73,25 +73,9 @@ export class PlanLimitsService {
     return (documents._sum.size ?? 0) + (photos._sum.size ?? 0);
   }
 
-  /** Uso atual vs limites (tela "Meu plano"). */
-  async getUsage() {
-    const [{ plan, limits }, users, patients, storageBytes] = await Promise.all([
-      this.getLimits(),
-      this.countActiveUsers(),
-      this.countPatients(),
-      this.storageBytes(),
-    ]);
-    return {
-      plan,
-      limits,
-      usage: { users, patients, storageBytes },
-      storageLimitBytes: limits.storageGb === null ? null : Math.round(limits.storageGb * BYTES_PER_GB),
-    };
-  }
-
   /** Antes de criar (ou reativar) um usuário ativo. */
   async assertCanAddUser(): Promise<void> {
-    const { limits } = await this.getLimits();
+    const limits = await this.getLimits();
     if (limits.maxUsers === null) return;
     const used = await this.countActiveUsers();
     if (used >= limits.maxUsers) {
@@ -102,7 +86,7 @@ export class PlanLimitsService {
   }
 
   async assertCanAddPatient(): Promise<void> {
-    const { limits } = await this.getLimits();
+    const limits = await this.getLimits();
     if (limits.maxPatients === null) return;
     const used = await this.countPatients();
     if (used >= limits.maxPatients) {
@@ -117,7 +101,7 @@ export class PlanLimitsService {
    * (ex.: versão assinada de um documento), que deixa de contar.
    */
   async assertStorageAvailable(incomingBytes: number, replacedBytes = 0): Promise<void> {
-    const { limits } = await this.getLimits();
+    const limits = await this.getLimits();
     if (limits.storageGb === null) return;
     const limitBytes = limits.storageGb * BYTES_PER_GB;
     const used = await this.storageBytes();

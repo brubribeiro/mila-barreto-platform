@@ -93,7 +93,7 @@ function LimitRow({
 
 const GB = 1024 ** 3;
 
-/** Plano da clínica, consumo vs limites informativos e contato para upgrade. */
+/** Plano da clínica, consumo vs limites e contato para upgrade. */
 export function MyPlan() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['tenant', 'plan'],
@@ -182,8 +182,8 @@ export function MyPlan() {
                 formatMax={(n) => formatBytes(n)}
               />
               <Typography sx={{ py: 1.5, fontSize: fontSizes.xs, color: 'text.secondary' }}>
-                {usage.files.toLocaleString('pt-BR')} arquivo(s) contabilizados · os limites são informativos e
-                ainda não bloqueiam cadastros automaticamente.
+                {usage.files.toLocaleString('pt-BR')} arquivo(s) contabilizados · ao atingir um limite, novos
+                usuários ativos, pacientes e envios de arquivo são bloqueados.
               </Typography>
             </>
           )}

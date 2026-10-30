@@ -26,7 +26,7 @@ describe('PlanLimitsService', () => {
   let service: PlanLimitsService;
 
   const withPlan = (limits: unknown) =>
-    prisma.tenant.findUnique.mockResolvedValue({ plan: { id: 'plan-1', name: 'Básico', limits } });
+    prisma.tenant.findUnique.mockResolvedValue({ plan: { limits } });
 
   const inTenant = <T>(fn: () => Promise<T>) => TenantContext.run('tenant-1', fn);
 
@@ -85,22 +85,7 @@ describe('PlanLimitsService', () => {
     await expect(inTenant(() => service.assertStorageAvailable(0.2 * GB, 0.1 * GB))).resolves.toBeUndefined();
   });
 
-  it('getUsage devolve plano, limites e uso', async () => {
-    withPlan({ maxUsers: 5, storageGb: 2 });
-    prisma.user.count.mockResolvedValue(3);
-    prisma.patient.count.mockResolvedValue(42);
-    prisma.document.aggregate.mockResolvedValue({ _sum: { size: 1000 } });
-    prisma.patientPhoto.aggregate.mockResolvedValue({ _sum: { size: null } });
-
-    await expect(inTenant(() => service.getUsage())).resolves.toEqual({
-      plan: { id: 'plan-1', name: 'Básico' },
-      limits: { maxUsers: 5, maxPatients: null, storageGb: 2 },
-      usage: { users: 3, patients: 42, storageBytes: 1000 },
-      storageLimitBytes: 2 * GB,
-    });
-  });
-
   it('exige contexto de clínica', async () => {
-    await expect(service.getUsage()).rejects.toThrow(ForbiddenException);
+    await expect(service.assertCanAddPatient()).rejects.toThrow(ForbiddenException);
   });
 });
