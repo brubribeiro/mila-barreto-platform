@@ -58,6 +58,7 @@ model Tenant {
   notificationPreferences NotificationPreference[]
   patients                Patient[]
   patientPhotos           PatientPhoto[]
+  patientMeasurements     PatientMeasurement[]
   procedures              Procedure[]
   procedureEquipments     ProcedureEquipment[]
   procedureMaterials      ProcedureMaterial[]
@@ -545,6 +546,7 @@ model Patient {
   packages         PatientPackage[]
   photos           PatientPhoto[]
   skincareRoutines SkincareRoutine[]
+  measurements     PatientMeasurement[]
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -581,6 +583,33 @@ model PatientPhoto {
   @@index([appointmentId])
   @@index([tenantId])
   @@map("patient_photos")
+}
+
+// Medidas corporais do paciente ao longo do tempo (IMC é calculado a partir de peso e altura).
+model PatientMeasurement {
+  id            String       @id @default(uuid())
+  tenantId      String       @default(dbgenerated("current_setting('app.tenant_id'::text, true)"))
+  patientId     String
+  appointmentId String? // consulta em que as medidas foram tomadas (opcional)
+  measuredAt    DateTime
+  weightKg      Decimal?     @db.Decimal(5, 2)
+  heightCm      Decimal?     @db.Decimal(5, 1)
+  waistCm       Decimal?     @db.Decimal(5, 1)
+  abdomenCm     Decimal?     @db.Decimal(5, 1)
+  hipCm         Decimal?     @db.Decimal(5, 1)
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([patientId, measuredAt])
+  @@index([appointmentId])
+  @@index([tenantId])
+  @@map("patient_measurements")
 }
 
 // =========================
@@ -887,6 +916,7 @@ model Appointment {
   financialEntries FinancialEntry[]
   extraMaterials   AppointmentMaterial[]
   photos           PatientPhoto[]
+  measurements     PatientMeasurement[]
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
