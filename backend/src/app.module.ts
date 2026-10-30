@@ -33,6 +33,7 @@ import { AuditLogModule } from './audit-log/audit-log.module';
 import { AdminModule } from './admin/admin.module';
 import { PlanLimitsModule } from './plan-limits/plan-limits.module';
 import { TenantPlanModule } from './tenant-plan/tenant-plan.module';
+import { PublicModule } from './public/public.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -70,6 +71,7 @@ import { AppController } from './app.controller';
     AuditLogModule,
     AdminModule,
     TenantPlanModule,
+    PublicModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
