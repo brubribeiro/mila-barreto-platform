@@ -31,6 +31,7 @@ import { SkincareModule } from './skincare/skincare.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { AdminModule } from './admin/admin.module';
+import { PlanLimitsModule } from './plan-limits/plan-limits.module';
 import { TenantPlanModule } from './tenant-plan/tenant-plan.module';
 import { AppController } from './app.controller';
 
@@ -42,6 +43,7 @@ import { AppController } from './app.controller';
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     PrismaModule,
+    PlanLimitsModule,
     AuthModule,
     UsersModule,
     RolesModule,

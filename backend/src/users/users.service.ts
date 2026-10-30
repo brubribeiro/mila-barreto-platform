@@ -19,6 +19,7 @@ import type { AuthenticatedUser } from '../common/decorators/current-user.decora
 import { isClinicAdministrator, SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
 import { assertAllowedFileContent } from '../common/utils/file-magic.util';
 import { PHOTO_ALLOWED_MIMES } from '../documents/upload-allowlist';
+import { PlanLimitsService } from '../plan-limits/plan-limits.service';
 
 const SAFE_SELECT = {
   id: true,
@@ -81,6 +82,7 @@ export class UsersService {
     private readonly notifications: NotificationsService,
     private readonly auditLog: AuditLogService,
     private readonly r2: R2StorageService,
+    private readonly planLimits: PlanLimitsService,
   ) {}
 
   /** Versão completa com password e relação para autenticação. */
@@ -248,6 +250,7 @@ export class UsersService {
     const role = await this.prisma.role.findUnique({ where: { id: dto.roleId } });
     if (!role) throw new BadRequestException('Grupo (role) inválido.');
     this.assertCanAssignRole(actor, role, {});
+    if (dto.active ?? true) await this.planLimits.assertCanAddUser();
 
     // Senha aleatória — autenticação é feita exclusivamente via Google OAuth
     const randomPassword = require('crypto').randomBytes(32).toString('hex');
@@ -315,6 +318,8 @@ export class UsersService {
         previousRoleName: user.role?.name,
       });
     }
+
+    if (dto.active === true && !user.active) await this.planLimits.assertCanAddUser();
 
     // Se marcado como principal, desmarca o anterior
     if (dto.isPrimary) {
