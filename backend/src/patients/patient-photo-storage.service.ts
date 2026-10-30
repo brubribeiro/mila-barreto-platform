@@ -4,6 +4,7 @@ import { R2StorageService } from '../documents/r2-storage.service';
 import { CompressionService } from '../documents/compression.service';
 import { assertAllowedFileContent } from '../common/utils/file-magic.util';
 import { PHOTO_ALLOWED_MIMES } from '../documents/upload-allowlist';
+import { PlanLimitsService } from '../plan-limits/plan-limits.service';
 
 const PATIENT_PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 const PATIENT_PHOTO_URL_TTL_SECONDS = 3600;
@@ -16,6 +17,7 @@ export class PatientPhotoStorageService {
   constructor(
     private readonly r2: R2StorageService,
     private readonly compression: CompressionService,
+    private readonly planLimits: PlanLimitsService,
   ) {}
 
   get isConfigured() {
@@ -63,6 +65,7 @@ export class PatientPhotoStorageService {
   async uploadGalleryPhoto(patientId: string, phase: string, file: Express.Multer.File) {
     const mimeType = this.assertUploadable(file, { checkSize: false });
     const compressed = await this.compression.compress(file.buffer, mimeType);
+    await this.planLimits.assertStorageAvailable(compressed.compressedSize);
     const { key } = await this.r2.upload(
       `${phase.toLowerCase()}.jpg`,
       compressed.mimeType,
