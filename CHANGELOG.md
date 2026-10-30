@@ -36,6 +36,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Formulários: sufixos de campo (`min`, `dias`, `R$`, `%`, etc.) com tipografia compacta via `FieldAdornment`.
 
 ### Added
+- Ficha do paciente (página e gaveta): abas **Documentos** (contagem Pendente/Enviado/Assinado, lista que abre o arquivo ou o visualizador, atalho para a lista filtrada) e **Financeiro** (recebido, a receber, último pagamento e lançamentos recentes), via `GET /documents?patientId=` e `GET /finance?patientId=`; só aparecem com o módulo do plano e a permissão `documents:view` / `finance:view` (#59).
 - Catálogo global: kind **`skincare_tag`** (características de rotinas/produtos); rotinas consomem via `usePlatformCatalog`; validação no backend.
 - Rotinas de skincare: produtos e tags de regra em **multi-select** com busca; `SkinModal` com altura fixa e scroll no miolo.
 - Usuários e horários: switches e grades alinhados no `UserFormDialog`; atalhos e linhas dos dias no `WorkingHoursDialog` (`formSwitchLabelSx`, `formDialogPaperSx`).

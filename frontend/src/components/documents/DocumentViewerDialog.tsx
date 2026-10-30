@@ -3,6 +3,7 @@ import {
   Button,
   Dialog,
   DialogActions,
+  type DialogProps,
   DialogContent,
   Skeleton,
   Stack,
@@ -41,9 +42,11 @@ interface Props {
   onClose: () => void;
   /** Exibe "Anexar versão assinada" quando informado */
   onAttach?: (doc: DocumentFile) => void;
+  /** Ex.: z-index acima da gaveta do paciente */
+  sx?: DialogProps['sx'];
 }
 
-export function DocumentViewerDialog({ doc, onClose, onAttach }: Props) {
+export function DocumentViewerDialog({ doc, onClose, onAttach, sx }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -61,6 +64,7 @@ export function DocumentViewerDialog({ doc, onClose, onAttach }: Props) {
       maxWidth="md"
       fullWidth
       fullScreen={isMobile}
+      sx={sx}
       PaperProps={{ sx: { ...dialogPaperSx(isMobile), display: 'flex', flexDirection: 'column', maxHeight: '94dvh' } }}
     >
       <DialogHeader
