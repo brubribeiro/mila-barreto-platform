@@ -53,8 +53,11 @@ describe('AssistantService (docs reais do repositório)', () => {
   it('responde com trecho e fonte quando a documentação cobre a pergunta', () => {
     const result = service.ask('Como ativo o modo escuro?', 'clinic');
     expect(result.covered).toBe(true);
+    expect(result.sources).toHaveLength(1);
     expect(result.sources[0].file).toBe('RELEASE_NOTES.md');
-    expect(result.sources[0].excerpt).toMatch(/modo escuro/i);
+    expect(result.answer).toMatch(/modo escuro/i);
+    expect(result.answer).not.toMatch(/Encontrei/i);
+    expect(result.sources[0].excerpt).toBe(result.answer);
   });
 
   it('admite quando a documentação não cobre, sem fontes', () => {
@@ -67,9 +70,11 @@ describe('AssistantService (docs reais do repositório)', () => {
   });
 
   it('clínica não vê a documentação técnica; o painel da plataforma vê', () => {
-    expect(service.ask('Como funciona o multi-tenant com tenantId?', 'clinic').covered).toBe(false);
-    const platform = service.ask('Como funciona o multi-tenant com tenantId?', 'platform');
-    expect(platform.sources.map((s) => s.file)).toContain('AGENTS.md');
+    const question = 'O PrismaService filtra tenantId pelo TenantContext?';
+    expect(service.ask(question, 'clinic').covered).toBe(false);
+    const platform = service.ask(question, 'platform');
+    expect(platform.covered).toBe(true);
+    expect(platform.sources[0].file).toBe('AGENTS.md');
   });
 
   it('super-admin fora de clínica usa o corpus da plataforma; "entrando como" usa o da clínica', () => {
