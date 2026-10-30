@@ -21,9 +21,16 @@ import {
 import { SidebarContent } from './layout/SidebarContent';
 import { HeaderActions } from './layout/HeaderActions';
 import { ImpersonationBanner } from './layout/ImpersonationBanner';
+import { AssistantFab } from './assistant/AssistantFab';
 import { GuidedTour } from './tour/GuidedTour';
 import { getScreenTour } from './tour/screenTours';
 import { isTourSeen, markTourSeen } from './tour/tourStorage';
+
+const CLINIC_ASSISTANT_SUGGESTIONS = [
+  'Como ativo o modo escuro?',
+  'Como funciona o mapa de aplicação?',
+  'Como montar uma rotina de skincare?',
+];
 
 export function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -277,6 +284,8 @@ export function Layout() {
       {screenTour && tourOpen && (
         <GuidedTour key={screenTour.key} steps={screenTour.steps} onClose={closeTour} />
       )}
+
+      <AssistantFab suggestions={CLINIC_ASSISTANT_SUGGESTIONS} canSendFeedback />
 
       {pageMeta.auditEntity && (
         <AuditHistoryDialog

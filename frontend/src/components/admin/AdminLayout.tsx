@@ -8,6 +8,7 @@ import { PAGE_SHELL_SX } from '../../theme/layout';
 import type { NavGroup } from '../layout/navConfig';
 import { DRAWER_COLLAPSED_WIDTH, DRAWER_WIDTH, SIDEBAR_BG, drawerTransition } from '../layout/layoutTheme';
 import { SidebarContent } from '../layout/SidebarContent';
+import { AssistantFab } from '../assistant/AssistantFab';
 
 const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
@@ -23,6 +24,12 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
       { label: 'Auditoria', path: '/admin/auditoria', icon: <AuroraIcon name="clock" /> },
     ],
   },
+];
+
+const ADMIN_ASSISTANT_SUGGESTIONS = [
+  'Como funciona o Entrar como?',
+  'Como funciona o multi-tenant?',
+  'Como subir o ambiente local?',
 ];
 
 const ADMIN_PAGE_META: { path: string; title: string; subtitle: string }[] = [
@@ -179,6 +186,8 @@ export function AdminLayout() {
               </Typography>
             )}
           </Box>
+
+          <Box sx={{ flex: 1 }} />
         </Toolbar>
       </AppBar>
 
@@ -227,6 +236,8 @@ export function AdminLayout() {
           <Outlet />
         </Box>
       </Box>
+
+      <AssistantFab suggestions={ADMIN_ASSISTANT_SUGGESTIONS} />
     </Box>
   );
 }
