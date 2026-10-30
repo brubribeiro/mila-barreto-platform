@@ -7,6 +7,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 ### Added
 - Clínica — **Meu plano** (`/meu-plano`, admin): nome do plano, uso vs limites informativos (usuários, pacientes, armazenamento), módulos ativos e CTA de contato para upgrade; `GET /tenant/plan` (#64).
 - Formas de pagamento: tipo (dinheiro, PIX, débito, crédito) e prazo de recebimento; lançamentos e conclusão de agendamento com parcelas, bandeira e NSU/autorização opcionais (#57).
+- Limites do plano aplicados na API (#61): criar/reativar usuário ativo, criar paciente e enviar documento ou foto "antes e depois" além de `maxUsers` / `maxPatients` / `storageGb` responde 403 com mensagem em português. Clínica sem plano segue sem limite. A contagem é a mesma do "Meu plano" (`GET /api/tenant/plan`), cujo texto deixa de dizer que os limites são informativos.
 - Documentos: ação "Enviar ao paciente" (menu da lista, visualizador e aba Documentos da ficha) abre WhatsApp (`wa.me`) ou e-mail (`mailto`) com mensagem e, opcionalmente, o texto do documento; contato vem da ficha (`GET /documents/:id` inclui `patient.phone`/`patient.email`), com aviso quando falta; documento Pendente passa a Enviado ao abrir o envio. Pendência "Documento sem assinatura" leva à lista já filtrada pelo documento (#60).
 
 ### Fixed

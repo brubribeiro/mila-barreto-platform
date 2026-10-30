@@ -10,7 +10,7 @@ import { TenantPlanService } from './tenant-plan.service';
 export class TenantPlanController {
   constructor(private readonly tenantPlan: TenantPlanService) {}
 
-  /** Plano, limites informativos e consumo atual da clínica (somente admin). */
+  /** Plano, limites (aplicados em src/plan-limits) e consumo atual da clínica (somente admin). */
   @Get()
   getPlan(@CurrentUser() user: AuthenticatedUser) {
     return this.tenantPlan.getSummary(user.tenantId!);
