@@ -24,8 +24,9 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { DialogHeader, dialogActionsBorderSx, dialogFormLayoutSx, formDialogPaperSx } from '../DialogCloseButton';
 import { FieldAdornment } from '../FieldAdornment';
 import { LabeledField } from '../LabeledField';
-import type { PaymentMethodEntry } from '../../types';
+import type { PaymentMethodEntry, PaymentMethodKind } from '../../types';
 import { fontSizes } from '../../theme/fontSizes';
+import { PAYMENT_METHOD_KIND_OPTIONS, settlementDaysLabel } from '../../utils/paymentMethodMeta';
 
 interface Props {
   open: boolean;
@@ -35,6 +36,8 @@ interface Props {
 
 interface FormValues {
   name: string;
+  kind: PaymentMethodKind;
+  settlementDays: number | '';
   feePercent: number | '';
   active: boolean;
 }
@@ -71,10 +74,11 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
   const toast = useAppToast();
 
   const { control, handleSubmit, reset, watch } = useForm<FormValues>({
-    defaultValues: { name: '', feePercent: '', active: true },
+    defaultValues: { name: '', kind: 'OTHER', settlementDays: 0, feePercent: '', active: true },
   });
 
   const watchedFee = watch('feePercent');
+  const watchedSettlement = watch('settlementDays');
   const isActive = watch('active');
 
   useEffect(() => {
@@ -82,11 +86,13 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
     if (editing) {
       reset({
         name: editing.name,
+        kind: editing.kind ?? 'OTHER',
+        settlementDays: editing.settlementDays ?? 0,
         feePercent: Number(editing.feePercent),
         active: editing.active,
       });
     } else {
-      reset({ name: '', feePercent: '', active: true });
+      reset({ name: '', kind: 'OTHER', settlementDays: 0, feePercent: '', active: true });
     }
   }, [open, editing, reset]);
 
@@ -118,6 +124,8 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
   const onSubmit = (values: FormValues) => {
     const payload: CreatePaymentMethodPayload = {
       name: values.name.trim(),
+      kind: values.kind,
+      settlementDays: values.settlementDays === '' ? 0 : Number(values.settlementDays),
       feePercent: values.feePercent === '' ? 0 : Number(values.feePercent),
       active: values.active,
     };
@@ -222,6 +230,52 @@ export function PaymentMethodFormDialog({ open, onClose, editing }: Props) {
                       <MenuItem value="inactive">Inativa</MenuItem>
                     </TextField>
                     <Hint>{isActive ? 'Disponível nos lançamentos' : 'Oculta nos lançamentos'}</Hint>
+                  </LabeledField>
+                )}
+              />
+            </Box>
+
+            <Box sx={TWO_COLUMNS_SX}>
+              <Controller
+                name="kind"
+                control={control}
+                render={({ field }) => (
+                  <LabeledField label="Tipo">
+                    <TextField {...field} select fullWidth>
+                      {PAYMENT_METHOD_KIND_OPTIONS.map((opt) => (
+                        <MenuItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                    <Hint>Débito/crédito habilitam bandeira e NSU nos lançamentos</Hint>
+                  </LabeledField>
+                )}
+              />
+              <Controller
+                name="settlementDays"
+                control={control}
+                rules={{
+                  min: { value: 0, message: 'Não pode ser negativo' },
+                  max: { value: 365, message: 'Máximo 365 dias' },
+                }}
+                render={({ field, fieldState }) => (
+                  <LabeledField label="Prazo de recebimento (dias)">
+                    <TextField
+                      {...field}
+                      type="number"
+                      fullWidth
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      inputProps={{ min: 0, max: 365, step: 1 }}
+                    />
+                    {!fieldState.error && (
+                      <Hint>
+                        {settlementDaysLabel(
+                          watchedSettlement === '' ? 0 : Number(watchedSettlement),
+                        )}
+                      </Hint>
+                    )}
                   </LabeledField>
                 )}
               />

@@ -4,6 +4,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 
 ## [Unreleased]
 
+### Added
+- Formas de pagamento: tipo (dinheiro, PIX, débito, crédito) e prazo de recebimento; lançamentos e conclusão de agendamento com parcelas, bandeira e NSU/autorização opcionais (#57).
 
 ### Fixed
 - UI (modais e listas): redesign Aurora compacto de Novo usuário, Equipamento, Item de estoque, Movimentar estoque, Lançamento, Forma de pagamento e Meta (altura ≈ conteúdo, grades 2–3 colunas, Mês sem reticências); Horário semanal sem scroll interno prematuro; Novo bloqueio sem hint condicional; grade e toolbar de Formas de pagamento; matriz de permissões com linhas de altura fixa e colunas uniformes; card Metas do mês do Dashboard sem o botão "Definir metas" no estado vazio; Pendências com tokens do tema (vermelho/âmbar/azul/verde, botão "Ver detalhes" primário); toolbar da Agenda com título de largura fixa (Hoje e Dia/Semana/Mês não se mexem ao trocar a visão).

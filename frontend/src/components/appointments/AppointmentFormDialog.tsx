@@ -496,10 +496,16 @@ export function AppointmentFormDialog({
       values,
       paymentMethodId,
       referenceMonth,
+      installments,
+      cardBrand,
+      authorizationCode,
     }: {
       values: FormValues;
       paymentMethodId?: string;
       referenceMonth?: string;
+      installments?: number;
+      cardBrand?: string;
+      authorizationCode?: string;
     }) => {
       const start = dayjs(`${values.date}T${values.startTime}`);
       if (!start.isValid()) {
@@ -527,6 +533,9 @@ export function AppointmentFormDialog({
         ...(values.clinicalNotes.trim() ? { clinicalNotes: values.clinicalNotes.trim() } : {}),
         ...(paymentMethodId ? { paymentMethodId } : {}),
         ...(referenceMonth ? { referenceMonth } : {}),
+        ...(installments ? { installments } : {}),
+        ...(cardBrand ? { cardBrand } : {}),
+        ...(authorizationCode ? { authorizationCode } : {}),
         ...(procedureId ? { procedureId } : {}),
         ...(selectedPackageId ? { patientPackageId: selectedPackageId } : {}),
         ...(normalizedExtraMaterials.length > 0 ? { extraMaterials: normalizedExtraMaterials } : {}),
@@ -635,14 +644,23 @@ export function AppointmentFormDialog({
     toast.warning('Revise os campos destacados antes de salvar.');
   };
 
-  const confirmPaymentAndSave = async (paymentMethodId: string, referenceMonth: string) => {
+  const confirmPaymentAndSave = async (data: {
+    paymentMethodId: string;
+    referenceMonth: string;
+    installments?: number;
+    cardBrand?: string;
+    authorizationCode?: string;
+  }) => {
     if (!pendingFormValues) return;
     await timer.stopTimerIfRunning();
-    const ref = referenceMonth || appointmentMonthKey;
+    const ref = data.referenceMonth || appointmentMonthKey;
     mutation.mutate({
       values: pendingFormValues,
-      paymentMethodId: paymentMethodId || undefined,
+      paymentMethodId: data.paymentMethodId || undefined,
       referenceMonth: ref && ref !== currentMonthKey ? ref : undefined,
+      installments: data.installments,
+      cardBrand: data.cardBrand,
+      authorizationCode: data.authorizationCode,
     });
     setPendingFormValues(null);
   };
@@ -1049,9 +1067,7 @@ export function AppointmentFormDialog({
         appointmentMonthKey={appointmentMonthKey}
         isPending={mutation.isPending}
         onCancel={() => setPendingFormValues(null)}
-        onConfirm={(paymentMethodId, referenceMonth) =>
-          void confirmPaymentAndSave(paymentMethodId, referenceMonth)
-        }
+        onConfirm={(data) => void confirmPaymentAndSave(data)}
       />
 
       <ReturnAppointmentDialog

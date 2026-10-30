@@ -12,6 +12,9 @@ export interface AppointmentPayload {
   notes?: string;
   clinicalNotes?: string;
   paymentMethodId?: string;
+  installments?: number;
+  cardBrand?: string;
+  authorizationCode?: string;
   /** Mês de competência da receita ("YYYY-MM"); usado para lançar agendamentos antigos. */
   referenceMonth?: string;
   patientPackageId?: string | null;

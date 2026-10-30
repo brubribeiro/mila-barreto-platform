@@ -17,6 +17,9 @@ export interface CompletionFinanceInput {
   extraMaterials: MaterialQuantity[];
   referenceMonth?: string;
   paymentMethodId?: string | null;
+  installments?: number | null;
+  cardBrand?: string | null;
+  authorizationCode?: string | null;
 }
 
 /** Lançamentos financeiros (receita e custo de materiais) gerados ao concluir agendamentos. */
@@ -91,6 +94,9 @@ export class AppointmentFinanceService {
           netAmount,
           feePercent,
           paymentMethodId: pmId,
+          installments: input.installments ?? null,
+          cardBrand: input.cardBrand?.trim() || null,
+          authorizationCode: input.authorizationCode?.trim() || null,
           category: packageId ? 'Pacotes' : 'Atendimentos',
           paidAt: revenuePaidAt,
           patientId,
