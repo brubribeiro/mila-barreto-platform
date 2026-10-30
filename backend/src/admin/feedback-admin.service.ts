@@ -1,12 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { FeedbackStatus, Prisma } from '@prisma/client';
+import { FeedbackStatus, FeedbackType, NotificationType, Prisma } from '@prisma/client';
 
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { SYSTEM_ADMIN_ROLE_NAME } from '../common/permissions';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TenantContext } from '../tenancy/tenant-context';
 import { parseUsageRange } from './usage.service';
 import type { FeedbackAdminQueryDto } from './dto/feedback-admin.dto';
 import { recordPlatformAudit } from './platform-audit';
+
+const FEEDBACK_TYPE_LABEL: Record<FeedbackType, string> = {
+  BUG: 'Bug',
+  SUGGESTION: 'Sugestão',
+};
 
 const LIST_SELECT = {
   id: true,
@@ -26,7 +33,10 @@ const LIST_SELECT = {
  */
 @Injectable()
 export class FeedbackAdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   list(query: FeedbackAdminQueryDto) {
     const page = Math.max(query.page ?? 1, 1);
@@ -89,7 +99,54 @@ export class FeedbackAdminService {
         { tenantId: report.tenant.id, name: report.tenant.name },
         { feedbackId: report.id, type: report.type, title: report.title, old: report.status, new: status },
       );
+      if (status === FeedbackStatus.CLOSED) {
+        this.notifyClinicFeedbackClosed(report).catch(() => undefined);
+      }
       return updated;
+    });
+  }
+
+  /** Quem reportou (se ativo); senão admins da clínica. */
+  private async notifyClinicFeedbackClosed(report: {
+    id: string;
+    type: FeedbackType;
+    title: string;
+    pageUrl: string | null;
+    tenant: { id: string };
+    user: { id: string };
+  }) {
+    const tenantId = report.tenant.id;
+    const typeLabel = FEEDBACK_TYPE_LABEL[report.type];
+    const link =
+      report.pageUrl && report.pageUrl.startsWith('/') ? report.pageUrl : undefined;
+
+    await TenantContext.run(tenantId, async () => {
+      const reporter = await this.prisma.user.findUnique({
+        where: { id: report.user.id },
+        select: { id: true, active: true },
+      });
+      let userIds: string[];
+      if (reporter?.active) {
+        userIds = [reporter.id];
+      } else {
+        const admins = await this.prisma.user.findMany({
+          where: {
+            active: true,
+            role: { name: SYSTEM_ADMIN_ROLE_NAME },
+          },
+          select: { id: true },
+        });
+        userIds = admins.map((a) => a.id);
+      }
+      if (!userIds.length) return;
+
+      await this.notifications.notifyMany(userIds, {
+        type: NotificationType.FEEDBACK_CLOSED,
+        title: `${typeLabel} concluído`,
+        message: `"${report.title}" foi finalizado pela equipe da plataforma.`,
+        link,
+        metadata: { feedbackId: report.id, feedbackType: report.type },
+      });
     });
   }
 

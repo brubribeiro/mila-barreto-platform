@@ -695,7 +695,8 @@ export type NotificationType =
   | 'PATIENT_REACTIVATION'
   | 'USER_CREATED'
   | 'EQUIPMENT_MAINTENANCE'
-  | 'PLATFORM_ANNOUNCEMENT';
+  | 'PLATFORM_ANNOUNCEMENT'
+  | 'FEEDBACK_CLOSED';
 
 export interface Notification {
   id: string;
