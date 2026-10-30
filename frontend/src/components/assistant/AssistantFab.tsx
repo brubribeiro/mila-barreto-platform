@@ -197,6 +197,7 @@ export function AssistantFab({ suggestions, canSendFeedback = false }: Props) {
                 borderTop: '1px solid',
                 borderColor: 'divider',
                 display: 'flex',
+                alignItems: 'flex-end',
                 gap: 1,
                 flexShrink: 0,
               }}
@@ -205,6 +206,7 @@ export function AssistantFab({ suggestions, canSendFeedback = false }: Props) {
                 fullWidth
                 size="small"
                 multiline
+                minRows={1}
                 maxRows={3}
                 placeholder="Ex.: como ativo o modo escuro?"
                 value={question}
@@ -216,13 +218,24 @@ export function AssistantFab({ suggestions, canSendFeedback = false }: Props) {
                   }
                 }}
                 inputProps={{ 'aria-label': 'Pergunta para o assistente' }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    minHeight: 40,
+                    alignItems: 'center',
+                    py: 0,
+                  },
+                  '& .MuiInputBase-inputMultiline': {
+                    py: '9px',
+                    boxSizing: 'border-box',
+                  },
+                }}
               />
               <IconButton
                 type="submit"
                 aria-label="Enviar pergunta"
                 disabled={question.trim().length < 2 || ask.isPending}
                 sx={{
-                  alignSelf: 'flex-end',
+                  flexShrink: 0,
                   width: 40,
                   height: 40,
                   borderRadius: '12px',

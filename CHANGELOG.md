@@ -20,6 +20,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 - Documentos: ação "Enviar ao paciente" (menu da lista, visualizador e aba Documentos da ficha) abre WhatsApp (`wa.me`) ou e-mail (`mailto`) com mensagem e, opcionalmente, o texto do documento; contato vem da ficha (`GET /documents/:id` inclui `patient.phone`/`patient.email`), com aviso quando falta; documento Pendente passa a Enviado ao abrir o envio. Pendência "Documento sem assinatura" leva à lista já filtrada pelo documento (#60).
 
 ### Fixed
+- Assistente (FAB): campo de pergunta e botão enviar com a mesma altura (~40px) e alinhamento na barra inferior do painel.
 - Migration `20261026223000_tenant_profile_fields`: `ALTER TABLE` apontava para `"Tenant"` em vez da tabela mapeada `"tenants"`, quebrando `prisma migrate deploy` em banco limpo (Fixes #98).
 - Backend: `provisionTenant` tipa o payload como `TenantUncheckedCreateInput`, permitindo `planId` escalar na criação de clínica pelo super-admin.
 - Anamnese: IMC aceita vírgula decimal e altura em metros (fichas importadas com `"1,73"` mostravam IMC 710000).
