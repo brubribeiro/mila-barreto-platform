@@ -5,6 +5,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e
 ## [Unreleased]
 
 ### Added
+- Métricas (`/metricas`): botão "Exportar CSV" ao lado das abas baixa o período filtrado (KPIs do resumo, atual e anterior) e as séries da aba ativa, em formato longo `Seção,Item,Indicador,Valor`; gerado no client a partir de `useMetricsData`, desabilitado enquanto o novo período carrega (#63).
 - Clínica — **Meu plano** (`/meu-plano`, admin): nome do plano, uso vs limites informativos (usuários, pacientes, armazenamento), módulos ativos e CTA de contato para upgrade; `GET /tenant/plan` (#64).
 - Formas de pagamento: tipo (dinheiro, PIX, débito, crédito) e prazo de recebimento; lançamentos e conclusão de agendamento com parcelas, bandeira e NSU/autorização opcionais (#57).
 - Limites do plano aplicados na API (#61): criar/reativar usuário ativo, criar paciente e enviar documento ou foto "antes e depois" além de `maxUsers` / `maxPatients` / `storageGb` responde 403 com mensagem em português. Clínica sem plano segue sem limite. A contagem é a mesma do "Meu plano" (`GET /api/tenant/plan`), cujo texto deixa de dizer que os limites são informativos.
