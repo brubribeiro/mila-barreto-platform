@@ -244,12 +244,23 @@ export function AssistantFab({ suggestions, canSendFeedback = false }: Props) {
           aria-expanded={expanded}
           onClick={() => setExpanded((v) => !v)}
           sx={{
-            boxShadow: '0 8px 24px -8px rgba(21,153,139,.85)',
-            width: 56,
-            height: 56,
+            width: 44,
+            height: 44,
+            minHeight: 44,
+            opacity: 0.88,
+            boxShadow: '0 4px 14px -6px rgba(21,153,139,.55)',
+            transition: (theme) =>
+              theme.transitions.create(['transform', 'opacity', 'box-shadow'], {
+                duration: theme.transitions.duration.shorter,
+              }),
+            '&:hover': {
+              opacity: 1,
+              transform: 'scale(1.12)',
+              boxShadow: '0 8px 22px -8px rgba(21,153,139,.75)',
+            },
           }}
         >
-          <AuroraIcon name="assistant" size={24} strokeWidth={1.8} />
+          <AuroraIcon name="assistant" size={20} strokeWidth={1.8} />
         </Fab>
       </Box>
 
