@@ -10,6 +10,7 @@ import { PatientPhotoStorageService } from './patient-photo-storage.service';
 import { PatientStatsService } from './patient-stats.service';
 import { PatientEventsService } from './patient-events.service';
 import { PatientMeasurementsService } from './patient-measurements.service';
+import { PlanLimitsService } from '../plan-limits/plan-limits.service';
 
 @Injectable()
 export class PatientsService {
@@ -19,6 +20,7 @@ export class PatientsService {
     private readonly patientStats: PatientStatsService,
     private readonly events: PatientEventsService,
     private readonly measurements: PatientMeasurementsService,
+    private readonly planLimits: PlanLimitsService,
   ) {}
 
   async list(search?: string) {
@@ -97,6 +99,7 @@ export class PatientsService {
   }
 
   async create(dto: CreatePatientDto, user?: AuditUser) {
+    await this.planLimits.assertCanAddPatient();
     const patient = await this.prisma.patient.create({
       data: normalizePatientWritableFields(dto) as Prisma.PatientUncheckedCreateInput,
     });

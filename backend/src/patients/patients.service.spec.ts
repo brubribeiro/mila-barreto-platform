@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 
 import { PatientsService } from './patients.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,6 +11,7 @@ import { PatientPhotoStorageService } from './patient-photo-storage.service';
 import { PatientStatsService } from './patient-stats.service';
 import { PatientEventsService } from './patient-events.service';
 import { PatientMeasurementsService } from './patient-measurements.service';
+import { PlanLimitsService } from '../plan-limits/plan-limits.service';
 
 describe('PatientsService', () => {
   let service: PatientsService;
@@ -18,6 +19,7 @@ describe('PatientsService', () => {
   let notifications: any;
   let r2: any;
   let auditLog: any;
+  let planLimits: any;
 
   const mockPatient = {
     id: 'patient-1',
@@ -68,6 +70,11 @@ describe('PatientsService', () => {
       logDelete: jest.fn().mockResolvedValue(undefined),
     };
 
+    planLimits = {
+      assertCanAddPatient: jest.fn().mockResolvedValue(undefined),
+      assertStorageAvailable: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PatientsService,
@@ -80,6 +87,7 @@ describe('PatientsService', () => {
         { provide: R2StorageService, useValue: r2 },
         { provide: CompressionService, useValue: { compress: jest.fn() } },
         { provide: AuditLogService, useValue: auditLog },
+        { provide: PlanLimitsService, useValue: planLimits },
       ],
     }).compile();
 
@@ -139,6 +147,13 @@ describe('PatientsService', () => {
 
       expect(result).toEqual(mockPatient);
       expect(prisma.patient.create).toHaveBeenCalled();
+    });
+
+    it('não cria quando o limite de pacientes do plano foi atingido', async () => {
+      planLimits.assertCanAddPatient.mockRejectedValue(new ForbiddenException('Limite do plano atingido'));
+
+      await expect(service.create({ name: 'João Silva' } as any)).rejects.toThrow(ForbiddenException);
+      expect(prisma.patient.create).not.toHaveBeenCalled();
     });
   });
 

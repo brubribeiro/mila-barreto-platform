@@ -99,7 +99,7 @@ model Plan {
   currency    String   @default("BRL")
   // Módulos incluídos (Json string[] do catálogo em platform-features.ts)
   features    Json?
-  // Limites/recursos informativos, ex.: { "maxUsers": 5, "maxPatients": 500, "storageGb": 5 } (null = ilimitado)
+  // Limites aplicados pela API (src/plan-limits), ex.: { "maxUsers": 5, "maxPatients": 500, "storageGb": 5 } (null = ilimitado)
   limits      Json?
   // false = não pode ser atribuído a novas clínicas; quem já tem continua com ele
   active      Boolean  @default(true)
