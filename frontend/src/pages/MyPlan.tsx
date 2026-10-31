@@ -144,7 +144,7 @@ export function MyPlan() {
 
   return (
     <Stack spacing={2.5}>
-      <Card>
+      <Card data-tour="plan-current">
         <Typography component="h2" sx={SECTION_TITLE_SX}>
           Plano atual
         </Typography>

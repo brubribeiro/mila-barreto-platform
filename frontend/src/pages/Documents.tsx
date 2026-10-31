@@ -283,7 +283,7 @@ export function Documents() {
         <StatCard label="Modelos ativos" value={activeTemplates} loading={templatesLoading} />
       </Box>
 
-      <Card sx={{ p: 0, overflow: 'hidden', borderRadius: '18px' }}>
+      <Card data-tour="documents-list" sx={{ p: 0, overflow: 'hidden', borderRadius: '18px' }}>
         {/* Título + filtros + ações */}
         <ListCardHeader
           breakpoint="xl"
@@ -374,7 +374,7 @@ export function Documents() {
             </IconButton>
           </Tooltip>
           {canCreate && (
-            <Button variant="contained" startIcon={<AddIcon />} onClick={openNew} sx={LIST_HEADER_PRIMARY_ACTION_SX}>
+            <Button data-tour="documents-new" variant="contained" startIcon={<AddIcon />} onClick={openNew} sx={LIST_HEADER_PRIMARY_ACTION_SX}>
               Novo documento
             </Button>
           )}

@@ -85,10 +85,12 @@ export function Metrics() {
 
         {error && <Alert severity="error">Erro ao carregar métricas. Verifique os filtros e tente novamente.</Alert>}
 
-        <SummaryKpis data={data} previous={previousData} loading={metricsLoading && !data} />
+        <Box data-tour="metrics-kpis">
+          <SummaryKpis data={data} previous={previousData} loading={metricsLoading && !data} />
+        </Box>
 
         {/* Abas */}
-        <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1.1}>
+        <Stack data-tour="metrics-tabs" direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1.1}>
           <Stack direction="row" flexWrap="wrap" gap={1.1} role="tablist">
             {TABS.filter((t) => t.value !== 'finance' || canSeeFinance).map((t) => (
               <TabPill
@@ -100,7 +102,7 @@ export function Metrics() {
               />
             ))}
           </Stack>
-          <Button
+          <Button data-tour="metrics-export"
             variant="text"
             startIcon={<FileDownloadOutlinedIcon fontSize="small" />}
             onClick={exportCsv}
