@@ -55,12 +55,6 @@ const PAGE_SIZE = 8;
 
 const TOOLBAR_SELECT_SX = { ...LIST_HEADER_SELECT_SX, width: { xs: 'calc(50% - 5px)', sm: 160 } } as const;
 
-const STAT_CARD_PROPS = {
-  sx: { p: { xs: 2, sm: '18px 20px' } },
-  skeletonWidth: 70,
-  valueSx: { lineHeight: 1.3 },
-} as const;
-
 function replaceDocument(list: DocumentFile[] | undefined, doc: DocumentFile): DocumentFile[] {
   const prev = list ?? [];
   if (!prev.some((d) => d.id === doc.id)) return [doc, ...prev];
@@ -283,10 +277,10 @@ export function Documents() {
           gap: { xs: 1.5, sm: 2.25 },
         }}
       >
-        <StatCard {...STAT_CARD_PROPS} label="Total de documentos" value={stats.total} loading={loading} />
-        <StatCard {...STAT_CARD_PROPS} label="Assinados" value={stats.byStatus.SIGNED} loading={loading} />
-        <StatCard {...STAT_CARD_PROPS} label="Pendentes" value={stats.byStatus.PENDING} loading={loading} />
-        <StatCard {...STAT_CARD_PROPS} label="Modelos ativos" value={activeTemplates} loading={templatesLoading} />
+        <StatCard label="Total de documentos" value={stats.total} loading={loading} />
+        <StatCard label="Assinados" value={stats.byStatus.SIGNED} loading={loading} />
+        <StatCard label="Pendentes" value={stats.byStatus.PENDING} loading={loading} />
+        <StatCard label="Modelos ativos" value={activeTemplates} loading={templatesLoading} />
       </Box>
 
       <Card sx={{ p: 0, overflow: 'hidden', borderRadius: '18px' }}>

@@ -17,7 +17,7 @@ import {
 import { PatientListEmptyState } from '../components/patients/PatientListEmptyState';
 import { PatientListPagination } from '../components/patients/PatientListPagination';
 import { PatientListRow } from '../components/patients/PatientListRow';
-import { PatientStatCard } from '../components/patients/PatientStatCard';
+import { StatCard } from '../components/StatCard';
 import { SendWhatsAppDialog } from '../components/messages/SendWhatsAppDialog';
 import {
   LIST_HEADER_ACTION_SX,
@@ -172,10 +172,10 @@ export function Patients() {
           mb: { xs: 2, sm: 2.5 },
         }}
       >
-        <PatientStatCard label="Total de pacientes" value={String(stats?.total ?? 0)} loading={statsLoading} />
-        <PatientStatCard label="Ativos (90 dias)" value={String(stats?.active90 ?? 0)} loading={statsLoading} />
-        <PatientStatCard label="Novos no mês" value={String(stats?.newThisMonth ?? 0)} loading={statsLoading} />
-        <PatientStatCard label="Ticket médio" value={brl.format(stats?.averageTicket ?? 0)} loading={statsLoading} />
+        <StatCard label="Total de pacientes" value={String(stats?.total ?? 0)} loading={statsLoading} />
+        <StatCard label="Ativos (90 dias)" value={String(stats?.active90 ?? 0)} loading={statsLoading} />
+        <StatCard label="Novos no mês" value={String(stats?.newThisMonth ?? 0)} loading={statsLoading} />
+        <StatCard label="Ticket médio" value={brl.format(stats?.averageTicket ?? 0)} loading={statsLoading} />
       </Box>
 
       {/* Tabela */}
